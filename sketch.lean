@@ -1,5 +1,5 @@
--- slim logic --
 /-
+-- slim logic sketch --
 
 -- symbol --
 s ::= [a-zA-Z]+
@@ -7,15 +7,17 @@ s ::= [a-zA-Z]+
 
 -- term --
 t ::=
-  $s                           -- unit variant (singleton)
-  #s t                         -- variant (singleton)
+  $s                           -- unit variant
+  #s t                         -- variant
   match t (case #s t => t ...) -- variant elimination
-  .s t                         -- record (singleton)
+  .s t, ...                    -- record
   t.s                          -- record elimination
   t => t                       -- function abstraction
   t t                          -- function application
   fix                          -- fixpoint combinator
 
+-- term sugar --
+(t , t) = (.left t , .right t)
 
 -- type --
 T ::=
@@ -31,6 +33,11 @@ T ::=
   μ T . T       -- inductive type
   { t | t : T } -- relational type
 
+Notes: 
+- universal and existential types quantify over types of kind *, resulting in types of kind **
+- these type quantifiers are primitive in this weak logic
+- in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
+
 -- composite types defined in terms of subtyping combinators --
 A /\ B = .left:A & .right:B -- product
 A \/ B = #left:A | #right:B -- sum
@@ -38,6 +45,11 @@ A \/ B = #left:A | #right:B -- sum
 
 -- kind --
 K ::=
+  *      -- kind of ground types
+  * -> K -- kind of type constructors
+
+-- higher kind --
+H ::= **
 
 
 -- context --
