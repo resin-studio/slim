@@ -28,9 +28,9 @@ T ::=
   T & T        -- intersection type
   T | T        -- union type
   T -> T        -- implication type
-  ∀ T . T      -- universal type
-  ∃ T . T      -- existential type
-  μ T . T       -- inductive type
+  ∀ s . T      -- universal type
+  ∃ s . T      -- existential type
+  μ s . T       -- inductive type
   { t | t : T } -- relational type
 
 Notes: 
