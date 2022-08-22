@@ -14,7 +14,7 @@ t ::=
   t.s                          -- record elimination
   t => t                       -- function abstraction
   t t                          -- function application
-  fix                          -- fixpoint combinator
+  fix t                        -- recursion
 
 -- term sugar --
 (t , t) = (.left t , .right t)
