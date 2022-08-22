@@ -56,6 +56,9 @@ A /\ B = .left:A & .right:B -- product
 A \/ B = #left:A | #right:B -- sum
 
 
+-- TODO: get rid of kind syntax --
+A kind is just a type of sort 1, rathern than sort 0 
+
 -- lower kind --
 L ::=
   *         -- kind of ground terms, type of types 
