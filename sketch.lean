@@ -43,14 +43,15 @@ related work: 1ml by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml
   { t | t : τ } -- relational type : * where τ : * 
   *             -- ground kind : **
   *<τ>          -- ground kind singleton : **
-  ∀ x . τ       -- universal type : ** where x : κ : **
-  ∃ x . τ       -- existential type : ** where x : κ : **
+  ∀ x . τ       -- universal type : ** where x : κ : ** (predicative) or x : ** (impredicative)
+  ∃ x . τ       -- existential type : ** where x : κ : ** (predicative) or x : ** (impredicative)
 
--- kind notes --
+-- type notes --
 A kind is a semantic notion
 - a type belongs to a kind, which belongs to **
 - κ where τ : κ : **
 
+predicativity is recognized by placing treating quantifiers as large types of **
 
 -- type notes --
 - universal and existential types quantify over types of kind *, resulting in types of kind **
