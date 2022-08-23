@@ -33,6 +33,7 @@ t ::=
 -- type --
 τ ::=
   x             -- variable type : *
+  ?             -- dynamic type : *
   ?l            -- unit variant type : *
   #l : τ        -- variant type : *
   .l : τ        -- record type : *
@@ -42,7 +43,7 @@ t ::=
   μ x . τ       -- inductive type : * where x : κ
   { t | t : τ } -- relational type : * where τ : * 
   *             -- unit ground kind : **
-  [τ]           -- payload ground kind <: * : **
+  [τ]           -- payload ground kind where τ : [τ] <: * : **
   ∀ x . τ       -- universal type : ** where x : κ (predicative) or x : ** (impredicative)
   ∃ x . τ       -- existential type : ** where x : κ (predicative) or x : ** (impredicative)
 
@@ -51,6 +52,7 @@ t ::=
 - A kind is a semantic notion that categorizes both term and type syntax
   - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
   - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
+  - related: **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
 - predicativity is recognized by treating quantifiers as large types belonging to **
   - unlinke kinds which also belong to **, only terms, not types belong to 
   - related work: **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
@@ -71,6 +73,8 @@ t ::=
 
 -- context --
 Γ ::= 
+  .        -- empty context
+  Γ, x : τ -- context extended with indentifier and its type 
 
 -- examples --
 let list = α : * => μ list α . ?nil | #cons:(α /\ list α)
@@ -84,6 +88,9 @@ let 4 = #succ (#succ (#succ (#succ $zero)))
 let list_4 = {xs | (xs, 4) : list_len nat}
 
 %check 1 :: 2 :: 3 :: 4 :: $nil : list_4
+
+
+# TODO: consistent subtyping
 
 
 
