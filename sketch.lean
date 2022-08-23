@@ -10,7 +10,7 @@ x ::= [a-zA-Zα-ζ][a-zA-Zα-ζ0-9_]*
 -- term --
 t ::=
   _                            -- irrelevant pattern / inferred expression
-  t : τ                        -- typed pattern
+  t : τ                        -- typed pattern where τ : κ : **
   x                            -- variable expression / pattern
   $l                           -- unit variant expression / pattern
   #l t                         -- variant expression / pattern
@@ -21,29 +21,33 @@ t ::=
   t t                          -- function application
   let t = t in t               -- binding
   fix t                        -- recursion
-  τ                            -- type as a term of type * and sort **
+  τ                            -- type as term : *
 
 -- term sugar --
 ⟦(t1 , t2)⟧  ~> (.left ⟦t1⟧, .right ⟦t2⟧)
 
 -- term notes --
-we collapse the notion of type with term to be consistent with Python 
+we collapse the notion of type with term to be consistent with Python's unstratified syntax
+related work: 1ml by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
 
 -- type --
 τ ::=
-  x             -- variable type
-  ?l            -- unit variant type
-  #l : τ        -- variant type
-  .l : τ        -- record type
-  τ & τ         -- intersection type
-  τ | τ         -- union type
-  τ -> τ        -- implication type
-  ∀ x . τ       -- universal type of sort ** with type param of any kind of universe 1
-  ∃ x . τ       -- existential type of sort ** with type param of any kind of universe 1
-  μ x . τ       -- inductive type of kind * with type param of kind *
-  { t | t : τ } -- relational type
-  L             -- kind as type of kind **
+  x             -- variable type : *
+  ?l            -- unit variant type : *
+  #l : τ        -- variant type : *
+  .l : τ        -- record type : *
+  τ & τ         -- intersection type : *
+  τ | τ         -- union type : *
+  τ -> τ        -- implication type where τ : * or higher kind where τ : **
+  μ x . τ       -- inductive type : * where x : * 
+  { t | t : τ } -- relational type : * where τ : * 
+  *             -- ground kind : **
+  *<τ>          -- ground kind singleton : **
+  ∀ x . τ       -- universal type : ** where x : κ : **
+  ∃ x . τ       -- existential type : ** where x : κ : **
 
+-- kind notes --
+A kind is a κ : **
 
 
 -- type notes --
@@ -54,7 +58,6 @@ we collapse the notion of type with term to be consistent with Python
 -- composite types defined in terms of subtyping combinators --
 A /\ B = .left:A & .right:B -- product
 A \/ B = #left:A | #right:B -- sum
-
 
 -- TODO: get rid of kind syntax --
 A kind is just a type of sort 1, rathern than sort 0 
