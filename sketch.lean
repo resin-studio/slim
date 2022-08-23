@@ -165,6 +165,12 @@ let list_4 = {xs | (xs, 4) : list_len nat}
 Γ ⊢ τ <: τ₁ & τ₂  
 
 
+
+- consitent subtyping 
+  - combine consistency with subtyping **gradual typing**
+    - gradual typing supplements subtyping with masking or separate consistency relation
+  - non-transitive dynamic subtyping **novel** 
+
 We must be careful integrating consistency with subtyping.
 Allowing the dynamic type at both the bottom and top of subtyping would allow evertyhing to typecheck
 If transitivty is also allowed through the dynamic type
@@ -172,7 +178,6 @@ e.g.
  X <: ?    ? <: T
 ------------------
       X <: T  
-
 
 -/
 
