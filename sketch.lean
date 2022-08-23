@@ -1,36 +1,17 @@
-/-
 -- slim logic sketch --
 
 -- label --
+/-
 l ::= [a-z_]+
+-/
 
 -- identifier --
+/-
 x ::= [a-zA-Zα-ζ][a-zA-Zα-ζ0-9_]*
-
--- term --
-t ::=
-  _                            -- irrelevant pattern / inferred expression
-  t : τ                        -- typed pattern where τ : κ : **
-  x                            -- variable expression / pattern
-  $l                           -- unit variant expression / pattern
-  #l t                         -- variant expression / pattern
-  match t (case #l t => t ...) -- variant elimination
-  .l t, ...                    -- record expression / pattern
-  t.l                          -- record elimination 
-  t => t                       -- function abstraction
-  t t                          -- function application
-  let t = t in t               -- binding
-  fix t                        -- recursion
-  τ                            -- type as term : *
-
-
--- term notes --
-- term sugar
-  - ⟦(t1 , t2)⟧  ~> (.left ⟦t1⟧, .right ⟦t2⟧)
-- we collapse the notion of type with term
-  - consistent with Python's unstratified syntax
+-/
 
 -- type --
+/-
 τ ::=
   x             -- variable type : *
   ?             -- dynamic type : *
@@ -41,13 +22,35 @@ t ::=
   τ | τ         -- union type : *
   τ -> τ        -- implication type where τ : * or higher kind where τ : **
   μ x . τ       -- inductive type : * where x : κ
+  ∀ x . τ       -- universal type : ** where x : κ (predicative) or x : ** (impredicative)
+  ∃ x . τ       -- existential type : ** where x : κ (predicative) or x : ** (impredicative)
   { t | t : τ } -- relational type : * where τ : * 
   *             -- unit ground kind : **
   [τ]           -- payload ground kind where τ : [τ] <: * : **
-  ∀ x . τ       -- universal type : ** where x : κ (predicative) or x : ** (impredicative)
-  ∃ x . τ       -- existential type : ** where x : κ (predicative) or x : ** (impredicative)
+-/
+
+
+inductive Ty where              -- τ ::=
+| Id : String -> Ty             --   x              variable type : *
+| Dyn : Ty                      --   ?              dynamic type : *
+| Label : String -> Ty          --   ?l             unit variant type : *
+| Variant : String -> Ty -> Ty  --   #l : τ         variant type : *
+| Record : String -> Ty -> Ty   --   .l : τ         record type : *
+| Inter : Ty -> Ty -> Ty        --   τ & τ          intersection type : *
+| Union : Ty -> Ty -> Ty        --   τ | τ          union type : *
+| Arrow : Ty -> Ty -> Ty        --   τ -> τ         implication type where τ : * or higher kind where τ : **
+| Mu : Ty -> Ty -> Ty           --   μ x . τ        inductive type : * where x : κ
+| Uni : String -> Ty -> Ty      --   ∀ x . τ        universal type : ** where x : κ (predicative) or x : ** (impredicative)
+| Exi : String -> Ty -> Ty      --   ∃ x . τ        existential type : ** where x : κ (predicative) or x : ** (impredicative)
+| Rel : Tm -> Tm -> Ty -> Ty    --   { t | t : τ }  relational type : * where τ : * 
+| Star : Ty                     --   *              unit ground kind : **
+| Anno : Ty -> Ty               --   [τ]            payload ground kind where τ : [τ] <: * : **
+
+
+
 
 -- type notes --
+/-
 - A type is a syntactic notion
 - A kind is a semantic notion that categorizes both term and type syntax
   - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
@@ -70,13 +73,45 @@ t ::=
   - relate content of a type AND refine types in terms of typings **novel** 
     - obviate the need for outsourcing to SMT solver, 
     - allow reusing definitions for both checking and refinement
+-/
+
+-- term --
+/-
+t ::=
+  _                            -- irrelevant pattern / inferred expression
+  t : τ                        -- typed pattern where τ : κ : **
+  x                            -- variable expression / pattern
+  $l                           -- unit variant expression / pattern
+  #l t                         -- variant expression / pattern
+  match t (case #l t => t ...) -- variant elimination
+  .l t, ...                    -- record expression / pattern
+  t.l                          -- record elimination 
+  t => t                       -- function abstraction
+  t t                          -- function application
+  let t = t in t               -- binding
+  fix t                        -- recursion
+  τ                            -- type as term : *
+-/
+
+
+-- term notes --
+/-
+- term sugar
+  - ⟦(t1 , t2)⟧  ~> (.left ⟦t1⟧, .right ⟦t2⟧)
+- we collapse the notion of type with term
+  - consistent with Python's unstratified syntax
+-/
+
 
 -- context --
+/-
 Γ ::= 
   .        -- empty context
   Γ, x : τ -- context extended with indentifier and its type 
+-/
 
 -- examples --
+/-
 let list = α : * => μ list α . ?nil | #cons:(α /\ list α)
 
 let nat = μ nat . ?zero | #succ:nat
@@ -88,18 +123,4 @@ let 4 = #succ (#succ (#succ (#succ $zero)))
 let list_4 = {xs | (xs, 4) : list_len nat}
 
 %check 1 :: 2 :: 3 :: 4 :: $nil : list_4
-
-
-# TODO: consistent subtyping
-
-
-
-
-
-
-
-
-
-
-
 -/
