@@ -11,7 +11,6 @@ x ∈ String
 -/
 
 -- type --
-
 inductive Ty where              -- τ ::=
 | Id : String -> Ty             --   x              variable type : *
 | Dyn : Ty                      --   ?              dynamic type : *
@@ -27,8 +26,6 @@ inductive Ty where              -- τ ::=
 | Rel : Tm -> Tm -> Ty -> Ty    --   { t | t : τ }  relational type : * where τ : * 
 | Star : Ty                     --   *              unit ground kind : **
 | Anno : Ty -> Ty               --   [τ]            payload ground kind where τ : [τ] <: * : **
-
-
 
 
 -- type notes --
@@ -58,21 +55,32 @@ inductive Ty where              -- τ ::=
 -/
 
 -- term --
-/-
-t ::=
-  _                               -- irrelevant pattern / inferred expression
-  t : τ                           -- typed pattern where τ : κ : **
-  x                               -- variable expression / pattern
-  #l                              -- tag expression / pattern
-  match t (case (#l, t) => t ...) -- variant elimination
-  .l t, ...                       -- record expression / pattern
-  t.l                             -- record elimination 
-  t => t                          -- function abstraction
-  t t                             -- function application
-  let t = t in t                  -- binding
-  fix t                           -- recursion
-  τ                               -- type as term : *
--/
+
+inductive Cases where
+| Base : Tm -> Tm -> Cases
+| Step : Tm -> Tm -> Cases -> Cases
+
+inductive Fields where
+| Base : String -> Tm -> Fields 
+| Step : String -> Tm -> Fields -> Fields 
+
+inductive Tm where                  -- t ::=
+| Irrel : Tm                        --   _                               -- irrelevant pattern / inferred expression
+| Memb : Tm -> Ty -> Tm             --   t : τ                           -- typed pattern where τ : κ : **
+| Id : String -> Tm                 --   x                               -- variable expression / pattern
+| Tag : String -> Tm                --   #l                              -- tag expression / pattern
+| Variant : String -> tm -> Tm      --   #l t                            -- variant expression / pattern
+| Match : Tm -> Cases -> Tm         --   match t (case t => t ...)       -- pattern matching 
+| Record : Fields -> Tm             --   .l t, ...                       -- record expression / pattern
+| Proj : Fields -> Tm               --   t.l                             -- record projection
+| Fun : Tm -> Tm -> Tm              --   t => t                          -- function abstraction
+| App : Tm -> Tm -> Tm              --   t t                             -- function application
+| Let : Tm -> Tm -> Tm -> Tm        --   let t = t in t                  -- binding
+| Fix : Tm -> Tm                    --   fix t                           -- recursion
+| Ty : Ty -> Tm                     --   τ                               -- type as term : *
+
+
+
 
 
 -- term notes --
