@@ -39,7 +39,7 @@ related work: 1ml by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml
   τ & τ         -- intersection type : *
   τ | τ         -- union type : *
   τ -> τ        -- implication type where τ : * or higher kind where τ : **
-  μ x . τ       -- inductive type : * where x : * 
+  μ x . τ       -- inductive type : * where x : κ : ** 
   { t | t : τ } -- relational type : * where τ : * 
   *             -- ground kind : **
   *<τ>          -- ground kind singleton : **
@@ -47,7 +47,9 @@ related work: 1ml by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml
   ∃ x . τ       -- existential type : ** where x : κ : **
 
 -- kind notes --
-A kind is a κ : **
+A kind is a semantic notion
+- a type belongs to a kind, which belongs to **
+- κ where τ : κ : **
 
 
 -- type notes --
