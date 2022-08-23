@@ -15,12 +15,12 @@ l, x ∈ String
   τ & τ          intersection type : *
   τ | τ          union type : *
   τ -> τ         implication type where τ : * or higher kind where τ : **
-  μ x . τ        inductive type : * where x : κ
-  ∀ x . τ        universal type : ** where x : κ (predicative) or x : ** (impredicative)
-  ∃ x . τ        existential type : ** where x : κ (predicative) or x : ** (impredicative)
+  μ x . τ        inductive type : *
+  ∀ x : τ . τ    universal type : ** where x : _ : ** (predicative) or x : ** (impredicative)
+  ∃ x : τ . τ    existential type : ** where x : _ : ** (predicative) or x : ** (impredicative)
   { t | t : τ }  relational type : * where τ : * 
-  *              unit ground kind : **
-  [τ]            payload ground kind where τ : [τ] <: * : **
+  *              ground kind : **
+  [τ]            annotation kind where τ : [τ] <: * : **
 
 - A type is a syntactic notion
 - A kind is a semantic notion that categorizes both term and type syntax
@@ -37,6 +37,7 @@ l, x ∈ String
   - A ∧ B = (.left : A) & (.right : B)           -- product
   - A ∨ B = (#left : A) | (#right : B)           -- sum
 - relational types 
+  - a special kind of dependent types with subtyping
   - refine a type in terms of typings **refinement types in ML**
   - relate content of a type to other values **liquid types**
     - liquid types refine using predicate expressions, rather than typings
@@ -92,11 +93,11 @@ t ::=
 -- examples --
 /-
 
-let list = α : * => μ list α . $nil | #cons:(α ∧ list α)
+let list = α : * => μ list . $nil | #cons:(α ∧ list)
 
 let nat = μ nat . ?zero | #succ:nat
 
-let list_len = α : * => μ list_len . ($nil ∧ $zero) | {(#cons (_ : α, xs), #succ n) | (xs, n) : list_len α}
+let list_len = α : * => μ list_len . ($nil ∧ $zero) | {(#cons (_ : α, xs), #succ n) | (xs, n) : list_len}
 
 let 4 = #succ (#succ (#succ (#succ $zero)))
 
@@ -167,28 +168,11 @@ let list_4 = {xs | (xs, 4) : list_len nat}
 We must be careful integrating consistency with subtyping.
 Allowing the dynamic type at both the bottom and top of subtyping would allow evertyhing to typecheck
 If transitivty is also allowed through the dynamic type
+e.g.
+ X <: ?    ? <: T
+------------------
+      X <: T  
 
--------   --------
-X <: ?     ? <: T
--------------------
-X <: T  
-
-
-
-  x              variable type : *
-  ?              dynamic type : *
-  $l             tag type : *
-  #l : τ         variant type : *
-  .l : τ         field type : *
-  τ & τ          intersection type : *
-  τ | τ          union type : *
-  τ -> τ         implication type where τ : * or higher kind where τ : **
-  μ x . τ        inductive type : * where x : κ
-  ∀ x . τ        universal type : ** where x : κ (predicative) or x : ** (impredicative)
-  ∃ x . τ        existential type : ** where x : κ (predicative) or x : ** (impredicative)
-  { t | t : τ }  relational type : * where τ : * 
-  *              unit ground kind : **
-  [τ]            payload ground kind where τ : [τ] <: * : **
 
 -/
 
