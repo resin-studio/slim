@@ -23,12 +23,12 @@ t ::=
   fix t                        -- recursion
   τ                            -- type as term : *
 
--- term sugar --
-⟦(t1 , t2)⟧  ~> (.left ⟦t1⟧, .right ⟦t2⟧)
 
 -- term notes --
-we collapse the notion of type with term to be consistent with Python's unstratified syntax
-related work: 1ml by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
+- term sugar
+  - ⟦(t1 , t2)⟧  ~> (.left ⟦t1⟧, .right ⟦t2⟧)
+- we collapse the notion of type with term
+  - consistent with Python's unstratified syntax
 
 -- type --
 τ ::=
@@ -39,42 +39,35 @@ related work: 1ml by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml
   τ & τ         -- intersection type : *
   τ | τ         -- union type : *
   τ -> τ        -- implication type where τ : * or higher kind where τ : **
-  μ x . τ       -- inductive type : * where x : κ : ** 
+  μ x . τ       -- inductive type : * where x : κ
   { t | t : τ } -- relational type : * where τ : * 
-  *             -- ground kind : **
-  *<τ>          -- ground kind singleton : **
-  ∀ x . τ       -- universal type : ** where x : κ : ** (predicative) or x : ** (impredicative)
-  ∃ x . τ       -- existential type : ** where x : κ : ** (predicative) or x : ** (impredicative)
+  *             -- unit ground kind : **
+  [τ]           -- payload ground kind <: * : **
+  ∀ x . τ       -- universal type : ** where x : κ (predicative) or x : ** (impredicative)
+  ∃ x . τ       -- existential type : ** where x : κ (predicative) or x : ** (impredicative)
 
 -- type notes --
-A kind is a semantic notion
-- a type belongs to a kind, which belongs to **
-- κ where τ : κ : **
-
-predicativity is recognized by placing treating quantifiers as large types of **
-
--- type notes --
+- A type is a syntactic notion
+- A kind is a semantic notion that categorizes both term and type syntax
+  - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
+  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
+- predicativity is recognized by treating quantifiers as large types belonging to **
+  - unlinke kinds which also belong to **, only terms, not types belong to 
+  - related work: **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
 - universal and existential types quantify over types of kind *, resulting in types of kind **
 - these type quantifiers are primitive in this weak logic
 - in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
-
--- composite types defined in terms of subtyping combinators --
-A /\ B = .left:A & .right:B -- product
-A \/ B = #left:A | #right:B -- sum
-
--- TODO: get rid of kind syntax --
-A kind is just a type of sort 1, rathern than sort 0 
-
--- lower kind --
-L ::=
-  *         -- kind of ground terms, type of types 
-  * -> L    -- kind of type constructors
-
--- kind --
-K ::=  
-  L       -- lower kind 
-  **      -- higher kind 
-
+- composite types defined in terms of subtyping combinators --
+  - A /\ B = .left:A & .right:B -- product
+  - A \/ B = #left:A | #right:B -- sum
+- relational types 
+  - refine a type in terms of typings **refinement types in ML**
+  - relate content of a type to other values **liquid types**
+    - liquid types refine using predicate expressions, rather than typings
+    - liquid types rely on SMT solvers check refinements
+  - relate content of a type AND refine types in terms of typings **novel** 
+    - obviate the need for outsourcing to SMT solver, 
+    - allow reusing definitions for both checking and refinement
 
 -- context --
 Γ ::= 
@@ -85,9 +78,6 @@ let list = α : * => μ list α . ?nil | #cons:(α /\ list α)
 let nat = μ nat . ?zero | #succ:nat
 
 let list_len = α : * => μ list_len . (?nil /\ ?zero) | {(#cons (_ : α, xs), #succ n) | (xs, n) : list_len α}
-Note: clauses based on typing membership in relational type
-- obviate the need for outsourcing to SMT solver, 
-- allow reusing definitions for both checking and refinement
 
 let 4 = #succ (#succ (#succ (#succ $zero)))
 
