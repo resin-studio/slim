@@ -2,40 +2,22 @@
 
 -- label --
 /-
-l ::= [a-z_]+
+l ∈ String 
 -/
 
 -- identifier --
 /-
-x ::= [a-zA-Zα-ζ][a-zA-Zα-ζ0-9_]*
+x ∈ String 
 -/
 
 -- type --
-/-
-τ ::=
-  x             -- variable type : *
-  ?             -- dynamic type : *
-  ?l            -- unit variant type : *
-  #l : τ        -- variant type : *
-  .l : τ        -- record type : *
-  τ & τ         -- intersection type : *
-  τ | τ         -- union type : *
-  τ -> τ        -- implication type where τ : * or higher kind where τ : **
-  μ x . τ       -- inductive type : * where x : κ
-  ∀ x . τ       -- universal type : ** where x : κ (predicative) or x : ** (impredicative)
-  ∃ x . τ       -- existential type : ** where x : κ (predicative) or x : ** (impredicative)
-  { t | t : τ } -- relational type : * where τ : * 
-  *             -- unit ground kind : **
-  [τ]           -- payload ground kind where τ : [τ] <: * : **
--/
-
 
 inductive Ty where              -- τ ::=
 | Id : String -> Ty             --   x              variable type : *
 | Dyn : Ty                      --   ?              dynamic type : *
-| Label : String -> Ty          --   ?l             unit variant type : *
-| Variant : String -> Ty -> Ty  --   #l : τ         variant type : *
-| Record : String -> Ty -> Ty   --   .l : τ         record type : *
+| Tag : String -> Ty            --   $l             tag type : *
+| Variant : String -> Ty        --   #l : τ         variant type : *
+| Field : String -> Ty -> Ty    --   .l : τ         field type : *
 | Inter : Ty -> Ty -> Ty        --   τ & τ          intersection type : *
 | Union : Ty -> Ty -> Ty        --   τ | τ          union type : *
 | Arrow : Ty -> Ty -> Ty        --   τ -> τ         implication type where τ : * or higher kind where τ : **
@@ -63,8 +45,8 @@ inductive Ty where              -- τ ::=
 - these type quantifiers are primitive in this weak logic
 - in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
 - composite types defined in terms of subtyping combinators --
-  - A /\ B = .left:A & .right:B -- product
-  - A \/ B = #left:A | #right:B -- sum
+  - A ∧ B = (.left : A) & (.right : B)           -- product
+  - A ∨ B = (#left : A) | (#right : B)           -- sum
 - relational types 
   - refine a type in terms of typings **refinement types in ML**
   - relate content of a type to other values **liquid types**
@@ -78,19 +60,18 @@ inductive Ty where              -- τ ::=
 -- term --
 /-
 t ::=
-  _                            -- irrelevant pattern / inferred expression
-  t : τ                        -- typed pattern where τ : κ : **
-  x                            -- variable expression / pattern
-  $l                           -- unit variant expression / pattern
-  #l t                         -- variant expression / pattern
-  match t (case #l t => t ...) -- variant elimination
-  .l t, ...                    -- record expression / pattern
-  t.l                          -- record elimination 
-  t => t                       -- function abstraction
-  t t                          -- function application
-  let t = t in t               -- binding
-  fix t                        -- recursion
-  τ                            -- type as term : *
+  _                               -- irrelevant pattern / inferred expression
+  t : τ                           -- typed pattern where τ : κ : **
+  x                               -- variable expression / pattern
+  #l                              -- tag expression / pattern
+  match t (case (#l, t) => t ...) -- variant elimination
+  .l t, ...                       -- record expression / pattern
+  t.l                             -- record elimination 
+  t => t                          -- function abstraction
+  t t                             -- function application
+  let t = t in t                  -- binding
+  fix t                           -- recursion
+  τ                               -- type as term : *
 -/
 
 
@@ -112,11 +93,11 @@ t ::=
 
 -- examples --
 /-
-let list = α : * => μ list α . ?nil | #cons:(α /\ list α)
+let list = α : * => μ list α . $nil | #cons:(α ∧ list α)
 
 let nat = μ nat . ?zero | #succ:nat
 
-let list_len = α : * => μ list_len . (?nil /\ ?zero) | {(#cons (_ : α, xs), #succ n) | (xs, n) : list_len α}
+let list_len = α : * => μ list_len . ($nil ∧ $zero) | {(#cons (_ : α, xs), #succ n) | (xs, n) : list_len α}
 
 let 4 = #succ (#succ (#succ (#succ $zero)))
 
