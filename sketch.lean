@@ -3,66 +3,18 @@
 l, x ∈ String 
 -/
 
--- type --
--- canonical forms 
-/-
-τ ::=
-  x                               variable type : *
-  ?                               dynamic type : *
-  $l                              tag type : *
-  #l : τ                          variant type : *
-  .l : τ                          field type : *
-  τ & τ                           intersection type : *
-  τ | τ                           union type : *
-  τ -> τ                          implication type where τ : * or higher kind where τ : **
-  ∀ x : τ . τ                     universal type : ** where x : _ : ** (predicative) or x : ** (impredicative)
-  ∃ x : τ . τ                     existential type : ** where x : _ : ** (predicative) or x : ** (impredicative)
-  μ x . τ                         inductive type : *
-  { t | t : τ }                   relational type : * where τ : * 
-  *                               ground kind : **
-  [τ]                             annotation kind where τ : [τ] <: * : **
-
-- implication is the same as universal without dependency 
-  - τ -> τ  ==  ∀ x : τ . τ where x ∉ τ
-- A type is an internal representation 
-- A kind is a semantic notion that categorizes both term and type syntax
-  - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
-  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
-  - related: **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
-- predicativity is recognized by treating quantifiers as large types belonging to **
-  - unlinke kinds which also belong to **, only terms, not types belong to 
-  - related work: **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
-- universal and existential types quantify over types of kind *, resulting in types of kind **
-- these type quantifiers are primitive in this weak logic
-- in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
-- composite types defined in terms of subtyping combinators --
-  - A ∧ B = (.left : A) & (.right : B)           -- product
-  - A ∨ B = (#left : A) | (#right : B)           -- sum
-- relational types 
-  - a special kind of dependent types with subtyping
-  - refine a type in terms of typings **refinement types in ML**
-  - relate content of a type to other values **liquid types**
-    - liquid types refine using predicate expressions, rather than typings
-    - liquid types rely on SMT solvers check refinements
-  - relate content of a type AND refine types in terms of typings **novel** 
-    - obviate the need for outsourcing to SMT solver, 
-    - allow reusing definitions for both checking and refinement
-
--/
-
--- term --
--- an external representation
+-- external representation
 /-
 
-cs ::=
-  case t => t                     pattern singleton 
-  cs case t => t                  patterns extended 
+cs ::=                            cases
+  case t => t                     case singleton 
+  cs case t => t                  cases extended 
 
-fs ::=
+fs ::=                            fields 
   .l t                            field singleton 
   fs .l t                         fields extended 
 
-t ::=
+t ::=                             term
   _                               irrelevant pattern / inferred expression
   t : t                           typed pattern where τ : κ : **
   x                               variable expression / pattern
@@ -96,12 +48,65 @@ t ::=
 
 -/
 
--- context --
+-- canonical form --
 /-
 
-Γ ::= 
-  .        -- empty context
-  Γ, x : τ -- context extended with indentifier and its type 
+vfs ::=                           value fields
+  .l v                            field singleton 
+  vfs .l v                        fields extended 
+
+v :: =                            value
+  #l                              tag
+  #l v                            variant
+  vfs                             record
+
+τ ::=                             type
+  x                               variable type : *
+  ?                               dynamic type : *
+  $l                              tag type : *
+  #l : τ                          variant type : *
+  .l : τ                          field type : *
+  τ & τ                           intersection type : *
+  τ | τ                           union type : *
+  τ -> τ                          implication type where τ : * or higher kind where τ : **
+  ∀ x : τ . τ                     universal type : ** where x : _ : ** (predicative) or x : ** (impredicative)
+  ∃ x : τ . τ                     existential type : ** where x : _ : ** (predicative) or x : ** (impredicative)
+  μ x . τ                         inductive type : *
+  { t | t : τ }                   relational type : * where τ : * 
+  *                               ground kind : **
+  [τ]                             annotation kind where τ : [τ] <: * : **
+  {v}                             singleton 
+
+Γ ::=                             context
+  ·                               empty context
+  Γ, x : τ                        context extended with indentifier and its type 
+
+
+- implication is the same as universal without dependency 
+  - τ -> τ  ==  ∀ x : τ . τ where x ∉ τ
+- A type is an internal representation 
+- A kind is a semantic notion that categorizes both term and type syntax
+  - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
+  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
+  - related: **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
+- predicativity is recognized by treating quantifiers as large types belonging to **
+  - unlinke kinds which also belong to **, only terms, not types belong to 
+  - related work: **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
+- universal and existential types quantify over types of kind *, resulting in types of kind **
+- these type quantifiers are primitive in this weak logic
+- in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
+- composite types defined in terms of subtyping combinators --
+  - A ∧ B = (.left : A) & (.right : B)           -- product
+  - A ∨ B = (#left : A) | (#right : B)           -- sum
+- relational types 
+  - a special kind of dependent types with subtyping
+  - refine a type in terms of typings **refinement types in ML**
+  - relate content of a type to other values **liquid types**
+    - liquid types refine using predicate expressions, rather than typings
+    - liquid types rely on SMT solvers check refinements
+  - relate content of a type AND refine types in terms of typings **novel** 
+    - obviate the need for outsourcing to SMT solver, 
+    - allow reusing definitions for both checking and refinement
 
 -/
 
