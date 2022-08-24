@@ -4,25 +4,27 @@ l, x ∈ String
 -/
 
 -- type --
+-- canonical forms 
 /-
-
 τ ::=
-  x              variable type : *
-  ?              dynamic type : *
-  $l             tag type : *
-  #l : τ         variant type : *
-  .l : τ         field type : *
-  τ & τ          intersection type : *
-  τ | τ          union type : *
-  τ -> τ         implication type where τ : * or higher kind where τ : **
-  μ x . τ        inductive type : *
-  ∀ x : τ . τ    universal type : ** where x : _ : ** (predicative) or x : ** (impredicative)
-  ∃ x : τ . τ    existential type : ** where x : _ : ** (predicative) or x : ** (impredicative)
-  { t | t : τ }  relational type : * where τ : * 
-  *              ground kind : **
-  [τ]            annotation kind where τ : [τ] <: * : **
+  x                               variable type : *
+  ?                               dynamic type : *
+  $l                              tag type : *
+  #l : τ                          variant type : *
+  .l : τ                          field type : *
+  τ & τ                           intersection type : *
+  τ | τ                           union type : *
+  τ -> τ                          implication type where τ : * or higher kind where τ : **
+  ∀ x : τ . τ                     universal type : ** where x : _ : ** (predicative) or x : ** (impredicative)
+  ∃ x : τ . τ                     existential type : ** where x : _ : ** (predicative) or x : ** (impredicative)
+  μ x . τ                         inductive type : *
+  { t | t : τ }                   relational type : * where τ : * 
+  *                               ground kind : **
+  [τ]                             annotation kind where τ : [τ] <: * : **
 
-- A type is a syntactic notion
+- implication is the same as universal without dependency 
+  - τ -> τ  ==  ∀ x : τ . τ where x ∉ τ
+- A type is an internal representation 
 - A kind is a semantic notion that categorizes both term and type syntax
   - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
   - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
@@ -49,6 +51,7 @@ l, x ∈ String
 -/
 
 -- term --
+-- an external representation
 /-
 
 cs ::=
@@ -61,7 +64,7 @@ fs ::=
 
 t ::=
   _                               irrelevant pattern / inferred expression
-  t : τ                           typed pattern where τ : κ : **
+  t : t                           typed pattern where τ : κ : **
   x                               variable expression / pattern
   #l                              tag expression / pattern
   #l t                            variant expression / pattern
@@ -72,7 +75,19 @@ t ::=
   t t                             function application
   let t = t in t                  binding
   fix t                           recursion
-  τ                               type as term : *
+  ?                               dynamic type : *
+  $l                              tag type : *
+  #l : t                          variant type : *
+  .l : t                          field type : *
+  t & t                           intersection type : *
+  t | t                           union type : *
+  t -> t                          implication type where τ : * or higher kind where τ : **
+  μ x . t                         inductive type : *
+  ∀ x : t . t                     universal type : ** where x : _ : ** (predicative) or x : ** (impredicative)
+  ∃ x : t . t                     existential type : ** where x : _ : ** (predicative) or x : ** (impredicative)
+  { t | t : t }                   relational type : * where τ : * 
+  *                               ground kind : **
+  [t]                             annotation kind where τ : [τ] <: * : **
 
 - term sugar
   - ⟦(t1 , t2)⟧  ~> (.left ⟦t1⟧, .right ⟦t2⟧)
