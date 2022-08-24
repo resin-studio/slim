@@ -1,10 +1,8 @@
--- symbol --
-/-
-l, x ∈ String 
--/
 
--- external representation
+-- syntax
 /-
+
+l, x ∈ String                     symbol
 
 cs ::=                            cases
   case t => t                     case singleton 
@@ -39,13 +37,14 @@ t ::=                             term
   ∃ x : t . t                     existential type : ** where x : _ : ** (predicative) or x : ** (impredicative)
   { t | t : t }                   relational type : * where τ : * 
   *                               ground kind : **
-  [t]                             annotation kind where τ : [τ] <: * : **
+  [t]                             annotation kind where t : [t] <: * : **
 
 - term sugar
   - ⟦(t1 , t2)⟧  ~> (.left ⟦t1⟧, .right ⟦t2⟧)
-- we collapse the notion of type with term
+- collapse the syntax of type with term
+  - collapse type constructors, polymorphic terms, and lambdas into `t => t` **Cic** 
   - consistent with Python's unstratified syntax
-
+  - related: **CiC** 
 -/
 
 -- canonical form --
@@ -81,7 +80,6 @@ v :: =                            value
   ·                               empty context
   Γ, x : τ                        context extended with indentifier and its type 
 
-
 - implication is the same as universal without dependency 
   - τ -> τ  ==  ∀ x : τ . τ where x ∉ τ
 - A type is an internal representation 
@@ -107,10 +105,9 @@ v :: =                            value
   - relate content of a type AND refine types in terms of typings **novel** 
     - obviate the need for outsourcing to SMT solver, 
     - allow reusing definitions for both checking and refinement
-
 -/
 
--- examples --
+-- example --
 /-
 
 let list = α : * => μ list . $nil | #cons:(α ∧ list)
@@ -127,88 +124,97 @@ let list_4 = {xs | (xs, 4) : list_len nat}
 
 -/
 
--- consistency --
--- Γ ⊢ τ ~ τ 
+-- semantics --
 /-
 
-  τ₁ ~ τ₂  
----------------------- field
-  Γ |-  .l τ₁ ~ .l τ₂  
+Γ ⊢ τ <: τ                        consistent subtyping
 
-  τ₁ ~ τ₂  
----------------------- variant 
-  Γ |-  #l τ₁ ~ #l τ₂  
 
--/
-
--- consistent subtyping --
--- Γ ⊢ τ <: τ 
-/-
-
----------------- dyno_right
+----------------                  dyno_right
 Γ ⊢ τ ~ ? 
 
----------------- dyno_left
+
+----------------                  dyno_left
 Γ ⊢ ? ~ τ 
+
 
 Γ ⊢ τ₁ <: τ 
 Γ ⊢ τ <: τ₂
 τ ≠ ?
--------------- trans
+--------------                    trans
 Γ ⊢ τ₁ <: τ₂  
 
+
+τ₁ <: τ₂  
+------------------                field
+Γ ⊢ .l τ₁ <: .l τ₂  
+
+
+Γ ⊢ τ₁ <: τ₂  
+--------------------              variant 
+Γ ⊢ #l τ₁ <: #l τ₂  
+
+
 Γ ⊢ τ <: τ₁
------------------- union_left
+------------------                union_left
 Γ ⊢ τ <: τ₁ | τ₂  
 
+
 Γ ⊢ τ <: τ₂
------------------- union_right
+------------------                union_right
 Γ ⊢ τ <: τ₁ | τ₂  
+
 
 Γ ⊢ τ₁ <: τ   
 Γ ⊢ τ₂ <: τ  
------------------- union 
+------------------                union 
 Γ ⊢ τ₁ | τ₂ <: τ 
 
+
 Γ ⊢ τ₁ <: τ
-------------------- intersection_left
+-------------------               intersection_left
 Γ ⊢ τ₁ & τ₂ <: τ  
 
+
 Γ ⊢ τ₂ <: τ
-------------------- intersection_right
+-------------------               intersection_right
 Γ ⊢ τ₁ & τ₂ <: τ  
 
 
 Γ ⊢ τ <: τ₁  
 Γ ⊢ τ <: τ₂  
------------------- intersection
+------------------                intersection
 Γ ⊢ τ <: τ₁ & τ₂  
 
 
 
-- consitent subtyping 
+- subtyping incorporates dynamic type 
   - combine consistency with subtyping **gradual typing**
     - gradual typing supplements subtyping with masking or separate consistency relation
   - non-transitive dynamic subtyping **novel** 
+    - prevents everything from subtyping 
+      e.g.
+      X <: ?    ? <: T
+      ------------------
+            X <: T  
 
-We must be careful integrating consistency with subtyping.
-Allowing the dynamic type at both the bottom and top of subtyping would allow evertyhing to typecheck
-If transitivty is also allowed through the dynamic type
-e.g.
- X <: ?    ? <: T
-------------------
-      X <: T  
+
+Γ ⊢ t : τ :> τ                    type strengthening
+
+
+- propagate types down, delay subsumption 
+  - propgate types down, and infer types up **bidrectional typing**
+  - always propagate down, even if inferring upward **roundtrip typing**
+  - propagate dynamic types **novel**
+
+Γ ⊢ t : τ :> τ ~> t               term synthesis
+
+Γ C ⊢ ...                         constraint typing
+
+Γ C ⊢ τ <: x = τ                  constraint solving
+
+- find some super type satisfying constraints
+  - find the least super type satsifying constraints **HM(X)**
+  - find a somewhat lenient super type satsifying constraints **novel**
 
 -/
-
-
--- type strengthening --
--- Γ ⊢ t : τ :> τ
-
--- term synthesis --
--- Γ ⊢ t : τ :> τ ~> t
-
--- constraint typing --
--- Γ ⊢ τ :> τ :: t 
-
--- constraint solving -- 
