@@ -44,7 +44,7 @@ t ::=                             term
 - collapse the syntax of type with term
   - collapse type constructors, polymorphic terms, and lambdas into `t => t` **Cic** 
   - consistent with Python's unstratified syntax
-  - related: **CiC** 
+
 -/
 
 -- canonical form --
@@ -84,12 +84,12 @@ v :: =                            value
   - τ -> τ  ==  ∀ x : τ . τ where x ∉ τ
 - A type is an internal representation 
 - A kind is a semantic notion that categorizes both term and type syntax
+  - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
   - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
   - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
-  - related: **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
 - predicativity is recognized by treating quantifiers as large types belonging to **
-  - unlinke kinds which also belong to **, only terms, not types belong to 
-  - related work: **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
+  - unlike kinds which also belong to **, only terms, not types belong to 
+  - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
 - universal and existential types quantify over types of kind *, resulting in types of kind **
 - these type quantifiers are primitive in this weak logic
 - in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
@@ -186,7 +186,9 @@ let list_4 = {xs | (xs, 4) : list_len nat}
 ------------------                intersection
 Γ ⊢ τ <: τ₁ & τ₂  
 
-
+- too lenient vs too strict in the context of synthesis
+  - too lenient would result in a large search space 
+  - too strict would prevent generating intersting idiomatic programs
 
 - subtyping incorporates dynamic type 
   - combine consistency with subtyping **gradual typing**
