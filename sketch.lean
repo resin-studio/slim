@@ -1,4 +1,31 @@
+-- title --
+/-
+type directed program synthesis for dynamic languages
+-/
 
+-- introduction --
+/-
+
+
+Dualities
+1. correctness: strict vs lenient
+  - strict: reject programs with errors 
+  - lenient: accept programs without errors 
+2. elaboration: forward vs backward 
+  - forward: incomplete types; infer types from terms
+  - backward: incomplete terms; synthesizes terms from types
+
+Goals
+1. strict/forward
+  - reject erroneous programs with incomplete types
+2. strict/backward
+  - reject erroneous incomplete programs with type annotations 
+3. lenient/forward: 
+  - accept error-free programs with incomplete types
+4. lenient/backward
+  - accept error-free incomplete programs with type annotations 
+
+-/
 -- syntax
 /-
 
@@ -168,31 +195,32 @@ let list_n = n => {xs | xs,n : list_len nat}
 
 
 ------------------                union_left
-Γ ⊢ τ₁ <: τ₁ | τ₂  
+Γ ⊢ τ₁ <: τ₁ ∨ τ₂  
 
 
 ------------------                union_right
-Γ ⊢ τ₂ <: τ₁ | τ₂  
+Γ ⊢ τ₂ <: τ₁ ∨ τ₂  
 
 
 Γ ⊢ τ₁ <: τ   
 Γ ⊢ τ₂ <: τ  
 ------------------                union 
-Γ ⊢ τ₁ | τ₂ <: τ 
+Γ ⊢ τ₁ ∨ τ₂ <: τ 
 
 
 -------------------               intersection_left
-Γ ⊢ τ₁ & τ₂ <: τ₁  
+Γ ⊢ τ₁ ∧ τ₂ <: τ₁  
 
 
 -------------------               intersection_right
-Γ ⊢ τ₁ & τ₂ <: τ₂  
+Γ ⊢ τ₁ ∧ τ₂ <: τ₂  
 
 
 Γ ⊢ τ <: τ₁  
 Γ ⊢ τ <: τ₂  
 ------------------                intersection
-Γ ⊢ τ <: τ₁ & τ₂  
+Γ ⊢ τ <: τ₁ ∧ τ₂  
+
 
 - too lenient vs too strict in the context of synthesis
   - too lenient would result in a large search space 
