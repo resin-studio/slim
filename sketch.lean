@@ -118,13 +118,13 @@ v :: =                            value
 -- example --
 /-
 
-let list = α : * => μ list . #nil:unit | #cons:(α ∧ list)
+let list = α : * => μ list . #nil:unit | #cons:(α;list)
 
 let nat = μ nat . #zero:unit | #succ:nat
 
 let list_len = α : * => μ list_len . 
-  (#nil:unit ∧ #zero:unit) | 
-  {#cons(x,xs) , #succ n |  x, xs, n : α ∧ list_len}
+  (#nil:unit ; #zero:unit) | 
+  {#cons(x,xs) , #succ n |  x,xs,n : (α;list_len)}
 
 let 4 = #succ (#succ (#succ (#succ (#zero ()))))
 
@@ -167,14 +167,12 @@ let list_n = n => {xs | xs,n : list_len nat}
 Γ ⊢ #l τ₁ <: #l τ₂  
 
 
-Γ ⊢ τ <: τ₁
 ------------------                union_left
-Γ ⊢ τ <: τ₁ | τ₂  
+Γ ⊢ τ₁ <: τ₁ | τ₂  
 
 
-Γ ⊢ τ <: τ₂
 ------------------                union_right
-Γ ⊢ τ <: τ₁ | τ₂  
+Γ ⊢ τ₂ <: τ₁ | τ₂  
 
 
 Γ ⊢ τ₁ <: τ   
@@ -183,14 +181,12 @@ let list_n = n => {xs | xs,n : list_len nat}
 Γ ⊢ τ₁ | τ₂ <: τ 
 
 
-Γ ⊢ τ₁ <: τ
 -------------------               intersection_left
-Γ ⊢ τ₁ & τ₂ <: τ  
+Γ ⊢ τ₁ & τ₂ <: τ₁  
 
 
-Γ ⊢ τ₂ <: τ
 -------------------               intersection_right
-Γ ⊢ τ₁ & τ₂ <: τ  
+Γ ⊢ τ₁ & τ₂ <: τ₂  
 
 
 Γ ⊢ τ <: τ₁  
