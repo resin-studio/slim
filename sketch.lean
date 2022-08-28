@@ -16,35 +16,44 @@ t ::=                             term
   _                               irrelevant pattern / inferred expression
   t : t                           typed pattern where τ : κ : **
   x                               variable expression / pattern
-  #l                              tag expression / pattern
+  ()                              unit expression / pattern
   #l t                            variant expression / pattern
   match t cs                      pattern matching 
   fs                              record expression / pattern
   t.l                             record projection
-  t => t                          function abstraction
+  t : t => t                      function abstraction
   t t                             function application
-  let t = t in t                  binding
+  let t : t = t in t              binding
   fix t                           recursion
+
   ?                               dynamic type : *
-  $l                              tag type : *
+  unit                            unit type : * 
   #l : t                          variant type : *
   .l : t                          field type : *
   t & t                           intersection type : *
   t | t                           union type : *
   t -> t                          implication type where τ : * or higher kind where τ : **
   μ x . t                         inductive type : *
-  ∀ x : t . t                     universal type : ** where x : _ : ** (predicative) or x : ** (impredicative)
-  ∃ x : t . t                     existential type : ** where x : _ : ** (predicative) or x : ** (impredicative)
   { t | t : t }                   relational type : * where τ : * 
   *                               ground kind : **
   [t]                             annotation kind where t : [t] <: * : **
 
-- term sugar
-  - ⟦(t1 , t2)⟧  ~> (.left ⟦t1⟧, .right ⟦t2⟧)
 - collapse the syntax of type with term
   - collapse type constructors, polymorphic terms, and lambdas into `t => t` **Cic** 
   - consistent with Python's unstratified syntax
+-/
 
+
+-- syntactic sugar -- 
+/-
+t1 , t2                           .left t1 .right t2
+t1 => t2                          t1 : ? => t2
+let t1 = t2 in t3                 let t1 : ? = t2 in t3
+
+∀ x : X . Y x                     {x => y | x => y : X -> Y x}     -- universal
+X ∧ Y                             (.left : X) & (.right : Y)       -- product
+∃ x : X . (Y x)                   {x, y | x, y : X /\ Y x}         -- existential
+X ∨ Y                             (#left : X) | (#right : Y)       -- sum
 -/
 
 -- canonical form --
@@ -55,34 +64,36 @@ vfs ::=                           value fields
   vfs .l v                        fields extended 
 
 v :: =                            value
-  #l                              tag
+  ()                              unit
   #l v                            variant
   vfs                             record
 
 τ ::=                             type
   x                               variable type : *
   ?                               dynamic type : *
-  $l                              tag type : *
+  unit                            unit type : *
   #l : τ                          variant type : *
   .l : τ                          field type : *
   τ & τ                           intersection type : *
   τ | τ                           union type : *
   τ -> τ                          implication type where τ : * or higher kind where τ : **
-  ∀ x : τ . τ                     universal type : ** where x : _ : ** (predicative) or x : ** (impredicative)
-  ∃ x : τ . τ                     existential type : ** where x : _ : ** (predicative) or x : ** (impredicative)
   μ x . τ                         inductive type : *
   { t | t : τ }                   relational type : * where τ : * 
   *                               ground kind : **
   [τ]                             annotation kind where τ : [τ] <: * : **
-  {v}                             singleton 
 
 Γ ::=                             context
   ·                               empty context
   Γ, x : τ                        context extended with indentifier and its type 
 
-- implication is the same as universal without dependency 
-  - τ -> τ  ==  ∀ x : τ . τ where x ∉ τ
+
+
 - A type is an internal representation 
+
+- universal has many names
+    - i.e. dependent implication, indexed product, Π 
+- existential has many names
+    - i.e. dependent product, indexed sum, Σ
 - A kind is a semantic notion that categorizes both term and type syntax
   - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
   - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
@@ -93,9 +104,7 @@ v :: =                            value
 - universal and existential types quantify over types of kind *, resulting in types of kind **
 - these type quantifiers are primitive in this weak logic
 - in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
-- composite types defined in terms of subtyping combinators --
-  - A ∧ B = (.left : A) & (.right : B)           -- product
-  - A ∨ B = (#left : A) | (#right : B)           -- sum
+
 - relational types 
   - a special kind of dependent types with subtyping
   - refine a type in terms of typings **refinement types in ML**
@@ -105,6 +114,13 @@ v :: =                            value
   - relate content of a type AND refine types in terms of typings **novel** 
     - obviate the need for outsourcing to SMT solver, 
     - allow reusing definitions for both checking and refinement
+
+
+
+
+
+
+
 -/
 
 -- example --
@@ -116,11 +132,11 @@ let nat = μ nat . ?zero | #succ:nat
 
 let list_len = α : * => μ list_len . ($nil ∧ $zero) | {(#cons (_ : α, xs), #succ n) | (xs, n) : list_len}
 
-let 4 = #succ (#succ (#succ (#succ $zero)))
+let 4 = #succ (#succ (#succ (#succ #zero)))
 
 let list_4 = {xs | (xs, 4) : list_len nat}
 
-%check 1 :: 2 :: 3 :: 4 :: $nil : list_4
+%check 1 :: 2 :: 3 :: 4 :: #nil : list_4
 
 -/
 
