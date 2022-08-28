@@ -88,8 +88,6 @@ v :: =                            value
 
 
 
-- A type is an internal representation 
-
 - universal has many names
     - i.e. dependent implication, indexed product, Π 
 - existential has many names
@@ -115,26 +113,24 @@ v :: =                            value
     - obviate the need for outsourcing to SMT solver, 
     - allow reusing definitions for both checking and refinement
 
-
-
-
-
-
-
 -/
 
 -- example --
 /-
 
-let list = α : * => μ list . $nil | #cons:(α ∧ list)
+let list = α : * => μ list . #nil:unit | #cons:(α ∧ list)
 
-let nat = μ nat . ?zero | #succ:nat
+let nat = μ nat . #zero:unit | #succ:nat
 
-let list_len = α : * => μ list_len . ($nil ∧ $zero) | {(#cons (_ : α, xs), #succ n) | (xs, n) : list_len}
+let list_len = α : * => μ list_len . 
+  (#nil:unit ∧ #zero:unit) | 
+  {#cons(x,xs) , #succ n |  x, xs, n : α ∧ list_len}
 
-let 4 = #succ (#succ (#succ (#succ #zero)))
+let 4 = #succ (#succ (#succ (#succ (#zero ()))))
 
 let list_4 = {xs | (xs, 4) : list_len nat}
+
+let list_n n = {xs | (xs, n) : list_len nat}
 
 %check 1 :: 2 :: 3 :: 4 :: #nil : list_4
 
