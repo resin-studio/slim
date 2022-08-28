@@ -30,8 +30,8 @@ t ::=                             term
   unit                            unit type : * 
   #l : t                          variant type : *
   .l : t                          field type : *
-  t & t                           intersection type : *
-  t | t                           union type : *
+  t ∧ t                           intersection type : *
+  t ∨ t                           union type : *
   t -> t                          implication type where τ : * or higher kind where τ : **
   μ x . t                         inductive type : *
   { t | t : t }                   relational type : * where τ : * 
@@ -46,14 +46,14 @@ t ::=                             term
 
 -- syntactic sugar -- 
 /-
-t1 , t2                           .left t1 .right t2
-t1 => t2                          t1 : ? => t2
+t1 , t2                           .left t1 .right t2               -- product
+X ; Y                             (.left : X) ∧ (.right : Y)       -- product type
+
+t1 => t2                          t1 : ? => t2                     
 let t1 = t2 in t3                 let t1 : ? = t2 in t3
 
-∀ x : X . Y x                     {x => y | x => y : X -> Y x}     -- universal
-X ∧ Y                             (.left : X) & (.right : Y)       -- product
-∃ x : X . (Y x)                   {x, y | x, y : X /\ Y x}         -- existential
-X ∨ Y                             (#left : X) | (#right : Y)       -- sum
+∀ x : X . Y x                     {x => y | x => y : X -> Y x}     -- universal type
+∃ x : X . Y x                     {x, y | x, y : X /\ Y x}         -- existential type
 -/
 
 -- canonical form --
@@ -74,8 +74,8 @@ v :: =                            value
   unit                            unit type : *
   #l : τ                          variant type : *
   .l : τ                          field type : *
-  τ & τ                           intersection type : *
-  τ | τ                           union type : *
+  τ ∧ τ                           intersection type : *
+  τ ∨ τ                           union type : *
   τ -> τ                          implication type where τ : * or higher kind where τ : **
   μ x . τ                         inductive type : *
   { t | t : τ }                   relational type : * where τ : * 
@@ -128,9 +128,9 @@ let list_len = α : * => μ list_len .
 
 let 4 = #succ (#succ (#succ (#succ (#zero ()))))
 
-let list_4 = {xs | (xs, 4) : list_len nat}
+let list_4 = {xs | xs,4 : list_len nat}
 
-let list_n n = {xs | (xs, n) : list_len nat}
+let list_n = n => {xs | xs,n : list_len nat}
 
 %check 1 :: 2 :: 3 :: 4 :: #nil : list_4
 
