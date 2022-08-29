@@ -89,6 +89,13 @@ let t₁ = t₂ in t₃                 let t₁ : ? = τ₂ in t₃
 t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
 
 
+- kinds
+  - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
+  - a term satifies a type of higher kind if  it type checks with all of its arguments instantiated with the dynamic type 
+  - it is useful for safely generalizing over type construcotrs rather than merely types 
+  - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
+  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
+
 - A schema is a type that quantifies over types 
   - predicativity is recognized by treating quantifiers as large types belonging to **
   - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
@@ -114,12 +121,6 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
       - any type defined in terms of of the datatype's subtypes is defined as a datatype's subtype 
     - ML refinement types' intersections of user-defined types are inferred from subtyping relations
     - ML refinement types do not relate type to parts of a product type 
-
-- kinds are not necessary (yet)
-  - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
-  - it is useful for safely generalizing over type construcotrs rather than merely types 
-  - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
-  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
 
 - collapsing types and terms is not necessary (yet)
   - various abstraction and composition portions of types and terms are merged **CiC**
