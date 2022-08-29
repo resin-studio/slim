@@ -117,7 +117,7 @@ v :: =                            value
 
 - A schema is a semantic notion that categorizes generic type forms 
   - predicativity is recognized by treating quantifiers as large types belonging to **
-    - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
+  - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
   - universal and existential types quantify over types of kind *, resulting in types of kind **
   - these type quantifiers are primitive in this logic with refinement types, rather than dependent types
   - in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
@@ -134,12 +134,13 @@ v :: =                            value
     - liquid types refine using predicate expressions, rather than subtypings
     - liquid types rely on SMT solvers check refinements
     - liquid types may have dependencies on values
-- inference of intersection types from subtyping relation **ML refinement types**
-  - ML refinement types of user-defined datatypes (variant types) are explicitly declared
-    - datatype creates a named supertype (upper) bound. A
-    - any type defined in terms of of the datatype's subtypes is defined as a datatype's subtype 
-  - ML refinement types' intersections of user-defined types are inferred from subtyping relations
-  - ML refinement types do not relate type to parts of a product type 
+- inference of intersection types
+  - inference based on subtyping relation **ML refinement types**
+    - ML refinement types of user-defined datatypes (variant types) are explicitly declared
+      - datatype creates a named supertype (upper) bound. A
+      - any type defined in terms of of the datatype's subtypes is defined as a datatype's subtype 
+    - ML refinement types' intersections of user-defined types are inferred from subtyping relations
+    - ML refinement types do not relate type to parts of a product type 
 
 -/
 
