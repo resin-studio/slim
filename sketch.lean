@@ -132,14 +132,16 @@ v :: =                            value
     - obviate the need for outsourcing to SMT solver, 
     - allow reusing definitions for both checking and constructing subtypes 
     - avoid dependencies on values
-  - infer the intersection between types **ML refinement types**
-    - subtypes of datatypes (variant types) are explicitly declared
-    - intersections are inferred
-    - ML refinement types do not relate type to parts of a product type 
   - relate a type to parts of a relation **liquid types**
     - liquid types refine using predicate expressions, rather than subtypings
     - liquid types rely on SMT solvers check refinements
     - liquid types may have dependencies on values
+  - inference of intersection types from subtyping relation **ML refinement types**
+    - ML refinement types of user-defined datatypes (variant types) are explicitly declared
+      - datatype creates a named supertype (upper) bound. A
+      - any type defined in terms of of the datatype's subtypes is defined as a datatype's subtype 
+    - ML refinement types' intersections of user-defined types are inferred from subtyping relations
+    - ML refinement types do not relate type to parts of a product type 
 
 -/
 
