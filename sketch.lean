@@ -57,13 +57,14 @@ t ::=                             term
   unit                            unit type : * 
   #l : t                          variant type : *
   .l : t                          field type : *
+  t -> t                          implication type where τ : * or higher kind where τ : **
   t ∧ t                           intersection type : *
   t ∨ t                           union type : *
-  t -> t                          implication type where τ : * or higher kind where τ : **
+  ∀ x : t . t                     universal schema : **
+  ∃ x : t . t                     existential schema : **
   μ x . t                         inductive type : *
-  { t | t : t }                   relational type : * where τ : * 
+  t @ t <: t                      refinement type : * where τ : * 
   *                               ground kind : **
-  [t]                             annotation kind where t : [t] <: * : **
 
 - collapse the syntax of type with term
   - collapse type constructors, polymorphic terms, and lambdas into `t => t` **Cic** 
@@ -73,14 +74,12 @@ t ::=                             term
 
 -- syntactic sugar -- 
 /-
-t1 , t2                           .left t1 .right t2               -- product
-X ; Y                             (.left : X) ∧ (.right : Y)       -- product type
+t₁ , t₂                           .left t₁ .right t₂               -- product
+t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
 
-t1 => t2                          t1 : ? => t2                     
-let t1 = t2 in t3                 let t1 : ? = t2 in t3
+t₁ => t₂                          t₁ : ? => t₂                     
+let t₁ = t₂ in t₃                 let t₁ : ? = t₂ in t₃
 
-∀ x : X . Y x                     {x => y | x => y : X -> Y x}     -- universal type
-∃ x : X . Y x                     {x, y | x, y : X /\ Y x}         -- existential type
 -/
 
 -- canonical form --
@@ -101,13 +100,14 @@ v :: =                            value
   unit                            unit type : *
   #l : τ                          variant type : *
   .l : τ                          field type : *
+  τ -> τ                          implication type where τ : * or higher kind where τ : **
   τ ∧ τ                           intersection type : *
   τ ∨ τ                           union type : *
-  τ -> τ                          implication type where τ : * or higher kind where τ : **
-  μ x . τ                         inductive type : *
-  { t | t : τ }                   relational type : * where τ : * 
+  ∀ x : τ . τ                     universal schema : **
+  ∃ x : τ . τ                     existential schema : **
+  μ x . t                         inductive type : *
+  τ @ τ <: τ                      refinement type : * where τ : * 
   *                               ground kind : **
-  [τ]                             annotation kind where τ : [τ] <: * : **
 
 Γ ::=                             context
   ·                               empty context
@@ -115,49 +115,52 @@ v :: =                            value
 
 
 
-- universal has many names
-    - i.e. dependent implication, indexed product, Π 
-- existential has many names
-    - i.e. dependent product, indexed sum, Σ
-- A kind is a semantic notion that categorizes both term and type syntax
+- A schema is a semantic notion that categorizes generic type forms 
+  - predicativity is recognized by treating quantifiers as large types belonging to **
+    - unlike kinds which also belong to **, only terms, not types belong to 
+    - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
+  - universal and existential types quantify over types of kind *, resulting in types of kind **
+  - these type quantifiers are primitive in this logic with refinement types, rather than dependent types
+  - in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
+- A kind is a semantic notion that categorizes type forms of varying arity 
   - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
   - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
   - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
-- predicativity is recognized by treating quantifiers as large types belonging to **
-  - unlike kinds which also belong to **, only terms, not types belong to 
-  - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
-- universal and existential types quantify over types of kind *, resulting in types of kind **
-- these type quantifiers are primitive in this weak logic
-- in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
 
-- relational types 
-  - a special kind of dependent types with subtyping
-  - refine a type in terms of typings **refinement types in ML**
+- refinement types / relational types
+  - a special kind of subtyping
+  - refine a type in terms of subtypings **refinement types in ML**
   - relate content of a type to other values **liquid types**
     - liquid types refine using predicate expressions, rather than typings
     - liquid types rely on SMT solvers check refinements
-  - relate content of a type AND refine types in terms of typings **novel** 
+  - relate content of a type AND refine types in terms of subtypings **novel** 
     - obviate the need for outsourcing to SMT solver, 
     - allow reusing definitions for both checking and refinement
+    - avoid dependency on values
 
 -/
 
 -- example --
 /-
 
-let list = α : * => μ list . #nil:unit | #cons:(α;list)
+let list = α : * => μ list . #nil:unit ∨ #cons:(α;list)
 
-let nat = μ nat . #zero:unit | #succ:nat
+let nat = μ nat . #zero:unit ∨ #succ:nat
 
 let list_len = α : * => μ list_len . 
-  (#nil:unit ; #zero:unit) | 
-  {#cons(x,xs) , #succ n |  x,xs,n : (α;list_len)}
+  (#nil:unit ; #zero:unit) ∨ 
+  (#cons:(α;XS) ; #succ:N) @ XS;N <: list_len 
 
-let 4 = #succ (#succ (#succ (#succ (#zero ()))))
+-- list_len <: list;nat
+-- #nil(), #zero() : list_len
+-- (a,xs,n => #cons(a, xs), #succ n) : α;XS;N -> list_len 
 
-let list_4 = {xs | xs,4 : list_len nat}
 
-let list_n = n => {xs | xs,n : list_len nat}
+let {4} = #succ:#succ:#succ:#succ:#zero:unit
+
+let list_4 = XS @ XS;{4} <: list_len nat
+
+let list_n = n : * => XS @ XS;{n} <: list_len nat
 
 %check 1 :: 2 :: 3 :: 4 :: #nil : list_4
 
