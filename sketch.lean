@@ -117,7 +117,6 @@ v :: =                            value
 
 - A schema is a semantic notion that categorizes generic type forms 
   - predicativity is recognized by treating quantifiers as large types belonging to **
-    - unlike kinds which also belong to **, only terms, not types belong to 
     - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
   - universal and existential types quantify over types of kind *, resulting in types of kind **
   - these type quantifiers are primitive in this logic with refinement types, rather than dependent types
@@ -126,7 +125,6 @@ v :: =                            value
   - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
   - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
   - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
-
 - relational types
   - relate a type to parts of a product type via product subtyping **novel** 
     - obviate the need for outsourcing to SMT solver, 
@@ -136,12 +134,12 @@ v :: =                            value
     - liquid types refine using predicate expressions, rather than subtypings
     - liquid types rely on SMT solvers check refinements
     - liquid types may have dependencies on values
-  - inference of intersection types from subtyping relation **ML refinement types**
-    - ML refinement types of user-defined datatypes (variant types) are explicitly declared
-      - datatype creates a named supertype (upper) bound. A
-      - any type defined in terms of of the datatype's subtypes is defined as a datatype's subtype 
-    - ML refinement types' intersections of user-defined types are inferred from subtyping relations
-    - ML refinement types do not relate type to parts of a product type 
+- inference of intersection types from subtyping relation **ML refinement types**
+  - ML refinement types of user-defined datatypes (variant types) are explicitly declared
+    - datatype creates a named supertype (upper) bound. A
+    - any type defined in terms of of the datatype's subtypes is defined as a datatype's subtype 
+  - ML refinement types' intersections of user-defined types are inferred from subtyping relations
+  - ML refinement types do not relate type to parts of a product type 
 
 -/
 
