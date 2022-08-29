@@ -128,32 +128,43 @@ v :: =                            value
   - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
 
 - relational types
-  - a special kind of subtyping
-  - refine a type in terms of subtypings **refinement types in ML**
-  - relate content of a type to other values **liquid types**
-    - liquid types refine using predicate expressions, rather than typings
-    - liquid types rely on SMT solvers check refinements
-  - relate content of a type AND refine types in terms of subtypings **novel** 
+  - relate a type to parts of a product type via product subtyping **novel** 
     - obviate the need for outsourcing to SMT solver, 
-    - allow reusing definitions for both checking and refinement
-    - avoid dependency on values
+    - allow reusing definitions for both checking and constructing subtypes 
+    - avoid dependencies on values
+  - infer the intersection between types **ML refinement types**
+    - subtypes of datatypes (variant types) are explicitly declared
+    - intersections are inferred
+    - ML refinement types do not relate type to parts of a product type 
+  - relate a type to parts of a relation **liquid types**
+    - liquid types refine using predicate expressions, rather than subtypings
+    - liquid types rely on SMT solvers check refinements
+    - liquid types may have dependencies on values
 
 -/
 
 -- example --
 /-
 
-let list = α : * => μ list . #nil:unit ∨ #cons:(α;list)
-
 let nat = μ nat . #zero:unit ∨ #succ:nat
+
+let even = μ even . 
+  #zero:unit ∨ 
+  #succ:#succ:even 
+
+let even;odd = μ even;odd . 
+(
+  #zero:unit ∨ 
+  #succ:odd
+);(
+  #succ:even
+)
+
+let list = α : * => μ list . #nil:unit ∨ #cons:(α;list)
 
 let list_len = α : * => μ list_len . 
   (#nil:unit ; #zero:unit) ∨ 
   (#cons:(α;XS) ; #succ:N) @ XS;N <: list_len 
-
--- list_len <: list;nat
--- #nil(), #zero() : list_len
--- (a,xs,n => #cons(a, xs), #succ n) : α;XS;N -> list_len 
 
 
 let {4} = #succ:#succ:#succ:#succ:#zero:unit
