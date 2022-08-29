@@ -89,15 +89,6 @@ let t₁ = t₂ in t₃                 let t₁ : ? = τ₂ in t₃
 t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
 
 
-- collapsing types and terms is not necessary (yet)
-  - **CiC**
-
-- kinds are not necessary (yet)
-  - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
-  - it is useful for safely generalizing over type construcotrs rather than merely types 
-  - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
-  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
-
 - A schema is a type that quantifies over types 
   - predicativity is recognized by treating quantifiers as large types belonging to **
   - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
@@ -105,22 +96,35 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
   - these type quantifiers are primitive in this logic with refinement types, rather than dependent types
   - in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
 
-- relational types
+- relational types relate a type to parts of some relation 
   - relate a type to parts of a product type via product subtyping **novel** 
     - obviate the need for outsourcing to SMT solver, 
     - allow reusing definitions for both checking and constructing subtypes 
     - avoid dependencies on values
-  - relate a type to parts of a relation **liquid types**
-    - liquid types refine using predicate expressions, rather than subtypings
+
+  - relation as booean expression is not necessary (yet)
+    - boolean expressions relate parts of types using predicate expressions rather than subtypings **liquid types**
     - liquid types rely on SMT solvers check refinements
     - liquid types may have dependencies on values
-- inference of intersection types
+
+- refinement types are not necessary yet
   - inference based on subtyping relation **ML refinement types**
     - ML refinement types of user-defined datatypes (variant types) are explicitly declared
       - datatype creates a named supertype (upper) bound. A
       - any type defined in terms of of the datatype's subtypes is defined as a datatype's subtype 
     - ML refinement types' intersections of user-defined types are inferred from subtyping relations
     - ML refinement types do not relate type to parts of a product type 
+
+- kinds are not necessary (yet)
+  - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
+  - it is useful for safely generalizing over type construcotrs rather than merely types 
+  - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
+  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
+
+- collapsing types and terms is not necessary (yet)
+  - various abstraction and composition portions of types and terms are merged **CiC**
+
+
 
 -/
 
