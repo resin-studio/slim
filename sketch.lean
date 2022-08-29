@@ -26,10 +26,11 @@ Goals
   - accept error-free incomplete programs with type annotations 
 
 -/
+
 -- syntax
 /-
 
-l, x ∈ String                     symbol
+l, x, α ∈ String                     symbol
 
 cs ::=                            cases
   case t => t                     case singleton 
@@ -41,61 +42,23 @@ fs ::=                            fields
 
 t ::=                             term
   _                               irrelevant pattern / inferred expression
-  t : t                           typed pattern where τ : κ : **
   x                               variable expression / pattern
   ()                              unit expression / pattern
   #l t                            variant expression / pattern
   match t cs                      pattern matching 
   fs                              record expression / pattern
   t.l                             record projection
-  t : t => t                      function abstraction
+  t : τ => t                      function abstraction
   t t                             function application
-  let t : t = t in t              binding
+  α <: τ => t                     type abstraction
+  t[τ]                            type application 
+  let t : τ = t in t              binding
+  {τ, t} as ∃ α . τ               type packing 
+  let {α, t} = t in t             type unpacking
   fix t                           recursion
 
-  ?                               dynamic type : *
-  unit                            unit type : * 
-  #l : t                          variant type : *
-  .l : t                          field type : *
-  t -> t                          implication type where τ : * or higher kind where τ : **
-  t ∧ t                           intersection type : *
-  t ∨ t                           union type : *
-  ∀ x : t . t                     universal schema : **
-  ∃ x : t . t                     existential schema : **
-  μ x . t                         inductive type : *
-  t @ t <: t                      refinement type : * where τ : * 
-  *                               ground kind : **
-
-- collapse the syntax of type with term
-  - collapse type constructors, polymorphic terms, and lambdas into `t => t` **Cic** 
-  - consistent with Python's unstratified syntax
--/
-
-
--- syntactic sugar -- 
-/-
-t₁ , t₂                           .left t₁ .right t₂               -- product
-t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
-
-t₁ => t₂                          t₁ : ? => t₂                     
-let t₁ = t₂ in t₃                 let t₁ : ? = t₂ in t₃
-
--/
-
--- canonical form --
-/-
-
-vfs ::=                           value fields
-  .l v                            field singleton 
-  vfs .l v                        fields extended 
-
-v :: =                            value
-  ()                              unit
-  #l v                            variant
-  vfs                             record
-
 τ ::=                             type
-  x                               variable type : *
+  α                               variable type : *
   ?                               dynamic type : *
   unit                            unit type : *
   #l : τ                          variant type : *
@@ -103,28 +66,45 @@ v :: =                            value
   τ -> τ                          implication type where τ : * or higher kind where τ : **
   τ ∧ τ                           intersection type : *
   τ ∨ τ                           union type : *
-  ∀ x : τ . τ                     universal schema : **
-  ∃ x : τ . τ                     existential schema : **
-  μ x . t                         inductive type : *
+  ∀ α <: τ . τ                    universal schema : **
+  ∃ α <: τ . τ                    existential schema : **
+  μ α . t                         inductive type : *
+  α => τ                          type constructor abstraction
+  τ τ                             type constructor application
   τ @ τ <: τ                      refinement type : * where τ : * 
-  *                               ground kind : **
 
 Γ ::=                             context
   ·                               empty context
   Γ, x : τ                        context extended with indentifier and its type 
+  Γ, α <: τ                       context extended with indentifier and its super type 
 
 
+-- syntactic sugar -- 
+t₁ , t₂                           .left t₁ .right t₂               -- product
 
-- A schema is a semantic notion that categorizes generic type forms 
+t₁ => t₂                          t₁ : ? => t₂                     
+let t₁ = t₂ in t₃                 let t₁ : ? = τ₂ in t₃
+
+
+t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
+
+
+- collapsing types and terms is not necessary (yet)
+  - **CiC**
+
+- kinds are not necessary (yet)
+  - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
+  - it is useful for safely generalizing over type construcotrs rather than merely types 
+  - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
+  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
+
+- A schema is a type that quantifies over types 
   - predicativity is recognized by treating quantifiers as large types belonging to **
   - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
   - universal and existential types quantify over types of kind *, resulting in types of kind **
   - these type quantifiers are primitive in this logic with refinement types, rather than dependent types
   - in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
-- A kind is a semantic notion that categorizes type forms of varying arity 
-  - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
-  - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
-  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
+
 - relational types
   - relate a type to parts of a product type via product subtyping **novel** 
     - obviate the need for outsourcing to SMT solver, 
