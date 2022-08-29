@@ -127,7 +127,7 @@ v :: =                            value
   - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
   - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
 
-- refinement types / relational types
+- relational types
   - a special kind of subtyping
   - refine a type in terms of subtypings **refinement types in ML**
   - relate content of a type to other values **liquid types**
