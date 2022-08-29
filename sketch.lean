@@ -145,11 +145,13 @@ let even;odd = μ even;odd .
   #succ:even
 )
 
-let list = α : * => μ list . #nil:unit ∨ #cons:(α;list)
+let list α = μ list . #nil:unit ∨ #cons:(α;list)
 
-let list_len = α : * => μ list_len . 
+let list_len α = μ list_len . 
   (#nil:unit ; #zero:unit) ∨ 
   (#cons:(α;XS) ; #succ:N) @ XS;N <: list_len 
+
+- relational type `list_len` is similar to the measure concept in Synquid
 
 
 let {4} = #succ:#succ:#succ:#succ:#zero:unit
