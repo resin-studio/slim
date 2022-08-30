@@ -28,11 +28,12 @@ Concepts
   - incomplete programs: synthesizes terms from types
 
 - kinds
-  - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
+  - a kind categorizes a type or typerator by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
+  - keeping kinds syntactically distinct from types is useful for subtyping syntax in bounded quantification/typerator abstraction
   - a term satifies a type of higher kind if  it type checks with all of its arguments instantiated with the dynamic type 
   - it is useful for safely generalizing over type construcotrs rather than merely types 
   - τ : κ : **, i.e. a type belongs to a kind, which belongs to □ 
-  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to □ 
+  - τ => τ : κ -> κ : **, i.e. a typerator belongs to a kind, which belongs to □ 
 
 - A schema is a type that quantifies over types 
   - predicativity is recognized by treating quantifiers as large types belonging to □  
@@ -146,13 +147,17 @@ t ::=                             term
   ∀ α <: τ . τ                    universal schema : **
   ∃ α <: τ . τ                    existential schema : **
   μ α . t                         inductive type : *
-  α :: κ => τ                     type constructor abstraction
-  τ τ                             type constructor application
-  τ @ τ <: τ                      refinement type : * where τ : * 
+  α <: τ => τ                     typerator abstraction
+  τ τ                             typerator application
+  τ @ τ <: τ                      relational type : * where τ : * 
 
-κ ::=
-  *
-  κ => κ
+κ ::=                             kind
+  *                               ground kind
+  κ -> κ
+
+u ::=                             universe
+  □                               universe of schemas 
+  κ                               universe of small types
 
 Γ ::=                             context
   ·                               empty context
@@ -170,13 +175,57 @@ let t₁ = t₂ in t₃                 let t₁ : ? = τ₂ in t₃
 t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
 
 ?[*]                              ?                                -- dynamic type of ground kind 
-?[κ₁ => κ₂]                       α :: κ₁ => ?[κ₂]                 -- dynamic type of higher kind
+?[κ₁ -> κ₂]                       α <: ?[κ₁] => ?[κ₂]              -- dynamic type of higher kind
 
 -/
 
 
 -- semantics --
 /-
+
+----------------------------------------------------------------------------
+
+Γ ⊢ τ :: u                                universe-kinding
+
+
+α <: Γ
+Γ ⊢ τ :: κ 
+------------                              variable
+Γ ⊢ α :: κ
+
+
+Γ ⊢ τ₁ :: κ₁
+Γ, α <: τ₁ ⊢ τ₂ :: κ₂
+------------------------------            typerator abstraction
+Γ ⊢ α <: τ₁ => τ₂ :: κ₁ -> κ₂
+
+
+Γ ⊢ τ₁ :: κ₂ -> κ₁
+Γ ⊢ τ₂ :: κ₂
+------------------------------            typerator application
+Γ ⊢ τ₁ τ₂ :: κ₁
+
+
+Γ ⊢ τ₁ :: * 
+Γ ⊢ τ₂ :: *
+------------------------------            implication
+Γ ⊢ τ₁ -> τ₂ :: *
+
+
+Γ ⊢ τ₁ :: κ 
+Γ, α <: τ₁ ⊢ τ₂ :: * 
+------------------------------            universal (predicative)
+Γ ⊢ ∀ α <: τ₁ . τ₂ :: □ 
+
+
+Γ ⊢ τ₁ :: κ 
+Γ, α <: τ₁ ⊢ τ₂ :: * 
+------------------------------            existential (predicative)
+Γ ⊢ ∃ α <: τ₁ . τ₂ :: □ 
+
+
+------------------------------------------------------------------------
+
 
 Γ ⊢ τ <: τ                                consistent subtyping
 
@@ -185,10 +234,12 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
 Γ ⊢ τ ~ τ
 
 
+Γ ⊢ τ :: *
 ----------------                          dyno_right
 Γ ⊢ τ ~ ? 
 
 
+Γ ⊢ τ :: *
 ----------------                          dyno_left
 Γ ⊢ ? ~ τ 
 
@@ -214,7 +265,37 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
 Γ ⊢ τ₁ <: τ₃ 
 Γ, α <: τ₁ ⊢ τ₂ <: τ₄ 
 ---------------------------------------   existential
-Γ ⊢ (∃ α <: τ₁. τ₂)  <: (∃ α <: τ₃. τ₄)
+Γ ⊢ (∃ α <: τ₁. τ₂) <: (∃ α <: τ₃. τ₄)
+
+
+Γ ⊢ τ₃ <: τ₁
+Γ, α₁ <: τ₁ ⊢ τ₂ <: τ₄ 
+----------------------------------------- typerator abstraction
+Γ ⊢ (α₁ <: τ₁ => τ₂) <: (α₂ <: τ₃ => τ₄)
+
+
+Γ ⊢ τ₁ <: τ₂
+----------------------------------------- typerator application 
+Γ ⊢ τ₁ τ <: τ₂ τ
+
+
+Γ ⊢ τ covariant
+Γ ⊢ τ₁ <: τ₂
+----------------------------------------- typerator convariant 
+Γ ⊢ τ τ₁ <: τ τ₂
+
+
+Γ ⊢ τ contravariant
+Γ ⊢ τ₂ <: τ₁
+----------------------------------------- typerator contravariant
+Γ ⊢ τ τ₁ <: τ τ₂
+
+
+Γ ⊢ τ₁ :: u
+Γ ⊢ τ₂ :: u
+Γ ⊢ τ₁ ≃ τ₂ 
+-------------------------                 eq
+Γ ⊢ τ₁ <: τ₂
 
 
 Γ ⊢ τ₃ <: τ₁ 
@@ -259,6 +340,14 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
 Γ ⊢ τ <: τ₂  
 ------------------                        intersection
 Γ ⊢ τ <: τ₁ ∧ τ₂  
+
+
+
+
+--------------------------------------------------------------------------
+
+
+
 
 
 - too lenient vs too strict in the context of synthesis
