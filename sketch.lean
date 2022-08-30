@@ -51,7 +51,7 @@ t ::=                             term
   t : τ => t                      function abstraction
   t t                             function application
   α <: τ => t                     type abstraction
-  t[τ]                            type application 
+  t τ                             type application 
   let t : τ = t in t              binding
   {τ, t} as ∃ α . τ               type packing 
   let {α, t} = t in t             type unpacking
@@ -69,9 +69,13 @@ t ::=                             term
   ∀ α <: τ . τ                    universal schema : **
   ∃ α <: τ . τ                    existential schema : **
   μ α . t                         inductive type : *
-  α => τ                          type constructor abstraction
+  α :: κ => τ                     type constructor abstraction
   τ τ                             type constructor application
   τ @ τ <: τ                      refinement type : * where τ : * 
+
+κ ::=
+  *
+  κ => κ
 
 Γ ::=                             context
   ·                               empty context
@@ -88,16 +92,19 @@ let t₁ = t₂ in t₃                 let t₁ : ? = τ₂ in t₃
 
 t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
 
+?[*]                              ?                                -- dynamic type of ground kind 
+?[κ₁ => κ₂]                       α :: κ₁ => ?[κ₂]                 -- dynamic type of higher kind
+
 
 - kinds
   - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
   - a term satifies a type of higher kind if  it type checks with all of its arguments instantiated with the dynamic type 
   - it is useful for safely generalizing over type construcotrs rather than merely types 
-  - τ : κ : **, i.e. a type belongs to a kind, which belongs to ** 
-  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to ** 
+  - τ : κ : **, i.e. a type belongs to a kind, which belongs to □ 
+  - τ => τ : κ -> κ : **, i.e. a type constructor belongs to a kind, which belongs to □ 
 
 - A schema is a type that quantifies over types 
-  - predicativity is recognized by treating quantifiers as large types belonging to **
+  - predicativity is recognized by treating quantifiers as large types belonging to □  
   - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
   - universal and existential types quantify over types of kind *, resulting in types of kind **
   - these type quantifiers are primitive in this logic with refinement types, rather than dependent types
@@ -161,7 +168,7 @@ let list_4 = XS @ XS;{4} <: list_len nat
 
 let list_n = n : * => XS @ XS;{n} <: list_len nat
 
-%check 1 :: 2 :: 3 :: 4 :: #nil : list_4
+%check #cons 1,  #cons 2 #cons 3 , #cons 4 , #nil () : list_4
 
 -/
 
