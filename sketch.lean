@@ -7,94 +7,25 @@ type directed program synthesis for dynamic languages
 /-
 
 
-Dualities
-1. correctness: strict vs lenient
-  - strict: reject programs with errors 
-  - lenient: accept programs without errors 
-2. elaboration: forward vs backward 
-  - forward: incomplete types; infer types from terms
-  - backward: incomplete terms; synthesizes terms from types
-
 Goals
-1. strict/forward
-  - reject erroneous programs with incomplete types
-2. strict/backward
+1. strict/unannotated
+  - reject erroneous programs with unannotated types
+2. strict/incomplete
   - reject erroneous incomplete programs with type annotations 
-3. lenient/forward: 
+3. lenient/unannotated 
   - accept error-free programs with incomplete types
-4. lenient/backward
+4. lenient/incomplete
   - accept error-free incomplete programs with type annotations 
 
--/
 
--- syntax
-/-
+Concepts
+- correctness: strict vs lenient
+  - strict: reject programs with errors 
+  - lenient: accept programs without errors 
 
-l, x, α ∈ String                     symbol
-
-cs ::=                            cases
-  case t => t                     case singleton 
-  cs case t => t                  cases extended 
-
-fs ::=                            fields 
-  .l t                            field singleton 
-  fs .l t                         fields extended 
-
-t ::=                             term
-  _                               irrelevant pattern / inferred expression
-  x                               variable expression / pattern
-  ()                              unit expression / pattern
-  #l t                            variant expression / pattern
-  match t cs                      pattern matching 
-  fs                              record expression / pattern
-  t.l                             record projection
-  t : τ => t                      function abstraction
-  t t                             function application
-  α <: τ => t                     type abstraction
-  t τ                             type application 
-  let t : τ = t in t              binding
-  {τ, t} as ∃ α . τ               type packing 
-  let {α, t} = t in t             type unpacking
-  fix t                           recursion
-
-τ ::=                             type
-  α                               variable type : *
-  ?                               dynamic type : *
-  unit                            unit type : *
-  #l : τ                          variant type : *
-  .l : τ                          field type : *
-  τ -> τ                          implication type where τ : * or higher kind where τ : **
-  τ ∧ τ                           intersection type : *
-  τ ∨ τ                           union type : *
-  ∀ α <: τ . τ                    universal schema : **
-  ∃ α <: τ . τ                    existential schema : **
-  μ α . t                         inductive type : *
-  α :: κ => τ                     type constructor abstraction
-  τ τ                             type constructor application
-  τ @ τ <: τ                      refinement type : * where τ : * 
-
-κ ::=
-  *
-  κ => κ
-
-Γ ::=                             context
-  ·                               empty context
-  Γ, x : τ                        context extended with indentifier and its type 
-  Γ, α <: τ                       context extended with indentifier and its super type 
-
-
--- syntactic sugar -- 
-t₁ , t₂                           .left t₁ .right t₂               -- product
-
-t₁ => t₂                          t₁ : ? => t₂                     
-let t₁ = t₂ in t₃                 let t₁ : ? = τ₂ in t₃
-
-
-t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
-
-?[*]                              ?                                -- dynamic type of ground kind 
-?[κ₁ => κ₂]                       α :: κ₁ => ?[κ₂]                 -- dynamic type of higher kind
-
+- elaboration: unannotated types vs incomplete programs 
+  - unannotated types: infer types from terms
+  - incomplete programs: synthesizes terms from types
 
 - kinds
   - a kind categorizes a type or type constructor by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
@@ -171,6 +102,78 @@ let list_n = n : * => XS @ XS;{n} <: list_len nat
 %check #cons 1,  #cons 2 #cons 3 , #cons 4 , #nil () : list_4
 
 -/
+
+
+-- syntax
+/-
+
+l, x, α ∈ String                     symbol
+
+cs ::=                            cases
+  case t => t                     case singleton 
+  cs case t => t                  cases extended 
+
+fs ::=                            fields 
+  .l t                            field singleton 
+  fs .l t                         fields extended 
+
+t ::=                             term
+  _                               irrelevant pattern / inferred expression
+  x                               variable expression / pattern
+  ()                              unit expression / pattern
+  #l t                            variant expression / pattern
+  match t cs                      pattern matching 
+  fs                              record expression / pattern
+  t.l                             record projection
+  t : τ => t                      function abstraction
+  t t                             function application
+  α <: τ => t                     type abstraction
+  t τ                             type application 
+  let t : τ = t in t              binding
+  {τ, t} as ∃ α . τ               type packing 
+  let {α, t} = t in t             type unpacking
+  fix t                           recursion
+
+τ ::=                             type
+  α                               variable type : *
+  ?                               dynamic type : *
+  unit                            unit type : *
+  #l : τ                          variant type : *
+  .l : τ                          field type : *
+  τ -> τ                          implication type where τ : * or higher kind where τ : **
+  τ ∧ τ                           intersection type : *
+  τ ∨ τ                           union type : *
+  ∀ α <: τ . τ                    universal schema : **
+  ∃ α <: τ . τ                    existential schema : **
+  μ α . t                         inductive type : *
+  α :: κ => τ                     type constructor abstraction
+  τ τ                             type constructor application
+  τ @ τ <: τ                      refinement type : * where τ : * 
+
+κ ::=
+  *
+  κ => κ
+
+Γ ::=                             context
+  ·                               empty context
+  Γ, x : τ                        context extended with indentifier and its type 
+  Γ, α <: τ                       context extended with indentifier and its super type 
+
+
+-- syntactic sugar -- 
+t₁ , t₂                           .left t₁ .right t₂               -- product
+
+t₁ => t₂                          t₁ : ? => t₂                     
+let t₁ = t₂ in t₃                 let t₁ : ? = τ₂ in t₃
+
+
+t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
+
+?[*]                              ?                                -- dynamic type of ground kind 
+?[κ₁ => κ₂]                       α :: κ₁ => ?[κ₂]                 -- dynamic type of higher kind
+
+-/
+
 
 -- semantics --
 /-
