@@ -27,15 +27,7 @@ Concepts
   - unannotated types: infer types from terms
   - incomplete programs: synthesizes terms from types
 
-- kinds
-  - a kind categorizes a type or typerator by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
-  - keeping kinds syntactically distinct from types is useful for subtyping syntax in bounded quantification/typerator abstraction
-  - a term satifies a type of higher kind if  it type checks with all of its arguments instantiated with the dynamic type 
-  - it is useful for safely generalizing over type construcotrs rather than merely types 
-  - τ : κ : **, i.e. a type belongs to a kind, which belongs to □ 
-  - τ => τ : κ -> κ : **, i.e. a typerator belongs to a kind, which belongs to □ 
-
-- A schema is a type that quantifies over types 
+- A scheme is a type that quantifies over types 
   - predicativity is recognized by treating quantifiers as large types belonging to □  
   - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
   - universal and existential types quantify over types of kind *, resulting in types of kind **
@@ -63,6 +55,23 @@ Concepts
 
 - collapsing types and terms is not necessary (yet)
   - various abstraction and composition portions of types and terms are merged **CiC**
+
+
+- type equivalence
+  - evaluate types to normalized forms
+
+
+- kinds 
+  - kinding serves three purposes: 
+    - ensure wellformedness of types/typerators
+    - ensure certain arity of types/typerators 
+  - a kind categorizes a type or typerator by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
+  - keeping kinds syntactically distinct from types is useful for subtyping syntax in bounded quantification/typerator abstraction
+  - a term satifies a type of higher kind if  it type checks with all of its arguments instantiated with the dynamic type 
+  - it is useful for safely generalizing over type construcotrs rather than merely types 
+  - τ : κ : **, i.e. a type belongs to a kind, which belongs to □ 
+  - τ => τ : κ -> κ : **, i.e. a typerator belongs to a kind, which belongs to □ 
+
 
 
 
@@ -136,24 +145,24 @@ t ::=                             term
   fix t                           recursion
 
 τ ::=                             type
-  α                               variable type : *
-  ?                               dynamic type : *
-  unit                            unit type : *
-  #l : τ                          variant type : *
-  .l : τ                          field type : *
-  τ -> τ                          implication type where τ : * or higher kind where τ : **
-  τ ∧ τ                           intersection type : *
-  τ ∨ τ                           union type : *
-  ∀ α <: τ . τ                    universal schema : **
-  ∃ α <: τ . τ                    existential schema : **
-  μ α . t                         inductive type : *
+  α                               variable type :: *
+  ?                               dynamic type :: *
+  unit                            unit type :: *
+  #l : τ                          variant type :: *
+  .l : τ                          field type :: *
+  τ -> τ                          implication type :: * 
+  τ ∧ τ                           intersection type :: *
+  τ ∨ τ                           union type :: *
+  ∀ α <: τ . τ                    universal schema :: □ 
+  ∃ α <: τ . τ                    existential schema :: □ 
+  μ α . t                         inductive type :: *
   α <: τ => τ                     typerator abstraction
   τ τ                             typerator application
-  τ @ τ <: τ                      relational type : * where τ : * 
+  τ @ τ <: τ                      relational type :: * where τ :: * 
 
 κ ::=                             kind
   *                               ground kind
-  κ -> κ
+  τ -> κ
 
 u ::=                             universe
   □                               universe of schemas 
@@ -174,36 +183,102 @@ let t₁ = t₂ in t₃                 let t₁ : ? = τ₂ in t₃
 
 t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
 
-?[*]                              ?                                -- dynamic type of ground kind 
-?[κ₁ -> κ₂]                       α <: ?[κ₁] => ?[κ₂]              -- dynamic type of higher kind
 
 -/
 
 
 -- semantics --
+
 /-
 
 ----------------------------------------------------------------------------
 
+Γ ⊢ τ ≃ τ                                type equivalence
+
+α₁ <: τ ∈ Γ                              
+α₂ <: τ ∈ Γ                              
+------------                              variable 
+Γ ⊢ α₁ ≃ α₂                             
+
+
+-----------
+Γ ⊢ τ ≃ τ                                refl
+
+
+Γ ⊢ τ₂ ≃ τ₁                              
+-----------                               symm
+Γ ⊢ τ₁ ≃ τ₂                               
+
+
+Γ ⊢ τ₁ ≃ τ                              
+Γ ⊢ τ ≃ τ₂                              
+-----------                               trans
+Γ ⊢ τ₁ ≃ τ₂                               
+
+
+Γ ⊢ τ₁ ≃ τ₃                              
+Γ ⊢ τ₂ ≃ τ₄                              
+------------------------                     implication
+Γ ⊢ τ₁ -> τ₂ ≃ τ₃ -> τ₄                               
+
+
+Γ ⊢ τ₁ ≃ τ₃                              
+Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ ≃ τ₄                              
+fresh α₁
+fresh α₂
+-----------------------------------------    universal
+Γ ⊢ (∀ α₁ <: τ₁ . τ₂) ≃ (∀ α₂ <: τ₃ . τ₄)                               
+
+
+Γ ⊢ τ₁ ≃ τ₃                              
+Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ ≃ τ₄                              
+fresh α₁
+fresh α₂
+-----------------------------------------    existential
+Γ ⊢ (∃ α₁ <: τ₁ . τ₂) ≃ (∃ α₂ <: τ₃ . τ₄)                               
+
+
+Γ ⊢ τ₁ ≃ τ₃                              
+Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ ≃ τ₄                              
+fresh α₁
+fresh α₂
+-----------------------------------------    typerator abstraction
+Γ ⊢ (α₁ <: τ₁ => τ₂) ≃ (α₂ <: τ₃ => τ₄)                                
+
+
+Γ ⊢ τ₁ ≃ τ₃                                
+Γ ⊢ τ₂ ≃ τ₄                                
+-----------------------------------------    typerator application
+Γ ⊢ τ₁ τ₂ ≃ τ₃ τ₄                                
+
+
+-----------------------------------------    typerator abstraction application
+Γ ⊢ (α <: τ₁ => τ₂) τ₃ ≃ τ₄[α → τ₃]                                
+
+
+----------------------------------------------------------------------------
+
+
 Γ ⊢ τ :: u                                universe-kinding
 
 
-α <: Γ
-Γ ⊢ τ :: κ 
+α <: τ ∈ Γ
+Γ ⊢ τ :: u 
 ------------                              variable
-Γ ⊢ α :: κ
+Γ ⊢ α :: u 
 
 
-Γ ⊢ τ₁ :: κ₁
-Γ, α <: τ₁ ⊢ τ₂ :: κ₂
-------------------------------            typerator abstraction
-Γ ⊢ α <: τ₁ => τ₂ :: κ₁ -> κ₂
+Γ ⊢ τ₁ :: u 
+Γ, α <: τ₁ ⊢ τ₂ <: τ₁  
+--------------------------------------      typerator abstraction
+Γ ⊢ α <: τ₁ => τ₂ :: τ₁ -> u
 
 
-Γ ⊢ τ₁ :: κ₂ -> κ₁
-Γ ⊢ τ₂ :: κ₂
+Γ ⊢ τ₁ :: τ -> u
+Γ ⊢ τ₂ <: τ   
+Γ ⊢ τ :: u 
 ------------------------------            typerator application
-Γ ⊢ τ₁ τ₂ :: κ₁
+Γ ⊢ τ₁ τ₂ :: u
 
 
 Γ ⊢ τ₁ :: * 
@@ -224,7 +299,8 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
 Γ ⊢ ∃ α <: τ₁ . τ₂ :: □ 
 
 
-------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------
 
 
 Γ ⊢ τ <: τ                                consistent subtyping
@@ -236,16 +312,17 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
 
 Γ ⊢ τ :: *
 ----------------                          dyno_right
-Γ ⊢ τ ~ ? 
+Γ ⊢ τ <: ? 
 
 
 Γ ⊢ τ :: *
 ----------------                          dyno_left
-Γ ⊢ ? ~ τ 
+Γ ⊢ ? <: τ 
 
 
 Γ ⊢ τ₁ <: τ 
 Γ ⊢ τ <: τ₂
+τ :: u
 τ ≠ ?
 --------------                            trans
 Γ ⊢ τ₁ <: τ₂  
@@ -256,20 +333,32 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
 Γ ⊢ α <: τ  
 
 
+Γ ⊢ τ₁ :: u
+Γ ⊢ τ₃ :: u
 Γ ⊢ τ₃ <: τ₁ 
-Γ, α <: τ₃ ⊢ τ₂ <: τ₄ 
+Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ <: τ₄ 
+fresh α₁
+fresh α₂
 ---------------------------------------   universal
-Γ ⊢ (∀ α <: τ₁. τ₂)  <: (∀ α <: τ₃. τ₄)
+Γ ⊢ (∀ α₁ <: τ₁. τ₂)  <: (∀ α₂ <: τ₃. τ₄)
 
 
+Γ ⊢ τ₁ :: u
+Γ ⊢ τ₃ :: u
 Γ ⊢ τ₁ <: τ₃ 
-Γ, α <: τ₁ ⊢ τ₂ <: τ₄ 
+Γ, α₁ <: τ₁, α₂ <: τ₁ ⊢ τ₂ <: τ₄ 
+fresh α₁
+fresh α₂
 ---------------------------------------   existential
-Γ ⊢ (∃ α <: τ₁. τ₂) <: (∃ α <: τ₃. τ₄)
+Γ ⊢ (∃ α₁ <: τ₁. τ₂) <: (∃ α₂ <: τ₃. τ₄)
 
 
+Γ ⊢ τ₁ :: u
+Γ ⊢ τ₃ :: u
 Γ ⊢ τ₃ <: τ₁
-Γ, α₁ <: τ₁ ⊢ τ₂ <: τ₄ 
+Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ <: τ₄ 
+fresh α₁
+fresh α₂
 ----------------------------------------- typerator abstraction
 Γ ⊢ (α₁ <: τ₁ => τ₂) <: (α₂ <: τ₃ => τ₄)
 
@@ -279,13 +368,13 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
 Γ ⊢ τ₁ τ <: τ₂ τ
 
 
-Γ ⊢ τ covariant
+Γ ⊢ convariant τ
 Γ ⊢ τ₁ <: τ₂
 ----------------------------------------- typerator convariant 
 Γ ⊢ τ τ₁ <: τ τ₂
 
 
-Γ ⊢ τ contravariant
+Γ ⊢ contravariant τ
 Γ ⊢ τ₂ <: τ₁
 ----------------------------------------- typerator contravariant
 Γ ⊢ τ τ₁ <: τ τ₂
@@ -345,6 +434,13 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
 
 
 --------------------------------------------------------------------------
+
+
+Γ ⊢ t : τ :> τ                            type strenthening 
+
+
+----------------------------------------------------------------------------
+
 
 
 
