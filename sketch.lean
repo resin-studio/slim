@@ -152,20 +152,20 @@ t ::=                             term
   fix t                           recursion
 
 τ ::=                             type
-  α                               variable type :: *
-  ?                               dynamic type :: *
-  unit                            unit type :: *
-  #l : τ                          variant type :: *
-  .l : τ                          field type :: *
-  τ -> τ                          implication type :: * 
-  τ ∧ τ                           intersection type :: *
-  τ ∨ τ                           union type :: *
-  ∀ α <: τ . τ                    universal schema :: □ 
-  ∃ α <: τ . τ                    existential schema :: □ 
-  μ α . t                         inductive type :: *
+  α                               variable type
+  ?                               dynamic type
+  unit                            unit type
+  #l : τ                          variant type
+  .l : τ                          field type
+  τ -> τ                          implication type 
+  τ ∧ τ                           intersection type
+  τ ∨ τ                           union type
+  ∀ α <: τ . τ                    universal schema 
+  ∃ α <: τ . τ                    existential schema 
+  μ α . t                         inductive type
   α <: τ => τ                     typerator abstraction
   τ τ                             typerator application
-  τ @ τ <: τ                      relational type :: * where τ :: * 
+  τ @ τ <: τ                      relational type 
 
 κ ::=                             kind
   *τ                              ground kind
@@ -188,7 +188,6 @@ t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- 
 
 
 -- semantics --
-
 
 ----------------------------------------------------------------------------
 
@@ -251,6 +250,7 @@ fresh α₂
 Γ ⊢ τ₁ τ₂ ≃ τ₃ τ₄                                
 
 
+fresh α
 -----------------------------------------    typerator abstraction application
 Γ ⊢ (α <: τ₁ => τ₂) τ₃ ≃ τ₄[α → τ₃]                                
 
@@ -337,7 +337,7 @@ fresh α₂
 Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ <: τ₄ 
 fresh α₁
 fresh α₂
----------------------------------------   universal
+-----------------------------------------   universal
 Γ ⊢ (∀ α₁ <: τ₁. τ₂)  <: (∀ α₂ <: τ₃. τ₄)
 
 
@@ -347,7 +347,7 @@ fresh α₂
 Γ, α₁ <: τ₁, α₂ <: τ₁ ⊢ τ₂ <: τ₄ 
 fresh α₁
 fresh α₂
----------------------------------------   existential
+-----------------------------------------   existential
 Γ ⊢ (∃ α₁ <: τ₁. τ₂) <: (∃ α₂ <: τ₃. τ₄)
 
 
@@ -433,7 +433,7 @@ fresh α₂
 --------------------------------------------------------------------------
 
 
-Γ ⊢ t : τ :> τ                            type constraint strenthening 
+Γ ⊢ t : τ :> τ                            constraint supertyping 
 
 
 x : τ₂ ∈ Γ 
@@ -449,7 +449,7 @@ x : τ₂ ∈ Γ
 Γ ⊢ t₁ t₂ : τ₁ :> τ₃
 
 
--- from checking to HM strengening -- 
+-- from checking to HM strengthening -- 
 
 
 Γ ⊢ τ₁ :: *?
