@@ -1,24 +1,22 @@
+/-
+
 -- title --
-/-
-type directed program synthesis for dynamic languages
--/
-
--- introduction --
-/-
+type assisted program synthesis for dynamic languages
 
 
-Goals
+-- Goals --
 1. strict/unannotated
   - reject erroneous programs with unannotated types
 2. strict/incomplete
   - reject erroneous incomplete programs with type annotations 
+  - remove erroneous programs from search space for synthesis
 3. lenient/unannotated 
   - accept error-free programs with incomplete types
 4. lenient/incomplete
   - accept error-free incomplete programs with type annotations 
+  - include interesting programs in search space for synthesis
 
-
-Concepts
+-- Concepts --
 - correctness: strict vs lenient
   - strict: reject programs with errors 
   - lenient: accept programs without errors 
@@ -27,25 +25,55 @@ Concepts
   - unannotated types: infer types from terms
   - incomplete programs: synthesizes terms from types
 
+- kinds 
+  - kinding serves two purposes: 
+    - ensure wellformedness of types/typerators
+    - ensure certain arity of types/typerators 
+  - a kind categorizes a type or typerator by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
+  - keeping kinds syntactically distinct from types is useful for subtyping syntax in bounded quantification/typerator abstraction
+
 - A scheme is a type that quantifies over types 
   - predicativity is recognized by treating quantifiers as large types belonging to □  
   - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
-  - universal and existential types quantify over types of kind *, resulting in types of kind **
-  - these type quantifiers are primitive in this logic with refinement types, rather than dependent types
-  - in a stronger dependently typed / higher kinded logic, these types would be subsumed by implication 
 
 - relational types relate a type to parts of some relation 
+  - relate a type to parts of a relation **liquid types** 
+    - liquid types uses boolean expressions to relate parts of types rather than subtypings
+    - liquid types rely on SMT solvers check refinements
+    - liquid types may have dependencies on values
   - relate a type to parts of a product type via product subtyping **novel** 
+    - enforce that inductive subtype is decreasing pointwise to ensure termination e.g. `(.a #a A .b #b B) < (.a A .b B)`
     - obviate the need for outsourcing to SMT solver, 
     - allow reusing definitions for both checking and constructing subtypes 
     - avoid dependencies on values
 
-  - relation as booean expression is not necessary (yet)
-    - boolean expressions relate parts of types using predicate expressions rather than subtypings **liquid types**
-    - liquid types rely on SMT solvers check refinements
-    - liquid types may have dependencies on values
 
-- refinement types are not necessary yet
+- type equivalence
+  - evaluate types to normalized forms
+
+- consistent subtyping  
+  - incorporates dynamic type
+  - combine consistency with subtyping **gradual typing**
+    - gradual typing supplements subtyping with masking or separate consistency relation
+  - non-transitive dynamic subtyping **novel (maybe)** 
+    - prevents everything from subtyping 
+      e.g.
+      X <: ?    ? <: T
+      ------------------
+            X <: T  
+
+- constraint supertyping (type constraint strengthening)
+  - propagate types in both directions for a given term **roundtrip typing**
+  - collect and solve type constraints **hindley milner type system**
+    - HM finds the least super type satisfying constraints
+  - propagate types down and solve type constraints for all terms **novel** 
+  - finds a somewhat lenient super type satsifying constraints **novel**
+    - lenient to account for unforseen future constraints
+
+
+-- other unused concepts --
+
+- refinement types are not necessary (yet)
   - inference based on subtyping relation **ML refinement types**
     - ML refinement types of user-defined datatypes (variant types) are explicitly declared
       - datatype creates a named supertype (upper) bound. A
@@ -57,28 +85,7 @@ Concepts
   - various abstraction and composition portions of types and terms are merged **CiC**
 
 
-- type equivalence
-  - evaluate types to normalized forms
-
-
-- kinds 
-  - kinding serves three purposes: 
-    - ensure wellformedness of types/typerators
-    - ensure certain arity of types/typerators 
-  - a kind categorizes a type or typerator by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
-  - keeping kinds syntactically distinct from types is useful for subtyping syntax in bounded quantification/typerator abstraction
-  - a term satifies a type of higher kind if  it type checks with all of its arguments instantiated with the dynamic type 
-  - it is useful for safely generalizing over type construcotrs rather than merely types 
-  - τ : κ : **, i.e. a type belongs to a kind, which belongs to □ 
-  - τ => τ : κ -> κ : **, i.e. a typerator belongs to a kind, which belongs to □ 
-
-
-
-
--/
-
--- example --
-/-
+-- Examples --
 
 let nat = μ nat . #zero:unit ∨ #succ:nat
 
@@ -102,6 +109,11 @@ let list_len α = μ list_len .
 
 - relational type `list_len` is similar to the measure concept in Synquid
 
+- inductive dependent types have an isomorphic form
+inductive LL : list α -> nat -> type 
+| base : LL nil zero
+| step (x : α) : (LL xs n) -> LL (cons x xs) (succ n)
+
 
 let {4} = #succ:#succ:#succ:#succ:#zero:unit
 
@@ -111,13 +123,10 @@ let list_n = n : * => XS @ XS;{n} <: list_len nat
 
 %check #cons 1,  #cons 2 #cons 3 , #cons 4 , #nil () : list_4
 
--/
-
 
 -- syntax
-/-
 
-l, x, α ∈ String                     symbol
+l, x, α ∈ String                  symbol
 
 cs ::=                            cases
   case t => t                     case singleton 
@@ -135,7 +144,7 @@ t ::=                             term
   match t cs                      pattern matching 
   fs                              record expression / pattern
   t.l                             record projection
-  t : τ => t                      function abstraction
+  x : τ => t                      function abstraction
   t t                             function application
   α <: τ => t                     type abstraction
   t τ                             type application 
@@ -180,12 +189,8 @@ let t₁ = t₂ in t₃                 let t₁ : ? = τ₂ in t₃
 t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
 
 
--/
-
-
 -- semantics --
 
-/-
 
 ----------------------------------------------------------------------------
 
@@ -430,47 +435,32 @@ fresh α₂
 --------------------------------------------------------------------------
 
 
-Γ ⊢ t : τ :> τ                            type strenthening 
+Γ ⊢ t : τ :> τ                            type constraint strenthening 
+
+
+x : τ₂ ∈ Γ 
+τ₂ <: τ₁
+------------------                        variable
+Γ ⊢ x : τ₁ :> τ₂ 
+
+
+
+Γ ⊢ t₁ : ? -> τ₁ :> τ₂ -> τ₃ 
+Γ ⊢ t₂ : τ₂ :> τ₄
+-------------------------------            function application
+Γ ⊢ t₁ t₂ : τ₁ :> τ₃
+
+
+-- from checking to HM strengening -- 
+
+
+Γ ⊢ τ₁ :: *?
+Γ, x : τ₁ ⊢ t₂ : τ₂ 
+-----------------------------------       function abstraction
+Γ ⊢ x : τ₁ => t₂ : τ₁ -> t₂ 
 
 
 ----------------------------------------------------------------------------
 
-
-
-
-
-
-- too lenient vs too strict in the context of synthesis
-  - too lenient would result in a large search space 
-  - too strict would prevent generating intersting idiomatic programs
-
-- subtyping incorporates dynamic type 
-  - combine consistency with subtyping **gradual typing**
-    - gradual typing supplements subtyping with masking or separate consistency relation
-  - non-transitive dynamic subtyping **novel** 
-    - prevents everything from subtyping 
-      e.g.
-      X <: ?    ? <: T
-      ------------------
-            X <: T  
-
-
-Γ ⊢ t : τ :> τ                    type strengthening
-
-
-- propagate types down, delay subsumption 
-  - propgate types down, and infer types up **bidrectional typing**
-  - always propagate down, even if inferring upward **roundtrip typing**
-  - propagate dynamic types **novel**
-
-Γ ⊢ t : τ :> τ ~> t               term synthesis
-
-Γ C ⊢ ...                         constraint typing
-
-Γ C ⊢ τ <: x = τ                  constraint solving
-
-- find some super type satisfying constraints
-  - find the least super type satsifying constraints **HM(X)**
-  - find a somewhat lenient super type satsifying constraints **novel**
 
 -/
