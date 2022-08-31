@@ -1,7 +1,7 @@
 /-
 
 -- title --
-type assisted program synthesis for dynamic languages
+type assisted program synthesis for dynamically typed languages
 
 
 -- Goals --
@@ -32,11 +32,10 @@ type assisted program synthesis for dynamic languages
   - a kind categorizes a type or typerator by arity **Fω** - https://xavierleroy.org/CdF/2018-2019/2.pdf
   - keeping kinds syntactically distinct from types is useful for subtyping syntax in bounded quantification/typerator abstraction
 
-- A scheme is a type that quantifies over types 
-  - predicativity is recognized by treating quantifiers as large types belonging to □  
+- schemes 
   - predicativity is controlled by universes. **1ml** by Andreas Rossberg - https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf
 
-- relational types relate a type to parts of some relation 
+- relational types 
   - relate a type to parts of a relation **liquid types** 
     - liquid types uses boolean expressions to relate parts of types rather than subtypings
     - liquid types rely on SMT solvers check refinements
@@ -46,7 +45,6 @@ type assisted program synthesis for dynamic languages
     - obviate the need for outsourcing to SMT solver, 
     - allow reusing definitions for both checking and constructing subtypes 
     - avoid dependencies on values
-
 
 - type equivalence
   - evaluate types to normalized forms
@@ -71,9 +69,9 @@ type assisted program synthesis for dynamic languages
     - lenient to account for unforseen future constraints
 
 
--- other unused concepts --
+-- unused concepts --
 
-- refinement types are not necessary (yet)
+- refinement types
   - inference based on subtyping relation **ML refinement types**
     - ML refinement types of user-defined datatypes (variant types) are explicitly declared
       - datatype creates a named supertype (upper) bound. A
@@ -81,7 +79,7 @@ type assisted program synthesis for dynamic languages
     - ML refinement types' intersections of user-defined types are inferred from subtyping relations
     - ML refinement types do not relate type to parts of a product type 
 
-- collapsing types and terms is not necessary (yet)
+- collapsing types
   - various abstraction and composition portions of types and terms are merged **CiC**
 
 
