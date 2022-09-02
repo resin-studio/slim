@@ -4,17 +4,32 @@
 type assisted program synthesis for dynamically typed languages
 
 
--- Goals --
-1. strict/unannotated
-  - reject erroneous programs with unannotated types
-2. strict/incomplete
-  - reject erroneous incomplete programs with type annotations 
-  - remove erroneous programs from search space for synthesis
-3. lenient/unannotated 
-  - accept error-free programs with incomplete types
-4. lenient/incomplete
-  - accept error-free incomplete programs with type annotations 
-  - include interesting programs in search space for synthesis
+-- Objectives --
+- Balance the following criteria:
+  1. strict/unannotated **Standard ML**
+    - reject erroneous programs with unannotated types
+  2. strict/incomplete **Synquid**
+    - reject erroneous incomplete programs with type annotations 
+    - remove erroneous programs from search space for synthesis
+  3. lenient/unannotated **Pytype**
+    - accept error-free programs with incomplete types
+  4. lenient/incomplete **novel**
+    - accept error-free incomplete programs with type annotations 
+    - include interesting programs in search space for synthesis
+- In exchange of soundness, offer automation for an expressive programming language
+  - first-class functions
+  - open recursion
+  - variants, records
+  - pattern matching
+  - record projection
+- In exchange of automation, offer soundness for an expressive annotation language
+  - intersection types, union types
+  - variant types, field types
+  - inductive types
+  - universal types, existential types 
+  - type operations
+  - boundend types
+  - relational types
 
 -- Concepts --
 - correctness: strict vs lenient
