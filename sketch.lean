@@ -8,13 +8,13 @@ type assisted program synthesis for dynamically typed languages
 - Balance correctness and elaboration criteria:
   1. strict/unannotated **Standard ML**
     - reject erroneous programs with unannotated types
-  2. strict/incomplete **Synquid**
-    - reject erroneous incomplete programs with type annotations 
+  2. strict/incomplete 
+    - reject erroneous incomplete programs **Synquid**
     - remove erroneous programs from search space for synthesis
-  3. lenient/unannotated **Pytype**
-    - accept error-free programs with incomplete types
-  4. lenient/incomplete **novel**
-    - accept error-free incomplete programs with type annotations 
+  3. lenient/unannotated 
+    - accept error-free programs with unannotated types **Pytype**
+  4. lenient/incomplete
+    - accept error-free incomplete programs 
     - include interesting programs in search space for synthesis
 - In exchange of soundness, offer automation for an expressive programming language
   - first-class functions
