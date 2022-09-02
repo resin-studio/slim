@@ -121,8 +121,11 @@ let list_len α = μ list_len .
   (#cons:(α;XS) ; #succ:N) @ XS;N <: list_len 
 
 - relational type `list_len` is similar to the measure concept in Synquid
+- relational types correspond with inductive dependent types and logic programming horn clauses
 
-- inductive dependent types have an isomorphic form
+list_len nil zero
+list_len (cons x xs) (succ n) :- list_len xs n 
+
 inductive LL : list α -> nat -> type 
 | base : LL nil zero
 | step (x : α) : (LL xs n) -> LL (cons x xs) (succ n)
