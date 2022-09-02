@@ -5,7 +5,7 @@ type assisted program synthesis for dynamically typed languages
 
 
 -- Objectives --
-- Balance the following criteria:
+- Balance correctness and elaboration criteria:
   1. strict/unannotated **Standard ML**
     - reject erroneous programs with unannotated types
   2. strict/incomplete **Synquid**
