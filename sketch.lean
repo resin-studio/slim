@@ -1,10 +1,71 @@
 /-
 
 -- title --
-type assisted program synthesis for dynamically typed languages
+type guided program synthesis for dynamically typed languages
 
 
--- Objectives --
+-- criteria --
+- correctness: strict and lenient
+  - strict: reject programs with errors 
+  - lenient: accept programs without errors 
+
+- elaboration: unannotated types and incomplete terms 
+  - unannotated types: infer types from terms
+  - incomplete terms: synthesizes terms from types
+
+- expressivity: types (specs) vs terms (programs) 
+  - expressive programs: powerful features that can be combined with few restrictions
+  - expressive types: granular decidable descriptions  
+
+-- objective --
+  - Slim Logic
+    - strict: very good, not sound 
+    - lenient: very good, incomplete
+    - type inference: very good, nearly complete
+    - term synthesis: good 
+    - term expressivity: very good, 
+      - in exchange of sound correctness
+      - impredicative polymorphism, pattern matching, variants, records, open recursion  
+    - type expressivity: very good
+      - in exchange of type inference
+      - impredicative types, relational inductive types, intersection types, union types, variant types, field types
+
+-- benchmarks --
+  - Standard ML
+    - strict: best, sound 
+    - lenient: decent, incomplete
+    - type inference: very good, nearly complete
+    - term synthesis: none
+    - term expressivity: good 
+      -- predicative polymorphism, pattern matching, variants, records, mutual recursion  
+    - type expressivity: good 
+      - predicative types, restricted induction types (datatypes), variant types (datatypes), record types 
+
+  - Synquid 
+    - strict: best, sound 
+    - lenient: decent, incomplete
+    - type inference: decent
+    - term synthesis: good 
+    - term expressivity: good 
+      -- predicative polymorphism, pattern matching, variants, records, mutual recursion  
+    - type expressivity: good 
+      - predicative types, restricted induction types (datatypes), 
+      - relational refinement types (liquid types)
+      - variant types (datatypes), record types 
+
+  - Pytype 
+    - strict: decent, unsound 
+    - lenient: good, incomplete
+    - type inference: good 
+    - term synthesis: none 
+    - term expressivity: very good, 
+      - in exchange of sound correctness
+      - impredicative polymorphism, pattern matching, variants, records, open recursion  
+    - type expressivity: good
+      - impredicative types, record types, union types, variant types, field types
+
+
+
 - Balance correctness and elaboration criteria:
   1. strict/unannotated **Standard ML**
     - reject erroneous programs with unannotated types
@@ -32,13 +93,6 @@ type assisted program synthesis for dynamically typed languages
   - relational types
 
 -- Concepts --
-- correctness: strict vs lenient
-  - strict: reject programs with errors 
-  - lenient: accept programs without errors 
-
-- elaboration: unannotated types vs incomplete programs 
-  - unannotated types: infer types from terms
-  - incomplete programs: synthesizes terms from types
 
 - kinds 
   - kinding serves two purposes: 
