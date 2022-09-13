@@ -530,28 +530,32 @@ true ⊩ τ₂ <: τ₁
 Γ ⊢ x : τ₁ :> τ₂ ⊣ true
 
 
-x : ∀ α <: τ₂ @ D . τ₃ ∈ Γ 
-Γ ; C ∧ α <: τ₂ ∧ D ⊩ τ₃ <: τ₁ # solve/decide constraint here
---------------------------------------             variable
-Γ ⊢ x : τ₁ :> τ₃ ⊣ C ∧ α <: τ₂ ∧ D 
+fresh αᵢ # (τ₁)
+x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ 
+OPTION A: Γ ; αᵢ <: τᵢ ∧ D ⊩ τ₂ <: τ₁ # solve/decide constraint here
+OPTION B: (Γ ⊩ (∃ αᵢ <: τᵢ @ (D ∧ τ₂ <: τ₁)) # solve/decide constraint here
+-----------------------------------------------------             variable
+Γ ⊢ x : τ₁ :> τ₂ ⊣ αᵢ <: τᵢ ∧ D 
 
 
 
-x : ∀ α <: τ₂ @ D . τ₃ ∈ Γ 
+fresh αᵢ in (τ₁)
+x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ 
 -------------------------------------------------             variable
-Γ ⊢ x : τ :> τ₃ ⊣ C ∧ (∀ α <: τ₂ @ D . τ₃) -< τ  #separate deciding/solving constraint from generating constraint
+OPTION A: Γ ⊢ x : τ₁ :> τ₂ ⊣ (∀ αᵢ <: τᵢ @ D . τ₂) -< τ₁  #separate deciding/solving constraint from generating constraint
+OPTION B: Γ ⊢ x : τ₁ :> τ₂ ⊣ (∃ αᵢ <: τᵢ @ (D ∧ τ₂ <: τ₁))  #separate deciding/solving constraint from generating constraint
 
 
 fresh αᵢ # (C, Γ)
 fresh αⱼ # (αᵢ, C, Γ)
 
-τ = ∀ αⱼ <: τⱼ @ Cⱼ
+τ = ∀ αⱼ <: τⱼ @ D 
 
 Γ ⊢ t₁ : τ :> _ ⊣ D 
 
-Γ, x : ∀αᵢ <: ? . τ[? → αᵢ] ⊢ t₂ : τ₁ :> τ₂ ⊣ C ∧ ∃ αᵢ <: ? @ ∃ αⱼ <: τⱼ[? → αᵢ] @ D
+Γ, x : ∀αᵢ <: ? . τ[? → αᵢ] ⊢ t₂ : τ₁ :> τ₂ ⊣ ∃ αᵢ <: ? @ ∃ αⱼ <: τⱼ[? → αᵢ] @ D
 ---------------------------------------------------------------------------------------       let 
-Γ ⊢ (let x : τ = t₁ in t₂) : τ₁ :> τ₂ ⊣ C ∧ ∃ αᵢ <: ? @ ∃ αⱼ <: τⱼ[? → αᵢ] @ D
+Γ ⊢ (let x : τ = t₁ in t₂) : τ₁ :> τ₂ ⊣ ∃ αᵢ <: ? @ ∃ αⱼ <: τⱼ[? → αᵢ] @ D
 
 
 
