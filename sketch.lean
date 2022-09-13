@@ -530,11 +530,16 @@ true ⊩ τ₂ <: τ₁
 Γ ⊢ x : τ₁ :> τ₂ ⊣ true
 
 
-x : ∀ α <: τ₂ @ C . τ₃ ∈ Γ 
-Γ ; α <: τ₂ ∧ C ⊩ τ₃ <: τ₁
+x : ∀ α <: τ₂ @ D . τ₃ ∈ Γ 
+Γ ; C ∧ α <: τ₂ ∧ D ⊩ τ₃ <: τ₁ # solve/decide constraint here
 --------------------------------------             variable
-Γ ⊢ x : τ₁ :> τ₃ ⊣ Γ ; α <: τ₂ ∧ C 
+Γ ⊢ x : τ₁ :> τ₃ ⊣ C ∧ α <: τ₂ ∧ D 
 
+
+
+x : ∀ α <: τ₂ @ D . τ₃ ∈ Γ 
+-------------------------------------------------             variable
+Γ ⊢ x : τ :> τ₃ ⊣ C ∧ (∀ α <: τ₂ @ D . τ₃) -< τ  #separate deciding/solving constraint from generating constraint
 
 
 fresh αᵢ # (C, Γ)
