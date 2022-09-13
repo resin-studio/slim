@@ -538,6 +538,12 @@ OPTION B: (Γ ⊩ (∃ αᵢ <: τᵢ @ (D ∧ τ₂ <: τ₁)) # solve/decide c
 Γ ⊢ x : τ₁ :> τ₂ ⊣ αᵢ <: τᵢ ∧ D 
 
 
+What's the advantage of separating deciding of the constraint?
+Where does deciding the constraint move to?
+Deciding the constraint involves solving for type variables.
+Solving for type variables is necessary to provide human-readable results to queries.
+Solving for type variables and type equivalence are special cases of type-level computation
+
 
 fresh αᵢ in (τ₁)
 x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ 
