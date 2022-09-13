@@ -503,6 +503,61 @@ fresh α₂
 
 
 --------------------------------------------------------------------------
+NOTES:
+- C, Γ ⊢ t : τ :> τ
+- constraint type inference:
+  - produce a constraint C = ⟦Γ ⊢ t : τ⟧ that is both sufficient and necessary for C, Γ ⊢ t : τ to hold
+  - can we relax the sufficient and necessary criteria? necessary but not sufficient (unsound)? 
+- what should be the relationship between type variables in Γ and type variables in C?
+  - can Γ and C be merged by having constraints as a part of τ?
+- HM(X) presentation reuses term variables as scheme variables
+- modify HM(X) by creating a fresh type variable in let binding 
+- combine the declarative HM(X) (10-7) with constraint generation function (10-9)
+  - maybe  Γ ⊢ t : τ :> τ ⊣ C
+- type solving can be combined with type equivalence
+- how does type computation relate to more general constraints?
+- should kind carry a constraint, rather than just a type?
+
+
+
+
+--------------------------------------------------------------------------------------
+Γ ⊢ t : τ :> τ ⊣ C                  constraint supertyping
+
+x : τ₂ ∈ Γ 
+true ⊩ τ₂ <: τ₁
+-------------------------                    variable
+Γ ⊢ x : τ₁ :> τ₂ ⊣ true
+
+
+x : ∀ α <: τ₂ @ C . τ₃ ∈ Γ 
+Γ ; α <: τ₂ ∧ C ⊩ τ₃ <: τ₁
+--------------------------------------             variable
+Γ ⊢ x : τ₁ :> τ₃ ⊣ Γ ; α <: τ₂ ∧ C 
+
+
+
+fresh αᵢ # (C, Γ)
+fresh αⱼ # (αᵢ, C, Γ)
+
+τ = ∀ αⱼ <: τⱼ @ Cⱼ
+
+Γ ⊢ t₁ : τ :> _ ⊣ D 
+
+Γ, x : ∀αᵢ <: ? . τ[? → αᵢ] ⊢ t₂ : τ₁ :> τ₂ ⊣ C ∧ ∃ αᵢ <: ? @ ∃ αⱼ <: τⱼ[? → αᵢ] @ D
+---------------------------------------------------------------------------------------       let 
+Γ ⊢ (let x : τ = t₁ in t₂) : τ₁ :> τ₂ ⊣ C ∧ ∃ αᵢ <: ? @ ∃ αⱼ <: τⱼ[? → αᵢ] @ D
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------------------
+
 
 
 Γ ⊢ t : τ :> τ                            constraint supertyping 
