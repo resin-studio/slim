@@ -523,23 +523,36 @@ NOTES:
 
 --------------------------------------------------------------------------------------
 constraint supertyping
-Γ ⊢ t : τ :> τ ⊣ C                  
+Γ ⊢ t : τ :> τ                 
+
+
+- constraints are turned inside out
+- there are no constraint combinators, only type combinators
+- there is only one constraint predicate: subtyping (≤)
+- combining constraints requires combining types and applying subtyping 
+- true ≅ _ ≤ ⊤
+- false ≅ _ ≤ ⊥
+- α₁ ≤ α₂ and β₁ ≤ β₂ ≅ α₁ ; β₁ ≤ α₂ ; β₂  
+
 
 
 variable
 - decide constraint here instead of separate subsumption rule
 - constraint check also solves and unifies
-    - e.g. Γ ; _ ⊩ dict[α, β] <: dict[str, ?] ⊣ Γ, α <: str, β <: ? 
+    - e.g. Γ ⊩ (∃ α ≤ ?, β ≤ ? . dict[α, β]) ≤ dict[str, ?] ~> α ≤ str, β ≤ ? 
+
 - might need to do renaming here to avoid collisions
 - or incorporate existential constraints
 - an existential constraint carries variables that should be renamed for broader contextfresh αᵢ # τ₁
   - however, we have separated the supertyping from the constraint
 
-x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ 
-fresh αᵢ # Γ  
-Γ ; αᵢ <: τᵢ ∧ D ⊩ τ₂ <: τ₁ ⊣ Γ'        
+using existential constraint type
+- Δ' contains tighter bounts on αᵢ
+
+(x : ∀ Δ ⟨C⟩ . τ₂) ∈ Γ 
+Γ ⊩ (∃ Δ ⟨C⟩ . τ₂) ≤ τ₁ ~> Δ'    
 -----------------------------------------------------             
-Γ ⊢ x : τ₁ :> τ₂ ⊣ Γ' ; αᵢ <: τᵢ ∧ D 
+Γ ⊢ x : τ₁ ≥ (∃ Δ' ⟨C⟩ . τ₂)
 
 
 let binding
@@ -548,34 +561,62 @@ let binding
 - fresh names are inferred from inductive call for any unknown/dynamic parts of a type annotation
 - fresh names should be replaced by any known parts of type annotation  
 - fresh name constraints are simply included in generetated Γ'
-  - e.g. Γ ⊢ {} : dict[str, ?] :> dict[α, β] ⊣ Γ, α <: str, β <: ? 
+  - e.g. Γ ⊢ {} : dict[str, ?] ≥ ∃ α ≤ ?, β ≤ ? . dict[α, β] ⊣ α ≤ str, β ≤ ? 
     - add solve/unify feature to constraint check
 - TODO: check if inductive calls should generate the same constraints
 
-Γ ⊢ t₁ : τ :> τ₁ ⊣ Γ' ; C ∧ D       
-fresh αᵢ # (τ, Γ, C) 
-Γ', x : ∀ αᵢ <: ?ᵢ @ D . τ₁ ⊢ t₂ : τ₂ :> τ₃ ⊣ Γ', αᵢ <: ?ᵢ ; C ∧ D  
+existential constraint types serve three purposes:
+1. type inference: carries inferred constraints on types 
+2. relational specification: constrains subportions of types
+3. information hiding:
+
+using existential constraint type
+
+Γ ⊢ t₁ : τ ≥ (∃ Δ₁ ⟨C ∧ D⟩ . τ₁)     
+Δ₂ # (τ, Γ, C)
+Γ, Δ₁, (x : ∀ Δ₂ ⟨D⟩ -> τ₁) ⊢ t₂ : τ₂ ≥ (∃ Δ₂ ⟨C ∧ D⟩ . τ₃) 
 ------------------------------------------------------------------------
-Γ ⊢ (let x : τ = t₁ in t₂) : τ₂ :> τ₃ ⊣ Γ', αᵢ <: ?ᵢ ; C ∧ D
+Γ ⊢ (let x : τ = t₁ in t₂) : τ₂ ≥ (∃ Δ₂ ⟨C ∧ D⟩ . τ₃)
 
 
 function abstraction
 - fresh names are created for unknown/dynamic subparts of type annotation
 
-Γ ⊢ τ :: *?
-τ₃ = τ[?/αᵢ]  fresh αᵢ # (Γ)   
-Γ, x : τ₃ ⊢ t₂ : τ₂ :> τ₄ ⊣ Γ' ; C 
+
+Γ ⊢ τ₃ ∷ *?
+Δ # Γ
+Γ, Δ, x ∶ τ₃[?/Δ] ⊢ t : τ₂ ≥ τ₄
 ---------------------------------------------------------------------       
-Γ ⊢ x : τ => t₂ : τ₁ -> τ₂ :> τ₃ -> τ₄ ⊣ Γ' ; C 
+Γ ⊢ x : τ₃ => t : τ₁ -> τ₂ ≥ (∃ Δ . τ₃[?/Δ] -> τ₄)
+
 
 
 function application
-- unify τ₂ <: ?, τ₃ <: τ₁, τ₄ <: τ₂ via inductive calls
 
-Γ ⊢ t₁ : ? -> τ₁ :> τ₂ -> τ₃ ⊣ Γ' ; C₁
-Γ' ⊢ t₂ : τ₂ :> τ₄ ⊣ Γ'' ; C₂ 
+
+Γ ⊢ t₁ : ? -> τ₁ ≥ ∀ Δ ⟨C⟩ . τ₂ -> τ₃
+Δ # Γ
+Γ, Δ ⊢ t₂ : τ₂ ≥ τ₄
 ---------------------------------------- 
-Γ ⊢ t₁ t₂ : τ₁ :> τ₃ ⊣ Γ'' ; C₁ ∧ C₂
+Γ ⊢ t₁ t₂ : τ₁ ≥ ∃ Δ ⟨C ∧ τ₄ ≤ τ₂⟩ . τ₃
+
+-
+- let foo (xs : α, x : β) -> ω = x :: xs  
+- 
+- xs : α, 
+- x : β, 
+- (x :: xs) : (∃ X ≤ (α | β). list X) ≤ ω
+- 
+- ~> ω ≤ list (α | β)
+- 
+- foo ([1], "hello") = ["hello", 1]
+- 
+- 
+- list int ; str ≤ α ; β 
+- 
+- list int ≤ α
+- str ≤ β
+
 
 
 ----------------------------------------------------------------------------------
