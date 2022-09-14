@@ -536,15 +536,20 @@ x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ fresh αᵢ # (τ₁)
 
 
 
-
 let binding
 
 -- naming dynamic subparts is handles by recursive type inference
 -- fresh names are inferred from inductive call for any unknown/dynamic parts of a type annotation
-Γ ⊢ t₁ : τ :> τ₁ ⊣ Γ' ; C ∧ D       fresh αᵢ # (τ, Γ, C) 
-Γ', x : ∀ αᵢ <: ?ᵢ . τ₁ ⊢ t₂ : τ₂ :> τ₃ ⊣ Γ', αᵢ <: ?ᵢ ; C ∧ D  
+-- fresh names should be replaced by any known parts of type annotation  
+-- fresh name constraints are simply included in generetated Γ'
+    e.g. Γ ⊢ {} : dict[str, ?] :> dict[α, β] ⊣ Γ, α <: str, β <: ? 
+    - add solve/unify feature to constraint check
+-- TODO: check if inductive calls should generate the same constraints
+Γ ⊢ t₁ : τ :> τ₁ ⊣ Γ' ; C ∧ D       
+fresh αᵢ # (τ, Γ, C) 
+Γ', x : ∀ αᵢ <: ?ᵢ @ D . τ₁ ⊢ t₂ : τ₂ :> τ₃ ⊣ Γ', αᵢ <: ?ᵢ ; C ∧ D  
 ------------------------------------------------------------------------
-Γ ⊢ (let x : τ = t₁ in t₂) : τ₂ :> τ₃ ⊣ Γ', αᵢ <: ?ᵢ ; C ∧ D 
+Γ ⊢ (let x : τ = t₁ in t₂) : τ₂ :> τ₃ ⊣ Γ', αᵢ <: ?ᵢ ; C ∧ D
 
 
 function abstraction
