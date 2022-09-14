@@ -531,12 +531,12 @@ variable
 - constraint check also solves and unifies
     - e.g. Γ ; _ ⊩ dict[α, β] <: dict[str, ?] ⊣ Γ, α <: str, β <: ? 
 
-x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ fresh αᵢ # (τ₁)
+fresh αᵢ # τ₁
+x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ 
+fresh αᵢ # Γ
 Γ ; αᵢ <: τᵢ ∧ D ⊩ τ₂ <: τ₁ ⊣ Γ'        
 -----------------------------------------------------             
 Γ ⊢ x : τ₁ :> τ₂ ⊣ Γ' ; αᵢ <: τᵢ ∧ D 
-
-
 
 
 let binding
