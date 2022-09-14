@@ -522,66 +522,41 @@ NOTES:
 
 
 --------------------------------------------------------------------------------------
-Γ ⊢ t : τ :> τ ⊣ C                  constraint supertyping
-
-x : τ₂ ∈ Γ 
-true ⊩ τ₂ <: τ₁
--------------------------                    variable
-Γ ⊢ x : τ₁ :> τ₂ ⊣ true
+constraint supertyping
+Γ ⊢ t : τ :> τ ⊣ C                  
 
 
-fresh αᵢ # (τ₁)
-x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ 
-OPTION A: Γ ; αᵢ <: τᵢ ∧ D ⊩ τ₂ <: τ₁ # solve/decide constraint here
-OPTION B: (Γ ⊩ (∃ αᵢ <: τᵢ @ (D ∧ τ₂ <: τ₁)) # solve/decide constraint here
------------------------------------------------------             variable
-Γ ⊢ x : τ₁ :> τ₂ ⊣ αᵢ <: τᵢ ∧ D 
-
-
-IDEAL?
-fresh αᵢ # (τ₁)
-x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ 
-Γ ; αᵢ <: τᵢ ∧ D ⊩ τ₂ <: τ₁          # solve/decide constraint here
------------------------------------------------------             variable
-Γ ⊢ x : τ₁ :> τ₂ ⊣ αᵢ <: τᵢ ∧ D 
-
-
-What's the advantage of separating deciding of the constraint?
-Where does deciding the constraint move to?
-Deciding the constraint involves solving for type variables.
-Solving for type variables is necessary to provide human-readable results to queries.
-Solving for type variables and type equivalence are special cases of type-level computation
-
-
-
-fresh αᵢ in (τ₁)
-x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ 
--------------------------------------------------             variable
-OPTION A: Γ ⊢ x : τ₁ :> τ₂ ⊣ (∀ αᵢ <: τᵢ @ D . τ₂) -< τ₁  #separate deciding/solving constraint from generating constraint
-OPTION B: Γ ⊢ x : τ₁ :> τ₂ ⊣ (∃ αᵢ <: τᵢ @ (D ∧ τ₂ <: τ₁))  #separate deciding/solving constraint from generating constraint
-
-
-
-Do we need existential constraints if we do checks with the proper contexxt?
-
-fresh αᵢ # (Γ)
-fresh αⱼ # (αᵢ, Γ)
-τ = ∀ αⱼ <: τⱼ @ D 
-Γ ⊢ t₁ : τ :> _ ⊣ D 
-Γ, x : ∀αᵢ <: ? . τ[? → αᵢ] ⊢ t₂ : τ₁ :> τ₂ ⊣ ∃ αᵢ <: ? @ ∃ αⱼ <: τⱼ[? → αᵢ] @ D
----------------------------------------------------------------------------------------       let 
-Γ ⊢ (let x : τ = t₁ in t₂) : τ₁ :> τ₂ ⊣ ∃ αᵢ <: ? @ ∃ αⱼ <: τⱼ[? → αᵢ] @ D
+variable
+-- decide constraint here instead of separate subsumption rule
+x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ fresh αᵢ # (τ₁)
+Γ ; αᵢ <: τᵢ ∧ D ⊩ τ₂ <: τ₁          
+-----------------------------------------------------             
+Γ ⊢ x : τ₁ :> τ₂ ⊣ Γ ; αᵢ <: τᵢ ∧ D 
 
 
 
 
 
+let binding
+
+-- naming dynamic subparts is handles by recursive type inference
+-- fresh names are inferred from inductive call for any unknown/dynamic parts of a type annotation
+Γ ⊢ t₁ : τ :> τ₁ ⊣ Γ' ; C ∧ D       fresh αᵢ # (τ, Γ, C) 
+Γ', x : ∀ αᵢ <: ?ᵢ . τ₁ ⊢ t₂ : τ₂ :> τ₃ ⊣ Γ', αᵢ <: ?ᵢ ; C ∧ D  
+------------------------------------------------------------------------
+Γ ⊢ (let x : τ = t₁ in t₂) : τ₂ :> τ₃ ⊣ Γ', αᵢ <: ?ᵢ ; C ∧ D 
 
 
+function abstraction
+-- fresh names are created for unknown/dynamic subparts of type annotation
+Γ ⊢ τ :: *?
+τ₃ = τ[?/αᵢ]  fresh αᵢ # (Γ)   
+Γ, x : τ₃ ⊢ t₂ : τ₂ :> τ₄ ⊣ Γ' ; C 
+---------------------------------------------------------------------       
+Γ ⊢ x : τ => t₂ : τ₁ -> τ₂ :> τ₃ -> τ₄ ⊣ Γ' ; C 
 
 
 ----------------------------------------------------------------------------------
-
 
 
 Γ ⊢ t : τ :> τ                            constraint supertyping 
@@ -606,7 +581,24 @@ x : τ₂ ∈ Γ
 Γ ⊢ τ₁ :: *?
 Γ, x : τ₁ ⊢ t₂ : τ₂ 
 -----------------------------------       function abstraction
-Γ ⊢ x : τ₁ => t₂ : τ₁ -> t₂ 
+Γ ⊢ x => t₂ : τ₁ -> τ₂ 
+
+
+-- Remy version with existential and alternate bindings
+
+let binding
+
+Γ ⊢ t₁ : τ :> τ₁ ⊣ C ∧ D       fresh αᵢ # (τ, Γ, C)
+Γ, x : ∀ αᵢ <: ?ᵢ . τ₁ ⊢ t₂ : τ₂ :> τ₃ ⊣ C ∧ ∃ αᵢ <: ?ᵢ @ D  
+------------------------------------------------------------------------
+Γ ⊢ (let x : τ = t₁ in t₂) : τ₂ :> τ₃ ⊣ C ∧ ∃ αᵢ <: ?ᵢ @ D 
+
+j
+variable 
+constraint information is could be enriched if Γ were missing **Remy adv. TAPL**
+ALTERNATE A: ⊢ x : τ₁ :> τ₂ ⊣ x =< τ₁   
+ALTERNATE B: ⊢ x : τ₁ :> τ₂ ⊣ (∀ αᵢ <: τᵢ @ D . τ₂) -< τ₁  
+ALTERNATE C: ⊢ x : τ₁ :> τ₂ ⊣ (∃ αᵢ <: τᵢ @ (D ∧ τ₂ <: τ₁))
 
 
 ----------------------------------------------------------------------------
