@@ -527,13 +527,16 @@ constraint supertyping
 
 
 variable
--- decide constraint here instead of separate subsumption rule
+- decide constraint here instead of separate subsumption rule
 - constraint check also solves and unifies
     - e.g. Γ ; _ ⊩ dict[α, β] <: dict[str, ?] ⊣ Γ, α <: str, β <: ? 
+- might need to do renaming here to avoid collisions
+- or incorporate existential constraints
+- an existential constraint carries variables that should be renamed for broader contextfresh αᵢ # τ₁
+  - however, we have separated the supertyping from the constraint
 
-fresh αᵢ # τ₁
 x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ 
-fresh αᵢ # Γ
+fresh αᵢ # Γ  
 Γ ; αᵢ <: τᵢ ∧ D ⊩ τ₂ <: τ₁ ⊣ Γ'        
 -----------------------------------------------------             
 Γ ⊢ x : τ₁ :> τ₂ ⊣ Γ' ; αᵢ <: τᵢ ∧ D 
@@ -541,13 +544,14 @@ fresh αᵢ # Γ
 
 let binding
 
--- naming dynamic subparts is handles by recursive type inference
--- fresh names are inferred from inductive call for any unknown/dynamic parts of a type annotation
--- fresh names should be replaced by any known parts of type annotation  
--- fresh name constraints are simply included in generetated Γ'
-    e.g. Γ ⊢ {} : dict[str, ?] :> dict[α, β] ⊣ Γ, α <: str, β <: ? 
+- naming dynamic subparts is handles by recursive type inference
+- fresh names are inferred from inductive call for any unknown/dynamic parts of a type annotation
+- fresh names should be replaced by any known parts of type annotation  
+- fresh name constraints are simply included in generetated Γ'
+  - e.g. Γ ⊢ {} : dict[str, ?] :> dict[α, β] ⊣ Γ, α <: str, β <: ? 
     - add solve/unify feature to constraint check
--- TODO: check if inductive calls should generate the same constraints
+- TODO: check if inductive calls should generate the same constraints
+
 Γ ⊢ t₁ : τ :> τ₁ ⊣ Γ' ; C ∧ D       
 fresh αᵢ # (τ, Γ, C) 
 Γ', x : ∀ αᵢ <: ?ᵢ @ D . τ₁ ⊢ t₂ : τ₂ :> τ₃ ⊣ Γ', αᵢ <: ?ᵢ ; C ∧ D  
@@ -556,7 +560,8 @@ fresh αᵢ # (τ, Γ, C)
 
 
 function abstraction
--- fresh names are created for unknown/dynamic subparts of type annotation
+- fresh names are created for unknown/dynamic subparts of type annotation
+
 Γ ⊢ τ :: *?
 τ₃ = τ[?/αᵢ]  fresh αᵢ # (Γ)   
 Γ, x : τ₃ ⊢ t₂ : τ₂ :> τ₄ ⊣ Γ' ; C 
@@ -564,7 +569,19 @@ function abstraction
 Γ ⊢ x : τ => t₂ : τ₁ -> τ₂ :> τ₃ -> τ₄ ⊣ Γ' ; C 
 
 
+function application
+- unify τ₂ <: ?, τ₃ <: τ₁, τ₄ <: τ₂ via inductive calls
+
+Γ ⊢ t₁ : ? -> τ₁ :> τ₂ -> τ₃ ⊣ Γ' ; C₁
+Γ' ⊢ t₂ : τ₂ :> τ₄ ⊣ Γ'' ; C₂ 
+---------------------------------------- 
+Γ ⊢ t₁ t₂ : τ₁ :> τ₃ ⊣ Γ'' ; C₁ ∧ C₂
+
+
 ----------------------------------------------------------------------------------
+
+
+scratch:
 
 
 Γ ⊢ t : τ :> τ                            constraint supertyping 
