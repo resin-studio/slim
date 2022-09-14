@@ -528,10 +528,13 @@ constraint supertyping
 
 variable
 -- decide constraint here instead of separate subsumption rule
+- constraint check also solves and unifies
+    - e.g. Γ ; _ ⊩ dict[α, β] <: dict[str, ?] ⊣ Γ, α <: str, β <: ? 
+
 x : ∀ αᵢ <: τᵢ @ D . τ₂ ∈ Γ fresh αᵢ # (τ₁)
-Γ ; αᵢ <: τᵢ ∧ D ⊩ τ₂ <: τ₁          
+Γ ; αᵢ <: τᵢ ∧ D ⊩ τ₂ <: τ₁ ⊣ Γ'        
 -----------------------------------------------------             
-Γ ⊢ x : τ₁ :> τ₂ ⊣ Γ ; αᵢ <: τᵢ ∧ D 
+Γ ⊢ x : τ₁ :> τ₂ ⊣ Γ' ; αᵢ <: τᵢ ∧ D 
 
 
 
