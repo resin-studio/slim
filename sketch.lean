@@ -194,6 +194,164 @@ let list_n = n : * => XS @ XS;{n} <: list_len nat
 %check #cons 1,  #cons 2 #cons 3 , #cons 4 , #nil () : list_4
 
 
+--------
+
+consider:
+
+```
+let x = [1]
+-- x : list[int]
+
+let first : (list[str] ; ?) -> list[str]
+let first = (a , b) => a 
+-- first : (list[str] ; ?) -> list[str]
+
+let _ = first (x, ... 
+-- error: list[int] ≤ list[str]
+```
+
+
+basic typing: 
+Γ ⊢ t : τ  
+
+variable
+(x : τ) ∈ Γ 
+---------------------------                        
+Γ ⊢ x : τ
+
+application
+Γ ⊢ t₁ : τ₁ -> τ₃ 
+Γ ⊢ t₂ : τ₂
+Γ ⊩ τ₂ ≤ τ₁
+------------------------------- 
+Γ ⊢ t₁ t₂ : τ₃
+
+
+example: is `first (x, ...` well-typed?
+Γ ⊢ first : (dict[str, ?] ; ?) -> dict[str, ?] 
+Γ ⊢ (x, ... : ... 
+Γ ⊩ ... ≤ (dict[str, ?] ; ?)
+--------------------------------------------------
+Γ ⊢ first (x, ... : ...
+
+
+basic supertyping: 
+Γ ⊢ t : τ ≥ τ  
+
+variable
+(x : τ₂) ∈ Γ 
+Γ ⊩ τ₂ ≤ τ₁
+---------------------------                        
+Γ ⊢ x : τ₁ ≥ τ₂ 
+
+application
+Γ ⊢ t₁ : ? -> τ₁ ≥ τ₂ -> τ₃ 
+Γ ⊢ t₂ : τ₂ ≥ _ 
+------------------------------- 
+Γ ⊢ t₁ t₂ : τ₁ ≥ τ₃
+
+
+example: is `first (x, ...` well-typed?
+(x : list[int]) ∈ Γ 
+Γ ⊩ list[int] ≤ list[str]
+--------------------------------------------------------------------
+Γ ⊢ x : list[str] ≥ list[int]
+
+
+consider:
+let x = [] 
+-- x : (∃ α ≤ ? . list[α])
+
+let first : list[str] ; ? -> list[str] 
+let first = (a , b) => a 
+-- first : (list[str] ; ?) -> list[str]
+
+let _ = first (x, x)  
+-- ok 
+
+polymorphic supertyping 
+Γ ⊢ t : τ ≥ τ  
+
+(x : ∀ Δ . τ₂) ∈ Γ 
+Γ ⊩ (∃ Δ . τ₂) ≤ τ₁
+---------------------------                        
+Γ ⊢ x : τ₁ ≥ ∃ Δ . τ₂ 
+
+
+example: is `first(x, x)` well-typed?
+(x : ∀ α ≤ ? . list[α]) ∈ Γ 
+Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str]
+--------------------------------------------------------------------
+Γ ⊢ x : list[str] ≥ (∃ α ≤ ? . list[α])
+
+
+
+consider:
+let x = [] 
+-- x : (∃ α ≤ ? . list[α])
+
+let first : list[str] ; ? -> list[str] 
+let first = (a , b) => a 
+-- first : (list[str] ; ?) -> list[str]
+
+let _ = first (x, x)  
+-- ok 
+-- treat first as a constraint on the type of x
+-- strict option. x : list[str] 
+-- lenient option. x : ∃ α . list[str | α]
+
+let y = x ++ [4]
+-- ++ : ∀ α ≤ ? . list[α] ; list[α] -> list[α]
+-- strict option. error: list[int] ≤ list[str] 
+-- lenient option. x : ∃ α . list[str | α]
+
+
+
+supertyping + constraints
+Γ ⊢ t : τ ≥ τ ; C
+Γ ⊩ C
+
+variable
+(x : ∀ Δ ⟨C⟩. τ₂) ∈ Γ 
+Γ ⊩ ∃ Δ ⟨C ∧ τ₂ ≤ τ₁⟩
+-----------------------------------------------------             
+Γ ⊢ x : τ₁ ≥ ∃ Δ . τ₂ ; (∃ Δ ⟨C ∧ τ₂ ≤ τ₁⟩)
+
+Note: cumbersome redunancy between supertyping and constraints
+Note: a constraint consists of subtyping, conjunction, and existential forms
+
+
+supertyping * constraints
+Γ ⊢ t : τ ≥ τ
+Γ ⊩ τ ≤ τ ~> Δ ; C
+
+(x : ∀ Δ ⟨C⟩. τ₂) ∈ Γ 
+Γ ⊩ (∃ Δ ⟨C⟩ .τ₂) ≤ τ₁ ~> Δ' ; C'
+-----------------------------------------------------             
+Γ ⊢ x : τ₁ ≥ ∃ Δ' ⟨C'⟩ . τ₂
+
+
+Note: constraints only consists of subtyping
+Note: other forms of constraints are replaced by forms of types
+
+
+example: strict option
+(x : ∀ α ≤ ? . list[α]) ∈ Γ 
+Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str] ~> α ≤ str
+--------------------------------------------------------------------
+Γ ⊢ x : list[str] ≥ (∃ α ≤ str . list[α])
+
+
+example: lenient option
+(x : ∀ α ≤ ? . list[α]) ∈ Γ 
+Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str] ~> α ≤ (str | α)
+--------------------------------------------------------------------
+Γ ⊢ x : list[str] ≥ (∃ α ≤ (str | α) . list[α])
+
+
+---------
+
+
 -- syntax
 
 l, x, α ∈ String                  symbol
@@ -539,7 +697,7 @@ constraint supertyping
 variable
 - decide constraint here instead of separate subsumption rule
 - constraint check also solves and unifies
-    - e.g. Γ ⊩ (∃ α ≤ ?, β ≤ ? . dict[α, β]) ≤ dict[str, ?] ~> α ≤ str, β ≤ ? 
+    - e.g. Γ ; true ⊩ (∃ α ≤ ?, β ≤ ? . dict[α, β]) ≤ dict[str, ?] ~> α ≤ str, β ≤ ? 
 
 - might need to do renaming here to avoid collisions
 - or incorporate existential constraints
@@ -549,10 +707,12 @@ variable
 using existential constraint type
 - Δ' contains tighter bounts on αᵢ
 
+
 (x : ∀ Δ ⟨C⟩ . τ₂) ∈ Γ 
-Γ ⊩ (∃ Δ ⟨C⟩ . τ₂) ≤ τ₁ ~> Δ'    
+Γ ⊩ (∃ Δ ⟨C⟩ . τ₂) ≤ τ₁ ~> Δ' ; C'    
 -----------------------------------------------------             
-Γ ⊢ x : τ₁ ≥ (∃ Δ' ⟨C⟩ . τ₂)
+Γ ⊢ x : τ₁ ≥ (∃ Δ' ⟨C'⟩ . τ₂)
+
 
 
 let binding
@@ -625,20 +785,20 @@ function application
 scratch:
 
 
-Γ ⊢ t : τ :> τ                            constraint supertyping 
+Γ ⊢ t : τ ≥ τ                            constraint supertyping 
 
 
 x : τ₂ ∈ Γ 
-τ₂ <: τ₁
+τ₂ ≤ τ₁
 ------------------                        variable
-Γ ⊢ x : τ₁ :> τ₂ 
+Γ ⊢ x : τ₁ ≥ τ₂ 
 
 
 
-Γ ⊢ t₁ : ? -> τ₁ :> τ₂ -> τ₃ 
-Γ ⊢ t₂ : τ₂ :> τ₄
+Γ ⊢ t₁ : ? -> τ₁ ≥ τ₂ -> τ₃ 
+Γ ⊢ t₂ : τ₂ ≥ _ 
 -------------------------------            function application
-Γ ⊢ t₁ t₂ : τ₁ :> τ₃
+Γ ⊢ t₁ t₂ : τ₁ ≥ τ₃
 
 
 -- from checking to HM strengthening -- 
