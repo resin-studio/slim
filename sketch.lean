@@ -308,31 +308,38 @@ let y = x ++ [4]
 
 
 supertyping + constraints
-Γ ⊢ t : τ ≥ τ ; C
-Γ ⊩ C
+Γ ; C ⊢ t : τ ≥ τ ; C
+Γ ; C ⊩ C
 
 variable
-(x : ∀ Δ ⟨C⟩. τ₂) ∈ Γ 
-Γ ⊩ ∃ Δ ⟨C ∧ τ₂ ≤ τ₁⟩
+(x : ∀ Δ ⟨D⟩. τ₂) ∈ Γ 
+Γ ; C ⊩ ∃ Δ ⟨D ∧ τ₂ ≤ τ₁⟩
 -----------------------------------------------------             
-Γ ⊢ x : τ₁ ≥ ∃ Δ . τ₂ ; (∃ Δ ⟨C ∧ τ₂ ≤ τ₁⟩)
-
+Γ ; C ⊢ x : τ₁ ≥ ∃ Δ . τ₂ ; (∃ Δ ⟨D ∧ τ₂ ≤ τ₁⟩)
 Note: cumbersome redunancy between supertyping and constraints
-Note: a constraint consists of subtyping, conjunction, and existential forms
+Note: type information may not be readable from constraints
 
+supertyping * constraints, simple 
+Γ ; C ⊢ t : τ ≥ τ
+Γ ; C ⊩ τ ≤ τ 
 
-supertyping * constraints
-Γ ⊢ t : τ ≥ τ
-Γ ⊩ τ ≤ τ ~> Δ ; C
-
-(x : ∀ Δ ⟨C⟩. τ₂) ∈ Γ 
-Γ ⊩ (∃ Δ ⟨C⟩ .τ₂) ≤ τ₁ ~> Δ' ; C'
+(x : ∀ Δ ⟨D⟩. τ₂) ∈ Γ 
+Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ₂) ≤ τ₁
 -----------------------------------------------------             
-Γ ⊢ x : τ₁ ≥ ∃ Δ' ⟨C'⟩ . τ₂
+Γ ; C ⊢ x : τ₁ ≥ ∃ Δ ⟨D ∧ τ₂ ≤ τ₁⟩ . τ₂
+Note: cumbersome redunancy between supertyping and constraints
+Note: type information may not be readable from constraints
 
 
-Note: constraints only consists of subtyping
-Note: other forms of constraints are replaced by forms of types
+supertyping * constraints, eager unification 
+Γ ; C ⊢ t : τ ≥ τ
+Γ ; C ⊩ τ ≤ τ ~> Δ ; D 
+
+(x : ∀ Δ ⟨D⟩. τ₂) ∈ Γ 
+Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ₂) ≤ τ₁ ~> Δ' ; D'
+-----------------------------------------------------             
+Γ ; C ⊢ x : τ₁ ≥ ∃ Δ' ⟨D'⟩ . τ₂
+Note: type information readable in incomplete program 
 
 
 example: strict option
@@ -681,7 +688,7 @@ NOTES:
 
 --------------------------------------------------------------------------------------
 constraint supertyping
-Γ ⊢ t : τ :> τ                 
+Γ ; C ⊢ t : τ :> τ                 
 
 
 - constraints are turned inside out
@@ -708,10 +715,10 @@ using existential constraint type
 - Δ' contains tighter bounts on αᵢ
 
 
-(x : ∀ Δ ⟨C⟩ . τ₂) ∈ Γ 
-Γ ⊩ (∃ Δ ⟨C⟩ . τ₂) ≤ τ₁ ~> Δ' ; C'    
+(x : ∀ Δ ⟨D⟩ . τ₂) ∈ Γ 
+Γ ; C ⊩ (∃ Δ ⟨D⟩ . τ₂) ≤ τ₁ ~> Δ' ; D'    
 -----------------------------------------------------             
-Γ ⊢ x : τ₁ ≥ (∃ Δ' ⟨C'⟩ . τ₂)
+Γ ; C ⊢ x : τ₁ ≥ (∃ Δ' ⟨D'⟩ . τ₂)
 
 
 
@@ -743,22 +750,29 @@ function abstraction
 - fresh names are created for unknown/dynamic subparts of type annotation
 
 
-Γ ⊢ τ₃ ∷ *?
+Γ ; C ⊢ τ₃ ∷ *?
 Δ # Γ
-Γ, Δ, x ∶ τ₃[?/Δ] ⊢ t : τ₂ ≥ τ₄
+Γ, Δ, x ∶ τ₃[?/Δ] ; C ⊢ t : τ₂ ≥ τ₄
 ---------------------------------------------------------------------       
-Γ ⊢ x : τ₃ => t : τ₁ -> τ₂ ≥ (∃ Δ . τ₃[?/Δ] -> τ₄)
+Γ ; C ⊢ x : τ₃ => t : τ₁ -> τ₂ ≥ (∃ Δ . τ₃[?/Δ] -> τ₄)
 
 
 
-function application
-
-
-Γ ⊢ t₁ : ? -> τ₁ ≥ ∀ Δ ⟨C⟩ . τ₂ -> τ₃
+function application, eager unification version
+Γ ; C ⊢ t₁ : ? -> τ₁ ≥ ∀ Δ ⟨D⟩ . τ₂ -> τ₃
 Δ # Γ
-Γ, Δ ⊢ t₂ : τ₂ ≥ τ₄
----------------------------------------- 
-Γ ⊢ t₁ t₂ : τ₁ ≥ ∃ Δ ⟨C ∧ τ₄ ≤ τ₂⟩ . τ₃
+Γ, Δ ; C, D ⊢ t₂ : τ₂ ≥ τ₄
+Γ, Δ ; C, D, τ₄ ≤ τ₂ ⊩ τ₃ ≤ τ₁ ~> Δ' ; D'
+---------------------------------------------
+Γ ; C ⊢ t₁ t₂ : τ₁ ≥ ∃ Δ' ⟨D'⟩ . τ₃
+
+
+function application, simple version:
+Γ ; C ⊢ t₁ : ? -> τ₁ ≥ ∀ Δ ⟨D⟩ . τ₂ -> τ₃
+Δ # Γ
+Γ, Δ ; C, D ⊢ t₂ : τ₂ ≥ τ₄
+---------------------------------------------
+Γ ; C ⊢ t₁ t₂ : τ₁ ≥ ∃ Δ ⟨D ∧ τ₄ ≤ τ₂⟩ . τ₃
 
 -
 - let foo (xs : α, x : β) -> ω = x :: xs  
