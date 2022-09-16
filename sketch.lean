@@ -172,7 +172,8 @@ let list α = μ list . #nil:unit ∨ #cons:(α;list)
 
 let list_len α = μ list_len . 
   (#nil:unit ; #zero:unit) ∨ 
-  ∃ XS <: list α , N ≤ nat ⟨XS;N <: list_len⟩ . (#cons:(α;XS) ; #succ:N)
+  ∃ XS ≤ list α , N ≤ nat ⟨(XS ; N) ≤ list_len⟩ . (#cons:(α;XS) ; #succ:N) ∨
+  ⊥
 
 - relational type `list_len` is similar to the measure concept in Synquid
 - relational types correspond with inductive dependent types and logic programming horn clauses
