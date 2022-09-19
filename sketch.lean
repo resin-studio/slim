@@ -259,54 +259,66 @@ let _ = first (x, ...
 ```
 
 
-basic typing: 
-Γ ⊢ t : τ  
+basic typing: <br> 
+`Γ ⊢ t : τ` <br>
 
 variable
+```
 (x : τ) ∈ Γ 
 ---------------------------                        
 Γ ⊢ x : τ
+```
 
 application
-Γ ⊢ t₁ : τ₁ -> τ₃ 
-Γ ⊢ t₂ : τ₂
-Γ ⊩ τ₂ ≤ τ₁
+```
+Γ ⊢ t₁ : τ₂ -> τ₁
+Γ ⊢ t₂ : τ₂'
+Γ ⊩ τ₂' ≤ τ₂
 ------------------------------- 
-Γ ⊢ t₁ t₂ : τ₃
+Γ ⊢ t₁ t₂ : τ₁
+```
 
 
 example: is `first (x, ...` well-typed?
+```
 Γ ⊢ first : (dict[str, ?] ; ?) -> dict[str, ?] 
 Γ ⊢ (x, ... : ... 
 Γ ⊩ ... ≤ (dict[str, ?] ; ?)
 --------------------------------------------------
 Γ ⊢ first (x, ... : ...
+```
 
 
-basic supertyping: 
-Γ ⊢ t : τ ≥ τ  
+basic supertyping: <br>
+`Γ ⊢ t : τ ≥ τ` <br>
 
 variable
-(x : τ₂) ∈ Γ 
-Γ ⊩ τ₂ ≤ τ₁
+```
+(x : τ') ∈ Γ 
+Γ ⊩ τ' ≤ τ
 ---------------------------                        
-Γ ⊢ x : τ₁ ≥ τ₂ 
+Γ ⊢ x : τ ≥ τ' 
+```
 
 application
-Γ ⊢ t₁ : ? -> τ₁ ≥ τ₂ -> τ₃ 
+```
+Γ ⊢ t₁ : ? -> τ₁ ≥ τ₂ -> τ₁'
 Γ ⊢ t₂ : τ₂ ≥ _ 
 ------------------------------- 
-Γ ⊢ t₁ t₂ : τ₁ ≥ τ₃
+Γ ⊢ t₁ t₂ : τ₁ ≥ τ₁'
+```
 
 
 example: is `first (x, ...` well-typed?
+```
 (x : list[int]) ∈ Γ 
 Γ ⊩ list[int] ≤ list[str]
 --------------------------------------------------------------------
 Γ ⊢ x : list[str] ≥ list[int]
-
+```
 
 consider:
+```
 let x = [] 
 -- x : (∃ α ≤ ? . list[α])
 
@@ -316,25 +328,32 @@ let first = (a , b) => a
 
 let _ = first (x, x)  
 -- ok 
+```
 
-polymorphic supertyping 
-Γ ⊢ t : τ ≥ τ  
+polymorphic supertyping: <br>
+`Γ ⊢ t : τ ≥ τ` <br>
 
-(x : ∀ Δ . τ₂) ∈ Γ 
-Γ ⊩ (∃ Δ . τ₂) ≤ τ₁
+variable
+```
+(x : ∀ Δ . τ') ∈ Γ 
+Γ ⊩ (∃ Δ . τ') ≤ τ
 ---------------------------                        
-Γ ⊢ x : τ₁ ≥ ∃ Δ . τ₂ 
+Γ ⊢ x : τ ≥ ∃ Δ . τ'
+```
 
 
 example: is `first(x, x)` well-typed?
+```
 (x : ∀ α ≤ ? . list[α]) ∈ Γ 
 Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str]
 --------------------------------------------------------------------
 Γ ⊢ x : list[str] ≥ (∃ α ≤ ? . list[α])
+```
 
 
 
 consider:
+```
 let x = [] 
 -- x : (∃ α ≤ ? . list[α])
 
@@ -352,56 +371,69 @@ let y = x ++ [4]
 -- ++ : ∀ α ≤ ? . list[α] ; list[α] -> list[α]
 -- strict option. error: list[int] ≤ list[str] 
 -- lenient option. x : ∃ α . list[str | α]
+```
 
 
 
-supertyping + constraints
-Γ ; C ⊢ t : τ ≥ τ ; C
-Γ ; C ⊩ C
+supertyping + constraints: <br>
+`Γ ; C ⊢ t : τ ≥ τ ; C` <br>
+`Γ ; C ⊩ C` <br>
 
 variable
-(x : ∀ Δ ⟨D⟩. τ₂) ∈ Γ 
-Γ ; C ⊩ ∃ Δ ⟨D ∧ τ₂ ≤ τ₁⟩
+```
+(x : ∀ Δ ⟨D⟩. τ') ∈ Γ 
+Γ ; C ⊩ ∃ Δ ⟨D ∧ τ' ≤ τ⟩
 -----------------------------------------------------             
-Γ ; C ⊢ x : τ₁ ≥ ∃ Δ . τ₂ ; (∃ Δ ⟨D ∧ τ₂ ≤ τ₁⟩)
+Γ ; C ⊢ x : τ ≥ ∃ Δ . τ' ; (∃ Δ ⟨D ∧ τ' ≤ τ⟩)
+```
 Note: cumbersome redunancy between supertyping and constraints
 Note: type information may not be readable from constraints
 
-supertyping * constraints, simple 
-Γ ; C ⊢ t : τ ≥ τ
-Γ ; C ⊩ τ ≤ τ 
+supertyping * constraints, simple: <br>
+`Γ ; C ⊢ t : τ ≥ τ` <br>
+`Γ ; C ⊩ τ ≤ τ` <br>
 
-(x : ∀ Δ ⟨D⟩. τ₂) ∈ Γ 
-Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ₂) ≤ τ₁
+variable
+```
+(x : ∀ Δ ⟨D⟩. τ') ∈ Γ 
+Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ') ≤ τ
 -----------------------------------------------------             
-Γ ; C ⊢ x : τ₁ ≥ ∃ Δ ⟨D ∧ τ₂ ≤ τ₁⟩ . τ₂
+Γ ; C ⊢ x : τ ≥ ∃ Δ ⟨D ∧ τ' ≤ τ₁⟩ . τ'
+```
 Note: cumbersome redunancy between supertyping and constraints
 Note: type information may not be readable from constraints
 
 
-supertyping * constraints, eager unification 
-Γ ; C ⊢ t : τ ≥ τ
-Γ ; C ⊩ τ ≤ τ ~> Δ ; D 
+supertyping * constraints, eager unification: <br>
+`Γ ; C ⊢ t : τ ≥ τ` <br>
+`Γ ; C ⊩ τ ≤ τ ~> Δ ; D` <br>
 
-(x : ∀ Δ ⟨D⟩. τ₂) ∈ Γ 
-Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ₂) ≤ τ₁ ~> Δ' ; D'
+variable
+```
+(x : ∀ Δ ⟨D⟩. τ') ∈ Γ 
+Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ') ≤ τ ~> Δ' ; D'
 -----------------------------------------------------             
-Γ ; C ⊢ x : τ₁ ≥ ∃ Δ' ⟨D'⟩ . τ₂
+Γ ; C ⊢ x : τ ≥ ∃ Δ' ⟨D'⟩ . τ'
+```
 Note: type information readable in incomplete program 
 
 
 example: strict option
+```
 (x : ∀ α ≤ ? . list[α]) ∈ Γ 
 Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str] ~> α ≤ str
 --------------------------------------------------------------------
 Γ ⊢ x : list[str] ≥ (∃ α ≤ str . list[α])
+```
 
 
 example: lenient option
+```
 (x : ∀ α ≤ ? . list[α]) ∈ Γ 
 Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str] ~> α ≤ (str | α)
 --------------------------------------------------------------------
 Γ ⊢ x : list[str] ≥ (∃ α ≤ (str | α) . list[α])
+```
 
 
 ---------
@@ -715,26 +747,19 @@ fresh α₂
 
 
 
---------------------------------------------------------------------------
-
-
-
-
-
-
 --------------------------------------------------------------------------------------
 constraint supertyping
+
 Γ ; C ⊢ t : τ :> τ                 
 
 
 
 variable
 
-
-(x : ∀ Δ ⟨D⟩ . τ₂) ∈ Γ 
-Γ ; C ⊩ (∃ Δ ⟨D⟩ . τ₂) ≤ τ₁ ~> Δ' ; D'    
+(x : ∀ Δ ⟨D⟩ . τ') ∈ Γ 
+Γ ; C ⊩ (∃ Δ ⟨D⟩ . τ') ≤ τ ~> Δ' ; D'    
 -----------------------------------------------------             
-Γ ; C ⊢ x : τ₁ ≥ (∃ Δ' ⟨D'⟩ . τ₂)
+Γ ; C ⊢ x : τ ≥ (∃ Δ' ⟨D'⟩ . τ')
 
 
 
@@ -747,17 +772,19 @@ let binding
 Γ ; C ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ ≥ (∃ Δ ⟨D⟩ . τ₂')
 
 
+
 function abstraction
 
-Γ ; C ⊢ τ₃ ∷ *?
+Γ ; C ⊢ τ₁ ∷ *?
 Δ # Γ
-Γ, Δ, x ∶ τ₃[?/Δ] ; C ⊢ t : τ₂ ≥ τ₄
+Γ, Δ, x ∶ τ₁[?/Δ] ; C ⊢ t : τ₂ ≥ τ₂'
 ---------------------------------------------------------------------       
-Γ ; C ⊢ x : τ₃ => t : τ₁ -> τ₂ ≥ (∃ Δ . τ₃[?/Δ] -> τ₄)
+Γ ; C ⊢ x : τ₁ => t : τ₁' -> τ₂ ≥ (∃ Δ . τ₁[?/Δ] -> τ₂')
 
 
 
 function application
+
 Γ ; C ⊢ t₁ : ? -> τ₁ ≥ ∀ Δ ⟨D⟩ . τ₂ -> τ₁'
 Δ # Γ
 Γ, Δ ; C ∧ D ⊢ t₂ : τ₂ ≥ τ₂'
