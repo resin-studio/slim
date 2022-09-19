@@ -731,7 +731,6 @@ let binding
 - fresh name constraints are simply included in generetated Γ'
   - e.g. Γ ⊢ {} : dict[str, ?] ≥ ∃ α ≤ ?, β ≤ ? . dict[α, β] ⊣ α ≤ str, β ≤ ? 
     - add solve/unify feature to constraint check
-- TODO: check if inductive calls should generate the same constraints
 
 existential constraint types serve three purposes:
 1. type inference: carries inferred constraints on types 
@@ -740,11 +739,11 @@ existential constraint types serve three purposes:
 
 using existential constraint type
 
-Γ ⊢ t₁ : τ ≥ (∃ Δ₁ ⟨C ∧ D⟩ . τ₁)     
-Δ₂ # (τ, Γ, C)
-Γ, Δ₁, (x : ∀ Δ₂ ⟨D⟩ -> τ₁) ⊢ t₂ : τ₂ ≥ (∃ Δ₂ ⟨C ∧ D⟩ . τ₃) 
+Γ ; C ⊢ t₁ : τ₁ ≥ τ₁'     
+Δ # (τ₁, Γ, C)
+Γ, x : (∀ Δ ⟨D⟩ -> τ₁') ; C ⊢ t₂ : τ₂ ≥ (∃ Δ ⟨D⟩ . τ₂') 
 ------------------------------------------------------------------------
-Γ ⊢ (let x : τ = t₁ in t₂) : τ₂ ≥ (∃ Δ₂ ⟨C ∧ D⟩ . τ₃)
+Γ ; C ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ ≥ (∃ Δ ⟨D⟩ . τ₂')
 
 
 function abstraction
