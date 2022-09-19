@@ -136,6 +136,53 @@ type guided program synthesis for dynamically typed languages
   - propagate types down and solve type constraints for all terms **novel** 
   - finds a somewhat lenient super type satsifying constraints **novel**
     - lenient to account for unforseen future constraints
+  - constraint type inference:
+    - produce a constraint C = ⟦Γ ⊢ t : τ⟧ that is both sufficient and necessary for C, Γ ⊢ t : τ to hold
+    - can we relax the sufficient and necessary criteria? necessary but not sufficient (unsound)? 
+  - what should be the relationship between type variables in Γ and type variables in C?
+    - can Γ and C be merged by having constraints as a part of τ?
+  - HM(X) presentation reuses term variables as scheme variables
+  - modify HM(X) by creating a fresh type variable in let binding 
+  - combine the declarative HM(X) (10-7) with constraint generation function (10-9)
+    - maybe  Γ ⊢ t : τ :> τ ⊣ C
+  - type solving can be combined with type equivalence
+  - how does type computation relate to more general constraints?
+  - should kind carry a constraint, rather than just a type?
+  - constraints are turned inside out
+  - there are no constraint combinators, only type combinators
+  - there is only one constraint predicate: subtyping (≤)
+  - combining constraints requires combining types and applying subtyping 
+  - true ≅ _ ≤ ⊤
+  - false ≅ _ ≤ ⊥
+  - α₁ ≤ α₂ and β₁ ≤ β₂ ≅ α₁ ; β₁ ≤ α₂ ; β₂  
+  - variable
+    - decide constraint here instead of separate subsumption rule
+    - constraint check also solves and unifies
+        - e.g. Γ ; true ⊩ (∃ α ≤ ?, β ≤ ? . dict[α, β]) ≤ dict[str, ?] ~> α ≤ str, β ≤ ? 
+
+    - might need to do renaming here to avoid collisions
+    - or incorporate existential constraints
+    - an existential constraint carries variables that should be renamed for broader contextfresh αᵢ # τ₁
+      - however, we have separated the supertyping from the constraint
+
+    using existential constraint type
+    - Δ' contains tighter bounts on αᵢ
+  - let binding
+    - naming dynamic subparts is handles by recursive type inference
+    - fresh names are inferred from inductive call for any unknown/dynamic parts of a type annotation
+    - fresh names should be replaced by any known parts of type annotation  
+    - fresh name constraints are simply included in generetated Γ'
+      - e.g. Γ ⊢ {} : dict[str, ?] ≥ ∃ α ≤ ?, β ≤ ? . dict[α, β] ⊣ α ≤ str, β ≤ ? 
+        - add solve/unify feature to constraint check
+
+  existential constraint types serve three purposes:
+  1. type inference: carries inferred constraints on types 
+  2. relational specification: constrains subportions of types
+  3. information hiding:
+
+  - eager unification
+  - using existential constraint type
+  - function abstraction: fresh names are created for unknown/dynamic subparts of type annotation
 
 
 -- unused concepts --
@@ -669,20 +716,8 @@ fresh α₂
 
 
 --------------------------------------------------------------------------
-NOTES:
-- C, Γ ⊢ t : τ :> τ
-- constraint type inference:
-  - produce a constraint C = ⟦Γ ⊢ t : τ⟧ that is both sufficient and necessary for C, Γ ⊢ t : τ to hold
-  - can we relax the sufficient and necessary criteria? necessary but not sufficient (unsound)? 
-- what should be the relationship between type variables in Γ and type variables in C?
-  - can Γ and C be merged by having constraints as a part of τ?
-- HM(X) presentation reuses term variables as scheme variables
-- modify HM(X) by creating a fresh type variable in let binding 
-- combine the declarative HM(X) (10-7) with constraint generation function (10-9)
-  - maybe  Γ ⊢ t : τ :> τ ⊣ C
-- type solving can be combined with type equivalence
-- how does type computation relate to more general constraints?
-- should kind carry a constraint, rather than just a type?
+
+
 
 
 
@@ -692,28 +727,8 @@ constraint supertyping
 Γ ; C ⊢ t : τ :> τ                 
 
 
-- constraints are turned inside out
-- there are no constraint combinators, only type combinators
-- there is only one constraint predicate: subtyping (≤)
-- combining constraints requires combining types and applying subtyping 
-- true ≅ _ ≤ ⊤
-- false ≅ _ ≤ ⊥
-- α₁ ≤ α₂ and β₁ ≤ β₂ ≅ α₁ ; β₁ ≤ α₂ ; β₂  
-
-
 
 variable
-- decide constraint here instead of separate subsumption rule
-- constraint check also solves and unifies
-    - e.g. Γ ; true ⊩ (∃ α ≤ ?, β ≤ ? . dict[α, β]) ≤ dict[str, ?] ~> α ≤ str, β ≤ ? 
-
-- might need to do renaming here to avoid collisions
-- or incorporate existential constraints
-- an existential constraint carries variables that should be renamed for broader contextfresh αᵢ # τ₁
-  - however, we have separated the supertyping from the constraint
-
-using existential constraint type
-- Δ' contains tighter bounts on αᵢ
 
 
 (x : ∀ Δ ⟨D⟩ . τ₂) ∈ Γ 
@@ -725,20 +740,6 @@ using existential constraint type
 
 let binding
 
-- naming dynamic subparts is handles by recursive type inference
-- fresh names are inferred from inductive call for any unknown/dynamic parts of a type annotation
-- fresh names should be replaced by any known parts of type annotation  
-- fresh name constraints are simply included in generetated Γ'
-  - e.g. Γ ⊢ {} : dict[str, ?] ≥ ∃ α ≤ ?, β ≤ ? . dict[α, β] ⊣ α ≤ str, β ≤ ? 
-    - add solve/unify feature to constraint check
-
-existential constraint types serve three purposes:
-1. type inference: carries inferred constraints on types 
-2. relational specification: constrains subportions of types
-3. information hiding:
-
-using existential constraint type
-
 Γ ; C ⊢ t₁ : τ₁ ≥ τ₁'     
 Δ # (τ₁, Γ, C)
 Γ, x : (∀ Δ ⟨D⟩ -> τ₁') ; C ⊢ t₂ : τ₂ ≥ (∃ Δ ⟨D⟩ . τ₂') 
@@ -747,8 +748,6 @@ using existential constraint type
 
 
 function abstraction
-- fresh names are created for unknown/dynamic subparts of type annotation
-
 
 Γ ; C ⊢ τ₃ ∷ *?
 Δ # Γ
@@ -758,90 +757,17 @@ function abstraction
 
 
 
-function application, eager unification version
-Γ ; C ⊢ t₁ : ? -> τ₁ ≥ ∀ Δ ⟨D⟩ . τ₂ -> τ₃
+function application
+Γ ; C ⊢ t₁ : ? -> τ₁ ≥ ∀ Δ ⟨D⟩ . τ₂ -> τ₁'
 Δ # Γ
-Γ, Δ ; C, D ⊢ t₂ : τ₂ ≥ τ₄
-Γ, Δ ; C, D, τ₄ ≤ τ₂ ⊩ τ₃ ≤ τ₁ ~> Δ' ; D'
+Γ, Δ ; C ∧ D ⊢ t₂ : τ₂ ≥ τ₂'
+Γ, Δ ; C ∧ D, τ₂' ≤ τ₂ ⊩ τ₁' ≤ τ₁ ~> Δ' ; D'
 ---------------------------------------------
-Γ ; C ⊢ t₁ t₂ : τ₁ ≥ ∃ Δ' ⟨D'⟩ . τ₃
-
-
-function application, simple version:
-Γ ; C ⊢ t₁ : ? -> τ₁ ≥ ∀ Δ ⟨D⟩ . τ₂ -> τ₃
-Δ # Γ
-Γ, Δ ; C, D ⊢ t₂ : τ₂ ≥ τ₄
----------------------------------------------
-Γ ; C ⊢ t₁ t₂ : τ₁ ≥ ∃ Δ ⟨D ∧ τ₄ ≤ τ₂⟩ . τ₃
-
--
-- let foo (xs : α, x : β) -> ω = x :: xs  
-- 
-- xs : α, 
-- x : β, 
-- (x :: xs) : (∃ X ≤ (α | β). list X) ≤ ω
-- 
-- ~> ω ≤ list (α | β)
-- 
-- foo ([1], "hello") = ["hello", 1]
-- 
-- 
-- list int ; str ≤ α ; β 
-- 
-- list int ≤ α
-- str ≤ β
-
-
+Γ ; C ⊢ t₁ t₂ : τ₁ ≥ ∃ Δ' ⟨D'⟩ . τ₁'
 
 ----------------------------------------------------------------------------------
 
 
-scratch:
-
-
-Γ ⊢ t : τ ≥ τ                            constraint supertyping 
-
-
-x : τ₂ ∈ Γ 
-τ₂ ≤ τ₁
-------------------                        variable
-Γ ⊢ x : τ₁ ≥ τ₂ 
-
-
-
-Γ ⊢ t₁ : ? -> τ₁ ≥ τ₂ -> τ₃ 
-Γ ⊢ t₂ : τ₂ ≥ _ 
--------------------------------            function application
-Γ ⊢ t₁ t₂ : τ₁ ≥ τ₃
-
-
--- from checking to HM strengthening -- 
-
-
-Γ ⊢ τ₁ :: *?
-Γ, x : τ₁ ⊢ t₂ : τ₂ 
------------------------------------       function abstraction
-Γ ⊢ x => t₂ : τ₁ -> τ₂ 
-
-
--- Remy version with existential and alternate bindings
-
-let binding
-
-Γ ⊢ t₁ : τ :> τ₁ ⊣ C ∧ D       fresh αᵢ # (τ, Γ, C)
-Γ, x : ∀ αᵢ <: ?ᵢ . τ₁ ⊢ t₂ : τ₂ :> τ₃ ⊣ C ∧ ∃ αᵢ <: ?ᵢ @ D  
-------------------------------------------------------------------------
-Γ ⊢ (let x : τ = t₁ in t₂) : τ₂ :> τ₃ ⊣ C ∧ ∃ αᵢ <: ?ᵢ @ D 
-
-j
-variable 
-constraint information is could be enriched if Γ were missing **Remy adv. TAPL**
-ALTERNATE A: ⊢ x : τ₁ :> τ₂ ⊣ x =< τ₁   
-ALTERNATE B: ⊢ x : τ₁ :> τ₂ ⊣ (∀ αᵢ <: τᵢ @ D . τ₂) -< τ₁  
-ALTERNATE C: ⊢ x : τ₁ :> τ₂ ⊣ (∃ αᵢ <: τᵢ @ (D ∧ τ₂ <: τ₁))
-
-
-----------------------------------------------------------------------------
 
 
 -/
