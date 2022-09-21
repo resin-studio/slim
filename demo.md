@@ -1,4 +1,5 @@
 consider:
+
 ```
 let x = [1]
 -- x : list[int]
@@ -12,7 +13,7 @@ let _ = first (x, ...
 ```
 
 
-basic typing: <br>
+basic typing: <br> 
 `Γ ⊢ t : τ` <br>
 
 variable
@@ -23,21 +24,20 @@ variable
 ```
 
 application
-
 ```
-Γ ⊢ t₁ : τ₁ -> τ₃ 
-Γ ⊢ t₂ : τ₂
-Γ ⊩ τ₂ ≤ τ₁
+Γ ⊢ t₁ : τ₂ -> τ₁
+Γ ⊢ t₂ : τ₂'
+Γ ⊩ τ₂' ≤ τ₂
 ------------------------------- 
-Γ ⊢ t₁ t₂ : τ₃
+Γ ⊢ t₁ t₂ : τ₁
 ```
 
 
-derivation: is `first (x, ...` well-typed?
+example: is `first (x, ...` well-typed?
 ```
-Γ ⊢ first : (dict[str, ?] ; ?) -> dict[str, ?] 
+Γ ⊢ first : (list[str] ; ?) -> list[str] 
 Γ ⊢ (x, ... : ... 
-Γ ⊩ ... ≤ (dict[str, ?] ; ?)
+Γ ⊩ ... ≤ (list[str] ; ?)
 --------------------------------------------------
 Γ ⊢ first (x, ... : ...
 ```
@@ -48,29 +48,28 @@ basic supertyping: <br>
 
 variable
 ```
-(x : τ₂) ∈ Γ 
-Γ ⊩ τ₂ ≤ τ₁
+(x : τ') ∈ Γ 
+Γ ⊩ τ' ≤ τ
 ---------------------------                        
-Γ ⊢ x : τ₁ ≥ τ₂ 
+Γ ⊢ x : τ ≥ τ' 
 ```
 
 application
 ```
-Γ ⊢ t₁ : ? -> τ₁ ≥ τ₂ -> τ₃ 
+Γ ⊢ t₁ : ? -> τ₁ ≥ τ₂ -> τ₁'
 Γ ⊢ t₂ : τ₂ ≥ _ 
 ------------------------------- 
-Γ ⊢ t₁ t₂ : τ₁ ≥ τ₃
+Γ ⊢ t₁ t₂ : τ₁ ≥ τ₁'
 ```
 
 
-derivation: is `first (x, ...` well-typed?
+example: is `first (x, ...` well-typed?
 ```
 (x : list[int]) ∈ Γ 
 Γ ⊩ list[int] ≤ list[str]
--------------------------------
+--------------------------------------------------------------------
 Γ ⊢ x : list[str] ≥ list[int]
 ```
-
 
 consider:
 ```
@@ -85,20 +84,21 @@ let _ = first (x, x)
 -- ok 
 ```
 
-polymorphic supertyping: <br> 
+polymorphic supertyping: <br>
 `Γ ⊢ t : τ ≥ τ` <br>
 
+variable
 ```
-(x : ∀ Δ . τ₂) ∈ Γ 
-Γ ⊩ (∃ Δ . τ₂) ≤ τ₁
+(x : ∀ Δ . τ') ∈ Γ 
+Γ ⊩ (∃ Δ . τ') ≤ τ
 ---------------------------                        
-Γ ⊢ x : τ₁ ≥ ∃ Δ . τ₂ 
+Γ ⊢ x : τ ≥ ∃ Δ . τ'
 ```
 
 
-derivation: is `first(x, x)` well-typed?
+example: is `first(x, x)` well-typed?
 ```
-(x : ∀ α ≤ ? . list[α]) ∈ Γ 
+(x : ∃  α ≤ ? . list[α]) ∈ Γ 
 Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str]
 --------------------------------------------------------------------
 Γ ⊢ x : list[str] ≥ (∃ α ≤ ? . list[α])
@@ -131,27 +131,28 @@ let y = x ++ [4]
 
 supertyping + constraints: <br>
 `Γ ; C ⊢ t : τ ≥ τ ; C` <br>
-`Γ ; C ⊩ C`
+`Γ ; C ⊩ C` <br>
 
 variable
 ```
-(x : ∀ Δ ⟨D⟩. τ₂) ∈ Γ 
-Γ ; C ⊩ ∃ Δ ⟨D ∧ τ₂ ≤ τ₁⟩
+(x : ∀ Δ ⟨D⟩. τ') ∈ Γ 
+Γ ; C ⊩ ∃ Δ ⟨D ∧ τ' ≤ τ⟩
 -----------------------------------------------------             
-Γ ; C ⊢ x : τ₁ ≥ ∃ Δ . τ₂ ; (∃ Δ ⟨D ∧ τ₂ ≤ τ₁⟩)
+Γ ; C ⊢ x : τ ≥ ∃ Δ . τ' ; (∃ Δ ⟨D ∧ τ' ≤ τ⟩)
 ```
 Note: cumbersome redunancy between supertyping and constraints
 Note: type information may not be readable from constraints
 
 supertyping * constraints, simple: <br>
 `Γ ; C ⊢ t : τ ≥ τ` <br>
-`Γ ; C ⊩ τ ≤ τ`
+`Γ ; C ⊩ τ ≤ τ` <br>
 
+variable
 ```
-(x : ∀ Δ ⟨D⟩. τ₂) ∈ Γ 
-Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ₂) ≤ τ₁
+(x : ∀ Δ ⟨D⟩. τ') ∈ Γ 
+Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ') ≤ τ
 -----------------------------------------------------             
-Γ ; C ⊢ x : τ₁ ≥ ∃ Δ ⟨D ∧ τ₂ ≤ τ₁⟩ . τ₂
+Γ ; C ⊢ x : τ ≥ ∃ Δ ⟨D ∧ τ' ≤ τ₁⟩ . τ'
 ```
 Note: cumbersome redunancy between supertyping and constraints
 Note: type information may not be readable from constraints
@@ -159,18 +160,19 @@ Note: type information may not be readable from constraints
 
 supertyping * constraints, eager unification: <br>
 `Γ ; C ⊢ t : τ ≥ τ` <br>
-`Γ ; C ⊩ τ ≤ τ ~> Δ ; D`
+`Γ ; C ⊩ τ ≤ τ ~> Δ ; D` <br>
 
+variable
 ```
-(x : ∀ Δ ⟨D⟩. τ₂) ∈ Γ 
-Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ₂) ≤ τ₁ ~> Δ' ; D'
+(x : ∀ Δ ⟨D⟩. τ') ∈ Γ 
+Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ') ≤ τ ~> Δ' ; D'
 -----------------------------------------------------             
-Γ ; C ⊢ x : τ₁ ≥ ∃ Δ' ⟨D'⟩ . τ₂
+Γ ; C ⊢ x : τ ≥ ∃ Δ' ⟨D'⟩ . τ'
 ```
 Note: type information readable in incomplete program 
 
 
-derivation: strict option
+example: strict option
 ```
 (x : ∀ α ≤ ? . list[α]) ∈ Γ 
 Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str] ~> α ≤ str
@@ -179,7 +181,7 @@ derivation: strict option
 ```
 
 
-derivation: lenient option
+example: lenient option
 ```
 (x : ∀ α ≤ ? . list[α]) ∈ Γ 
 Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str] ~> α ≤ (str | α)
