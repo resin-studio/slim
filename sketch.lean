@@ -386,7 +386,7 @@ variable
 -----------------------------------------------------             
 Γ ; C ⊢ x : τ ≥ ∃ Δ . τ' ; (∃ Δ ⟨D ∧ τ' ≤ τ⟩)
 ```
-Note: cumbersome redunancy between supertyping and constraints
+Note: cumbersome redundancy between supertyping and constraints
 Note: type information may not be readable from constraints
 
 supertyping * constraints, simple: <br>
@@ -400,7 +400,7 @@ variable
 -----------------------------------------------------             
 Γ ; C ⊢ x : τ ≥ ∃ Δ ⟨D ∧ τ' ≤ τ₁⟩ . τ'
 ```
-Note: cumbersome redunancy between supertyping and constraints
+Note: cumbersome redundancy between supertyping and constraints
 Note: type information may not be readable from constraints
 
 
@@ -420,7 +420,7 @@ Note: type information readable in incomplete program
 
 example: strict option
 ```
-(x : ∀ α ≤ ? . list[α]) ∈ Γ 
+(x : ∃ α ≤ ? . list[α]) ∈ Γ 
 Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str] ~> α ≤ str
 --------------------------------------------------------------------
 Γ ⊢ x : list[str] ≥ (∃ α ≤ str . list[α])
@@ -429,7 +429,7 @@ example: strict option
 
 example: lenient option
 ```
-(x : ∀ α ≤ ? . list[α]) ∈ Γ 
+(x : ∃ α ≤ ? . list[α]) ∈ Γ 
 Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str] ~> α ≤ (str | α)
 --------------------------------------------------------------------
 Γ ⊢ x : list[str] ≥ (∃ α ≤ (str | α) . list[α])
@@ -761,12 +761,72 @@ constraint solving/unification
 - termination condition: constraints cannot be reduced  
 
 
-exists_right
+- recycling renamed constraints happens at existential  
 
+- constraints in existential of subtype e.g ∃ Δ' ⟨D'⟩ τ' ≤ ∃ Δ ⟨D⟩ τ
+  - are reduced to  Δ'; Δ ⊩ D' ∧ D ∧ τ' ≤ τ
+  - the subtyping is sufficient to subsume the implication D' --> D
+
+- a constraint on a single variable is simply recorded without recylcing
+- strictly record type variable in α ≤ τ as (α → τ);
+- leniently record type variable in τ ≤ α as (α → τ | β);
+- generalize any unbound variables in both input and output of function abstraction
+- convert any unbound variables only in return type to ⊥ type. 
+
+
+
+- solving generates solutions to type variables
+  - it does not generate new constraints
+
+
+
+
+conjunction
 Δ # Γ
-Γ, Δ ; C, D ⊩ τ' ≤ τ ~> Δ' ; D' 
+Γ ⊩ D ~> Δ'
+Γ, Δ' ⊩ C ∧ τ' ≤ τ ~> Δ'' 
 -----------------------------------
-Γ ; C ⊩ τ' ≤ ∃ Δ ⟨D⟩ τ ~> Δ' ; D' 
+Γ ⊩ C ∧ D ~> Δ'' 
+
+disjunction
+Δ # Γ
+Γ ⊩ D ~> Δ₁
+Γ ⊩ C ~> Δ₂
+-----------------------------------
+Γ ⊩ C ∨ D ~> Δ₁, Δ₂
+
+exists_left
+Δ # Γ
+Γ, Δ ⊩ D ∧ τ' ≤ τ ~> Δ' 
+-----------------------------------
+Γ ⊩ ∃ Δ ⟨D⟩ τ' ≤ τ ~> Δ' 
+
+exists_right
+Δ # Γ
+Γ, Δ ⊩ D ∧ τ' ≤ τ ~> Δ' 
+-----------------------------------
+Γ ⊩ τ' ≤ ∃ Δ ⟨D⟩ τ ~> Δ' 
+
+
+
+
+variable_left
+
+
+Γ ⊩ Γ(α) ≤ τ ~> . ; ⊥ ≤ ⊤  
+----------------------------------
+Γ ⊩ α ≤ τ ~> α ≤ τ ; ⊥ ≤ ⊤  
+
+variable_right
+----------------------------------
+Γ ⊩ τ ≤ α ~>  . ; τ ≤ α  
+
+
+
+typerator
+Γ, α ≤ ? ⊩  α ≤ str ~> α ≤ str
+--------------------------------------------------
+Γ, α ≤ ? ⊩  list[α] ≤ list[str] ~> α ≤ str
 
 
 --------------------------------------------------------------------------------------
@@ -778,7 +838,7 @@ constraint supertyping
 variable
 
 (x : ∀ Δ ⟨D⟩ . τ') ∈ Γ 
-Γ ; C ⊩ (∃ Δ ⟨D⟩ . τ') ≤ τ ~> Δ' ; D'    
+Γ ⊩ C ∧ (∃ Δ ⟨D⟩ . τ') ≤ τ ~> Δ' ; D'    
 -----------------------------------------------------             
 Γ ; C ⊢ x : τ ≥ (∃ Δ' ⟨D'⟩ . τ')
 
@@ -809,9 +869,9 @@ function application
 Γ ; C ⊢ t₁ : ? -> τ₁ ≥ ∀ Δ ⟨D⟩ . τ₂ -> τ₁'
 Δ # Γ
 Γ, Δ ; C ∧ D ⊢ t₂ : τ₂ ≥ τ₂'
-Γ, Δ ; C ∧ D, τ₂' ≤ τ₂ ⊩ τ₁' ≤ τ₁ ~> Δ' ; D'
----------------------------------------------
-Γ ; C ⊢ t₁ t₂ : τ₁ ≥ ∃ Δ' ⟨D'⟩ . τ₁'
+Γ, Δ ⊩ C ∧ D ∧ τ₂' ≤ τ₂ ∧ τ₁' ≤ τ₁ ~> Δ'
+----------------------------------------------
+Γ ; C ⊢ t₁ t₂ : τ₁ ≥ ∃ Δ' . τ₁'
 
 ----------------------------------------------------------------------------------
 
