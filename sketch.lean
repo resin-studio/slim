@@ -748,10 +748,41 @@ fresh α₂
 
 
 --------------------------------------------------------------------------------------
+constraint solving/unification 
+
+Γ ; C ⊩ τ ≤ τ ~> Δ ; D
+
+- subtyping corresponds to predicate defined by horn clauses
+- existential on the right: unify + backchain
+- existential on the left: differs from prolog/backchaining in that existential may be nested within predicate 
+- solving is similar to synquid 
+  - due to eager unification with constraints in subptyping producing implication of constraints 
+- solving is simpler than synquid by avoiding separate language of refinements 
+- termination condition: fixpoint between input/output constraints - constraints cannot be reduced  
+
+
+exists_right
+
+Δ # Γ
+Γ, Δ ; C ; D ⊩ τ' ≤ τ ~> Δ' ; D' 
+-----------------------------------
+Γ ; C ⊩ τ' ≤ ∃ Δ ⟨D⟩ τ ~> Δ' ; D' 
+
+exists_both
+Γ, Δ, Δ' ; C ; D' --> D ⊩ τ' ≤ τ ~> Δ'' ; D'' 
+-----------------------------------------------
+Γ ; C ⊩ ∃ Δ' ⟨D'⟩ τ' ≤ ∃ Δ ⟨D⟩ τ ~> Δ'' ; D'' 
+
+exists_left
+Γ, Δ' ; C ; D' ⊩ τ' ≤ τ ~> Δ ; D
+-----------------------------------------------
+Γ ; C ⊩ ∃ Δ' ⟨D'⟩ τ' ≤ τ ~> Δ ; D
+
+
+--------------------------------------------------------------------------------------
 constraint supertyping
 
 Γ ; C ⊢ t : τ :> τ                 
-
 
 
 variable
