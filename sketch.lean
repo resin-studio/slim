@@ -758,7 +758,7 @@ constraint solving/unification
 - solving is similar to synquid 
   - due to eager unification with constraints in subptyping producing implication of constraints 
 - solving is simpler than synquid by avoiding separate language of refinements 
-- termination condition: fixpoint between input/output constraints - constraints cannot be reduced  
+- termination condition: constraints cannot be reduced  
 
 
 exists_right
