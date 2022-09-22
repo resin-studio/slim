@@ -780,18 +780,20 @@ constraint solving/unification
 - solving generates solutions to type variables
   - it does not generate new constraints
 
-- record inductive definitions in environment?
+- save constraints on pairs in environment?
   - (τ₁ ; τ₂) ≤ (μ Z . τ) ==> τ₁ ≤ (∃ X ⟨(X ; τ₂) ≤ unroll(μ Z . τ)⟩ . X), τ₂ ≤ (∃ Y ⟨(τ₁ ; Y) ≤ unroll(μ Z . τ)⟩ . Y)
+  - breaking pairs into existential types allows saving constraints on variables that cannot be reduced 
+  - unrolling inside existential type avoids diverging in case pair cannot be unified with inductive type 
   - example
     - (#nil:unit ; #zero:unit) ≤ _ ==> 
       #nil:unit ≤ (∃ X ⟨(X ; #zero:unit) ≤ ((#nil:unit ; #zero:unit) | ...) ⟩ . X) ==>
+
 - roll
   - τ' ≤ (μ Z . τ) ==> τ' ≤ unroll(μ Z . τ) ==> τ' ≤ τ[μ Z . τ]
-  - τ[(μ Z . τ)] ≤ (μ Z . τ) ==> True
+  - invariant: τ[(μ Z . τ)] ≤ (μ Z . τ)
 - unroll
-
   - (μ Z . τ') ≤ τ ==> uroll(μ Z . τ') ≤ τ ==> τ'[μ Z . τ'] ≤ τ 
-  - (μ Z . τ) ≤ τ[(μ Z . τ)] ==> True
+  - invariant: (μ Z . τ) ≤ τ[(μ Z . τ)]
 
 
 
@@ -847,7 +849,7 @@ typerator
 --------------------------------------------------------------------------------------
 constraint supertyping
 
-Γ ; C ⊢ t : τ :> τ                 
+Γ ; C ⊢ t : τ ≥ τ                 
 
 
 variable
