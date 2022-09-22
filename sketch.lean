@@ -201,25 +201,19 @@ type guided program synthesis for dynamically typed languages
 
 -- Examples --
 
-let nat = μ nat . #zero:unit ∨ #succ:nat
+let nat = μ nat . #zero:unit | #succ:nat
 
 let even = μ even . 
-  #zero:unit ∨ 
-  #succ:#succ:even 
+  #zero:unit | #succ:#succ:even 
 
 let even;odd = μ even;odd . 
-(
-  #zero:unit ∨ 
-  #succ:odd
-);(
-  #succ:even
-)
+  (#zero:unit | #succ:odd) ; #succ:even
 
-let list α = μ list . #nil:unit ∨ #cons:(α;list)
+let list α = μ list . #nil:unit | #cons:(α;list)
 
 let list_len α = μ list_len . 
-  (#nil:unit ; #zero:unit) ∨ 
-  ∃ XS ≤ list α , N ≤ nat ⟨(XS ; N) ≤ list_len⟩ . (#cons:(α;XS) ; #succ:N) ∨
+  (#nil:unit ; #zero:unit) | 
+  ∃ XS ≤ list α , N ≤ nat ⟨(XS ; N) ≤ list_len⟩ . (#cons:(α;XS) ; #succ:N) |
   ⊥
 
 - relational type `list_len` is similar to the measure concept in Synquid
@@ -475,8 +469,8 @@ t ::=                             term
   #l : τ                          variant type
   .l : τ                          field type
   τ -> τ                          implication type 
-  τ ∧ τ                           intersection type
-  τ ∨ τ                           union type
+  τ & τ                           intersection type
+  τ | τ                           union type
   ∀ α <: τ . τ                    universal schema 
   ∃ α <: τ . τ                    existential schema 
   μ α . t                         inductive type
@@ -787,7 +781,10 @@ constraint solving/unification
   - it does not generate new constraints
 
 - record inductive definitions in environment?
-  - (τ₁ ; τ₂) ≤ (μ Z . τ) ==> τ₁ ≤ (∃ X ⟨(X ; τ₂) ≤ μ Z . τ)⟩ . X), τ₂ ≤ (∃ Y ⟨(τ₁ ; Y) ≤ (μ Z . τ)⟩ . Y)
+  - (τ₁ ; τ₂) ≤ (μ Z . τ) ==> τ₁ ≤ (∃ X ⟨(X ; τ₂) ≤ unroll(μ Z . τ)⟩ . X), τ₂ ≤ (∃ Y ⟨(τ₁ ; Y) ≤ unroll(μ Z . τ)⟩ . Y)
+  - example
+    - (#nil:unit ; #zero:unit) ≤ _ ==> 
+      #nil:unit ≤ (∃ X ⟨(X ; #zero:unit) ≤ ((#nil:unit ; #zero:unit) | ...) ⟩ . X) ==>
 - roll
   - τ' ≤ (μ Z . τ) ==> τ' ≤ unroll(μ Z . τ) ==> τ' ≤ τ[μ Z . τ]
   - τ[(μ Z . τ)] ≤ (μ Z . τ) ==> True
