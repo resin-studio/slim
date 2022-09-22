@@ -770,6 +770,14 @@ constraint solving/unification
 - a constraint on a single variable is simply recorded without recylcing
 - strictly record type variable in α ≤ τ as (α → τ);
 - leniently record type variable in τ ≤ α as (α → τ | β);
+  - τ ≤ α, [β → ?, α → τ | β]
+    - α ≤ X ==> (τ | β) ≤ X ==> (τ | ?) ≤ X ==> (τ ≤ X) ==> [Y → ?, X → [τ | Y]] 
+      - X ≤ τ ==> τ | ? ≤ τ ==> False
+    - X ≤ τ ==> [X → τ]
+      - α ≤ X ==> τ | ? ≤ τ ==> False
+
+
+
 - generalize any unbound variables in both input and output of function abstraction
 - convert any unbound variables only in return type to ⊥ type. 
 
@@ -777,6 +785,16 @@ constraint solving/unification
 
 - solving generates solutions to type variables
   - it does not generate new constraints
+
+- record inductive definitions in environment?
+  - (τ₁ ; τ₂) ≤ (μ Z . τ) ==> τ₁ ≤ (∃ X ⟨(X ; τ₂) ≤ μ Z . τ)⟩ . X), τ₂ ≤ (∃ Y ⟨(τ₁ ; Y) ≤ (μ Z . τ)⟩ . Y)
+- roll
+  - τ' ≤ (μ Z . τ) ==> τ' ≤ unroll(μ Z . τ) ==> τ' ≤ τ[μ Z . τ]
+  - τ[(μ Z . τ)] ≤ (μ Z . τ) ==> True
+- unroll
+
+  - (μ Z . τ') ≤ τ ==> uroll(μ Z . τ') ≤ τ ==> τ'[μ Z . τ'] ≤ τ 
+  - (μ Z . τ) ≤ τ[(μ Z . τ)] ==> True
 
 
 
