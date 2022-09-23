@@ -787,6 +787,13 @@ constraint solving/unification
   - example
     - (#nil:unit ; #zero:unit) ≤ _ ==> 
       #nil:unit ≤ (∃ X ⟨(X ; #zero:unit) ≤ ((#nil:unit ; #zero:unit) | ...) ⟩ . X) ==>
+    - (X ; Y ) ≤ _ ==> 
+      X ≤ (∃ X ⟨(X ; Y) ≤ ((#nil:unit ; #zero:unit) | ...) ⟩ . X) ==>
+      - X ≤ list ==>
+        (X' ; Y) ≤ ((#nil:unit ; #zero:unit) | ...) ∧  X' ≤ list ==>
+        (list ; Y) ≤ ((#nil:unit ; #zero:unit) | ...) ==>
+        (list ; Y) ≤ (#nil:unit ; #zero:unit) ∨ (list ; Y) ≤ (#nil:unit ; #zero:unit) ==>
+        FAIL
 
 - roll
   - τ' ≤ (μ Z . τ) ==> τ' ≤ unroll(μ Z . τ) ==> τ' ≤ τ[μ Z . τ]
@@ -831,9 +838,9 @@ variable_left_write
 
 variable_left_read
 {α → τ'} ⊆ Γ
-Γ ⊩ τ' ≤ τ ~> Δ  
+Γ ⊩ τ' ≤ τ ~> Δ 
 ----------------------------------
-Γ ⊩ α ≤ τ ~> Δ
+Γ ⊩ α ≤ τ ~> Δ 
 
 
 variable_right_write
