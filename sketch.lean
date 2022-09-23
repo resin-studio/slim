@@ -793,7 +793,8 @@ constraint solving/unification
         (X' ; Y) ≤ ((#nil:unit ; #zero:unit) | ...) ∧  X' ≤ list ==>
         (list ; Y) ≤ ((#nil:unit ; #zero:unit) | ...) ==>
         (list ; Y) ≤ (#nil:unit ; #zero:unit) ∨ (list ; Y) ≤ (#nil:unit ; #zero:unit) ==>
-        FAIL
+        FAIL # this constraint does not refine existing upper bound
+      - order matters? X ≤ τ₁ ∧ X ≤ τ₂; do we need intersection?
 
 - roll
   - τ' ≤ (μ Z . τ) ==> τ' ≤ unroll(μ Z . τ) ==> τ' ≤ τ[μ Z . τ]
@@ -839,7 +840,9 @@ variable_left_write
 variable_left_read
 {α → τ'} ⊆ Γ
 Γ ⊩ τ' ≤ τ ~> Δ 
-----------------------------------
+// ∨ Δ = {α ≤ τ & τ'} if subtyping fails, we intersect the types, lower upper bounds?
+// should we add intersection with variable when we see α ≤ τ : {α → τ & β}, then we can refine the unknown via solving future subtyping.
+------------------------------------
 Γ ⊩ α ≤ τ ~> Δ 
 
 
