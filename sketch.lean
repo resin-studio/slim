@@ -804,7 +804,9 @@ constraint solving/unification
   - invariant: (μ Z . τ) ≤ τ[(μ Z . τ)]
 
 
-
+theorems:
+  - completeness: if alorithm produces some type output then constraint typing holds on output type
+  - soundness: if constraint typing holds on a type then algorithm succeeds with type as input
 
 conjunction
 Δ # Γ
