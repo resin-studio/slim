@@ -458,8 +458,8 @@ t ::=                             term
   α <: τ => t                     type abstraction
   t τ                             type application 
   let t : τ = t in t              binding
-  {τ, t} as ∃ α . τ               type packing 
-  let {α, t} = t in t             type unpacking
+  hide τ in t                     type packing 
+  let α with t = t in t           type unpacking
   fix t                           recursion
 
 τ ::=                             type
@@ -471,12 +471,11 @@ t ::=                             term
   τ -> τ                          implication type 
   τ & τ                           intersection type
   τ | τ                           union type
-  ∀ α <: τ . τ                    universal schema 
-  ∃ α <: τ . τ                    existential schema 
+  ∀ Δ ⟨C⟩ . τ                     universal schema 
+  ∃ Δ ⟨C⟩ . τ                     existential schema 
   μ α . t                         inductive type
   α <: τ => τ                     typerator abstraction
   τ τ                             typerator application
-  τ @ τ <: τ                      relational type 
 
 κ ::=                             kind
   *τ                              ground kind
