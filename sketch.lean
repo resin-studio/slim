@@ -836,14 +836,13 @@ exists_right
 
 variable_left_write
 {α → ?} ⊆ Γ
+β # (Γ, τ)
 ----------------------------------
-Γ ⊩ α ≤ τ ~> {α → τ}  
+Γ ⊩ α ≤ τ ~> {α → (τ & β), β → ?}  
 
 variable_left_read
 {α → τ'} ⊆ Γ
 Γ ⊩ τ' ≤ τ ~> Δ 
-// ∨ Δ = {α ≤ τ & τ'} if subtyping fails, we intersect the types, lower upper bounds?
-// should we add intersection with variable when we see α ≤ τ : {α → τ & β}, then we can refine the unknown via solving future subtyping.
 ------------------------------------
 Γ ⊩ α ≤ τ ~> Δ 
 
