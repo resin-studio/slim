@@ -314,7 +314,7 @@ example: is `first (x, ...` well-typed?
 consider:
 ```
 let x = [] 
--- x : (∃ α ≤ ? . list[α])
+-- x : (∀ α ≤ ? . list[α])
 
 let first : list[str] ; ? -> list[str] 
 let first = (a , b) => a 
@@ -338,7 +338,7 @@ variable
 
 example: is `first(x, x)` well-typed?
 ```
-(x : ∃  α ≤ ? . list[α]) ∈ Γ 
+(x : ∀ α ≤ ? . list[α]) ∈ Γ 
 Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str]
 --------------------------------------------------------------------
 Γ ⊢ x : list[str] ≥ (∃ α ≤ ? . list[α])
@@ -349,7 +349,7 @@ example: is `first(x, x)` well-typed?
 consider:
 ```
 let x = [] 
--- x : (∃ α ≤ ? . list[α])
+-- x : (∀ α ≤ ? . list[α])
 
 let first : list[str] ; ? -> list[str] 
 let first = (a , b) => a 
