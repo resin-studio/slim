@@ -55,12 +55,14 @@ C ::=                             constraint
   C ∧ C                           conjunction
 
 Δ ::=                             type context
-  {}                              empty type context
-  Δ{α → τ}                        type context extended with indentifier and its super type 
+  {α → τ}
+  Δ, Δ                        
+
+o ::= some Δ | none               optional type context
 
 Γ ::=                             term context
-  {}                              empty term context
-  Γ{x → τ}                        term context extended with indentifier and its type 
+  {x → τ}                        
+  Γ, Γ                      
 
 -/
 
@@ -68,36 +70,120 @@ C ::=                             constraint
 /-
 -/
 
--- static semantics 
-/-
--/
-
-
 -- dynamic implementation 
 /-
 beyond scope
 -/
 
--- static implementation 
-/-
--/
-
-
 -- dynamic semantics/implementation theorems
 /-
-soundness: beyond scope 
-completeness: beyond scope
+beyond scope
 -/
 
--- static/dynamic semantics theorems
+-- static semantics 
 /-
-soundness: N/A
-completeness: N/A
 -/
 
+-- static implementation 
+/-
+
+
+`merge Δ Δ = Δ`
+```
+merge Δ₁ Δ₂ =
+  fmap Δ₁ (α → τ₁ =>
+  fmap Δ₂ (β → τ₂ =>
+    {α → τ₁ | (Δ₂ α), β → (Δ₁ β) | τ₂}
+  ))
+```
+
+`choose o o = o`
+```
+choose none none = none 
+choose none o = o 
+choose o none = o 
+choose (some Δ₁) (some Δ₂) = some (merge Δ₁ Δ₂)
+```
+
+`solve Δ ⊢ C = o`
+```
+solve Δ ⊢ C₁ ∧ C₂ =  
+  fmap (solve Δ ⊢ C₁) (Δ' => 
+    solve Δ, Δ' ⊢ C₂
+  )
+solve Δ ⊢ C₁ ∨ C₂ = 
+  choose (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
+
+solve Δ ⊢ τ₁ | τ₂ ≤ τ =
+  solve Δ ⊢ τ₁ ≤ τ ∧ τ₂ ≤ τ
+
+solve Δ ⊢ τ ≤ τ₁ | τ₂ =
+  Δ ⊢ τ ≤ τ₁ ∨ τ ≤ τ₂
+```
+
+
+intersection_left
+Γ ⊩ τ₁ ≤ τ ∨ τ₂ ≤ τ ~> Δ
+----------------------------------
+Γ ⊩ τ₁ & τ₂ ≤ τ ~> Δ 
+
+intersection_right
+Γ ⊩ τ ≤ τ₁ ∧ τ ≤ τ₂ ~> Δ 
+----------------------------------
+Γ ⊩ τ ≤ τ₁ & τ₂ ~> Δ
+
+exists_left
+Δ # Γ
+Γ, Δ ⊩ D ∧ τ' ≤ τ ~> Δ' 
+-----------------------------------
+Γ ⊩ ∃ Δ ⟨D⟩ τ' ≤ τ ~> Δ' 
+
+exists_right
+Δ # Γ
+Γ, Δ ⊩ D ∧ τ' ≤ τ ~> Δ' 
+-----------------------------------
+Γ ⊩ τ' ≤ ∃ Δ ⟨D⟩ τ ~> Δ' 
+
+
+variable_left_write
+{α → ?} ⊆ Γ
+β # (Γ, τ)
+----------------------------------
+Γ ⊩ α ≤ τ ~> {α → (τ & β), β → ?}  
+
+variable_left_read
+{α → τ'} ⊆ Γ
+Γ ⊩ τ' ≤ τ ~> Δ 
+------------------------------------
+Γ ⊩ α ≤ τ ~> Δ 
+
+
+variable_right_write
+{α → ?} ⊆ Γ    
+β # (Γ, τ)
+----------------------------------
+Γ ⊩ τ ≤ α ~> {α → (τ | β), β → ?}  
+
+variable_right_read
+```
+{α → τ} ⊆ Γ
+Γ ⊩ τ' ≤ τ ~> Δ  
+----------------------------------
+Γ ⊩ τ' ≤ α ~> Δ 
+```
+
+
+-/
 
 -- static implementation/semantics theorems
 /-
 soundness: ...
 completeness: ...
+-/
+
+
+-- static/dynamic semantics theorems
+/-
+soundness: N/A
+completeness: N/A
 -/
