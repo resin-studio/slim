@@ -754,7 +754,6 @@ constraint solving/unification
 - solving is simpler than synquid by avoiding separate language of refinements 
 - termination condition: constraints cannot be reduced  
 
-
 - recycling renamed constraints happens at existential  
 
 - constraints in existential of subtype e.g ∃ Δ' ⟨D'⟩ τ' ≤ ∃ Δ ⟨D⟩ τ
@@ -762,8 +761,10 @@ constraint solving/unification
   - the subtyping is sufficient to subsume the implication D' --> D
 
 - a constraint on a single variable is simply recorded without recylcing
-- strictly record type variable in α ≤ τ as (α → τ);
-- leniently record type variable in τ ≤ α as (α → τ | β);
+- strictly record type variable in α ≤ τ as (α → τ & Β)
+  - {α → nat & β, β → ?} ⊩ α ≤ even ==> nat & β ≤ even ==> nat ≤ even ∨ β ≤ even ==> nat ≤ even ∨ β ≤ even  ==> β ≤ even
+  - {α → nat & β, β → ?} ⊩ α ≤ int ==> nat & β ≤ int ==> nat ≤ int ∨ β ≤ int ==> nat ≤ int ∨ β ≤ int
+- leniently record type variable in τ ≤ α as (α → τ | β)
   - τ ≤ α, [β → ?, α → τ | β]
     - α ≤ X ==> (τ | β) ≤ X ==> (τ | ?) ≤ X ==> (τ ≤ X) ==> [Y → ?, X → [τ | Y]] 
       - X ≤ τ ==> τ | ? ≤ τ ==> False
@@ -796,6 +797,9 @@ constraint solving/unification
         FAIL # this constraint does not refine existing upper bound
       - order matters? X ≤ τ₁ ∧ X ≤ τ₂; do we need intersection?
 
+
+  
+
 - roll
   - τ' ≤ (μ Z . τ) ==> τ' ≤ unroll(μ Z . τ) ==> τ' ≤ τ[μ Z . τ]
   - invariant: τ[(μ Z . τ)] ≤ (μ Z . τ)
@@ -810,42 +814,37 @@ theorems:
 
 conjunction
 Δ # Γ
-Γ ⊩ D ~> Δ
-Γ, Δ ⊩ C ∧ τ' ≤ τ ~> Δ'
+Γ ⊩ C ~> Δ
+Γ, Δ ⊩ D ∧ τ' ≤ τ ~> Δ'
 -----------------------------------
 Γ ⊩ C ∧ D ~> Δ'
 
 disjunction
-Γ ⊩ D ~> Δ₁ ∨ Δ₁ = {}
-Γ ⊩ C ~> Δ₂ ∨ Δ₂ = {}
+Γ ⊩ C ~> Δ₁ else Δ₁ = {}
+Γ ⊩ D ~> Δ₂ else Δ₂ = {}
 -----------------------------------
 Γ ⊩ C ∨ D ~> merge(Δ₁, Δ₂)
 
 union_left
-Γ ⊩ τ₁ ≤ τ ~> Δ 
-Γ, Δ ⊩ τ₂ ≤ τ ~> Δ'
+Γ ⊩ τ₁ ≤ τ ∧ τ₂ ≤ τ ~> Δ 
 ----------------------------------
-Γ ⊩ τ₁ | τ₂ ≤ τ ~> Δ'
+Γ ⊩ τ₁ | τ₂ ≤ τ ~> Δ
 
 union_right
-Γ ⊩ τ ≤ τ₁ ~> Δ₁ ∨ Δ₁ = {}
-Γ ⊩ τ ≤ τ₂ ~> Δ₂ ∨ Δ₂ = {}
+Γ ⊩ τ ≤ τ₁ ∨ τ ≤ τ₂~> Δ
 ----------------------------------
-Γ ⊩  τ ≤ τ₁ | τ₂ ~> merge(Δ₁, Δ₂)   
+Γ ⊩  τ ≤ τ₁ | τ₂ ~> Δ 
 
 
 intersection_left
-Γ ⊩ τ₁ ≤ τ ~> Δ₁ ∨ Δ₁ = {}
-Γ ⊩ τ₂ ≤ τ ~> Δ₂ ∨ Δ₂ = {}
-// alternate: Γ ⊩ τ₁ ≤ τ ~> Δ orelse Γ ⊩ τ₂ ≤ τ ~> Δ
+Γ ⊩ τ₁ ≤ τ ∨ τ₂ ≤ τ ~> Δ
 ----------------------------------
-Γ ⊩ τ₁ & τ₂ ≤ τ ~> merge(Δ₁, Δ₂)
+Γ ⊩ τ₁ & τ₂ ≤ τ ~> Δ 
 
 intersection_right
-Γ ⊩ τ ≤ τ₁ ~> Δ 
-Γ, Δ ⊩ τ ≤ τ₂ ~> Δ'
+Γ ⊩ τ ≤ τ₁ ∧ τ ≤ τ₂ ~> Δ 
 ----------------------------------
-Γ ⊩ τ ≤ τ₁ & τ₂ ~> Δ'
+Γ ⊩ τ ≤ τ₁ & τ₂ ~> Δ
 
 exists_left
 Δ # Γ
