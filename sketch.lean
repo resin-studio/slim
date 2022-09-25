@@ -818,11 +818,17 @@ constraint solving/unification
   - if there is an inductive relation with intersection, then intersection must be a record
 
 
-- 
 
+-- intersection: must break right side items into conjuctive parts before disjunctive parts
+  - {x, y} & {z} <: {x, y, z} ==> {x, y} & {z} <: {x} & {y} & {z} ==>
+    ({x, y} & {z} <: {x}) ∧ ({x, y} & {z} ≤ {y}) ∧ ({x, y} & {z} ≤ {z})
+  - {x, y} & {z} <: {x, y, z} ==> ({x, y} <: {x, y, z}) ∨  ({z} <: {x, y, z})
 
-
-
+-- union: must break left side items into conjuctive parts before disjunctive parts
+  - #x | # y | #z <: #x | # y | #z ==>
+      (#x <: #x | # y | #z) ∧ (#y <: #x | # y | #z)
+  - #x | # y | #z <: #x | # y | #z ==>
+      (#x | # y | #z <: #x) ∨ (#x | # y | #z <: #y)
   
 
 - roll

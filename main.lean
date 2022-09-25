@@ -89,6 +89,7 @@ beyond scope
 /-
 
 
+
 `merge Δ Δ = Δ`
 ```
 merge Δ₁ Δ₂ =
@@ -194,11 +195,11 @@ solve Δ ⊢ τ ≤ τ₁ | τ₂ =
   solve Δ ⊢ τ ≤ τ₁ ∨ τ ≤ τ₂
 
 
-solve Δ ⊢ τ₁ & τ₂ ≤ τ =
-  solve Δ ⊢ τ₁ ≤ τ ∨ τ₂ ≤ τ
-
 solve Δ ⊢ τ ≤ τ₁ & τ₂ =
   solve Δ ⊢ τ ≤ τ₁ ∧ τ ≤ τ₂
+
+solve Δ ⊢ τ₁ & τ₂ ≤ τ =
+  solve Δ ⊢ τ₁ ≤ τ ∨ τ₂ ≤ τ
 
 
 
