@@ -780,13 +780,15 @@ constraint solving/unification
 - solving generates solutions to type variables
   - it does not generate new constraints
 
-- save constraints on pairs in environment?
-  - (τ₁ ; τ₂) ≤ (μ Z . τ) ==> τ₁ ≤ (∃ X ⟨(X ; τ₂) ≤ unroll(μ Z . τ)⟩ . X), τ₂ ≤ (∃ Y ⟨(τ₁ ; Y) ≤ unroll(μ Z . τ)⟩ . Y)
+- unions/intersections in relation to inductive type?
+  - (τ₁ | τ₂) ≤ (μ Z . τ) ==> τ₁ ≤ (∀ X ⟨(X | τ₂) ≤ unroll(μ Z . τ)⟩ . X) ∧ τ₂ ≤ (∀ Y ⟨(τ₁ | Y) ≤ unroll(μ Z . τ)⟩ . Y)
+  - (τ₁ & τ₂) ≤ (μ Z . τ) ==> τ₁ ≤ (∀ X ⟨(X & τ₂) ≤ unroll(μ Z . τ)⟩ . X) ∧ τ₂ ≤ (∀ Y ⟨(τ₁ & Y) ≤ unroll(μ Z . τ)⟩ . Y)
+  - (τ₁ ; τ₂) ≤ (μ Z . τ) ==> τ₁ ≤ (∀ X ⟨(X ; τ₂) ≤ unroll(μ Z . τ)⟩ . X) ∧ τ₂ ≤ (∀ Y ⟨(τ₁ ; Y) ≤ unroll(μ Z . τ)⟩ . Y)
   - breaking pairs into existential types allows saving constraints on variables that cannot be reduced 
   - unrolling inside existential type avoids diverging in case pair cannot be unified with inductive type 
   - example
     - (#nil:unit ; #zero:unit) ≤ _ ==> 
-      #nil:unit ≤ (∃ X ⟨(X ; #zero:unit) ≤ ((#nil:unit ; #zero:unit) | ...) ⟩ . X) ==>
+      #nil:unit ≤ (∀ X ⟨(X ; #zero:unit) ≤ ((#nil:unit ; #zero:unit) | ...) ⟩ . X) ==>
     - (X ; Y ) ≤ _ ==> 
       X ≤ (∀ X ⟨(X ; Y) ≤ ((#nil:unit ; #zero:unit) | ...) ⟩ . X) ==>
       - X ≤ list ==>
@@ -795,6 +797,30 @@ constraint solving/unification
         (list ; Y) ≤ (#nil:unit ; #zero:unit) ∨ (list ; Y) ≤ (#nil:unit ; #zero:unit) ==>
         FAIL # this constraint does not refine existing upper bound
       - order matters? X ≤ τ₁ ∧ X ≤ τ₂; do we need intersection?
+
+
+    - (.l X & .r Y ) ≤ (μ Z . τ) ==> 
+      .l X ≤ (∀ X' ⟨X' & .r Y ≤ unroll(μ Z . τ)⟩ . X') ∧ .r Y ≤ (∀ Y' ⟨.l X & ; Y') ≤ unroll(μ Z . τ)⟩ . Y') ==>
+      ... ==>
+      .l X ≤ X' ∧ X' & .r Y ≤ unroll(μ Z . τ) ==>
+      {X' → .l X | β} ⊢ X' & .r Y ≤ unroll(μ Z . τ) ==> 
+      {X' → .l X | β} ⊢ X' & .r Y ≤ (#nil ; #zero) | (#cons XS ; #succ N) ==> 
+      {X' → .l X | β} ⊢ (l. X | β) & (.r Y) ≤ (#nil ; #zero) ==> 
+      {X' → .l X | β} ⊢ (l. X | β) & (.r Y) ≤ (#nil ; #zero) ==> 
+      {X' → .l X | β} ⊢ (l. X | β) & (.r Y) ≤ (#nil ; #zero) ==> 
+      -- BAD!!! infinite recursion 
+      -- what is the precise reason for divergence?
+        -- we never reduce one side to a variable
+      -- must pattern match on union before separating intersection
+
+- inductive type may only relate to variants and records
+- treat record type as a special canonical form, such that a record of variables may relate to inductive type
+  - if there is an inductive relation with intersection, then intersection must be a record
+
+
+- 
+
+
 
 
   
