@@ -788,7 +788,7 @@ constraint solving/unification
     - (#nil:unit ; #zero:unit) ≤ _ ==> 
       #nil:unit ≤ (∃ X ⟨(X ; #zero:unit) ≤ ((#nil:unit ; #zero:unit) | ...) ⟩ . X) ==>
     - (X ; Y ) ≤ _ ==> 
-      X ≤ (∃ X ⟨(X ; Y) ≤ ((#nil:unit ; #zero:unit) | ...) ⟩ . X) ==>
+      X ≤ (∀ X ⟨(X ; Y) ≤ ((#nil:unit ; #zero:unit) | ...) ⟩ . X) ==>
       - X ≤ list ==>
         (X' ; Y) ≤ ((#nil:unit ; #zero:unit) | ...) ∧  X' ≤ list ==>
         (list ; Y) ≤ ((#nil:unit ; #zero:unit) | ...) ==>
@@ -845,17 +845,17 @@ intersection_right
 ----------------------------------
 Γ ⊩ τ ≤ τ₁ & τ₂ ~> Δ
 
-exists_left
+universal_left
 Δ # Γ
 Γ, Δ ⊩ D ∧ τ' ≤ τ ~> Δ' 
 -----------------------------------
-Γ ⊩ ∃ Δ ⟨D⟩ τ' ≤ τ ~> Δ' 
+Γ ⊩ ∀ Δ ⟨D⟩ τ' ≤ τ ~> Δ' 
 
-exists_right
+universal_right
 Δ # Γ
 Γ, Δ ⊩ D ∧ τ' ≤ τ ~> Δ' 
 -----------------------------------
-Γ ⊩ τ' ≤ ∃ Δ ⟨D⟩ τ ~> Δ' 
+Γ ⊩ τ' ≤ ∀ Δ ⟨D⟩ τ ~> Δ' 
 
 
 variable_left_write
