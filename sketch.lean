@@ -820,11 +820,13 @@ constraint solving/unification
 
 
 -- intersection: must break right side items into conjuctive parts before disjunctive parts
+  - raise the supertype as much as possible
   - {x, y} & {z} <: {x, y, z} ==> {x, y} & {z} <: {x} & {y} & {z} ==>
     ({x, y} & {z} <: {x}) ∧ ({x, y} & {z} ≤ {y}) ∧ ({x, y} & {z} ≤ {z})
   - {x, y} & {z} <: {x, y, z} ==> ({x, y} <: {x, y, z}) ∨  ({z} <: {x, y, z})
 
 -- union: must break left side items into conjuctive parts before disjunctive parts
+  - lower the subtype as much as possible
   - #x | # y | #z <: #x | # y | #z ==>
       (#x <: #x | # y | #z) ∧ (#y <: #x | # y | #z)
   - #x | # y | #z <: #x | # y | #z ==>
