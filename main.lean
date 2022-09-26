@@ -135,6 +135,9 @@ make_field_constraint Δ ⊢ τ₀ * .l τ₁ ≤ μ α . τ =
 make_field_constraint _ ⊢ _ * _ ≤ _ = none
 ```
 
+-- TODO: occurs check to turn type in cicular constraint into inductive type 
+-- TODO: add check for well-formed decreasing inductive type (μ α . τ)
+
 `solve Δ ⊢ C = o`
 ```
 solve Δ ⊢ C₁ ∧ C₂ =  

@@ -833,6 +833,13 @@ constraint solving/unification
       (#x | # y | #z <: #x) ∨ (#x | # y | #z <: #y)
   
 
+
+- occurs check: turn type in circular constraint into inductive type
+  - ML datatypes avoid circular constraint by inferring type from tag
+  - #succ α <: α ==> {α → (μ α . #succ α | β), β → ?}
+
+- well-formed inductive type (μ α . τ) check
+
 - roll
   - τ' ≤ (μ Z . τ) ==> τ' ≤ unroll(μ Z . τ) ==> τ' ≤ τ[μ Z . τ]
   - invariant: τ[(μ Z . τ)] ≤ (μ Z . τ)
