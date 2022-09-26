@@ -59,6 +59,10 @@ C ::=                             constraint
   {..., α → τ, ...}
   Δ, Δ                        
 
+m ::=                             renaming 
+  {..., α → β, ...}
+  m, m                        
+
 o ::= some _ | none               option
 
 Γ ::=                             term context
@@ -135,11 +139,26 @@ make_field_constraint Δ ⊢ τ₀ * .l τ₁ ≤ μ α . τ =
 make_field_constraint _ ⊢ _ * _ ≤ _ = none
 ```
 
--- TODO: occurs check to turn type in cicular constraint into inductive type 
 -- TODO: add check for well-formed decreasing inductive type (μ α . τ)
 
+`wf τ`
+```
+wf μ α . τ = well_founded α τ 
+```
 
--- pattern match on τ   
+`well_induct α τ`
+```
+well_founded α  τ₁ | τ₂ = 
+  wf (τ₁ | τ₂) andalso
+  well_founded α τ₁ andalso
+  well_founded α τ₂
+
+well_founded α ∀ Δ ⟨C⟩ . τ = 
+  α ∈ Δ orelse
+
+
+```
+
 `occurs α τ`
 ```
 occurs α α = true
@@ -151,19 +170,52 @@ occurs α (τ₁ -> τ₂) = (occurs α τ₁) orelse (occurs α τ₂)
 occurs α (τ₁ & τ₂) = (occurs α τ₁) orelse (occurs α τ₂)
 occurs α (τ₁ | τ₂) = (occurs α τ₁) orelse (occurs α τ₂)
 occurs α (∀ Δ ⟨C⟩ . τ) = 
-  false 
-  if α ∈ Δ else
+  α ∉ Δ andalso
   (occurs α C) orelse (occurs α τ)
 occurs α (μ β . t) = 
-  if α = β else
+  α ≠ β andalso 
   (occurs α τ)
+```
+
+`occurs α C`
+```
+occurs α (τ' ≤ τ) = (occurs α τ') orelse (occurs α τ)
+occurs α (C₁ ∨ C₂) = (occurs α C₁) orelse (occurs α C₂)
+occurs α (C₁ ∧ C₂) = (occurs α C₁) orelse (occurs α C₂)
 ```
 
 `subst Δ τ`
 ```
+subst Δ α = Δ α 
+subst Δ ? = ? 
+subst Δ ⟨⟩ = ⟨⟩ 
+subst Δ (#l τ) = #l (subst Δ τ) 
+subst Δ (.l τ) = .l (subst Δ τ) 
+subst Δ (τ₁ -> τ₂) = (subst Δ τ₁) -> (subst Δ τ₂)
+subst Δ (τ₁ & τ₂) = (subst Δ τ₁) & (subst Δ τ₂)
+subst Δ (τ₁ | τ₂) = (subst Δ τ₁) | (subst Δ τ₂)
 subst Δ (∀ Δ' ⟨C⟩ . τ) = 
   let Δ = filter Δ ((α → _)  => α ∉ Δ') in
   (∀ Δ' ⟨subst Δ C⟩ . (subst Δ τ))
+subst Δ (μ β . τ) = 
+  let Δ = filter Δ ((α → _)  => α ≠ β) in
+  subst Δ (μ β . τ)
+```
+
+`subst Δ C`
+```
+subst Δ (τ' ≤ τ) = (subst Δ τ') ≤ (subst Δ τ)
+subst Δ (C₁ ∨ C₂) = (subst Δ C₁) ∨ (subst Δ C₂)
+subst Δ (C₁ ∧ C₂) = (subst Δ C₁) ∧ (subst Δ C₂)
+```
+
+`rename m Δ`
+```
+rename m Δ = 
+  fmap Δ (α → τ =>
+    let β = m α in
+    {β → subst m τ}
+  )
 ```
 
 `guard α τ`
