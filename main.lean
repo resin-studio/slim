@@ -138,6 +138,51 @@ make_field_constraint _ ⊢ _ * _ ≤ _ = none
 -- TODO: occurs check to turn type in cicular constraint into inductive type 
 -- TODO: add check for well-formed decreasing inductive type (μ α . τ)
 
+
+-- pattern match on τ   
+`occurs α τ`
+```
+occurs α α = true
+occurs α ? = false 
+occurs α ⟨⟩ = false 
+occurs α (#l τ) = occurs α τ 
+occurs α (.l τ) = occurs α τ 
+occurs α (τ₁ -> τ₂) = (occurs α τ₁) orelse (occurs α τ₂)
+occurs α (τ₁ & τ₂) = (occurs α τ₁) orelse (occurs α τ₂)
+occurs α (τ₁ | τ₂) = (occurs α τ₁) orelse (occurs α τ₂)
+occurs α (∀ Δ ⟨C⟩ . τ) = 
+  false 
+  if α ∈ Δ else
+  (occurs α C) orelse (occurs α τ)
+occurs α (μ β . t) = 
+  if α = β else
+  (occurs α τ)
+```
+
+`subst Δ τ`
+```
+subst Δ (∀ Δ' ⟨C⟩ . τ) = 
+  let Δ = filter Δ ((α → _)  => α ∉ Δ') in
+  (∀ Δ' ⟨subst Δ C⟩ . (subst Δ τ))
+```
+
+`guard α τ`
+```
+guard α τ = 
+  μ α . τ
+  if occurs α τ else
+  τ
+```
+
+
+`Δ α = τ` 
+```
+Δ α =  
+  τ
+  if {α → τ} ⊆ Δ else
+  ?
+```
+
 `solve Δ ⊢ C = o`
 ```
 solve Δ ⊢ C₁ ∧ C₂ =  
@@ -147,16 +192,30 @@ solve Δ ⊢ C₁ ∧ C₂ =
 solve Δ ⊢ C₁ ∨ C₂ = 
   choose (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
 
+solve Δ ⊢ (∀ Δ' ⟨C⟩ τ') ≤ τ =
+  let rmap = fmap Δ (α → _ => {α → fresh}) in
+  let Δ' = rename rmap Δ' in
+  let C = subst rmap C in
+  let τ' = subst rmap τ' in
+  solve Δ, Δ' ⊢ C ∧ τ' ≤ τ 
+
+solve Δ ⊢  τ' ≤ (∀ Δ' ⟨C⟩ τ) =
+  let rmap = fmap Δ (α → _ => {α → fresh}) in
+  let Δ' = rename rmap Δ' in
+  let C = subst rmap C in
+  let τ = subst rmap τ in
+  solve Δ, Δ' ⊢ C ∧ τ ≤ τ' 
+
 solve Δ ⊢ α ≤ τ =
   let τ' = Δ α in (
-    let β = fresh in some {α → (τ & β), β → ?}
+    let β = fresh in some {α → ((guard α τ) & β), β → ?}
     if τ' = ? else
     solve Δ ⊢ τ' ≤ τ
   )
 
 solve Δ ⊢ τ' ≤ α =
   let τ = Δ α in (
-    let β = fresh in some {α → (τ' | β), β → ?}  
+    let β = fresh in some {α → ((guard α τ') | β), β → ?}  
     if τ = ? else
     (solve Δ ⊢ τ' ≤ τ)
   )
@@ -190,7 +249,6 @@ solve Δ ⊢ #l' τ' ≤ #l τ =
   if l' = l else
   none
 
-
 solve Δ ⊢ τ₁ | τ₂ ≤ τ =
   solve Δ ⊢ τ₁ ≤ τ ∧ τ₂ ≤ τ
 
@@ -205,24 +263,8 @@ solve Δ ⊢ τ₁ & τ₂ ≤ τ =
   solve Δ ⊢ τ₁ ≤ τ ∨ τ₂ ≤ τ
 
 
-
-
-
-
-
-
-solve Δ ⊢ ∀ Δ' ⟨C⟩ τ' ≤ τ =
-  let Δ', C, τ' = refresh Δ' C τ' in 
-  solve Δ, Δ' ⊢ C ∧ τ' ≤ τ 
-
-solve Δ ⊢ ∀ Δ' ⟨C⟩ τ ≤ τ' =
-  let Δ', C, τ = refresh Δ' C τ in 
-  solve Δ, Δ' ⊢ C ∧ τ ≤ τ' 
-
-
 solve Δ ⊢ τ₁ -> τ₂' ≤ τ₁' -> τ₂ =
   solve Δ ⊢ τ₁' ≤ τ₁ ∧ τ₂' ≤ τ₂
-
 
 
 solve τ ≤ τ = some {} 
