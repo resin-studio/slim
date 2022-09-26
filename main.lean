@@ -139,24 +139,74 @@ make_field_constraint Δ ⊢ τ₀ * .l τ₁ ≤ μ α . τ =
 make_field_constraint _ ⊢ _ * _ ≤ _ = none
 ```
 
--- TODO: add check for well-formed decreasing inductive type (μ α . τ)
+`fields τ = o`
+```
+fields τ₁ & τ₂ = 
+  fmap (fields τ₁) (s₁ =>
+  fmap (fields τ₂) (s₂ =>
+    s₁ ∪ s₂
+  )) 
+fields (.l τ) =
+  some {l → τ}
+fields _ =
+  none 
+```
 
-`wf τ`
+`keys τ = o`
 ```
-wf μ α . τ = well_founded α τ 
+keys τ =
+  map (fields τ) (fs =>
+    fmap fs (l → τ => {l})
+  )
 ```
 
-`well_induct α τ`
+`match o o = b`
 ```
-well_founded α  τ₁ | τ₂ = 
-  wf (τ₁ | τ₂) andalso
+match (some x₁) (some ×₂) = 
+  x₁ = x₂
+match none _ = false
+match _ none = false
+```
+
+`cases_normal τ τ = b`
+```
+cases_normal (#l₁ τ₁) (#l₂ τ₂) = true
+cases_normal τ₁ τ₂ = 
+  match (keys τ₁) (keys τ₂) 
+```
+
+
+`decreasing τ τ = b`
+```
+decreasing (#l τ) τ = true 
+decreasing τ₁ τ₂ = 
+  decreasing (fields τ₁) (fields τ₁)
+```
+
+`increasing τ τ = b`
+```
+increasing τ₁ τ₂ = decreasing τ₂ τ₁
+```
+
+`decreasing o o = b`
+```
+decreasing (some fs₁) (some fs₂) =  
+  any fs₁ (α → τ => decreasing τ (fs₂ α)) andalso
+  all fs₁ (α → τ => ¬ increasing τ (fs₂ α))
+decreasing none _ = false
+decreasing _ none = false
+```
+
+`well_founded α τ = b`
+```
+well_founded α τ₁ | τ₂ = 
+  cases_normal τ₁ τ₂ andalso
   well_founded α τ₁ andalso
   well_founded α τ₂
 
-well_founded α ∀ Δ ⟨C⟩ . τ = 
+well_founded α ∀ Δ ⟨τ' ≤ α⟩ . τ = 
   α ∈ Δ orelse
-
-
+  decreasing τ τ' 
 ```
 
 `occurs α τ`
