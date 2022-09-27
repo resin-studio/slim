@@ -162,6 +162,12 @@ beyond scope
 Δ ⊢ τ' ≤ τ₁ & τ₂  
 ```
 
+`Γ ; Δ ; C ⊢ t : τ`
+```
+---
+Γ ; Δ ; C ⊢ t : τ
+```
+
 -/
 
 -- static implementation 

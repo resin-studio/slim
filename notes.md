@@ -1,5 +1,3 @@
-/-
-
 -- title --
 type guided program synthesis for dynamically typed languages
 
@@ -158,7 +156,7 @@ type guided program synthesis for dynamically typed languages
   - variable
     - decide constraint here instead of separate subsumption rule
     - constraint check also solves and unifies
-        - e.g. Γ ; true ⊩ (∃ α ≤ ?, β ≤ ? . dict[α, β]) ≤ dict[str, ?] ~> α ≤ str, β ≤ ? 
+        - e.g. Γ ; true ⊩ (forall α ≤ ?, β ≤ ? . dict[α, β]) ≤ dict[str, ?] ~> α ≤ str, β ≤ ? 
 
     - might need to do renaming here to avoid collisions
     - or incorporate existential constraints
@@ -172,7 +170,7 @@ type guided program synthesis for dynamically typed languages
     - fresh names are inferred from inductive call for any unknown/dynamic parts of a type annotation
     - fresh names should be replaced by any known parts of type annotation  
     - fresh name constraints are simply included in generetated Γ'
-      - e.g. Γ ⊢ {} : dict[str, ?] ≥ ∃ α ≤ ?, β ≤ ? . dict[α, β] ⊣ α ≤ str, β ≤ ? 
+      - e.g. Γ ⊢ {} : dict[str, ?] ≥ forall α ≤ ?, β ≤ ? . dict[α, β] ⊣ α ≤ str, β ≤ ? 
         - add solve/unify feature to constraint check
 
   existential constraint types serve three purposes:
@@ -200,7 +198,7 @@ type guided program synthesis for dynamically typed languages
 
 
 -- Examples --
-
+```
 let nat = μ nat . #zero:unit | #succ:nat
 
 let even = μ even . 
@@ -234,7 +232,7 @@ let list_4 = XS @ XS;{4} ≤ list_len nat
 let list_n = n : * => XS @ XS;{n} ≤ list_len nat
 
 %check #cons 1,  #cons 2 #cons 3 , #cons 4 , #nil () : list_4
-
+```
 
 --------
 
@@ -262,6 +260,7 @@ variable
 ---------------------------                        
 Γ ⊢ x : τ
 ```
+ 
 
 application
 ```
@@ -330,18 +329,18 @@ polymorphic supertyping: <br>
 variable
 ```
 (x : ∀ Δ . τ') ∈ Γ 
-Γ ⊩ (∃ Δ . τ') ≤ τ
+Γ ⊩ (forall Δ . τ') ≤ τ
 ---------------------------                        
-Γ ⊢ x : τ ≥ ∃ Δ . τ'
+Γ ⊢ x : τ ≥ forall Δ . τ'
 ```
 
 
 example: is `first(x, x)` well-typed?
 ```
 (x : ∀ α ≤ ? . list[α]) ∈ Γ 
-Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str]
+Γ ⊩ (forall α ≤ ? . list[α]) ≤ list[str]
 --------------------------------------------------------------------
-Γ ⊢ x : list[str] ≥ (∃ α ≤ ? . list[α])
+Γ ⊢ x : list[str] ≥ (forall α ≤ ? . list[α])
 ```
 
 
@@ -359,12 +358,12 @@ let _ = first (x, x)
 -- ok 
 -- treat first as a constraint on the type of x
 -- strict option. x : list[str] 
--- lenient option. x : ∃ α . list[str | α]
+-- lenient option. x : forall α . list[str | α]
 
 let y = x ++ [4]
 -- ++ : ∀ α ≤ ? . list[α] ; list[α] -> list[α]
 -- strict option. error: list[int] ≤ list[str] 
--- lenient option. x : ∃ α . list[str | α]
+-- lenient option. x : forall α . list[str | α]
 ```
 
 
@@ -376,9 +375,9 @@ supertyping + constraints: <br>
 variable
 ```
 (x : ∀ Δ ⟨D⟩. τ') ∈ Γ 
-Γ ; C ⊩ ∃ Δ ⟨D ∧ τ' ≤ τ⟩
+Γ ; C ⊩ forall Δ ⟨D ∧ τ' ≤ τ⟩
 -----------------------------------------------------             
-Γ ; C ⊢ x : τ ≥ ∃ Δ . τ' ; (∃ Δ ⟨D ∧ τ' ≤ τ⟩)
+Γ ; C ⊢ x : τ ≥ forall Δ . τ' ; (forall Δ ⟨D ∧ τ' ≤ τ⟩)
 ```
 Note: cumbersome redundancy between supertyping and constraints
 Note: type information may not be readable from constraints
@@ -390,9 +389,9 @@ supertyping * constraints, simple: <br>
 variable
 ```
 (x : ∀ Δ ⟨D⟩. τ') ∈ Γ 
-Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ') ≤ τ
+Γ ; C ⊩ (forall Δ ⟨D⟩ .τ') ≤ τ
 -----------------------------------------------------             
-Γ ; C ⊢ x : τ ≥ ∃ Δ ⟨D ∧ τ' ≤ τ₁⟩ . τ'
+Γ ; C ⊢ x : τ ≥ forall Δ ⟨D ∧ τ' ≤ τ₁⟩ . τ'
 ```
 Note: cumbersome redundancy between supertyping and constraints
 Note: type information may not be readable from constraints
@@ -405,345 +404,32 @@ supertyping * constraints, eager unification: <br>
 variable
 ```
 (x : ∀ Δ ⟨D⟩. τ') ∈ Γ 
-Γ ; C ⊩ (∃ Δ ⟨D⟩ .τ') ≤ τ ~> Δ' ; D'
+Γ ; C ⊩ (forall Δ ⟨D⟩ .τ') ≤ τ ~> Δ' ; D'
 -----------------------------------------------------             
-Γ ; C ⊢ x : τ ≥ ∃ Δ' ⟨D'⟩ . τ'
+Γ ; C ⊢ x : τ ≥ forall Δ' ⟨D'⟩ . τ'
 ```
 Note: type information readable in incomplete program 
 
 
 example: strict option
 ```
-(x : ∃ α ≤ ? . list[α]) ∈ Γ 
-Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str] ~> α ≤ str
+(x : forall α ≤ ? . list[α]) ∈ Γ 
+Γ ⊩ (forall α ≤ ? . list[α]) ≤ list[str] ~> α ≤ str
 --------------------------------------------------------------------
-Γ ⊢ x : list[str] ≥ (∃ α ≤ str . list[α])
+Γ ⊢ x : list[str] ≥ (forall α ≤ str . list[α])
 ```
 
 
 example: lenient option
 ```
-(x : ∃ α ≤ ? . list[α]) ∈ Γ 
-Γ ⊩ (∃ α ≤ ? . list[α]) ≤ list[str] ~> α ≤ (str | α)
+(x : forall α ≤ ? . list[α]) ∈ Γ 
+Γ ⊩ (forall α ≤ ? . list[α]) ≤ list[str] ~> α ≤ (str | α)
 --------------------------------------------------------------------
-Γ ⊢ x : list[str] ≥ (∃ α ≤ (str | α) . list[α])
+Γ ⊢ x : list[str] ≥ (forall α ≤ (str | α) . list[α])
 ```
 
 
----------
-
-
--- syntax
-
-l, x, α ∈ String                  symbol
-
-cs ::=                            cases
-  case t => t                     case singleton 
-  cs case t => t                  cases extended 
-
-fs ::=                            fields 
-  .l t                            field singleton 
-  fs .l t                         fields extended 
-
-t ::=                             term
-  _                               irrelevant pattern / inferred expression
-  x                               variable expression / pattern
-  ()                              unit expression / pattern
-  #l t                            variant expression / pattern
-  match t cs                      pattern matching 
-  fs                              record expression / pattern
-  t.l                             record projection
-  x : τ => t                      function abstraction
-  t t                             function application
-  α <: τ => t                     type abstraction
-  t τ                             type application 
-  let t : τ = t in t              binding
-  hide τ in t                     type packing 
-  let α with t = t in t           type unpacking
-  fix t                           recursion
-
-τ ::=                             type
-  α                               variable type
-  ?                               dynamic type
-  unit                            unit type
-  #l : τ                          variant type
-  .l : τ                          field type
-  τ -> τ                          implication type 
-  τ & τ                           intersection type
-  τ | τ                           union type
-  ∀ Δ ⟨C⟩ . τ                     universal schema 
-  ∃ Δ ⟨C⟩ . τ                     existential schema 
-  μ α . t                         inductive type
-  α <: τ => τ                     typerator abstraction
-  τ τ                             typerator application
-
-κ ::=                             kind
-  *τ                              ground kind
-  κ --> κ                         higher kind
-
-Γ ::=                             context
-  ·                               empty context
-  Γ, x : τ                        context extended with indentifier and its type 
-  Γ, α <: τ                       context extended with indentifier and its super type 
-
-
--- syntactic sugar -- 
-t₁ , t₂                           .left t₁ .right t₂               -- product
-
-t₁ => t₂                          t₁ : ? => t₂                     
-let t₁ = t₂ in t₃                 let t₁ : ? = τ₂ in t₃
-
-
-t₁ ; t₂                           (.left : t₁) ∧ (.right : t₂)     -- product type
-
-
--- semantics --
-
-----------------------------------------------------------------------------
-
-Γ ⊢ τ ≃ τ                                type equivalence
-
-α₁ <: τ ∈ Γ                              
-α₂ <: τ ∈ Γ                              
-------------                              variable 
-Γ ⊢ α₁ ≃ α₂                             
-
-
------------
-Γ ⊢ τ ≃ τ                                refl
-
-
-Γ ⊢ τ₂ ≃ τ₁                              
------------                               symm
-Γ ⊢ τ₁ ≃ τ₂                               
-
-
-Γ ⊢ τ₁ ≃ τ                              
-Γ ⊢ τ ≃ τ₂                              
------------                               trans
-Γ ⊢ τ₁ ≃ τ₂                               
-
-
-Γ ⊢ τ₁ ≃ τ₃                              
-Γ ⊢ τ₂ ≃ τ₄                              
-------------------------                     implication
-Γ ⊢ τ₁ -> τ₂ ≃ τ₃ -> τ₄                               
-
-
-Γ ⊢ τ₁ ≃ τ₃                              
-Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ ≃ τ₄                              
-fresh α₁
-fresh α₂
------------------------------------------    universal
-Γ ⊢ (∀ α₁ <: τ₁ . τ₂) ≃ (∀ α₂ <: τ₃ . τ₄)                               
-
-
-Γ ⊢ τ₁ ≃ τ₃                              
-Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ ≃ τ₄                              
-fresh α₁
-fresh α₂
------------------------------------------    existential
-Γ ⊢ (∃ α₁ <: τ₁ . τ₂) ≃ (∃ α₂ <: τ₃ . τ₄)                               
-
-
-Γ ⊢ τ₁ ≃ τ₃                              
-Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ ≃ τ₄                              
-fresh α₁
-fresh α₂
------------------------------------------    typerator abstraction
-Γ ⊢ (α₁ <: τ₁ => τ₂) ≃ (α₂ <: τ₃ => τ₄)                                
-
-
-Γ ⊢ τ₁ ≃ τ₃                                
-Γ ⊢ τ₂ ≃ τ₄                                
------------------------------------------    typerator application
-Γ ⊢ τ₁ τ₂ ≃ τ₃ τ₄                                
-
-
-fresh α
------------------------------------------    typerator abstraction application
-Γ ⊢ (α <: τ₁ => τ₂) τ₃ ≃ τ₄[α → τ₃]                                
-
-
-----------------------------------------------------------------------------
-
-
-Γ ⊢ τ :: κ                                kinding
-
-
-α <: τ ∈ Γ
-Γ ⊢ τ :: κ 
-------------                              variable
-Γ ⊢ α :: κ 
-
-
-Γ ⊢ τ₁ :: κ 
-Γ, α <: τ₁ ⊢ τ₂ <: τ₁  
---------------------------------------      typerator abstraction
-Γ ⊢ α <: τ₁ => τ₂ :: *τ₁ --> κ 
-
-
-Γ ⊢ τ₁ :: *τ --> κ 
-Γ ⊢ τ₂ <: τ   
-Γ ⊢ τ :: κ 
-------------------------------            typerator application
-Γ ⊢ τ₁ τ₂ :: κ 
-
-
-Γ ⊢ τ₁ :: *? 
-Γ ⊢ τ₂ :: *?
-------------------------------            implication
-Γ ⊢ τ₁ -> τ₂ :: *?
-
-
-Γ ⊢ τ₁ :: κ 
-Γ, α <: τ₁ ⊢ τ₂ :: *? 
-------------------------------            universal
-Γ ⊢ ∀ α <: τ₁ . τ₂ :: *? 
-
-
-Γ ⊢ τ₁ :: κ 
-Γ, α <: τ₁ ⊢ τ₂ :: *? 
-------------------------------            existential
-Γ ⊢ ∃ α <: τ₁ . τ₂ :: *? 
-
-
----------------------------------------------------------------------------------
-
-
-Γ ⊢ τ <: τ                                consistent subtyping
-
-
-----------------                          refl
-Γ ⊢ τ <: τ
-
-
-Γ ⊢ τ :: *?
-----------------                          dyno_right
-Γ ⊢ τ <: ? 
-
-
-Γ ⊢ τ :: *?
-----------------                          dyno_left
-Γ ⊢ ? <: τ 
-
-
-Γ ⊢ τ₁ <: τ 
-Γ ⊢ τ <: τ₂
-τ :: u
-τ ≠ ?
---------------                            trans
-Γ ⊢ τ₁ <: τ₂  
-
-
-α <: τ ∈ Γ 
-----------------                          variable
-Γ ⊢ α <: τ  
-
-
-Γ ⊢ τ₁ :: u
-Γ ⊢ τ₃ :: u
-Γ ⊢ τ₃ <: τ₁ 
-Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ <: τ₄ 
-fresh α₁
-fresh α₂
------------------------------------------   universal
-Γ ⊢ (∀ α₁ <: τ₁. τ₂)  <: (∀ α₂ <: τ₃. τ₄)
-
-
-Γ ⊢ τ₁ :: u
-Γ ⊢ τ₃ :: u
-Γ ⊢ τ₁ <: τ₃ 
-Γ, α₁ <: τ₁, α₂ <: τ₁ ⊢ τ₂ <: τ₄ 
-fresh α₁
-fresh α₂
------------------------------------------   existential
-Γ ⊢ (∃ α₁ <: τ₁. τ₂) <: (∃ α₂ <: τ₃. τ₄)
-
-
-Γ ⊢ τ₁ :: u
-Γ ⊢ τ₃ :: u
-Γ ⊢ τ₃ <: τ₁
-Γ, α₁ <: τ₃, α₂ <: τ₃ ⊢ τ₂ <: τ₄ 
-fresh α₁
-fresh α₂
------------------------------------------ typerator abstraction
-Γ ⊢ (α₁ <: τ₁ => τ₂) <: (α₂ <: τ₃ => τ₄)
-
-
-Γ ⊢ τ₁ <: τ₂
------------------------------------------ typerator application 
-Γ ⊢ τ₁ τ <: τ₂ τ
-
-
-Γ ⊢ convariant τ
-Γ ⊢ τ₁ <: τ₂
------------------------------------------ typerator convariant 
-Γ ⊢ τ τ₁ <: τ τ₂
-
-
-Γ ⊢ contravariant τ
-Γ ⊢ τ₂ <: τ₁
------------------------------------------ typerator contravariant
-Γ ⊢ τ τ₁ <: τ τ₂
-
-
-Γ ⊢ τ₁ :: u
-Γ ⊢ τ₂ :: u
-Γ ⊢ τ₁ ≃ τ₂ 
--------------------------                 eq
-Γ ⊢ τ₁ <: τ₂
-
-
-Γ ⊢ τ₃ <: τ₁ 
-Γ ⊢ τ₂ <: τ₄ 
--------------------------                 implication
-Γ ⊢ τ₁ -> τ₂ <: τ₃ -> τ₄
-
-
-Γ ⊢ τ₁ <: τ₂  
-------------------                        field
-Γ ⊢ .l τ₁ <: .l τ₂  
-
-
-Γ ⊢ τ₁ <: τ₂  
---------------------                      variant 
-Γ ⊢ #l τ₁ <: #l τ₂  
-
-
-------------------                        union_left
-Γ ⊢ τ₁ <: τ₁ ∨ τ₂  
-
-
-------------------                        union_right
-Γ ⊢ τ₂ <: τ₁ ∨ τ₂  
-
-
-Γ ⊢ τ₁ <: τ   
-Γ ⊢ τ₂ <: τ  
-------------------                        union 
-Γ ⊢ τ₁ ∨ τ₂ <: τ 
-
-
--------------------                       intersection_left
-Γ ⊢ τ₁ ∧ τ₂ <: τ₁  
-
-
--------------------                       intersection_right
-Γ ⊢ τ₁ ∧ τ₂ <: τ₂  
-
-
-Γ ⊢ τ <: τ₁  
-Γ ⊢ τ <: τ₂  
-------------------                        intersection
-Γ ⊢ τ <: τ₁ ∧ τ₂  
-
-
-
 --------------------------------------------------------------------------------------
-constraint solving/unification 
-
-Γ ; C ⊩ τ ≤ τ ~> Δ ; D
 
 - subtyping corresponds to predicate defined by horn clauses
 - existential on the right: unify + backchain
@@ -755,7 +441,7 @@ constraint solving/unification
 
 - recycling renamed constraints happens at existential  
 
-- constraints in existential of subtype e.g ∃ Δ' ⟨D'⟩ τ' ≤ ∃ Δ ⟨D⟩ τ
+- constraints in existential of subtype e.g forall Δ' ⟨D'⟩ τ' ≤ forall Δ ⟨D⟩ τ
   - are reduced to  Δ'; Δ ⊩ D' ∧ D ∧ τ' ≤ τ
   - the subtyping is sufficient to subsume the implication D' --> D
 
@@ -851,6 +537,3 @@ constraint solving/unification
 theorems:
   - completeness: if alorithm produces some type output then constraint typing holds on output type
   - soundness: if constraint typing holds on a type then algorithm succeeds with type as input
-
-
--/
