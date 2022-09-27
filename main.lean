@@ -1,4 +1,4 @@
--- surface syntax 
+-- syntax 
 /-
 
 x ∈ String                        term variable
@@ -46,16 +46,6 @@ C ::=                             constraint
   τ ≤ τ                           subtyping 
   C ∨ C                           disjunction
   C ∧ C                           conjunction
-
--/
-
--- concrete canonical syntax 
-/-
-...
--/
-
--- abstract canonical syntax 
-/-
 
 Δ ::=                             type context
   {..., α → τ, ...}
