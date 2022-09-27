@@ -401,16 +401,16 @@ infer Γ ; Δ ⊢ t.l : τ =
   τ'
 
 
-infer Γ ; Δ ⊢ (match t₁ case t₂ => t₃) : τ =
-  let (∀ Δ' . τ') = infer Γ ; Δ ⊢ t₂ : ? in
-  let _ = infer Γ ; Δ, Δ' ⊢ t₁ : τ' in
-  let τ₃ = infer Γ ; Δ, Δ' ⊢ t₃ : τ in
-  τ₃
+infer Γ ; Δ ⊢ (match t₁' case t₁ => t₂) : τ₂ =
+  let τ₁' = infer Γ ; Δ ⊢ t₁ : ? in
+  let (∀ Δ' . _) = infer Γ ; Δ  ⊢ t₁' : τ₁' in
+  let τ₂' = infer Γ ; Δ, Δ' ⊢ t₂ : τ₂ in
+  τ₂'
 
-infer Γ ; Δ ⊢ (match t₁ case t₂ => t₃ cs) : τ =
-  let τ₁ = infer Γ ; Δ ⊢ (match t₁ case t₂ => t₃) : τ in
-  let τ₂ = infer Γ ; Δ ⊢ (match t₁ cs) : τ in
-  τ₁ | τ₂
+infer Γ ; Δ ⊢ (match t₁' case t₁ => t₂ cs) : τ₂ =
+  let τ₂' = infer Γ ; Δ ⊢ (match t₁' case t₁ => t₂) : τ₂ in
+  let τ₂'' = infer Γ ; Δ ⊢ (match t₁' cs) : τ₂ in
+  τ₂' | τ₂''
 
 
   fix t                           recursion
@@ -435,7 +435,7 @@ infer Γ ; Δ ⊢ (x : τ₁ => t) : (τ₁' -> τ₂) =
 
 infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
   let ∀ Δ' . τ₂ -> τ₁' = infer Γ ; Δ ⊢ t₁ : ? -> τ₁ in
-  let τ₂' = infer Γ ; Δ, Δ' ⊢ t₂ : τ₂ ≥ τ₂' in
+  let τ₂' = infer Γ ; Δ, Δ' ⊢ t₂ : τ₂ in
   let Δ' = solve Δ, Δ' ⊢ τ₂' ≤ τ₂ ∧ τ₁' ≤ τ₁ in
   (∀ Δ' . τ₁')
 
