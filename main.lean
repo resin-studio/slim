@@ -41,7 +41,7 @@ t ::=                             term
   [τ]                             grouped type
 
 C ::=                             constraint
-  ⟨⟩                              true
+  .                               true
   ⟨C⟩                             grouped constraint 
   τ ≤ τ                           subtyping 
   C ∨ C                           disjunction
@@ -381,13 +381,38 @@ infer Γ ; Δ ⊢ () : τ =
   (∀ Δ' . [])
 
 infer Γ ; Δ ⊢ (#l t) : τ =
-  let (∀ Δ' ⟨⟩ τ₁) = infer Γ ; Δ ⊢ t : ? in
-  let Δ' = solve Δ ⊢ (∀ Δ' ⟨⟩ (#l τ₁)) ≤ τ in
-  (∀ Δ' ⟨⟩ (#l τ₁))
+  let (∀ Δ₁ ⟨⟩ τ₁) = infer Γ ; Δ ⊢ t : ? in
+  let Δ' = solve Δ ⊢ (∀ Δ₁ . (#l τ₁)) ≤ τ in
+  (∀ Δ' . (#l τ₁))
 
-  match t cs                      pattern matching 
-  fs                              record expression / pattern
-  t.l                             record projection
+infer Γ ; Δ ⊢ (.l t) : τ =
+  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ⊢ t : ? in
+  let Δ' = solve Δ ⊢ (∀ Δ₁ . (.l τ₁)) ≤ τ in
+  (∀ Δ' . (.l τ₁))
+
+infer Γ ; Δ ⊢ (.l t) fs : τ =
+  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ⊢ t : ? in
+  let (∀ Δ₂ . τ₂) = infer Γ ; Δ ⊢ fs : ? in
+  let Δ' = solve Δ ⊢ (∀ Δ₁, Δ₂ . (.l τ₁) & τ₂) ≤ τ in
+  (∀ Δ' . (.l τ₁) & τ₂)
+
+infer Γ ; Δ ⊢ t.l : τ =
+  let τ' = infer Γ ; Δ ⊢ t : (.l τ) in
+  τ'
+
+
+infer Γ ; Δ ⊢ (match t₁ case t₂ => t₃) : τ =
+  let (∀ Δ' . τ') = infer Γ ; Δ ⊢ t₂ : ? in
+  let _ = infer Γ ; Δ, Δ' ⊢ t₁ : τ' in
+  let τ₃ = infer Γ ; Δ, Δ' ⊢ t₃ : τ in
+  τ₃
+
+infer Γ ; Δ ⊢ (match t₁ case t₂ => t₃ cs) : τ =
+  let τ₁ = infer Γ ; Δ ⊢ (match t₁ case t₂ => t₃) : τ in
+  let τ₂ = infer Γ ; Δ ⊢ (match t₁ cs) : τ in
+  τ₁ | τ₂
+
+
   fix t                           recursion
 
 
@@ -405,7 +430,7 @@ infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
 
 infer Γ ; Δ ⊢ (x : τ₁ => t) : (τ₁' -> τ₂) =
   let Δ₁, τ₁ = τ₁[?/fresh] in
-  let τ₂' = Γ, {x → τ₁} ; Δ, Δ₁ ⊢ t : τ₂ in
+  let τ₂' = infer Γ, {x → τ₁} ; Δ, Δ₁ ⊢ t : τ₂ in
   (∀ Δ₁ . τ₁ -> τ₂')
 
 infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
