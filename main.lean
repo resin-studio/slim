@@ -413,7 +413,9 @@ infer Γ ; Δ ⊢ (match t₁' case t₁ => t₂ cs) : τ₂ =
   τ₂' | τ₂''
 
 
-  fix t                           recursion
+infer Γ ; Δ ⊢ fix t : τ =
+  let (∀ Δ' . τ' -> τ') = infer Γ ; Δ ⊢ t : (τ -> τ) in 
+  (∀ Δ' . τ')
 
 
 infer Γ ; Δ ⊢ x : τ = 
