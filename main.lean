@@ -25,6 +25,28 @@ t ::=                             term
   let t : τ = t in t              binding
   fix t                           recursion
 
+α ∈ String                        type variable
+
+τ ::=                             type
+  α                               variable type
+  ?                               unknown type
+  []                              unit type
+  #l τ                            variant type
+  .l τ                            field type
+  τ -> τ                          implication type 
+  τ & τ                           intersection type
+  τ | τ                           union type
+  ∀ Δ C τ                         universal schema 
+  μ α . τ                         inductive type
+  [τ]                             grouped type
+
+C ::=                             constraint
+  ⟨⟩                              true
+  ⟨C⟩                             grouped constraint 
+  τ ≤ τ                           subtyping 
+  C ∨ C                           disjunction
+  C ∧ C                           conjunction
+
 -/
 
 -- concrete canonical syntax 
@@ -34,26 +56,6 @@ t ::=                             term
 
 -- abstract canonical syntax 
 /-
-
-α ∈ String                        type variable
-
-τ ::=                             type
-  α                               variable type
-  ?                               unknown type
-  ⟨⟩                              unit type
-  #l τ                            variant type
-  .l τ                            field type
-  τ -> τ                          implication type 
-  τ & τ                           intersection type
-  τ | τ                           union type
-  ∀ Δ ⟨C⟩ τ                       universal schema 
-  μ α . t                         inductive type
-
-
-C ::=                             constraint
-  τ ≤ τ                           operation
-  C ∨ C                           disjunction
-  C ∧ C                           conjunction
 
 Δ ::=                             type context
   {..., α → τ, ...}
@@ -383,6 +385,22 @@ solve _ = none
 
 `infer Γ ; Δ ⊢ t : τ = τ`
 ```
+
+infer Γ ; Δ ⊢ () : τ =
+  let Δ' = solve Δ ⊢ C ∧ [] ≤ τ in
+  (∀ Δ' . [])
+
+infer Γ ; Δ ⊢ (#l t) : τ =
+  let (∀ Δ' ⟨⟩ τ₁) = infer Γ ; Δ ⊢ t : ? in
+  let Δ' = solve Δ ⊢ (∀ Δ' ⟨⟩ (#l τ₁)) ≤ τ in
+  (∀ Δ' ⟨⟩ (#l τ₁))
+
+  match t cs                      pattern matching 
+  fs                              record expression / pattern
+  t.l                             record projection
+  fix t                           recursion
+
+
 infer Γ ; Δ ⊢ x : τ = 
   let τ' = Γ x 
   let Δ', C, τ' = refresh τ' in
@@ -405,6 +423,7 @@ infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
   let τ₂' = infer Γ ; Δ, Δ' ⊢ t₂ : τ₂ ≥ τ₂' in
   let Δ' = solve Δ, Δ' ⊢ τ₂' ≤ τ₂ ∧ τ₁' ≤ τ₁ in
   (∀ Δ' . τ₁')
+
 
 ```
 
