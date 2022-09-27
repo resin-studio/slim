@@ -46,7 +46,7 @@ t ::=                             term
   τ -> τ                          implication type 
   τ & τ                           intersection type
   τ | τ                           union type
-  ∀ Δ ⟨C⟩ . τ                     universal schema 
+  ∀ Δ ⟨C⟩ τ                       universal schema 
   μ α . t                         inductive type
 
 
@@ -91,7 +91,6 @@ beyond scope
 
 -- static implementation 
 /-
-
 
 
 `merge Δ Δ = Δ`
@@ -285,6 +284,19 @@ guard α τ =
   ?
 ```
 
+`refresh τ = Δ, C, τ`
+```
+refresh (∀ Δ ⟨C⟩ τ) =
+  let rmap = fmap Δ (α → _ => {α → fresh}) in
+  let Δ = rename rmap Δ in
+  let C = subst rmap C in
+  let τ = subst rmap τ in
+  Δ, C, τ 
+
+refresh τ = 
+  {}, ? ≤ ?, τ
+```
+
 `solve Δ ⊢ C = o`
 ```
 solve Δ ⊢ C₁ ∧ C₂ =  
@@ -294,18 +306,14 @@ solve Δ ⊢ C₁ ∧ C₂ =
 solve Δ ⊢ C₁ ∨ C₂ = 
   choose (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
 
-solve Δ ⊢ (∀ Δ' ⟨C⟩ τ') ≤ τ =
+solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
   let rmap = fmap Δ (α → _ => {α → fresh}) in
-  let Δ' = rename rmap Δ' in
-  let C = subst rmap C in
-  let τ' = subst rmap τ' in
+  let Δ', C, τ' = refresh (∀ Δ' ⟨C⟩ . τ') in
   solve Δ, Δ' ⊢ C ∧ τ' ≤ τ 
 
-solve Δ ⊢  τ' ≤ (∀ Δ' ⟨C⟩ τ) =
+solve Δ ⊢ τ' ≤ (∀ Δ' ⟨C⟩ . τ) =
   let rmap = fmap Δ (α → _ => {α → fresh}) in
-  let Δ' = rename rmap Δ' in
-  let C = subst rmap C in
-  let τ = subst rmap τ in
+  let Δ', C, τ = refresh (∀ Δ' ⟨C⟩ . τ) in
   solve Δ, Δ' ⊢ C ∧ τ ≤ τ' 
 
 solve Δ ⊢ α ≤ τ =
@@ -372,6 +380,34 @@ solve Δ ⊢ τ₁ -> τ₂' ≤ τ₁' -> τ₂ =
 solve τ ≤ τ = some {} 
 solve _ = none 
 ```
+
+`infer Γ ; Δ ⊢ t : τ = τ`
+```
+infer Γ ; Δ ⊢ x : τ = 
+  let τ' = Γ x 
+  let Δ', C, τ' = refresh τ' in
+  let Δ' = solve Δ, Δ' ⊢ C ∧ τ' ≤ τ in
+  (∀ Δ' . τ')
+
+infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
+  let Δ₁, τ₁ = τ₁[?/fresh]
+  let τ₁' = infer Γ ; Δ ⊢ t₁ : (∀ Δ₁ . τ₁) in
+  let τ₂' = infer Γ, {x → τ₁'} ; Δ ⊢ t₂ : τ₂ in
+  τ₂'
+
+infer Γ ; Δ ⊢ (x : τ₁ => t) : (τ₁' -> τ₂) =
+  let Δ₁, τ₁ = τ₁[?/fresh] in
+  let τ₂' = Γ, {x → τ₁} ; Δ, Δ₁ ⊢ t : τ₂ in
+  (∀ Δ₁ . τ₁ -> τ₂')
+
+infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
+  let ∀ Δ' . τ₂ -> τ₁' = infer Γ ; Δ ⊢ t₁ : ? -> τ₁ in
+  let τ₂' = infer Γ ; Δ, Δ' ⊢ t₂ : τ₂ ≥ τ₂' in
+  let Δ' = solve Δ, Δ' ⊢ τ₂' ≤ τ₂ ∧ τ₁' ≤ τ₁ in
+  (∀ Δ' . τ₁')
+
+```
+
 
 -/
 
