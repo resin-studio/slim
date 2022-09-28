@@ -233,9 +233,9 @@ make_field_constraint _ ⊢ _ * _ ≤ _ = none
 `fields τ = o`
 ```
 fields τ₁ & τ₂ = 
-  fmap (fields τ₁) (s₁ =>
-  fmap (fields τ₂) (s₂ =>
-    s₁ ∪ s₂
+  fmap (fields τ₁) (fs₁ =>
+  fmap (fields τ₂) (fs₂ =>
+    fs₁, fs₂
   )) 
 fields (.l τ) =
   some {l → τ}

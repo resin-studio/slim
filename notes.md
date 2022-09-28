@@ -440,8 +440,6 @@ example: lenient option
 - solving is simpler than synquid by avoiding separate language of refinements 
 - termination condition: constraints cannot be reduced  
 
-- recycling renamed constraints happens at existential  
-
 - constraints in existential of subtype e.g forall Δ' ⟨D'⟩ τ' ≤ forall Δ ⟨D⟩ τ
   - are reduced to  Δ'; Δ ⊩ D' ∧ D ∧ τ' ≤ τ
   - the subtyping is sufficient to subsume the implication D' --> D
@@ -536,25 +534,45 @@ example: lenient option
 
 
 theorems:
-  - completeness: if alorithm produces some type output then constraint typing holds on output type
+  - completeness: if algorithm produces some type output then constraint typing holds on output type
   - soundness: if constraint typing holds on a type then algorithm succeeds with type as input
 
 
 
-a <: int          
-{a -> int & b, b -> ?}
+- solving for variables
+  a <: int          
+  {a -> int & b, b -> ?}
 
-a <: nat
-int & b <: nat 
-
-
-int <: nat or b <: nat 
-b <: nat
-{a -> int & b, b -> nat & c, c -> ?}
-
-nat <: a
-nat <: int & b
-nat <: int and nat <: b 
-{b -> nat | c}
+  a <: nat
+  int & b <: nat 
 
 
+  int <: nat or b <: nat 
+  b <: nat
+  {a -> int & b, b -> nat & c, c -> ?}
+
+  nat <: a
+  nat <: int & b
+  nat <: int and nat <: b 
+  {b -> nat | c}
+
+
+- problem: synthesize program from: tests, types, and context
+
+- how solving relates to synquid's method
+  - recording constraints on variables and using intersection/union with fresh variable, 
+  e.g. a <: str ==> {a : str & b, b : ?}, 
+  corresponds to synquid's recording variable variable subbed in for refinement
+  then recycling constraint with fresh refinement 
+
+  {} a <: T & R 
+  {a : T & b} a <: T & R    
+  T & b <: T & R 
+  b <: R 
+  {a <: T & b, b <: R}
+
+
+benefits of non-datatype language over liquid datatypes 
+- more flexible subtyping
+- unified language for both types and refinements 
+  - since types are flexible, no need separate additional refinement language for precision
