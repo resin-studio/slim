@@ -194,12 +194,12 @@ merge Δ₁ Δ₂ =
   ))
 ```
 
-`choose o o = o`
+`merge o o = o`
 ```
-choose none none = none 
-choose none o = o 
-choose o none = o 
-choose (some Δ₁) (some Δ₂) = some (merge Δ₁ Δ₂)
+merge none none = none 
+merge none o = o 
+merge o none = o 
+merge (some Δ₁) (some Δ₂) = some (merge Δ₁ Δ₂)
 ```
 
 
@@ -402,7 +402,7 @@ solve Δ ⊢ C₁ ∧ C₂ =
     some Δ', Δ''
   ))
 solve Δ ⊢ C₁ ∨ C₂ = 
-  choose (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
+  merge (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
 
 solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
   let rmap = fmap Δ (α → _ => {α → fresh}) in
