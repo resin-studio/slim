@@ -187,19 +187,19 @@ beyond scope
 
 `merge Δ Δ = Δ`
 ```
-merge Δ₁ Δ₂ =
+merge op Δ₁ Δ₂ =
   fmap Δ₁ (α → τ₁ =>
   fmap Δ₂ (β → τ₂ =>
-    {α → τ₁ | (Δ₂ α), β → (Δ₁ β) | τ₂}
+    {α → τ₁ op (Δ₂ α), β → (Δ₁ β) op τ₂}
   ))
 ```
 
 `merge o o = o`
 ```
-merge none none = none 
-merge none o = o 
-merge o none = o 
-merge (some Δ₁) (some Δ₂) = some (merge Δ₁ Δ₂)
+merge _ none none = none 
+merge _ none o = o 
+merge _ o none = o 
+merge op (some Δ₁) (some Δ₂) = some (merge op Δ₁ Δ₂)
 ```
 
 
@@ -397,12 +397,10 @@ refresh τ =
 `solve Δ ⊢ C = o`
 ```
 solve Δ ⊢ C₁ ∧ C₂ =  
-  fmap (solve Δ ⊢ C₁) (Δ' => 
-  fmap (solve Δ, Δ' ⊢ C₂) (Δ'' =>
-    some Δ', Δ''
-  ))
+  merge & (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
+
 solve Δ ⊢ C₁ ∨ C₂ = 
-  merge (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
+  merge | (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
 
 solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
   let rmap = fmap Δ (α → _ => {α → fresh}) in
