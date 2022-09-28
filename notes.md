@@ -357,13 +357,14 @@ let first = (a , b) => a
 let _ = first (x, x)  
 -- ok 
 -- treat first as a constraint on the type of x
--- strict option. x : list[str] 
--- lenient option. x : forall α . list[str | α]
+-- x : list[str] 
 
 let y = x ++ [4]
--- ++ : ∀ α ≤ ? . list[α] ; list[α] -> list[α]
+-- ++ : ∀ {α} . list[α] ; list[α] -> list[α]
 -- strict option. error: list[int] ≤ list[str] 
 -- lenient option. x : forall α . list[str | α]
+-- list[str] <: α ==> {a -> str | b, b -> ?}
+-- [4] <: α ==> [4] <: {str | b} ==> 4 <: str \/ [4] <: b ==> {b -> [4] | c}
 ```
 
 
@@ -537,3 +538,23 @@ example: lenient option
 theorems:
   - completeness: if alorithm produces some type output then constraint typing holds on output type
   - soundness: if constraint typing holds on a type then algorithm succeeds with type as input
+
+
+
+a <: int          
+{a -> int & b, b -> ?}
+
+a <: nat
+int & b <: nat 
+
+
+int <: nat or b <: nat 
+b <: nat
+{a -> int & b, b -> nat & c, c -> ?}
+
+nat <: a
+nat <: int & b
+nat <: int and nat <: b 
+{b -> nat | c}
+
+
