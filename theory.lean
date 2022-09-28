@@ -398,8 +398,9 @@ refresh τ =
 ```
 solve Δ ⊢ C₁ ∧ C₂ =  
   fmap (solve Δ ⊢ C₁) (Δ' => 
-    solve Δ, Δ' ⊢ C₂
-  )
+  fmap (solve Δ, Δ' ⊢ C₂) (Δ'' =>
+    some Δ', Δ''
+  ))
 solve Δ ⊢ C₁ ∨ C₂ = 
   choose (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
 
