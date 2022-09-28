@@ -119,9 +119,20 @@ beyond scope
 Δ ⊢ α ≤ τ  
 
 
-  Δ₀, Δ', Δ ⊢ C' ∧ C ∧ τ' ≤ τ
+  Δ₀, Δ' ⊢ C' ∧ τ' ≤ τ
 ---
-Δ₀ ⊢ (∀ Δ' C' τ') ≤ (∀ Δ C τ)
+Δ₀ ⊢ (∀ Δ' C' τ') ≤ τ
+
+
+  Δ₀, Δ ⊢ C ∧ τ' ≤ τ
+---
+Δ₀ ⊢ τ' ≤ (∀ Δ C τ)
+
+
+Δ₀ ⊢ (μ α . τ) ≤ unroll (μ α . τ)
+
+
+Δ₀ ⊢ unroll (μ α . τ) ≤ (μ α . τ)
 
 
   Δ ⊢ τ₁' <: τ₁ 
@@ -318,7 +329,7 @@ occurs α (C₁ ∧ C₂) = (occurs α C₁) orelse (occurs α C₂)
 ```
 subst Δ α = Δ α 
 subst Δ ? = ? 
-subst Δ ⟨⟩ = ⟨⟩ 
+subst Δ [] = [] 
 subst Δ (#l τ) = #l (subst Δ τ) 
 subst Δ (.l τ) = .l (subst Δ τ) 
 subst Δ (τ₁ -> τ₂) = (subst Δ τ₁) -> (subst Δ τ₂)
@@ -337,6 +348,11 @@ subst Δ (μ β . τ) =
 subst Δ (τ' ≤ τ) = (subst Δ τ') ≤ (subst Δ τ)
 subst Δ (C₁ ∨ C₂) = (subst Δ C₁) ∨ (subst Δ C₂)
 subst Δ (C₁ ∧ C₂) = (subst Δ C₁) ∧ (subst Δ C₂)
+```
+
+`unroll μ α . τ = τ`
+```
+unroll μ α . τ = subst {α → μ α . τ} τ
 ```
 
 `rename m Δ`
