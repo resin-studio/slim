@@ -402,16 +402,6 @@ solve Δ ⊢ C₁ ∧ C₂ =
 solve Δ ⊢ C₁ ∨ C₂ = 
   merge | (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
 
-solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
-  let rmap = fmap Δ (α → _ => {α → fresh}) in
-  let Δ', C, τ' = refresh (∀ Δ' ⟨C⟩ . τ') in
-  solve Δ, Δ' ⊢ C ∧ τ' ≤ τ 
-
-solve Δ ⊢ τ' ≤ (∀ Δ' ⟨C⟩ . τ) =
-  let rmap = fmap Δ (α → _ => {α → fresh}) in
-  let Δ', C, τ = refresh (∀ Δ' ⟨C⟩ . τ) in
-  solve Δ, Δ' ⊢ C ∧ τ ≤ τ' 
-
 solve Δ ⊢ α ≤ τ =
   let τ' = Δ α in (
     let β = fresh in some {α → ((guard α τ) & β), β → ?}
@@ -425,6 +415,33 @@ solve Δ ⊢ τ' ≤ α =
     if τ = ? else
     (solve Δ ⊢ τ' ≤ τ)
   )
+
+solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
+  let rmap = fmap Δ (α → _ => {α → fresh}) in
+  let Δ', C, τ' = refresh (∀ Δ' ⟨C⟩ . τ') in
+  solve Δ, Δ' ⊢ C ∧ τ' ≤ τ 
+
+solve Δ ⊢ τ' ≤ (∀ Δ' ⟨C⟩ . τ) =
+  let rmap = fmap Δ (α → _ => {α → fresh}) in
+  let Δ', C, τ = refresh (∀ Δ' ⟨C⟩ . τ) in
+  solve Δ, Δ' ⊢ C ∧ τ ≤ τ' 
+
+solve Δ ⊢ τ₁ | τ₂ ≤ τ =
+  solve Δ ⊢ τ₁ ≤ τ ∧ τ₂ ≤ τ
+
+solve Δ ⊢ τ ≤ τ₁ | τ₂ =
+  solve Δ ⊢ τ ≤ τ₁ ∨ τ ≤ τ₂
+
+
+solve Δ ⊢ τ ≤ τ₁ & τ₂ =
+  solve Δ ⊢ τ ≤ τ₁ ∧ τ ≤ τ₂
+
+solve Δ ⊢ τ₁ & τ₂ ≤ τ =
+  solve Δ ⊢ τ₁ ≤ τ ∨ τ₂ ≤ τ
+
+solve Δ ⊢ τ₁ -> τ₂' ≤ τ₁' -> τ₂ =
+  solve Δ ⊢ τ₁' ≤ τ₁ ∧ τ₂' ≤ τ₂
+
 
 solve Δ ⊢ #l τ' ≤ μ α . τ =  
   solve Δ ⊢ #l τ' ≤ unroll (μ α . τ)  
@@ -455,22 +472,6 @@ solve Δ ⊢ #l' τ' ≤ #l τ =
   if l' = l else
   none
 
-solve Δ ⊢ τ₁ | τ₂ ≤ τ =
-  solve Δ ⊢ τ₁ ≤ τ ∧ τ₂ ≤ τ
-
-solve Δ ⊢ τ ≤ τ₁ | τ₂ =
-  solve Δ ⊢ τ ≤ τ₁ ∨ τ ≤ τ₂
-
-
-solve Δ ⊢ τ ≤ τ₁ & τ₂ =
-  solve Δ ⊢ τ ≤ τ₁ ∧ τ ≤ τ₂
-
-solve Δ ⊢ τ₁ & τ₂ ≤ τ =
-  solve Δ ⊢ τ₁ ≤ τ ∨ τ₂ ≤ τ
-
-
-solve Δ ⊢ τ₁ -> τ₂' ≤ τ₁' -> τ₂ =
-  solve Δ ⊢ τ₁' ≤ τ₁ ∧ τ₂' ≤ τ₂
 
 
 solve τ ≤ τ = some {} 
@@ -484,35 +485,29 @@ infer Γ ; Δ ⊢ () : τ =
   let Δ' = solve Δ ⊢ C ∧ [] ≤ τ in
   (∀ Δ' . [])
 
-infer Γ ; Δ ⊢ (#l t₁) : #l τ₁ =
-  let (∀ Δ₁ . τ₁') = infer Γ ; Δ ⊢ t₁ : τ₁ in
-  (∀ Δ₁ . #l τ₁')
-
 infer Γ ; Δ ⊢ (#l t₁) : τ =
-  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ⊢ t₁ : ? in
-  let Δ' = solve Δ ⊢ (∀ Δ₁ . (#l τ₁)) ≤ τ in
-  (∀ Δ' . (#l τ₁))
+  let α = fresh in
+  let Δ' = solve Δ ⊢ (∀ {α} . (#l α)) ≤ τ in
+  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ∪ Δ' ⊢ t₁ : α in
+  (∀ Δ' ∪ Δ₁ . (#l τ₁)) 
 
-infer Γ ; Δ ⊢ (.l t₁) : .l τ₁ =
-  let (∀ Δ₁ . τ₁') = infer Γ ; Δ ⊢ t₁ : τ₁ in
-  (∀ Δ₁ . .l τ₁')
+infer Γ ; Δ ⊢ (.l t₁) : τ =
+  let α = fresh in
+  let Δ' = solve Δ ⊢ (∀ {α} . (.l α)) ≤ τ in
+  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ∪ Δ' ⊢ t₁ : α in
+  (∀ Δ' ∪ Δ₁ . (.l τ₁)) 
 
-infer Γ ; Δ ⊢ (.l t) : τ =
-  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ⊢ t : ? in
-  let Δ' = solve Δ ⊢ (∀ Δ₁ . (.l τ₁)) ≤ τ in
-  (∀ Δ' . (.l τ₁))
-
--- TODO: create canonical record type
-infer Γ ; Δ ⊢ (.l t) fs : τ =
-  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ⊢ t : ? in
-  let (∀ Δ₂ . τ₂) = infer Γ ; Δ ⊢ fs : ? in
-  let Δ' = solve Δ ⊢ (∀ Δ₁, Δ₂ . (.l τ₁) & τ₂) ≤ τ in
-  (∀ Δ' . (.l τ₁) & τ₂)
+infer Γ ; Δ ⊢ (.l t₁) fs : τ =
+  let α = fresh in
+  let β = fresh in
+  let Δ' = solve Δ ⊢ (∀ {α, β} . (.l α) & β) ≤ τ in
+  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ∪ Δ' ⊢ t₁ : α in
+  let (∀ Δ₂ . τ₂) = infer Γ ; Δ ∪ Δ' ⊢ fs : β in
+  (∀ Δ' ∪ Δ₁ ∪ Δ₂ . (.l τ₁) & τ₂)
 
 infer Γ ; Δ ⊢ t.l : τ =
   let τ' = infer Γ ; Δ ⊢ t : (.l τ) in
   τ'
-
 
 infer Γ ; Δ ⊢ (match t₁' case t₁ => t₂) : τ₂ =
   let τ₁' = infer Γ ; Δ ⊢ t₁ : ? in
@@ -543,16 +538,11 @@ infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   let τ₂' = infer Γ, {x → τ₁'} ; Δ ⊢ t₂ : τ₂ in
   τ₂'
 
-infer Γ ; Δ ⊢ (x : τ₁ => t₂) : (τ₁' -> τ₂) =
-  let Δ₁, τ₁ = τ₁[?/fresh] in
-  let τ₂' = infer Γ, {x → τ₁} ; Δ, Δ₁ ⊢ t₂ : τ₂ in
-  (∀ Δ₁ . τ₁ -> τ₂')
-
-
 infer Γ ; Δ ⊢ (x : τ₁ => t₂) : τ =
-  let τ₂' = infer Γ ; Δ ⊢ t₂ : ? in
   let Δ₁, τ₁ = τ₁[?/fresh] in
-  let Δ' = solve Δ ⊢ (∀ Δ₁ . τ₁ -> τ₂') ≤ τ in
+  let β = fresh
+  let Δ' = solve Δ ⊢ (∀ Δ₁ ∪ {β} . τ₁ -> β) ≤ τ in
+  let τ₂' = infer Γ ∪ {x → τ₁} ; Δ, Δ' ⊢ t₂ : β in
   (∀ Δ' . τ₁ -> τ₂')
 
 
@@ -561,10 +551,7 @@ infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
   let τ₂' = infer Γ ; Δ, Δ' ⊢ t₂ : τ₂ in
   let Δ' = solve Δ, Δ' ⊢ τ₂' ≤ τ₂ ∧ τ₁' ≤ τ₁ in
   (∀ Δ' . τ₁')
-
-
 ```
-
 
 -/
 
