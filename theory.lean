@@ -484,10 +484,18 @@ infer Γ ; Δ ⊢ () : τ =
   let Δ' = solve Δ ⊢ C ∧ [] ≤ τ in
   (∀ Δ' . [])
 
-infer Γ ; Δ ⊢ (#l t) : τ =
-  let (∀ Δ₁ ⟨⟩ τ₁) = infer Γ ; Δ ⊢ t : ? in
+infer Γ ; Δ ⊢ (#l t₁) : #l τ₁ =
+  let (∀ Δ₁ . τ₁') = infer Γ ; Δ ⊢ t₁ : τ₁ in
+  (∀ Δ₁ . #l τ₁')
+
+infer Γ ; Δ ⊢ (#l t₁) : τ =
+  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ⊢ t₁ : ? in
   let Δ' = solve Δ ⊢ (∀ Δ₁ . (#l τ₁)) ≤ τ in
   (∀ Δ' . (#l τ₁))
+
+infer Γ ; Δ ⊢ (.l t₁) : .l τ₁ =
+  let (∀ Δ₁ . τ₁') = infer Γ ; Δ ⊢ t₁ : τ₁ in
+  (∀ Δ₁ . .l τ₁')
 
 infer Γ ; Δ ⊢ (.l t) : τ =
   let (∀ Δ₁ . τ₁) = infer Γ ; Δ ⊢ t : ? in
@@ -534,10 +542,18 @@ infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   let τ₂' = infer Γ, {x → τ₁'} ; Δ ⊢ t₂ : τ₂ in
   τ₂'
 
-infer Γ ; Δ ⊢ (x : τ₁ => t) : (τ₁' -> τ₂) =
+infer Γ ; Δ ⊢ (x : τ₁ => t₂) : (τ₁' -> τ₂) =
   let Δ₁, τ₁ = τ₁[?/fresh] in
-  let τ₂' = infer Γ, {x → τ₁} ; Δ, Δ₁ ⊢ t : τ₂ in
+  let τ₂' = infer Γ, {x → τ₁} ; Δ, Δ₁ ⊢ t₂ : τ₂ in
   (∀ Δ₁ . τ₁ -> τ₂')
+
+
+infer Γ ; Δ ⊢ (x : τ₁ => t₂) : τ =
+  let τ₂' = infer Γ ; Δ ⊢ t₂ : ? in
+  let Δ₁, τ₁ = τ₁[?/fresh] in
+  let Δ' = solve Δ ⊢ (∀ Δ₁ . τ₁ -> τ₂') ≤ τ in
+  (∀ Δ' . τ₁ -> τ₂')
+
 
 infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
   let ∀ Δ' . τ₂ -> τ₁' = infer Γ ; Δ ⊢ t₁ : ? -> τ₁ in
@@ -562,4 +578,79 @@ completeness: ...
 /-
 soundness: N/A
 completeness: N/A
+-/
+
+
+
+/-
+# examples 
+
+## sub variable type
+- a <: t, narrowing types
+
+## super variable type 
+- t <: a widening types
+
+## scalar inductive type
+```
+list a = \mu list .  
+  #nil [] | 
+  #cons [a ; list]
+```
+
+```
+nat = \mu nat . 
+  #zero [] | 
+  #succ nat 
+```
+
+## relational inductive type 
+```
+list_len a = \mu list_len .
+    [#nil [] ;# zero []] |
+    \all {list, nat} [list ; nat] <: list_len .  
+      [#cons [a ; list] ; #succ nat]
+```
+
+## unknown type
+
+
+## predicative polymorphic type
+
+what is the type of `singleton`?
+```
+let singleton = x => #cons (x, #nil ()) in singleton 
+```
+
+
+    {} ; {} |- `#cons (x, #nil ())` : 
+  ---
+  {} ; {} |- `x => #cons (x, #nil ())` : `\all {b} . b` = _
+
+  ---
+  {singleton : _} ; {} |- `singleton` : `?` = _
+
+---
+infer {} ; {} |- `let singleton = x => #cons (x, #nil ()) in singleton` : ? =
+  singleton : `\all a . a -> #cons [a ; #nil []]`
+
+{singleton : \all {b} . b} |- x => #cons (x, #nil ()) : <br>
+---
+{
+  singleton : \all a . a -> #cons [a; #nil []]<br>
+} ; {} |- let singleton = x => #cons (x, #nil ()) : [] <br>
+
+
+```
+singleton :   
+```
+
+
+## impredicative polymorphic type 
+what is the type of `result`?
+```
+let id = x => x 
+let result = id id
+```
+
 -/

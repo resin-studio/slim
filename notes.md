@@ -1,3 +1,6 @@
+
+# todo: organize 
+
 -- title --
 type guided program synthesis for dynamically typed languages
 
@@ -576,3 +579,6 @@ benefits of non-datatype language over liquid datatypes
 - more flexible subtyping
 - unified language for both types and refinements 
   - since types are flexible, no need separate additional refinement language for precision
+
+
+- there are no circular constraints via indirection 
