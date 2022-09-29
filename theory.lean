@@ -502,6 +502,7 @@ infer Γ ; Δ ⊢ (.l t) : τ =
   let Δ' = solve Δ ⊢ (∀ Δ₁ . (.l τ₁)) ≤ τ in
   (∀ Δ' . (.l τ₁))
 
+-- TODO: create canonical record type
 infer Γ ; Δ ⊢ (.l t) fs : τ =
   let (∀ Δ₁ . τ₁) = infer Γ ; Δ ⊢ t : ? in
   let (∀ Δ₂ . τ₂) = infer Γ ; Δ ⊢ fs : ? in
@@ -617,12 +618,13 @@ list_len a = \mu list_len .
 
 ## predicative polymorphic type
 
-what is the type of `singleton`?
+what is the type of `singleton` in the following?
 ```
 let singleton = x => #cons (x, #nil ()) in singleton 
 ```
 
-
+-- TODO: derivation
+```
     {} ; {} |- `#cons (x, #nil ())` : 
   ---
   {} ; {} |- `x => #cons (x, #nil ())` : `\all {b} . b` = _
@@ -639,10 +641,6 @@ infer {} ; {} |- `let singleton = x => #cons (x, #nil ()) in singleton` : ? =
 {
   singleton : \all a . a -> #cons [a; #nil []]<br>
 } ; {} |- let singleton = x => #cons (x, #nil ()) : [] <br>
-
-
-```
-singleton :   
 ```
 
 
