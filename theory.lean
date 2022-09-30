@@ -509,6 +509,7 @@ infer Γ ; Δ ⊢ t.l : τ =
   let τ' = infer Γ ; Δ ⊢ t : (.l τ) in
   τ'
 
+-- TODO: check that pattern matching is handled correctly
 infer Γ ; Δ ⊢ (match t₁' case t₁ => t₂) : τ₂ =
   let τ₁' = infer Γ ; Δ ⊢ t₁ : ? in
   let (∀ Δ' . _) = infer Γ ; Δ  ⊢ t₁' : τ₁' in
@@ -573,31 +574,66 @@ completeness: N/A
 /-
 # examples 
 
+## actual type
+what is the type of `x`?
+```
+let x = #zero () in x 
+```
+`x : #zero []`
+
+## expected type
+what is the type of `x`?
+```
+(p : [str ; ?] => 
+  match p case (x, y) => x 
+) (0, _) 
+```
+`x : #zero [] ≤ str`
+
 ## sub variable type
-- a <: t, narrowing types
+- a ≤ t, narrowing types
+what is the type of `x`?
+```
+(i2s : int -> str => 
+(n2s : nat -> str => 
+  (x : ? => (i2s x, n2s x))
+))
+```
+`x : int & nat`
 
 ## super variable type 
-- t <: a widening types
+- t ≤ a widening types
+what is the type of `++` at application?
+```
+(++ : ∀ α . list[α] ; list[α] -> list[α] => 
+(n : int => 
+(s : str => 
+  #cons(n, #nil()) ++  #cons(s, #nil())
+)))
+`++ : ∀ {β} = list[int | str | β] ; list[int | str | β] -> list[int | str | β]`
+
+
+```
 
 ## scalar inductive type
 ```
-list a = \mu list .  
-  #nil [] | 
-  #cons [a ; list]
+list a = μ list .  
+  #nil[] | 
+  #cons[a;list]
 ```
 
 ```
-nat = \mu nat . 
-  #zero [] | 
-  #succ nat 
+nat = μ nat . 
+  #zero[] | 
+  #succ[nat]
 ```
 
 ## relational inductive type 
 ```
-list_len a = \mu list_len .
-    [#nil [] ;# zero []] |
-    \all {list, nat} [list ; nat] <: list_len .  
-      [#cons [a ; list] ; #succ nat]
+list_len a = μ list_len .
+    [#nil[] ; #zero[]] |
+    ∀ {list,nat} [list;nat] ≤ list_len .  
+      [#cons[a;list] ; #succ[nat]]
 ```
 
 ## unknown type
