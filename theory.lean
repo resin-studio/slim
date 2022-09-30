@@ -612,7 +612,7 @@ what is the type of `++` at application?
 )))
 ```
 
-`++ : ∀ {β} = list[int|str|β] ; list[int|str|β] -> list[int|str|β]`
+`++ : ∀ {α ≤ int|str|β} = list[α] ; list[α] -> list[α]`
 
 
 ```
