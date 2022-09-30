@@ -477,6 +477,14 @@ solve Δ ⊢ #l' τ' ≤ #l τ =
 solve τ ≤ τ = some {} 
 solve _ = none 
 ```
+`patvars t = Γ`
+```
+patvars x = {x : ?} 
+patvars .l t = patvars t
+patvars .l t fs =
+  (patvars t) ∪ (patvars fs) 
+...
+```
 
 `infer Γ ; Δ ⊢ t : τ = τ`
 ```
@@ -509,10 +517,10 @@ infer Γ ; Δ ⊢ t.l : τ =
   let τ' = infer Γ ; Δ ⊢ t : (.l τ) in
   τ'
 
--- TODO: check that pattern matching is handled correctly
 infer Γ ; Δ ⊢ (match t₁' case t₁ => t₂) : τ₂ =
-  let τ₁' = infer Γ ; Δ ⊢ t₁ : ? in
-  let (∀ Δ' . _) = infer Γ ; Δ  ⊢ t₁' : τ₁' in
+  Γ₁ = patvars t₁
+  let τ₁ = infer Γ₁ ; {} ⊢ t₁ : ? in
+  let (∀ Δ' . _) = infer Γ ; Δ  ⊢ t₁' : τ₁ in
   let τ₂' = infer Γ ; Δ, Δ' ⊢ t₂ : τ₂ in
   τ₂'
 
