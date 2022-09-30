@@ -608,9 +608,11 @@ what is the type of `++` at application?
 (++ : ∀ α . list[α] ; list[α] -> list[α] => 
 (n : int => 
 (s : str => 
-  #cons(n, #nil()) ++  #cons(s, #nil())
+  #cons(n, #nil()) ++ #cons(s, #nil())
 )))
-`++ : ∀ {β} = list[int | str | β] ; list[int | str | β] -> list[int | str | β]`
+```
+
+`++ : ∀ {β} = list[int|str|β] ; list[int|str|β] -> list[int|str|β]`
 
 
 ```
