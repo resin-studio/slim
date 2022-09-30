@@ -612,9 +612,8 @@ what is the type of `++` at application?
 )))
 ```
 
-`++ : ∀ {α ≤ int|str|?} = list[α] ; list[α] -> list[α]`
+`++ : ∀ {α ≤ int|str|β, β ≤ ?} . list[α] ; list[α] -> list[α]`
 
--- TODO: check that new variables are eliminated when solve returns 
 -- TODO: check that type environment is not renamed in solving 
 
 ```
