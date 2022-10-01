@@ -553,7 +553,7 @@ infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   let Δ₁, τ₁ = τ₁[?/fresh]
   let τ₁' = infer Γ ; Δ ⊢ t₁ : (∀ Δ₁ . τ₁) in
   let τ₂' = infer Γ, {x → τ₁'} ; Δ ⊢ t₂ : τ₂ in
-  -- τ₁' is generalized
+  -- τ₁' is generalized in τ₂'
   τ₂'
 
 -- TODO: allow patterns in abstraction 
@@ -564,7 +564,7 @@ infer Γ ; Δ ⊢ (x : τ₁ => t₂) : τ =
   let β = fresh
   let Δ' = solve Δ ⊢ (∀ Δ₁ ∪ {β} . τ₁ -> β) ≤ τ in
   let τ₂' = infer Γ ∪ {x → τ₁} ; Δ, Δ' ⊢ t₂ : β in
-  -- τ₁ is NOT generalized
+  -- τ₁ is NOT generalized in τ₂'
   (∀ Δ' . τ₁ -> τ₂')
 
 
