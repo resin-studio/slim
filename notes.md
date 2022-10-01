@@ -611,3 +611,13 @@ what's the type of `g`, if impredicative?
 let g = (fn f => (f 1, f "hello")) in;
 g(x => x), g(x => 0)
 ```
+
+-- union of tags is eliminated by intersection of functions
+
+-- assoc map is eliminated by union of keys 
+Field[]
+{.l = v} & {.l = v}... // .l | .l 
+
+e : {.l0 : T0, ... .ln : Tn}     .l : union(.l0 | ... | .ln)
+\-------------------------------------------------------------
+e.l : T

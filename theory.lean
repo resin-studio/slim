@@ -651,6 +651,19 @@ what is the type of `++` at application?
 
 ```
 
+## unknown type
+
+## known type
+
+## key union type
+## data union type
+
+## record intersection type
+- dual of key union type
+## function intersection type / tag elim type
+- dual of data union type
+
+
 ## scalar inductive type
 ```
 list a = μ list .  
@@ -671,8 +684,6 @@ list_len a = μ list_len .
     ∀ {list,nat} [list;nat] ≤ list_len .  
       [#cons[a;list] ; #succ[nat]]
 ```
-
-## unknown type
 
 
 ## predicative polymorphic type
