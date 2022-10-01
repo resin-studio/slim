@@ -595,15 +595,19 @@ benefits of non-datatype language over liquid datatypes
 
 OK:
 ```
-let f = fn x => x in
+let f = x => x in
 (f 1, f "hello")
 ```
 
 FAIL:
 ```
-(fn f => 
+(f => 
   (f 1, f "hello")
-)(fn x => x)
+)(x => x)
 ```
 
-
+what's the type of `g`, if impredicative?
+```
+let g = (fn f => (f 1, f "hello")) in;
+g(x => x), g(x => 0)
+```

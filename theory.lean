@@ -547,20 +547,24 @@ infer Γ ; Δ ⊢ x : τ =
   let Δ' = solve Δ, Δ' ⊢ C ∧ τ' ≤ τ in
   (∀ Δ' . τ')
 
+-- this rule allows generalization of named things
 -- TODO: MAYBE: allow patterns in let-binding 
 infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   let Δ₁, τ₁ = τ₁[?/fresh]
   let τ₁' = infer Γ ; Δ ⊢ t₁ : (∀ Δ₁ . τ₁) in
   let τ₂' = infer Γ, {x → τ₁'} ; Δ ⊢ t₂ : τ₂ in
+  -- τ₁' is generalized
   τ₂'
 
 -- TODO: allow patterns in abstraction 
 -- τ₁ is generalized here too! not restricted to let-polymorphism
+-- should we avoid generalizing, except at let-binding?
 infer Γ ; Δ ⊢ (x : τ₁ => t₂) : τ =
   let Δ₁, τ₁ = τ₁[?/fresh] in
   let β = fresh
   let Δ' = solve Δ ⊢ (∀ Δ₁ ∪ {β} . τ₁ -> β) ≤ τ in
   let τ₂' = infer Γ ∪ {x → τ₁} ; Δ, Δ' ⊢ t₂ : β in
+  -- τ₁ is NOT generalized
   (∀ Δ' . τ₁ -> τ₂')
 
 
