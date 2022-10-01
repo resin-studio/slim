@@ -582,3 +582,28 @@ benefits of non-datatype language over liquid datatypes
 
 
 - there are no circular constraints via indirection 
+
+- intersection of function types
+  - corresponds to ML cases
+  - application of intersection corresponds to ML case matching
+  - no benefit to using match over function application
+
+- what is the benefit of let-binding?
+  - allows some generalization but avoids nested generalization
+    - restricting generalizing to let-binding
+    - no generic types in abstraction
+
+OK:
+```
+let f = fn x => x in
+(f 1, f "hello")
+```
+
+FAIL:
+```
+(fn f => 
+  (f 1, f "hello")
+)(fn x => x)
+```
+
+
