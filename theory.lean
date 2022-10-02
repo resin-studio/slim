@@ -420,6 +420,7 @@ solve Δ ⊢ τ' ≤ α =
   )
 
 solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
+  -- quantified Δ' assumed to not be in Δ 
   fmap (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ'' =>
     some (fmap Δ' (α ≤ _ =>
       {α ≤ Δ''(α)}
@@ -427,6 +428,7 @@ solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
   )
 
 solve Δ ⊢ τ' ≤ (∀ Δ' ⟨C⟩ . τ) =
+  -- quantified Δ' assumed to not be in Δ 
   fmap (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ'' =>
     some (fmap Δ' (α ≤ _ =>
       {α ≤ Δ''(α)}
