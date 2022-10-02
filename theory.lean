@@ -395,8 +395,6 @@ refresh τ =
   {}, ? ≤ ?, τ
 ```
 
--- TODO: check that renaming makes sense
--- TODO: check that type environment is not renamed in solving 
 `solve Δ ⊢ C = o`
 ```
 solve Δ ⊢ C₁ ∧ C₂ =  
