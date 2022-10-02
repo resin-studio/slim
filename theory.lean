@@ -1,3 +1,4 @@
+-- checking, inference, and synthesis in a unityped language 
 -- syntax 
 /-
 
@@ -13,13 +14,13 @@ fs ::=                            fields
   fs .l t                         fields extended 
 
 t ::=                             term
-  _                               irrelevant pattern / inferred expression
+  _                               hole / irrelevant pattern
   x                               variable expression / pattern
   ()                              unit expression / pattern
   #l t                            variant expression / pattern
-  match t cs                      pattern matching 
   fs                              record expression / pattern
   t.l                             record projection
+  cs                              cases expression
   x : τ => t                      function abstraction
   t t                             function application
   let t : τ = t in t              binding
@@ -395,6 +396,7 @@ refresh τ =
 ```
 
 -- TODO: check that renaming makes sense
+-- TODO: check that type environment is not renamed in solving 
 `solve Δ ⊢ C = o`
 ```
 solve Δ ⊢ C₁ ∧ C₂ =  
@@ -485,6 +487,11 @@ patvars .l t = patvars t
 patvars .l t fs =
   (patvars t) ∪ (patvars fs) 
 ...
+```
+
+## test
+```
+-- asdf 
 ```
 
 `infer Γ ; Δ ⊢ t : τ = τ`
@@ -586,6 +593,7 @@ infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
   let Δ' = solve Δ, Δ' ⊢ τ₂' ≤ τ₂ ∧ τ₁' ≤ τ₁ in
   (∀ Δ' . τ₁')
 ```
+```
 
 -/
 
@@ -644,24 +652,23 @@ what is the type of `++` at application?
   #cons(n, #nil()) ++ #cons(s, #nil())
 )))
 ```
-
 `++ : ∀ {α ≤ int|str|β, β ≤ ?} . list[α] ; list[α] -> list[α]`
 
--- TODO: check that type environment is not renamed in solving 
-
-```
-
-## unknown type
-
-## known type
-
 ## key union type
-## data union type
+## tag union type
 
 ## record intersection type
 - dual of key union type
-## function intersection type / tag elim type
-- dual of data union type
+## function intersection type
+- dual of tag union type
+what is the type of `len`?
+```
+let size = fix (size => (
+  case #nil() => #zero()
+  case #cons(_, xs) => #succ(size xs)
+))
+```
+`len : ∀ {α} . (#nil[] -> #zero[]) & (#cons[α;list[α]] -> #succ[nat])`
 
 
 ## scalar inductive type
