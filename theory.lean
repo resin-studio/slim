@@ -1,4 +1,5 @@
--- checking, inference, and synthesis in a unityped language 
+-- a unityped language: checking, inference, and synthesis
+
 -- syntax 
 /-
 
@@ -20,8 +21,7 @@ t ::=                             term
   #l t                            variant expression / pattern
   fs                              record expression / pattern
   t.l                             record projection
-  cs                              cases expression
-  x : τ => t                      function abstraction
+  cs                              function expression
   t t                             function application
   let t : τ = t in t              binding
   fix t                           recursion
@@ -480,18 +480,17 @@ solve Δ ⊢ #l' τ' ≤ #l τ =
 solve τ ≤ τ = some {} 
 solve _ = none 
 ```
-`patvars t = Γ`
+`patvars t = Γ, Δ`
 ```
-patvars x = {x : ?} 
+patvars x = 
+  let α = fresh in
+  {x : α}, {α ≤ ?} 
 patvars .l t = patvars t
 patvars .l t fs =
-  (patvars t) ∪ (patvars fs) 
+  let Γ₁, Δ₁ = (patvars t) in
+  let Γ₂, Δ₂ = (patvars fs) in
+  (Γ₁ ∪ Γ₂), (Δ₁ ∪ Δ₂) 
 ...
-```
-
-## test
-```
--- asdf 
 ```
 
 `infer Γ ; Δ ⊢ t : τ = τ`
@@ -500,6 +499,12 @@ patvars .l t fs =
 infer Γ ; Δ ⊢ () : τ =
   let Δ' = solve Δ ⊢ C ∧ [] ≤ τ in
   (∀ Δ' . [])
+
+infer Γ ; Δ ⊢ x : τ = 
+  let τ' = Γ x 
+  let Δ', C, τ' = refresh τ' in
+  let Δ' = solve Δ, Δ' ⊢ C ∧ τ' ≤ τ in
+  (∀ Δ' . τ')
 
 infer Γ ; Δ ⊢ (#l t₁) : τ =
   let α = fresh in
@@ -514,48 +519,33 @@ infer Γ ; Δ ⊢ (.l t₁) : τ =
   (∀ Δ' ∪ Δ₁ . (.l τ₁)) 
 
 infer Γ ; Δ ⊢ (.l t₁) fs : τ =
-  let α = fresh in
-  let β = fresh in
-  let Δ' = solve Δ ⊢ (∀ {α, β} . (.l α) & β) ≤ τ in
-  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ∪ Δ' ⊢ t₁ : α in
-  let (∀ Δ₂ . τ₂) = infer Γ ; Δ ∪ Δ' ⊢ fs : β in
-  (∀ Δ' ∪ Δ₁ ∪ Δ₂ . (.l τ₁) & τ₂)
+  let (∀ Δ' . τ') = infer Γ ; Δ ⊢ (.l t₁) : τ in
+  let (∀ Δ'' . τ'') = infer Γ ; Δ ∪ Δ' ⊢ fs : τ in
+  (∀ Δ' ∪ Δ'' . τ' & τ'')
 
 infer Γ ; Δ ⊢ t.l : τ =
   let τ' = infer Γ ; Δ ⊢ t : (.l τ) in
   τ'
 
+infer Γ ; Δ ⊢ (case t₁ => t₂) : τ =
+  let Γ₁, Δ₁ = patvars t₁ in
+  let τ₁ = infer Γ₁ ; Δ₁ ⊢ t₁ : ? in
+  let β = fresh in
+  let Δ' = solve Δ ⊢ (∀ Δ₁ ∪ {β} . τ₁ -> β) ≤ τ in
+  let τ₂' = infer Γ ∪ Γ₁ ; Δ, Δ' ⊢ t₂ : β in
+  -- patvars (Γ₁) are NOT generalized in τ₂'
+  (∀ Δ' . τ₁ -> τ₂')
 
--- TODO: create a cases form/function version of record 
--- TODO: remove match; will be subsumed application on intersection of functions
--- cases is the instance form of intersection of types 
--- case does not need to be coupled with match?
-infer Γ ; Δ ⊢ (match t₁' case t₁ => t₂) : τ₂ =
-  Γ₁ = patvars t₁
-  let τ₁ = infer Γ₁ ; {} ⊢ t₁ : ? in
-  let (∀ Δ' . _) = infer Γ ; Δ  ⊢ t₁' : τ₁ in
-  let τ₂' = infer Γ ; Δ, Δ' ⊢ t₂ : τ₂ in
-  τ₂'
 
-infer Γ ; Δ ⊢ (match t₁' case t₁ => t₂ cs) : τ₂ =
-  let τ₂' = infer Γ ; Δ ⊢ (match t₁' case t₁ => t₂) : τ₂ in
-  let τ₂'' = infer Γ ; Δ ⊢ (match t₁' cs) : τ₂ in
-  τ₂' | τ₂''
-
+infer Γ ; Δ ⊢ (case t₁ => t₂) cs : τ =
+  let (∀ Δ' . τ') = infer Γ ; Δ ⊢ (case t₁ => t₂) : τ in
+  let (∀ Δ'' . τ'') = infer Γ ; Δ ∪ Δ' ⊢ cs : τ₂ in 
+  (∀ Δ' ∪ Δ'' . τ' & τ'')
 
 infer Γ ; Δ ⊢ fix t : τ =
   let (∀ Δ' . τ' -> τ') = infer Γ ; Δ ⊢ t : (τ -> τ) in 
   (∀ Δ' . τ')
 
-
-infer Γ ; Δ ⊢ x : τ = 
-  let τ' = Γ x 
-  let Δ', C, τ' = refresh τ' in
-  let Δ' = solve Δ, Δ' ⊢ C ∧ τ' ≤ τ in
-  (∀ Δ' . τ')
-
--- this rule allows generalization of named things
--- TODO: MAYBE: allow patterns in let-binding 
 infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   let Δ₁, τ₁ = τ₁[?/fresh]
   let τ₁' = infer Γ ; Δ ⊢ t₁ : (∀ Δ₁ . τ₁) in
@@ -563,23 +553,12 @@ infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   -- τ₁' is generalized in τ₂'
   τ₂'
 
--- TODO: allow patterns in abstraction 
--- τ₁ is generalized here too! not restricted to let-polymorphism
--- should we avoid generalizing, except at let-binding?
-infer Γ ; Δ ⊢ (x : τ₁ => t₂) : τ =
-  let Δ₁, τ₁ = τ₁[?/fresh] in
-  let β = fresh
-  let Δ' = solve Δ ⊢ (∀ Δ₁ ∪ {β} . τ₁ -> β) ≤ τ in
-  let τ₂' = infer Γ ∪ {x → τ₁} ; Δ, Δ' ⊢ t₂ : β in
-  -- τ₁ is NOT generalized in τ₂'
-  (∀ Δ' . τ₁ -> τ₂')
-
-
--- TODO: allow application of intersection functions 
 infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
-  let ∀ Δ' . τ₂ -> τ₁' = infer Γ ; Δ ⊢ t₁ : ? -> τ₁ in
-  let τ₂' = infer Γ ; Δ, Δ' ⊢ t₂ : τ₂ in
-  let Δ' = solve Δ, Δ' ⊢ τ₂' ≤ τ₂ ∧ τ₁' ≤ τ₁ in
+  let ∀ Δ' . τ = infer Γ ; Δ ⊢ t₁ : ? -> τ₁ in
+  let τ₂ -> τ₁' = inside_out τ in 
+  -- turn intersection inside out into function type
+  let τ₂' = infer Γ ; Δ ∪ Δ' ⊢ t₂ : τ₂ in
+  let Δ' = solve Δ ∪ Δ' ⊢ τ₂' ≤ τ₂ ∧ τ₁' ≤ τ₁ in
   (∀ Δ' . τ₁')
 ```
 
