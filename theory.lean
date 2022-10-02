@@ -583,18 +583,6 @@ infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
   (∀ Δ' . τ₁')
 ```
 
--- NEW: 
-infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
-  let α = fresh in
-
-
-  let ∀ Δ' . τ₂ -> τ₁' = infer Γ ; Δ ⊢ t₁ : ? -> τ₁ in
-  let τ₂' = infer Γ ; Δ, Δ' ⊢ t₂ : τ₂ in
-  let Δ' = solve Δ, Δ' ⊢ τ₂' ≤ τ₂ ∧ τ₁' ≤ τ₁ in
-  (∀ Δ' . τ₁')
-```
-```
-
 -/
 
 -- static implementation/semantics theorems
@@ -654,14 +642,10 @@ what is the type of `++` at application?
 ```
 `++ : ∀ {α ≤ int|str|β, β ≤ ?} . list[α] ; list[α] -> list[α]`
 
-## key union type
-## tag union type
+## fields intersection type
 
-## record intersection type
-- dual of key union type
-## function intersection type
-- dual of tag union type
-what is the type of `len`?
+## cases intersection type
+what is the type of `size`?
 ```
 let size = fix (size => (
   case #nil() => #zero()
