@@ -553,13 +553,14 @@ infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   -- τ₁' is generalized in τ₂'
   τ₂'
 
-infer Γ ; Δ ⊢ t₁ t₂ : τ₁ =
-  let ∀ Δ' . τ = infer Γ ; Δ ⊢ t₁ : ? -> τ₁ in
-  let τ₂ -> τ₁' = inside_out τ in 
+infer Γ ; Δ ⊢ t t₁ : τ₂ =
+  let τ = ? -> τ₂ in
+  let ∀ Δ' . τ' = infer Γ ; Δ ⊢ t : τ in
+  let τ₁ -> τ₂' = inside_out τ' in 
   -- turn intersection inside out into function type
-  let τ₂' = infer Γ ; Δ ∪ Δ' ⊢ t₂ : τ₂ in
-  let Δ' = solve Δ ∪ Δ' ⊢ τ₂' ≤ τ₂ ∧ τ₁' ≤ τ₁ in
-  (∀ Δ' . τ₁')
+  let τ₁' = infer Γ ; Δ ∪ Δ' ⊢ t₁ : τ₁ in
+  let Δ' = solve Δ ∪ Δ' ⊢ τ' ≤ (τ₁' -> τ₂) in
+  (∀ Δ' . τ₂' & τ₂)
 ```
 
 -/
