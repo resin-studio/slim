@@ -657,50 +657,42 @@ list_len a = μ list_len .
 ```
 
 
-## predicative polymorphic type
-OK:
+## polymorphic type
 ```
+(case (one, hello) : [nat;str] =>
 let f = fn x => x in
-(f 1, f "hello")
-```
+-- Γ = {f : ∀ {α} . α -> α}
 
-what is the type of `singleton` in the following?
-```
-let singleton = x => #cons (x, #nil ()) in singleton 
-```
+let one' = f one in 
+-- Γ = {f : ∀ {α} . α -> α}, one' : (nat | ?)} 
+-- Γ = {f : ∀ {α} . α -> α}, one' : (∀ {α ≤ (nat | β), β ≤ ?} . α)} 
+-- infer {f : ∀ {α} . α -> α} ; {...} ⊢ f one : ? = ∀ {α ≤ (nat | β), β ≤ ?} . α    
+-- solve {α ≤ ?} ⊢ one ≤ α = {α ≤ nat | β, β ≤ ?}
 
--- TODO: derivation
-```
-    {} ; {} |- `#cons (x, #nil ())` : 
-  ---
-  {} ; {} |- `x => #cons (x, #nil ())` : `\all {b} . b` = _
-
-  ---
-  {singleton : _} ; {} |- `singleton` : `?` = _
-
----
-infer {} ; {} |- `let singleton = x => #cons (x, #nil ()) in singleton` : ? =
-  singleton : `\all a . a -> #cons [a ; #nil []]`
-
-{singleton : \all {b} . b} |- x => #cons (x, #nil ()) : <br>
----
-{
-  singleton : \all a . a -> #cons [a; #nil []]<br>
-} ; {} |- let singleton = x => #cons (x, #nil ()) : [] <br>
+let hello' = f hello in
+-- same as above
+...
+)
 ```
 
 
-## impredicative polymorphic type 
-what is the type of `result`?  
-FAILs under  predicative let-polymorphism:
+## monomorphic type 
 ```
+(case (one, hello) : [nat;str] =>
 (fn f => 
-  (f 1, f "hello")
-)(fn x => x)
-```
-```
-let id = x => x 
-let result = id id
-```
+  -- Γ = {f : α} ; Δ = {α ≤ ?}
 
+  let one' = f one in
+  -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & β₃, β₃ ≤ ?} ⊢ f one : ? = ∀ {β₂ ≤ ?} . β₂    
+
+  let hello' = f hello in
+  -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ f hello : ? = none
+  -- solve {β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ str ≤ β₁ = none
+  -- solve {...} ⊢ str ≤ nat & str = none
+  -- solve {...} ⊢ str ≤ nat ∧ str ≤ str = none
+  -- solve {...} ⊢ str ≤ nat = none
+  ...
+)(fn x => x)
+)
+```
 -/
