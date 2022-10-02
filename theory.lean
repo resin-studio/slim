@@ -420,14 +420,18 @@ solve Δ ⊢ τ' ≤ α =
   )
 
 solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
-  let rmap = fmap Δ (α → _ => {α → fresh}) in
-  let Δ', C, τ' = refresh (∀ Δ' ⟨C⟩ . τ') in
-  solve Δ, Δ' ⊢ C ∧ τ' ≤ τ 
+  fmap (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ'' =>
+    some (fmap Δ' (α ≤ _ =>
+      {α ≤ Δ''(α)}
+    )) 
+  )
 
 solve Δ ⊢ τ' ≤ (∀ Δ' ⟨C⟩ . τ) =
-  let rmap = fmap Δ (α → _ => {α → fresh}) in
-  let Δ', C, τ = refresh (∀ Δ' ⟨C⟩ . τ) in
-  solve Δ, Δ' ⊢ C ∧ τ ≤ τ' 
+  fmap (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ'' =>
+    some (fmap Δ' (α ≤ _ =>
+      {α ≤ Δ''(α)}
+    )) 
+  )
 
 solve Δ ⊢ τ₁ | τ₂ ≤ τ =
   solve Δ ⊢ τ₁ ≤ τ ∧ τ₂ ≤ τ
