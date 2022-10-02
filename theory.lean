@@ -618,9 +618,9 @@ completeness: N/A
 ## actual type
 what is the type of `x`?
 ```
-let x = #zero () in x 
+let x = #zero() in x 
 ```
-`x : #zero []`
+`x : #zero[]`
 
 ## expected type
 what is the type of `x`?
@@ -629,7 +629,7 @@ what is the type of `x`?
   match p case (x, y) => x 
 ) (0, _) 
 ```
-`x : #zero [] ≤ str`
+`x : #zero[] ≤ str`
 
 ## sub variable type
 - a ≤ t, narrowing types
