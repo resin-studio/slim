@@ -531,19 +531,20 @@ infer Γ ; Δ ⊢ t.l : τ =
   let τ' = infer Γ ; Δ ⊢ t : (.l τ) in
   τ'
 
-infer Γ ; Δ ⊢ (case t₁ => t₂) : τ =
+infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) : τ =
   let Γ₁, Δ₁ = patvars t₁ in
-  let τ₁ = infer Γ₁ ; Δ₁ ⊢ t₁ : ? in
+  let Δ₁', τ₁' = τ₁[?/fresh]
+  let Δ₁', τ₁' = infer Γ₁ ; Δ₁ ∪ Δ₁' ⊢ t₁ : τ₁' in
   let β = fresh in
-  let Δ' = solve Δ ⊢ (∀ Δ₁ ∪ {β} . τ₁ -> β) ≤ τ in
+  let Δ' = solve Δ ⊢ (∀ Δ₁' ∪ {β} . τ₁' -> β) ≤ τ in
   let τ₂' = infer Γ ∪ Γ₁ ; Δ, Δ' ⊢ t₂ : β in
   -- patvars (Γ₁) are NOT generalized in τ₂'
-  (∀ Δ' . τ₁ -> τ₂')
+  (∀ Δ' . τ₁' -> τ₂')
 
 
-infer Γ ; Δ ⊢ (case t₁ => t₂) cs : τ =
-  let (∀ Δ' . τ') = infer Γ ; Δ ⊢ (case t₁ => t₂) : τ in
-  let (∀ Δ'' . τ'') = infer Γ ; Δ ∪ Δ' ⊢ cs : τ₂ in 
+infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) cs : τ =
+  let Δ', τ' = infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) : τ in
+  let Δ'', τ'' = infer Γ ; Δ ∪ Δ' ⊢ cs : τ₂ in 
   (∀ Δ' ∪ Δ'' . τ' & τ'')
 
 infer Γ ; Δ ⊢ fix t : τ =
@@ -622,21 +623,25 @@ what is the type of `++` at application?
 (n : int => 
 (s : str => 
   #cons(n, #nil()) ++ #cons(s, #nil())
+  -- {++ : ∀ {α ≤ int|str|β, β ≤ ?} . list[α] ; list[α] -> list[α]}
+  -- TODO: check application rule for where specialization happens
 )))
 ```
-`++ : ∀ {α ≤ int|str|β, β ≤ ?} . list[α] ; list[α] -> list[α]`
 
-## fields intersection type
+## record intersection type
 
-## cases intersection type
-what is the type of `size`?
+## function intersection type
+-- TODO: check that we can infer the type without infinite loop
 ```
-let size = fix (size => (
+fix (size => (
+  -- size : α
   case #nil() => #zero()
   case #cons(_, xs) => #succ(size xs)
+  -- solve ⊢ (α -> β) ≤ (#nil[] -> #zero[] & #cons[_;α] -> #succ[β])
 ))
+-- infer ... ⊢ fix (size -> ...) = ∀ {α} . (#nil[] -> #zero[]) & (#cons[α;list[α]] -> #succ[nat])
+...
 ```
-`len : ∀ {α} . (#nil[] -> #zero[]) & (#cons[α;list[α]] -> #succ[nat])`
 
 
 ## scalar inductive type
