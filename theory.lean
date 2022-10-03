@@ -591,29 +591,36 @@ completeness: N/A
 ## actual type
 what is the type of `x`?
 ```
-let x = #zero() in x 
+#zero()
+-- infer ⊢ x : #zero() = _, #zero[]
 ```
-`x : #zero[]`
 
 ## expected type
-what is the type of `x`?
 ```
-(p : [str ; ?] => 
-  match p case (x, y) => x 
-) (0, _) 
+(case n : nat =>
+(case (x,y) : [str;?] => 
+  x 
+) (n, _) 
+)
+-- infer {n : nat} ⊢ (... => ...)(n, _) = none
+  -- solve _ ⊢ nat ≤ str = none
 ```
-`x : #zero[] ≤ str`
+`x : `
 
 ## sub variable type
 - a ≤ t, narrowing types
-what is the type of `x`?
 ```
-(i2s : int -> str => 
-(n2s : nat -> str => 
-  (x : ? => (i2s x, n2s x))
+(case i2s : int -> str => 
+(case n2s : nat -> str => 
+  (case x : ? => (i2s x, n2s x))
+  -- infer {x : α} {α ≤ ?} ⊢ (... => ...) = _ , int & nat -> [str ; str] 
+    -- solve {α ≤ ?} ⊢ α ≤ int = {α ≤ int & β, β ≤ ?}  
+    -- solve {α ≤ int & β, β ≤ ?} ⊢ α ≤ nat = {α ≤ int & nat & ?}  
+      -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ nat = {β ≤ nat & ?}  
+        -- solve {...} ⊢ int ≤ nat ∧ β ≤ nat = {β ≤ nat & ?}  
+
 ))
 ```
-`x : int & nat`
 
 ## super variable type 
 - t ≤ a widening types
@@ -674,9 +681,9 @@ let f = fn x => x in
 
 let one' = f one in 
 -- Γ = {f : ∀ {α} . α -> α}, one' : (nat | ?)} 
--- Γ = {f : ∀ {α} . α -> α}, one' : (∀ {α ≤ (nat | β), β ≤ ?} . α)} 
--- infer {f : ∀ {α} . α -> α} ; {...} ⊢ f one : ? = ∀ {α ≤ (nat | β), β ≤ ?} . α    
--- solve {α ≤ ?} ⊢ one ≤ α = {α ≤ nat | β, β ≤ ?}
+  -- Γ = {f : ∀ {α} . α -> α}, one' : (∀ {α ≤ (nat | β), β ≤ ?} . α)} 
+    -- infer {f : ∀ {α} . α -> α} ; {...} ⊢ f one : ? = ∀ {α ≤ (nat | β), β ≤ ?} . α    
+      -- solve {α ≤ ?} ⊢ one ≤ α = {α ≤ nat | β, β ≤ ?}
 
 let hello' = f hello in
 -- same as above
@@ -696,10 +703,10 @@ let hello' = f hello in
 
   let hello' = f hello in
   -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ f hello : ? = none
-  -- solve {β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ str ≤ β₁ = none
-  -- solve {...} ⊢ str ≤ nat & str = none
-  -- solve {...} ⊢ str ≤ nat ∧ str ≤ str = none
-  -- solve {...} ⊢ str ≤ nat = none
+    -- solve {β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ str ≤ β₁ = none
+      -- solve {...} ⊢ str ≤ nat & str = none
+        -- solve {...} ⊢ str ≤ nat ∧ str ≤ str = none
+          -- solve {...} ⊢ str ≤ nat = none
   ...
 )(fn x => x)
 )
