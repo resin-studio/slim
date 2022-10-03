@@ -497,6 +497,8 @@ patvars .l t fs =
 ...
 ```
 
+-- TODO: rewrite with separation of type env and type 
+-- TODO: rewrite with options
 `infer Γ ; Δ ⊢ t : τ = τ`
 ```
 
@@ -587,6 +589,7 @@ completeness: N/A
 
 /-
 # examples 
+-- TODO: gather all examples from other doc
 
 ## actual type
 what is the type of `x`?
@@ -605,10 +608,8 @@ what is the type of `x`?
 -- infer {n : nat} ⊢ (... => ...)(n, _) = none
   -- solve _ ⊢ nat ≤ str = none
 ```
-`x : `
 
 ## sub variable type
-- a ≤ t, narrowing types
 ```
 (case i2s : int -> str => 
 (case n2s : nat -> str => 
@@ -622,18 +623,25 @@ what is the type of `x`?
 ))
 ```
 
-## super variable type 
-- t ≤ a widening types
-what is the type of `++` at application?
+## super variable type
+-- NOTE: widen expected type (input), narrow actual type (output)
+-- NOTE: ? is treated as ⊥ in sub/actual positions
+-- NOTE: ? is treated as ⊤ in super/expected position
 ```
-(++ : ∀ α . list[α] ; list[α] -> list[α] => 
+(pair : ∀ α . α -> α -> [α ; α] => 
 (n : int => 
 (s : str => 
-  #cons(n, #nil()) ++ #cons(s, #nil())
-  -- {++ : ∀ {α ≤ int|str|β, β ≤ ?} . list[α] ; list[α] -> list[α]}
-  -- TODO: check application rule for where specialization happens
+  pair n s
+  -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
+    -- solve {α ≤ ?} ⊢ int ≤ α = some {α ≤ int | ?} 
+    -- solve {α ≤ int | ?} ⊢ str ≤ α = some {α ≤ int | str | ?} 
+      -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int | β  = {β ≤ str | ?} 
+        -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int ∨ str ≤ β = {β ≤ str | ?}
+          -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ β = {β ≤ str | ?}
 )))
 ```
+
+`str | ? ≤ str` 
 
 ## record intersection type
 
