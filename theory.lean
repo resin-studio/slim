@@ -536,12 +536,12 @@ infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) cs : τ =
 
 infer Γ ; Δ ⊢ t t₁ : τ₂ =
   let τ = ? -> τ₂ in
-  let ∀ Δ' . τ' = infer Γ ; Δ ⊢ t : τ in
+  let Δ' , τ' = infer Γ ; Δ ⊢ t : τ in
   let τ₁ -> τ₂' = inside_out τ' in 
   -- turn intersection inside out into function type
   let τ₁' = infer Γ ; Δ ∪ Δ' ⊢ t₁ : τ₁ in
   let Δ' = solve Δ ∪ Δ' ⊢ τ' ≤ (τ₁' -> τ₂) in
-  (∀ Δ' . τ₂' & τ₂)
+  Δ' , τ₂' & τ₂
 
 infer Γ ; Δ ⊢ (.l t₁) : τ =
   let α = fresh in
