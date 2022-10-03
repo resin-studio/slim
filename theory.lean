@@ -498,58 +498,64 @@ infer Γ ; Δ ⊢ (#l t₁) : τ =
 
 infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
   let Γ₀, Δ₀ = patvars t₁ in
-  let Δ₁, τ₁ = τ₁[?/fresh]
-  map (infer Γ₀ ; Δ₀ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁',τ₁' => 
+  let Δ₁, τ₁ = τ₁[?/fresh] in
   let β = fresh in
+  map (infer Γ₀ ; Δ₀ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁',τ₁' => 
   map (solve Δ ⊢ (∀ Δ₁' ∪ {β} . τ₁' -> β) ≤ τ) (Δ' => 
   map (infer Γ ∪ Γ₁ ; Δ, Δ' ⊢ t₂ : β) (Δ₂', τ₂' =>
-  -- patvars (Γ₁) are NOT generalized in τ₂'
+    -- patvars (Γ₁) are NOT generalized in τ₂'
     some (Δ' ∪ Δ₂' , τ₁' -> τ₂')
   )))
 
 
 infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) cs : τ =
-  let Δ', τ' = infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) : τ in
-  let Δ'', τ'' = infer Γ ; Δ ∪ Δ' ⊢ cs : τ₂ in 
-  (Δ' ∪ Δ'') , (τ' & τ'')
+  map (infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) : τ) (Δ', τ' =>
+  map (infer Γ ; Δ ∪ Δ' ⊢ cs : τ₂) (Δ'', τ'' => 
+    some (Δ' ∪ Δ'' , τ' & τ'')
+  ))
 
 infer Γ ; Δ ⊢ t t₁ : τ₂ =
-  let τ = ? -> τ₂ in
-  let Δ' , τ' = infer Γ ; Δ ⊢ t : τ in
-  let τ₁ -> τ₂' = inside_out τ' in 
-  -- turn intersection inside out into function type
-  let τ₁' = infer Γ ; Δ ∪ Δ' ⊢ t₁ : τ₁ in
-  let Δ' = solve Δ ∪ Δ' ⊢ τ' ≤ (τ₁' -> τ₂) in
-  Δ' , (τ₂' & τ₂)
+  map (infer Γ ; Δ ⊢ t : ? -> τ₂ in) (Δ',τ' => 
+  map (functify τ') (τ₁,τ₂' => 
+  -- break type (possibly intersection) into premise and conclusion 
+  map (infer Γ ; Δ ∪ Δ' ⊢ t₁ : τ₁) (Δ₁',τ₁' =>
+  map (solve Δ ∪ Δ' ∪ Δ₁' ⊢ τ' ≤ (τ₁' -> τ₂)) (Δ' =>
+    some(Δ' , τ₂' & τ₂)
+  ))))
 
 infer Γ ; Δ ⊢ (.l t₁) : τ =
   let α = fresh in
-  let Δ' = solve Δ ⊢ (∀ {α} . (.l α)) ≤ τ in
-  let Δ₁ , τ₁ = infer Γ ; Δ ∪ Δ' ⊢ t₁ : α in
-  (Δ' ∪ Δ₁) , (.l τ₁)
+  map (solve Δ ⊢ (∀ {α} . (.l α)) ≤ τ) (Δ' =>
+  map (infer Γ ; Δ ∪ Δ' ⊢ t₁ : α) (Δ₁ , τ₁ =>  
+    some(Δ' ∪ Δ₁ , .l τ₁)
+  ))
 
 infer Γ ; Δ ⊢ (.l t₁) fs : τ =
-  let Δ' , τ' = infer Γ ; Δ ⊢ (.l t₁) : τ in
-  let Δ'' , τ'' = infer Γ ; Δ ∪ Δ' ⊢ fs : τ in
-  (Δ' ∪ Δ'') , (τ' & τ'')
+  map (infer Γ ; Δ ⊢ (.l t₁) : τ) (Δ' , τ' =>
+  map (infer Γ ; Δ ∪ Δ' ⊢ fs : τ) (Δ'' , τ'' =>
+    some(Δ' ∪ Δ'' , τ' & τ'')
+  ))
 
 infer Γ ; Δ ⊢ t.l : τ₂ =
-  let τ 
-  let Δ' , τ' = infer Γ ; Δ ⊢ t : (.l τ₂) in
-  let τ₂' = project τ' l in 
-  Δ' , τ₂'
+  map (infer Γ ; Δ ⊢ t : (.l τ₂)) (Δ' , τ' =>
+  map (project τ' l) (τ₂' => 
+    some(Δ' , τ₂')
+  ))
 
 infer Γ ; Δ ⊢ fix t : τ =
-  let Δ' , (τ' -> τ') = infer Γ ; Δ ⊢ t : (τ -> τ) in 
-  Δ' , τ'
+  map (infer Γ ; Δ ⊢ t : (τ -> τ)) (Δ',τ' =>
+  map (functify τ') (τ₁', τ₂' =>
+    -- extract premise and conclusion 
+    some(Δ' , τ₂')
+  ))
 
 infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
-  let Δ₁ , τ₁ = τ₁[?/fresh]
-  let Δ₁' , τ₁' = infer Γ ; Δ ⊢ t₁ : (∀ Δ₁ . τ₁) in
-  let Δ₂' , τ₂' = infer Γ, {x → (∀ Δ₁' . τ₁')} ; Δ ⊢ t₂ : τ₂ in
-  -- τ₁' is generalized in τ₂'
-  Δ₂' , τ₂'
-
+  let Δ₁ , τ₁ = τ₁[?/fresh] in
+  map (infer Γ ; Δ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁' , τ₁' => 
+  map (infer Γ, {x → (∀ Δ₁' . τ₁')} ; Δ ⊢ t₂ : τ₂) (Δ₂' , τ₂' =>
+    -- τ₁' is generalized in τ₂'
+    some(Δ₂' , τ₂')
+  ))
 ```
 
 -/
