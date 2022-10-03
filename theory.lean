@@ -593,6 +593,7 @@ completeness: N/A
 
 ## actual type
 what is the type of `x`?
+-- NOTE: compare to lenient/strict for complete program
 ```
 #zero()
 -- infer ⊢ x : #zero() = _, #zero[]
@@ -600,6 +601,7 @@ what is the type of `x`?
 
 ## expected type
 ```
+-- NOTE: compare to lenient/strict for incomplete program 
 (case n : nat =>
 (case (x,y) : [str;?] => 
   x 
@@ -611,6 +613,10 @@ what is the type of `x`?
 
 ## sub variable type
 ```
+-- TODO: check derivation
+-- NOTE: compare to lenient/strict for type arg inference 
+-- NOTE: narrow actual type, widen expected type
+-- NOTE: int & ? as expected type, becomes int & ⊤ = int
 (case i2s : int -> str => 
 (case n2s : nat -> str => 
   (case x : ? => (i2s x, n2s x))
@@ -625,6 +631,7 @@ what is the type of `x`?
 
 ## super variable type
 -- NOTE: widen expected type (input), narrow actual type (output)
+-- NOTE: compare to lenient/strict for type param inference 
 -- NOTE: ? is treated as ⊥ in sub/actual positions
 -- NOTE: ? is treated as ⊤ in super/expected position
 ```
