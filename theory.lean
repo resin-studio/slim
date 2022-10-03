@@ -532,14 +532,14 @@ infer Γ ; Δ ⊢ t.l : τ =
   τ'
 
 infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) : τ =
-  let Γ₁, Δ₁ = patvars t₁ in
-  let Δ₁', τ₁' = τ₁[?/fresh]
-  let Δ₁', τ₁' = infer Γ₁ ; Δ₁ ∪ Δ₁' ⊢ t₁ : τ₁' in
+  let Γ₀, Δ₀ = patvars t₁ in
+  let Δ₁, τ₁ = τ₁[?/fresh]
+  let Δ₁', τ₁' = infer Γ₀ ; Δ₀ ⊢ t₁ : (∀ Δ₁ . τ₁) in
   let β = fresh in
   let Δ' = solve Δ ⊢ (∀ Δ₁' ∪ {β} . τ₁' -> β) ≤ τ in
-  let τ₂' = infer Γ ∪ Γ₁ ; Δ, Δ' ⊢ t₂ : β in
+  let Δ₂', τ₂' = infer Γ ∪ Γ₁ ; Δ, Δ' ⊢ t₂ : β in
   -- patvars (Γ₁) are NOT generalized in τ₂'
-  (∀ Δ' . τ₁' -> τ₂')
+  (∀ Δ' ∪ Δ₂' . τ₁' -> τ₂')
 
 
 infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) cs : τ =
