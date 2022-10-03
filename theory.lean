@@ -499,39 +499,24 @@ patvars .l t fs =
 
 -- TODO: rewrite with separation of type env and type 
 -- TODO: rewrite with options
-`infer Γ ; Δ ⊢ t : τ = τ`
+`infer Γ ; Δ ⊢ t : τ = Δ, τ`
 ```
 
 infer Γ ; Δ ⊢ () : τ =
   let Δ' = solve Δ ⊢ C ∧ [] ≤ τ in
-  (∀ Δ' . [])
+  Δ' , []
 
 infer Γ ; Δ ⊢ x : τ = 
   let τ' = Γ x 
   let Δ', C, τ' = refresh τ' in
   let Δ' = solve Δ, Δ' ⊢ C ∧ τ' ≤ τ in
-  (∀ Δ' . τ')
+  Δ' , τ'
 
 infer Γ ; Δ ⊢ (#l t₁) : τ =
   let α = fresh in
   let Δ' = solve Δ ⊢ (∀ {α} . (#l α)) ≤ τ in
   let (∀ Δ₁ . τ₁) = infer Γ ; Δ ∪ Δ' ⊢ t₁ : α in
-  (∀ Δ' ∪ Δ₁ . (#l τ₁)) 
-
-infer Γ ; Δ ⊢ (.l t₁) : τ =
-  let α = fresh in
-  let Δ' = solve Δ ⊢ (∀ {α} . (.l α)) ≤ τ in
-  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ∪ Δ' ⊢ t₁ : α in
-  (∀ Δ' ∪ Δ₁ . (.l τ₁)) 
-
-infer Γ ; Δ ⊢ (.l t₁) fs : τ =
-  let (∀ Δ' . τ') = infer Γ ; Δ ⊢ (.l t₁) : τ in
-  let (∀ Δ'' . τ'') = infer Γ ; Δ ∪ Δ' ⊢ fs : τ in
-  (∀ Δ' ∪ Δ'' . τ' & τ'')
-
-infer Γ ; Δ ⊢ t.l : τ =
-  let τ' = infer Γ ; Δ ⊢ t : (.l τ) in
-  τ'
+  Δ' ∪ Δ₁ , (#l τ₁)
 
 infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) : τ =
   let Γ₀, Δ₀ = patvars t₁ in
@@ -548,6 +533,21 @@ infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) cs : τ =
   let Δ', τ' = infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) : τ in
   let Δ'', τ'' = infer Γ ; Δ ∪ Δ' ⊢ cs : τ₂ in 
   (∀ Δ' ∪ Δ'' . τ' & τ'')
+
+infer Γ ; Δ ⊢ (.l t₁) : τ =
+  let α = fresh in
+  let Δ' = solve Δ ⊢ (∀ {α} . (.l α)) ≤ τ in
+  let Δ₁ , τ₁ = infer Γ ; Δ ∪ Δ' ⊢ t₁ : α in
+  Δ' ∪ Δ₁ , (.l τ₁)
+
+infer Γ ; Δ ⊢ (.l t₁) fs : τ =
+  let Δ' , τ' = infer Γ ; Δ ⊢ (.l t₁) : τ in
+  let Δ'' , τ'' = infer Γ ; Δ ∪ Δ' ⊢ fs : τ in
+  Δ' ∪ Δ'' , τ' & τ''
+
+infer Γ ; Δ ⊢ t.l : τ =
+  let Δ' , τ' = infer Γ ; Δ ⊢ t : (.l τ) in
+  infer Γ Δ ⊢ (functify(τ') #l[]) : τ 
 
 infer Γ ; Δ ⊢ fix t : τ =
   let (∀ Δ' . τ' -> τ') = infer Γ ; Δ ⊢ t : (τ -> τ) in 
