@@ -472,8 +472,6 @@ patvars .l t fs =
 ...
 ```
 
--- TODO: rewrite with options
-  -- should let be sugar for fmap(x 
 `infer Γ ; Δ ⊢ t : τ = o[Δ;τ]`
 ```
 
