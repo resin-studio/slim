@@ -370,7 +370,7 @@ refresh τ =
   {}, ? ≤ ?, τ
 ```
 
-`solve Δ ⊢ C = o`
+`solve Δ ⊢ C = o[Δ]`
 ```
 solve Δ ⊢ C₁ ∧ C₂ =  
   merge & (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
@@ -394,16 +394,16 @@ solve Δ ⊢ τ' ≤ α =
 
 solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
   -- quantified Δ' assumed to not be in Δ 
-  fmap (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ'' =>
-    some (fmap Δ' (α ≤ _ =>
+  map (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ'' =>
+    some (map Δ' (α ≤ _ =>
       {α ≤ Δ''(α)}
     )) 
   )
 
 solve Δ ⊢ τ' ≤ (∀ Δ' ⟨C⟩ . τ) =
   -- quantified Δ' assumed to not be in Δ 
-  fmap (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ'' =>
-    some (fmap Δ' (α ≤ _ =>
+  map (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ'' =>
+    some (map Δ' (α ≤ _ =>
       {α ≤ Δ''(α)}
     )) 
   )
@@ -440,8 +440,8 @@ solve Δ ⊢ μ α . τ' ≤ .l τ  =
 
 solve Δ ⊢ τ' ≤ μ α . τ =
   let true = ? ≤ ?
-  fmap (linearze_record τ') (τ' =>
-  fmap (make_field_constraint Δ ⊢ true * τ' ≤ μ α . τ) (C =>
+  map (linearze_record τ') (τ' =>
+  map (make_field_constraint Δ ⊢ true * τ' ≤ μ α . τ) (C =>
     solve Δ ⊢ C 
   ))
 
@@ -454,12 +454,11 @@ solve Δ ⊢ #l' τ' ≤ #l τ =
   if l' = l else
   none
 
-
-
 solve τ ≤ τ = some {} 
 solve _ = none 
 ```
-`patvars t = Γ, Δ`
+
+`patvars t = Γ;Δ`
 ```
 patvars x = 
   let α = fresh in
@@ -575,7 +574,9 @@ completeness: N/A
 
 /-
 # examples 
--- TODO: gather all examples from other doc
+-- TODO: tidy up derivations 
+-- TODO: add more derivations 
+-- TODO: check derivations 
 
 ## actual type
 what is the type of `x`?
