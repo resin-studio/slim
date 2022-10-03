@@ -499,13 +499,13 @@ infer Γ ; Δ ⊢ (#l t₁) : τ =
 infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
   let Γ₀, Δ₀ = patvars t₁ in
   let Δ₁, τ₁ = τ₁[?/fresh]
-  let Δ₁', τ₁' = infer Γ₀ ; Δ₀ ⊢ t₁ : (∀ Δ₁ . τ₁) in
+  map (infer Γ₀ ; Δ₀ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁',τ₁' => 
   let β = fresh in
   map (solve Δ ⊢ (∀ Δ₁' ∪ {β} . τ₁' -> β) ≤ τ) (Δ' => 
   map (infer Γ ∪ Γ₁ ; Δ, Δ' ⊢ t₂ : β) (Δ₂', τ₂' =>
   -- patvars (Γ₁) are NOT generalized in τ₂'
     some (Δ' ∪ Δ₂' , τ₁' -> τ₂')
-  ))
+  )))
 
 
 infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) cs : τ =
