@@ -7,8 +7,8 @@ x ∈ String                        term variable
 l ∈ String                        label
 
 cs ::=                            cases
-  case t => t                     case singleton 
-  cs case t => t                  cases extended 
+  for t => t                      case singleton 
+  cs for t => t                   cases extended 
 
 fs ::=                            fields 
   .l t                            field singleton 
@@ -472,40 +472,44 @@ patvars .l t fs =
 ...
 ```
 
--- TODO: rewrite with separation of type env and type 
 -- TODO: rewrite with options
-`infer Γ ; Δ ⊢ t : τ = Δ, τ`
+  -- should let be sugar for fmap(x 
+`infer Γ ; Δ ⊢ t : τ = o[Δ;τ]`
 ```
 
 infer Γ ; Δ ⊢ () : τ =
-  let Δ' = solve Δ ⊢ C ∧ [] ≤ τ in
-  Δ' , []
+  map (solve Δ ⊢ C ∧ [] ≤ τ in) (Δ' =>
+    some (Δ' , [])
+  )
 
 infer Γ ; Δ ⊢ x : τ = 
-  let τ' = Γ x 
+  let τ' = Γ x in
   let Δ', C, τ' = refresh τ' in
-  let Δ' = solve Δ, Δ' ⊢ C ∧ τ' ≤ τ in
-  Δ' , τ'
+  map (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ' =>
+    some (Δ' , τ')
+  )
 
 infer Γ ; Δ ⊢ (#l t₁) : τ =
   let α = fresh in
-  let Δ' = solve Δ ⊢ (∀ {α} . (#l α)) ≤ τ in
-  let (∀ Δ₁ . τ₁) = infer Γ ; Δ ∪ Δ' ⊢ t₁ : α in
-  (Δ' ∪ Δ₁) , (#l τ₁)
+  map (solve Δ ⊢ (∀ {α} . (#l α)) ≤ τ) (Δ' => 
+  map (infer Γ ; Δ ∪ Δ' ⊢ t₁ : α) (Δ₁,τ₁ => 
+    some (Δ' ∪ Δ₁ , #l τ₁)
+  )
 
-infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) : τ =
+infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
   let Γ₀, Δ₀ = patvars t₁ in
   let Δ₁, τ₁ = τ₁[?/fresh]
   let Δ₁', τ₁' = infer Γ₀ ; Δ₀ ⊢ t₁ : (∀ Δ₁ . τ₁) in
   let β = fresh in
-  let Δ' = solve Δ ⊢ (∀ Δ₁' ∪ {β} . τ₁' -> β) ≤ τ in
-  let Δ₂', τ₂' = infer Γ ∪ Γ₁ ; Δ, Δ' ⊢ t₂ : β in
+  map (solve Δ ⊢ (∀ Δ₁' ∪ {β} . τ₁' -> β) ≤ τ) (Δ' => 
+  map (infer Γ ∪ Γ₁ ; Δ, Δ' ⊢ t₂ : β) (Δ₂', τ₂' =>
   -- patvars (Γ₁) are NOT generalized in τ₂'
-  (Δ' ∪ Δ₂') , (τ₁' -> τ₂')
+    some (Δ' ∪ Δ₂' , τ₁' -> τ₂')
+  ))
 
 
-infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) cs : τ =
-  let Δ', τ' = infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) : τ in
+infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) cs : τ =
+  let Δ', τ' = infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) : τ in
   let Δ'', τ'' = infer Γ ; Δ ∪ Δ' ⊢ cs : τ₂ in 
   (Δ' ∪ Δ'') , (τ' & τ'')
 
@@ -537,7 +541,7 @@ infer Γ ; Δ ⊢ t.l : τ₂ =
 
 infer Γ ; Δ ⊢ fix t : τ =
   let Δ' , (τ' -> τ') = infer Γ ; Δ ⊢ t : (τ -> τ) in 
-  Δ' . τ'
+  Δ' , τ'
 
 infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   let Δ₁ , τ₁ = τ₁[?/fresh]
@@ -580,8 +584,8 @@ what is the type of `x`?
 ## expected type
 ```
 -- NOTE: compare to lenient/strict for incomplete program 
-(case n : nat =>
-(case (x,y) : [str;?] => 
+(for n : nat =>
+(for (x,y) : [str;?] => 
   x 
 ) (n, _) 
 )
@@ -595,9 +599,9 @@ what is the type of `x`?
 -- NOTE: compare to lenient/strict for type arg inference 
 -- NOTE: narrow actual type, widen expected type
 -- NOTE: int & ? as expected type, becomes int & ⊤ = int
-(case i2s : int -> str => 
-(case n2s : nat -> str => 
-  (case x : ? => (i2s x, n2s x))
+(for i2s : int -> str => 
+(for n2s : nat -> str => 
+  (for x : ? => (i2s x, n2s x))
   -- infer {x : α} {α ≤ ?} ⊢ (... => ...) = _ , int & nat -> [str ; str] 
     -- solve {α ≤ ?} ⊢ α ≤ int = {α ≤ int & β, β ≤ ?}  
     -- solve {α ≤ int & β, β ≤ ?} ⊢ α ≤ nat = {α ≤ int & nat & ?}  
@@ -635,8 +639,8 @@ what is the type of `x`?
 ```
 fix (size => (
   -- size : α
-  case #nil() => #zero()
-  case #cons(_, xs) => #succ(size xs)
+  for #nil() => #zero()
+  for #cons(_, xs) => #succ(size xs)
   -- solve ⊢ (α -> β) ≤ (#nil[] -> #zero[] & #cons[_;α] -> #succ[β])
 ))
 -- infer ... ⊢ fix (size -> ...) = ∀ {α} . (#nil[] -> #zero[]) & (#cons[α;list[α]] -> #succ[nat])
@@ -668,7 +672,7 @@ list_len a = μ list_len .
 
 ## polymorphic type
 ```
-(case (one, hello) : [nat;str] =>
+(for (one, hello) : [nat;str] =>
 let f = fn x => x in
 -- Γ = {f : ∀ {α} . α -> α}
 
@@ -687,7 +691,7 @@ let hello' = f hello in
 
 ## monomorphic type 
 ```
-(case (one, hello) : [nat;str] =>
+(for (one, hello) : [nat;str] =>
 (fn f => 
   -- Γ = {f : α} ; Δ = {α ≤ ?}
 
