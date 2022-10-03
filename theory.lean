@@ -534,6 +534,15 @@ infer Γ ; Δ ⊢ (case t₁ : τ₁ => t₂) cs : τ =
   let Δ'', τ'' = infer Γ ; Δ ∪ Δ' ⊢ cs : τ₂ in 
   (∀ Δ' ∪ Δ'' . τ' & τ'')
 
+infer Γ ; Δ ⊢ t t₁ : τ₂ =
+  let τ = ? -> τ₂ in
+  let ∀ Δ' . τ' = infer Γ ; Δ ⊢ t : τ in
+  let τ₁ -> τ₂' = inside_out τ' in 
+  -- turn intersection inside out into function type
+  let τ₁' = infer Γ ; Δ ∪ Δ' ⊢ t₁ : τ₁ in
+  let Δ' = solve Δ ∪ Δ' ⊢ τ' ≤ (τ₁' -> τ₂) in
+  (∀ Δ' . τ₂' & τ₂)
+
 infer Γ ; Δ ⊢ (.l t₁) : τ =
   let α = fresh in
   let Δ' = solve Δ ⊢ (∀ {α} . (.l α)) ≤ τ in
@@ -545,9 +554,11 @@ infer Γ ; Δ ⊢ (.l t₁) fs : τ =
   let Δ'' , τ'' = infer Γ ; Δ ∪ Δ' ⊢ fs : τ in
   Δ' ∪ Δ'' , τ' & τ''
 
-infer Γ ; Δ ⊢ t.l : τ =
-  let Δ' , τ' = infer Γ ; Δ ⊢ t : (.l τ) in
-  infer Γ Δ ⊢ (functify(τ') #l[]) : τ 
+infer Γ ; Δ ⊢ t.l : τ₂ =
+  let τ 
+  let Δ' , τ' = infer Γ ; Δ ⊢ t : (.l τ₂) in
+  let τ₂' = project τ' l in 
+  Δ' , τ₂'
 
 infer Γ ; Δ ⊢ fix t : τ =
   let (∀ Δ' . τ' -> τ') = infer Γ ; Δ ⊢ t : (τ -> τ) in 
@@ -560,14 +571,6 @@ infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   -- τ₁' is generalized in τ₂'
   τ₂'
 
-infer Γ ; Δ ⊢ t t₁ : τ₂ =
-  let τ = ? -> τ₂ in
-  let ∀ Δ' . τ' = infer Γ ; Δ ⊢ t : τ in
-  let τ₁ -> τ₂' = inside_out τ' in 
-  -- turn intersection inside out into function type
-  let τ₁' = infer Γ ; Δ ∪ Δ' ⊢ t₁ : τ₁ in
-  let Δ' = solve Δ ∪ Δ' ⊢ τ' ≤ (τ₁' -> τ₂) in
-  (∀ Δ' . τ₂' & τ₂)
 ```
 
 -/
