@@ -577,16 +577,18 @@ completeness: N/A
 /-
 # examples 
 
-## inferred type
-- infer actual type 
+## type flow
+
+### inferred type
+- infer type 
   - from form and context 
 ```
 #zero()
 -- infer _ _ ⊢ #zero() : _ = _, #zero[]
 ```
 
-## propagated type
-- propagate expected type
+### propagated type
+- propagate type
   - to solve type constraints locally 
 ```
 (for n : nat =>
@@ -598,7 +600,9 @@ completeness: N/A
 )
 ```
 
-## narrowed type
+## type solving
+
+### narrowed type
 - maintain leniency while increasing strictness
   - combine intersection (i.e. &) with unknown type (i.e. ?)
 - lenient
@@ -611,8 +615,8 @@ completeness: N/A
 (for i2n : int -> nat => 
 (for s2n : str -> nat => 
   (for x : ? => (i2n x, s2n x))
-  -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) = _ , int & str -> [nat;nat] 
-    -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) = _ , nat;nat
+  -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = _ , int & str -> [nat;nat] 
+    -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) : _ = _ , nat;nat
     -- solve {α ≤ ?} ⊢ α ≤ int = {α ≤ int & ?}  
     -- solve {α ≤ int & ?} ⊢ α ≤ nat = {α ≤ int & str & ?}  
       -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ str = {β ≤ str & ?}  
@@ -622,7 +626,7 @@ completeness: N/A
 ))
 ```
 
-## widened type
+### widened type
 - maintain leniency while increasing strictness
   - combine union (i.e. |) with unknown type (i.e. ?)
 - leient
@@ -647,9 +651,10 @@ completeness: N/A
 
 -- TODO: check/tidy/extend the derivations below 
 
-## record intersection type
+## type mapping
+### record type
 
-## function intersection type
+### function type
 -- TODO: check that we can infer the type without infinite loop
 ```
 fix (size => (
@@ -663,7 +668,9 @@ fix (size => (
 ```
 
 
-## scalar inductive type
+## type induction
+
+### scalar type
 ```
 list a = μ list .  
   #nil[] | 
@@ -676,7 +683,7 @@ nat = μ nat .
   #succ[nat]
 ```
 
-## relational inductive type 
+### relational type 
 ```
 list_len a = μ list_len .
     [#nil[] ; #zero[]] |
@@ -685,7 +692,8 @@ list_len a = μ list_len .
 ```
 
 
-## polymorphic type
+## type polymorphism
+### polymorphic type
 ```
 (for (one, hello) : [nat;str] =>
 let f = fn x => x in
@@ -703,8 +711,7 @@ let hello' = f hello in
 )
 ```
 
-
-## monomorphic type 
+### monomorphic type 
 ```
 (for (one, hello) : [nat;str] =>
 (fn f => 
