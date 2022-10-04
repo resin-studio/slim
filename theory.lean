@@ -131,7 +131,7 @@ inference and synthesis for unityped languages
 ```
 - maintain leniency while increasing strictness
   - combine union (i.e. |) with unknown type (i.e. ?)
-- leient
+- lenient
   - maintain top expected type 
   - τ | ? = τ | ⊤ = ⊤ 
 - strict
