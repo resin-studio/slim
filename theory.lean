@@ -161,7 +161,7 @@ fix (size =>
 
 
 ## type range
-- how types are used over various terms 
+- how types may be used over various terms 
 
 ### generalized type
 ```
