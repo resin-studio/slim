@@ -1,5 +1,202 @@
 -- a unityped language: checking, inference, and synthesis
 
+--background
+/-
+A unityped language allows all terms to belong to the same type, known as top (i.e. ⊤).
+In addition to belonging to a common top type, terms may belong to more restrictive types. 
+No terms may belong to the most restrictive type, known as bottom (i.e. ⊥).
+Multi-membership of different types allows terms to be used across different levels of restriction.
+A term may be used at a position:
+  - if the term's actual type is a subtype of the position's expected type.
+  - if the position's expected type is a supertype of the term's actual type.
+Types may be widened by the union operator (i.e. |).
+  - widening an expected type increases leniency
+  - widening an actual type increases strictness
+Types may be narrowed by the intersection operator (i.e. &).
+  - narrowing an expected type increases strictness
+  - narrowing an actual type increases leniency 
+When a type us used as both an actual type and an expected type:
+
+
+
+- 
+
+-/
+
+-- conventions 
+/-
+
+- premises are indented relative to conclusions
+- forward style rules place premises above conclusions 
+- backward style rules place premises below conclusions 
+- declarative rules are written as predicates in forward style
+- procedural rules are written as functions in backward style
+
+-/
+
+/-
+# examples 
+
+## type flow
+- how types flow between contexts
+
+### inferred type
+- infer type 
+  - from form and context 
+```
+#zero()
+-- infer _ _ ⊢ #zero() : _ = _, #zero[]
+```
+
+### propagated type
+- propagate type
+  - to solve type constraints locally 
+```
+(for n : nat =>
+  let first = (for (x,y) : [str;?] => x) in
+  first (n, _) 
+  -- infer {n : nat} ⊢ first (n, _) : _ = none
+    -- infer {n : nat} ⊢ (n,_) : [str;?]  = none
+      -- solve _ ⊢ nat ≤ str = none
+)
+```
+
+## type adaptation 
+- how types adapt to changing contexts 
+
+### narrowed type
+- maintain leniency while increasing strictness
+  - combine intersection (i.e. &) with unknown type (i.e. ?)
+- lenient
+  - maintain bottom actual type
+  - τ & ? = τ & ⊥ = ⊥
+- strict
+  - narrow unknown expected type from known expected type
+  - τ & ? = τ & ⊤ = τ 
+```
+(for i2n : int -> nat => 
+(for s2n : str -> nat => 
+  (for x : ? => (i2n x, s2n x))
+  -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = _ , int & str -> [nat;nat] 
+    -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) : _ = _ , nat;nat
+    -- solve {α ≤ ?} ⊢ α ≤ int = {α ≤ int & ?}  
+    -- solve {α ≤ int & ?} ⊢ α ≤ nat = {α ≤ int & str & ?}  
+      -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ str = {β ≤ str & ?}  
+        -- solve {...} ⊢ int ≤ str ∨ β ≤ str = {β ≤ str & ?}  
+          -- solve {...} ⊢ β ≤ str = {β ≤ str & ?}  
+
+))
+```
+
+### widened type
+- maintain leniency while increasing strictness
+  - combine union (i.e. |) with unknown type (i.e. ?)
+- leient
+  - maintain top expected type 
+  - τ | ? = τ | ⊤ = ⊤ 
+- strict
+  - widen unknown actual type from known actual type
+  - τ | ? = τ | ⊥ = τ  
+```
+(pair : ∀ α . α -> α -> [α ; α] => 
+(n : int => 
+(s : str => 
+  pair n s
+  -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
+    -- solve {α ≤ ?} ⊢ int ≤ α = some {α ≤ int | ?} 
+    -- solve {α ≤ int | ?} ⊢ str ≤ α = some {α ≤ int | str | ?} 
+      -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int | β  = {β ≤ str | ?} 
+        -- solve {...} ⊢ str ≤ int ∨ str ≤ β = {β ≤ str | ?}
+          -- solve {...} ⊢ str ≤ β = {β ≤ str | ?}
+)))
+```
+
+-- TODO: check/tidy/extend the derivations below 
+
+## type mapping
+- how types map to types 
+
+### record type
+
+### function type
+```
+fix (size => (
+  -- size : α
+  for #nil() => #zero()
+  for #cons(_, xs) => #succ(size xs)
+  -- solve ⊢ (α -> β) ≤ (#nil[] -> #zero[] & #cons[_;α] -> #succ[β])
+))
+-- infer ... ⊢ fix (size -> ...) = ∀ {α} . (#nil[] -> #zero[]) & (#cons[α;list[α]] -> #succ[nat])
+...
+```
+
+
+## type induction
+- how types are foundend on themselves
+
+### scalar type
+```
+∀ {α} . μ list .  
+  #nil[] | 
+  #cons[α;list]
+```
+```
+μ nat . 
+  #zero[] | 
+  #succ[nat]
+```
+
+### relational type 
+```
+∀ {α} . μ list_len .
+  [#nil[] ; #zero[]] |
+  ∀ {list,nat} [list;nat] ≤ list_len .  
+    [#cons[α;list] ; #succ[nat]]
+```
+
+
+## type range
+- how types range over variious values 
+
+### generalized type
+```
+(for (one, hello) : [nat;str] =>
+let f = fn x => x in
+-- Γ = {f : ∀ {α} . α -> α}
+
+let one' = f one in 
+-- Γ = {f : ∀ {α} . α -> α}, one' : (nat | ?)} 
+  -- Γ = {f : ∀ {α} . α -> α}, one' : (∀ {α ≤ (nat | β), β ≤ ?} . α)} 
+    -- infer {f : ∀ {α} . α -> α} ; {...} ⊢ f one : ? = ∀ {α ≤ (nat | β), β ≤ ?} . α    
+      -- solve {α ≤ ?} ⊢ one ≤ α = {α ≤ nat | β, β ≤ ?}
+
+let hello' = f hello in
+-- same as above
+...
+)
+```
+
+### specialized type 
+```
+(for (one, hello) : [nat;str] =>
+(for f => 
+  -- Γ = {f : α} ; Δ = {α ≤ ?}
+
+  let one' = f one in
+  -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & β₃, β₃ ≤ ?} ⊢ f one : ? = ∀ {β₂ ≤ ?} . β₂    
+
+  let hello' = f hello in
+  -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ f hello : ? = none
+    -- solve {β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ str ≤ β₁ = none
+      -- solve {...} ⊢ str ≤ nat & str = none
+        -- solve {...} ⊢ str ≤ nat ∧ str ≤ str = none
+          -- solve {...} ⊢ str ≤ nat = none
+  ...
+)(fn x => x)
+)
+```
+-/
+
 -- syntax 
 /-
 
@@ -573,167 +770,3 @@ completeness: N/A
 -/
 
 
-
-/-
-# examples 
-
-## type flow
-- how types flow between contexts
-
-### inferred type
-- infer type 
-  - from form and context 
-```
-#zero()
--- infer _ _ ⊢ #zero() : _ = _, #zero[]
-```
-
-### propagated type
-- propagate type
-  - to solve type constraints locally 
-```
-(for n : nat =>
-  let first = (for (x,y) : [str;?] => x) in
-  first (n, _) 
-  -- infer {n : nat} ⊢ first (n, _) : _ = none
-    -- infer {n : nat} ⊢ (n,_) : [str;?]  = none
-      -- solve _ ⊢ nat ≤ str = none
-)
-```
-
-## type adaptation 
-- how types adapt to changing contexts 
-
-### narrowed type
-- maintain leniency while increasing strictness
-  - combine intersection (i.e. &) with unknown type (i.e. ?)
-- lenient
-  - maintain bottom actual type
-  - τ & ? = τ & ⊥ = ⊥
-- strict
-  - narrow unknown expected type from known expected type
-  - τ & ? = τ & ⊤ = τ 
-```
-(for i2n : int -> nat => 
-(for s2n : str -> nat => 
-  (for x : ? => (i2n x, s2n x))
-  -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = _ , int & str -> [nat;nat] 
-    -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) : _ = _ , nat;nat
-    -- solve {α ≤ ?} ⊢ α ≤ int = {α ≤ int & ?}  
-    -- solve {α ≤ int & ?} ⊢ α ≤ nat = {α ≤ int & str & ?}  
-      -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ str = {β ≤ str & ?}  
-        -- solve {...} ⊢ int ≤ str ∨ β ≤ str = {β ≤ str & ?}  
-          -- solve {...} ⊢ β ≤ str = {β ≤ str & ?}  
-
-))
-```
-
-### widened type
-- maintain leniency while increasing strictness
-  - combine union (i.e. |) with unknown type (i.e. ?)
-- leient
-  - maintain top expected type 
-  - τ | ? = τ | ⊤ = ⊤ 
-- strict
-  - widen unknown actual type from known actual type
-  - τ | ? = τ | ⊥ = τ  
-```
-(pair : ∀ α . α -> α -> [α ; α] => 
-(n : int => 
-(s : str => 
-  pair n s
-  -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
-    -- solve {α ≤ ?} ⊢ int ≤ α = some {α ≤ int | ?} 
-    -- solve {α ≤ int | ?} ⊢ str ≤ α = some {α ≤ int | str | ?} 
-      -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int | β  = {β ≤ str | ?} 
-        -- solve {...} ⊢ str ≤ int ∨ str ≤ β = {β ≤ str | ?}
-          -- solve {...} ⊢ str ≤ β = {β ≤ str | ?}
-)))
-```
-
--- TODO: check/tidy/extend the derivations below 
-
-## type mapping
-- how types map to types 
-
-### record type
-
-### function type
--- TODO: check that we can infer the type without infinite loop
-```
-fix (size => (
-  -- size : α
-  for #nil() => #zero()
-  for #cons(_, xs) => #succ(size xs)
-  -- solve ⊢ (α -> β) ≤ (#nil[] -> #zero[] & #cons[_;α] -> #succ[β])
-))
--- infer ... ⊢ fix (size -> ...) = ∀ {α} . (#nil[] -> #zero[]) & (#cons[α;list[α]] -> #succ[nat])
-...
-```
-
-
-## type induction
-- how types are foundend on themselves
-
-### scalar type
-```
-∀ {α} . μ list .  
-  #nil[] | 
-  #cons[α;list]
-```
-```
-μ nat . 
-  #zero[] | 
-  #succ[nat]
-```
-
-### relational type 
-```
-∀ {α} . μ list_len .
-  [#nil[] ; #zero[]] |
-  ∀ {list,nat} [list;nat] ≤ list_len .  
-    [#cons[α;list] ; #succ[nat]]
-```
-
-
-## type abstraction 
-- how types choose an abstraction
-
-### generalized type
-```
-(for (one, hello) : [nat;str] =>
-let f = fn x => x in
--- Γ = {f : ∀ {α} . α -> α}
-
-let one' = f one in 
--- Γ = {f : ∀ {α} . α -> α}, one' : (nat | ?)} 
-  -- Γ = {f : ∀ {α} . α -> α}, one' : (∀ {α ≤ (nat | β), β ≤ ?} . α)} 
-    -- infer {f : ∀ {α} . α -> α} ; {...} ⊢ f one : ? = ∀ {α ≤ (nat | β), β ≤ ?} . α    
-      -- solve {α ≤ ?} ⊢ one ≤ α = {α ≤ nat | β, β ≤ ?}
-
-let hello' = f hello in
--- same as above
-...
-)
-```
-
-### specialized type 
-```
-(for (one, hello) : [nat;str] =>
-(fn f => 
-  -- Γ = {f : α} ; Δ = {α ≤ ?}
-
-  let one' = f one in
-  -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & β₃, β₃ ≤ ?} ⊢ f one : ? = ∀ {β₂ ≤ ?} . β₂    
-
-  let hello' = f hello in
-  -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ f hello : ? = none
-    -- solve {β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ str ≤ β₁ = none
-      -- solve {...} ⊢ str ≤ nat & str = none
-        -- solve {...} ⊢ str ≤ nat ∧ str ≤ str = none
-          -- solve {...} ⊢ str ≤ nat = none
-  ...
-)(fn x => x)
-)
-```
--/
