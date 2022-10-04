@@ -33,6 +33,21 @@ inference and synthesis for unityped languages
 - synthesis of terms while balancing precision and expressiveness
 -/
 
+-- related languages 
+/-
+- python
+- typescript
+-/
+
+-- related techniques 
+/-
+- consistent subtyping 
+- roundtrip typing 
+- hindley-milner type inference 
+- let-polymorphism
+-/
+
+
 -- conventions 
 /-
 - forward style rules place premises above conclusions 
