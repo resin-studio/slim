@@ -1,4 +1,7 @@
--- a unityped language: inference and synthesis
+-- title
+/-
+inference and synthesis for unityped languages
+-/
 
 -- background
 /-
@@ -22,8 +25,8 @@ The unknown type (i.e. ?) has special subtyping semantics
 
 -- innovation 
 /-
-- inference of types while balancing strictness and leniency.
-- synthesis of terms while balancing precision and expressiveness. 
+- inference of types while balancing strictness and leniency
+- synthesis of terms while balancing precision and expressiveness
 -/
 
 -- conventions 
@@ -39,7 +42,7 @@ The unknown type (i.e. ?) has special subtyping semantics
 # examples 
 
 ## type flow
-- how types flow between contexts
+- how types move between contexts
 
 ### inferred type
 - infer type from form and context 
@@ -61,7 +64,7 @@ The unknown type (i.e. ?) has special subtyping semantics
 ```
 
 ## type adaptation 
-- how types adapt to changing contexts 
+- how types adjust to changing contexts 
 
 ### narrowed type
 - maintain leniency while increasing strictness
@@ -112,10 +115,8 @@ The unknown type (i.e. ?) has special subtyping semantics
 )))
 ```
 
--- TODO: check/tidy/extend the derivations below 
-
 ## type mapping
-- how types map to types 
+- how types index into types 
 
 ### record type
 ```
@@ -136,7 +137,7 @@ fix (size =>
 
 
 ## type induction
-- how types are foundend on themselves
+- how types are founded on themselves
 
 ### scalar type
 ```
@@ -160,7 +161,7 @@ fix (size =>
 
 
 ## type range
-- how types range over variious values 
+- how types are used over various terms 
 
 ### generalized type
 ```
