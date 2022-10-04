@@ -5,25 +5,29 @@ inference and synthesis for unityped languages
 
 -- background
 /-
-A unityped language allows all terms to belong to the same type, known as top (i.e. ⊤).
-In addition to belonging to a common top type, terms may belong to more restrictive types. 
-No terms may belong to the most restrictive type, known as bottom (i.e. ⊥).
-Multi-membership of different types allows terms to be used across different levels of restriction.
-A term may be used at a position:
-  - if the term's actual type is a subtype of the position's expected type.
-  - if the position's expected type is a supertype of the term's actual type.
-Types may be widened by the union operator (i.e. |).
+- a unityped language allows all terms to belong to the same type, known as top (i.e. ⊤)
+
+- a subtyping language enables terms to be reused across different levels of restriction
+- no terms belong to the most restrictive type, known as bottom (i.e. ⊥)
+
+- a term may be used at a position:
+  - if the term's actual type is a subtype of the position's expected type
+  - if the position's expected type is a supertype of the term's actual type
+
+- types may be widened by the union operator (i.e. |).
   - widening an expected type increases leniency
   - widening an actual type increases strictness
-Types may be narrowed by the intersection operator (i.e. &).
+
+- types may be narrowed by the intersection operator (i.e. &)
   - narrowing an expected type increases strictness
   - narrowing an actual type increases leniency 
-The unknown type (i.e. ?) has special subtyping semantics
+
+- the unknown type (i.e. ?) has special subtyping semantics
   - behaves like a bottom type for actual types
   - behaves like a top type for expected types
 -/
 
--- innovation 
+-- innovations 
 /-
 - inference of types while balancing strictness and leniency
 - synthesis of terms while balancing precision and expressiveness
@@ -70,16 +74,6 @@ The unknown type (i.e. ?) has special subtyping semantics
 - how types adjust to changing contexts 
 
 ### narrowed type
-- maintain leniency while increasing strictness
-  - combine intersection (i.e. &) with unknown type (i.e. ?)
-- lenient
-  - maintain bottom actual type
-  - τ & ? = τ & ⊥ = ⊥
-- strict
-  - narrow unknown expected type from known expected type
-  - τ & ? = τ & ⊤ = τ 
-
-- maintain expressiveness while increasing precision
 ```
 (for i2n : int -> nat => 
 (for s2n : str -> nat => 
@@ -95,16 +89,17 @@ The unknown type (i.e. ?) has special subtyping semantics
 
 ))
 ```
+- maintain leniency while increasing strictness
+  - combine intersection (i.e. &) with unknown type (i.e. ?)
+- lenient
+  - maintain bottom actual type
+  - τ & ? = τ & ⊥ = ⊥
+- strict
+  - narrow unknown expected type from known expected type
+  - τ & ? = τ & ⊤ = τ 
+
 
 ### widened type
-- maintain leniency while increasing strictness
-  - combine union (i.e. |) with unknown type (i.e. ?)
-- leient
-  - maintain top expected type 
-  - τ | ? = τ | ⊤ = ⊤ 
-- strict
-  - widen unknown actual type from known actual type
-  - τ | ? = τ | ⊥ = τ  
 ```
 (pair : ∀ α . α -> α -> [α ; α] => 
 (n : int => 
@@ -119,6 +114,14 @@ The unknown type (i.e. ?) has special subtyping semantics
           -- solve {...} ⊢ str ≤ β = some {β ≤ str | ?}
 )))
 ```
+- maintain leniency while increasing strictness
+  - combine union (i.e. |) with unknown type (i.e. ?)
+- leient
+  - maintain top expected type 
+  - τ | ? = τ | ⊤ = ⊤ 
+- strict
+  - widen unknown actual type from known actual type
+  - τ | ? = τ | ⊥ = τ  
 
 ## type mapping
 - how types index into types 
