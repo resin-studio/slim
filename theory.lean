@@ -578,6 +578,7 @@ completeness: N/A
 # examples 
 
 ## type flow
+- how types flow between contexts
 
 ### inferred type
 - infer type 
@@ -600,7 +601,8 @@ completeness: N/A
 )
 ```
 
-## type solving
+## type adaptation 
+- how types adapt to changing contexts 
 
 ### narrowed type
 - maintain leniency while increasing strictness
@@ -652,6 +654,8 @@ completeness: N/A
 -- TODO: check/tidy/extend the derivations below 
 
 ## type mapping
+- how types map to types 
+
 ### record type
 
 ### function type
@@ -669,31 +673,33 @@ fix (size => (
 
 
 ## type induction
+- how types are foundend on themselves
 
 ### scalar type
 ```
-list a = μ list .  
+∀ {α} . μ list .  
   #nil[] | 
-  #cons[a;list]
+  #cons[α;list]
 ```
-
 ```
-nat = μ nat . 
+μ nat . 
   #zero[] | 
   #succ[nat]
 ```
 
 ### relational type 
 ```
-list_len a = μ list_len .
-    [#nil[] ; #zero[]] |
-    ∀ {list,nat} [list;nat] ≤ list_len .  
-      [#cons[a;list] ; #succ[nat]]
+∀ {α} . μ list_len .
+  [#nil[] ; #zero[]] |
+  ∀ {list,nat} [list;nat] ≤ list_len .  
+    [#cons[α;list] ; #succ[nat]]
 ```
 
 
-## type polymorphism
-### polymorphic type
+## type abstraction 
+- how types choose an abstraction
+
+### generalized type
 ```
 (for (one, hello) : [nat;str] =>
 let f = fn x => x in
@@ -711,7 +717,7 @@ let hello' = f hello in
 )
 ```
 
-### monomorphic type 
+### specialized type 
 ```
 (for (one, hello) : [nat;str] =>
 (fn f => 
