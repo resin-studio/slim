@@ -576,9 +576,6 @@ completeness: N/A
 
 /-
 # examples 
--- TODO: tidy up derivations 
--- TODO: add more derivations 
--- TODO: check derivations 
 
 ## actual type
 ```
@@ -597,29 +594,39 @@ completeness: N/A
 )
 ```
 
-## sub variable type
+## narrowed type
+- maintain  while increasing strictness
+  - combine intersection (i.e. &) with unknown type (i.e. ?)
+- lenient
+  - maintain bottom actual type
+  - τ & ? = τ & ⊥ = ⊥
+- strict
+  - narrow unknown expected type from known expected type
+  - τ & ? = τ & ⊤ = τ 
 ```
--- TODO: check derivation
--- NOTE: compare to lenient/strict for type arg inference 
--- NOTE: narrow actual type, widen expected type
--- NOTE: int & ? as expected type, becomes int & ⊤ = int
-(for i2s : int -> str => 
-(for n2s : nat -> str => 
-  (for x : ? => (i2s x, n2s x))
-  -- infer {x : α} {α ≤ ?} ⊢ (... => ...) = _ , int & nat -> [str ; str] 
-    -- solve {α ≤ ?} ⊢ α ≤ int = {α ≤ int & β, β ≤ ?}  
-    -- solve {α ≤ int & β, β ≤ ?} ⊢ α ≤ nat = {α ≤ int & nat & ?}  
-      -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ nat = {β ≤ nat & ?}  
-        -- solve {...} ⊢ int ≤ nat ∧ β ≤ nat = {β ≤ nat & ?}  
+(for i2n : int -> nat => 
+(for s2n : str -> nat => 
+  (for x : ? => (i2n x, s2n x))
+  -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) = _ , int & str -> [nat;nat] 
+    -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) = _ , nat;nat
+    -- solve {α ≤ ?} ⊢ α ≤ int = {α ≤ int & ?}  
+    -- solve {α ≤ int & ?} ⊢ α ≤ nat = {α ≤ int & str & ?}  
+      -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ str = {β ≤ str & ?}  
+        -- solve {...} ⊢ int ≤ str ∨ β ≤ str = {β ≤ str & ?}  
+          -- solve {...} ⊢ β ≤ str = {β ≤ str & ?}  
 
 ))
 ```
 
-## super variable type
--- NOTE: widen expected type (input), narrow actual type (output)
--- NOTE: compare to lenient/strict for type param inference 
--- NOTE: ? is treated as ⊥ in sub/actual positions
--- NOTE: ? is treated as ⊤ in super/expected position
+## widened type
+- maintain leniency while increasing strictness
+  - combine union (i.e. |) with unknown type (i.e. ?)
+- leient
+  - maintain top expected type 
+  - τ | ? = τ | ⊤ = ⊤ 
+- strict
+  - widen unknown actual type from known actual type
+  - τ | ? = τ | ⊥ = τ  
 ```
 (pair : ∀ α . α -> α -> [α ; α] => 
 (n : int => 
@@ -629,12 +636,12 @@ completeness: N/A
     -- solve {α ≤ ?} ⊢ int ≤ α = some {α ≤ int | ?} 
     -- solve {α ≤ int | ?} ⊢ str ≤ α = some {α ≤ int | str | ?} 
       -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int | β  = {β ≤ str | ?} 
-        -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int ∨ str ≤ β = {β ≤ str | ?}
-          -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ β = {β ≤ str | ?}
+        -- solve {...} ⊢ str ≤ int ∨ str ≤ β = {β ≤ str | ?}
+          -- solve {...} ⊢ str ≤ β = {β ≤ str | ?}
 )))
 ```
 
-`str | ? ≤ str` 
+-- TODO: check/tidy/extend the derivations below 
 
 ## record intersection type
 
