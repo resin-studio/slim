@@ -373,10 +373,10 @@ beyond scope
 Δ ⊢ τ' ≤ τ₁ & τ₂  
 ```
 
-`Γ ; Δ ; C ⊢ t : τ`
+`Γ Δ C ⊢ t : τ`
 ```
 ---
-Γ ; Δ ; C ⊢ t : τ
+Γ Δ C ⊢ t : τ
 ```
 
 -/
@@ -388,9 +388,9 @@ beyond scope
 `merge Δ Δ = Δ`
 ```
 merge op Δ₁ Δ₂ =
-  fmap Δ₁ (α → τ₁ =>
-  fmap Δ₂ (β → τ₂ =>
-    {α → τ₁ op (Δ₂ α), β → (Δ₁ β) op τ₂}
+  fmap Δ₁ (α ≤ τ₁ =>
+  fmap Δ₂ (β ≤ τ₂ =>
+    {α ≤ τ₁ op (Δ₂ α), β ≤ (Δ₁ β) op τ₂}
   ))
 ```
 
@@ -419,12 +419,12 @@ linearize_record τ₁ & τ₂ =
 ```
 make_field_constraint Δ ⊢ τ₀ * .l τ₁ & τ₂ ≤ μ α . τ =
   let β₁ = fresh in
-  let C₁ = τ₁ ≤ ∀ {β₁ → ?} ⟨(τ₀ & .l β₁ & τ₂) ≤ unroll (μ α . τ)⟩ . β₁ in
+  let C₁ = τ₁ ≤ ∀ {β₁ ≤ ?} ⟨(τ₀ & .l β₁ & τ₂) ≤ unroll (μ α . τ)⟩ . β₁ in
   C₁ ∧ make_field_constraint (Δ ⊢ τ₀ & .l τ₁ * τ₂ ≤ μ α . τ)
 
 make_field_constraint Δ ⊢ τ₀ * .l τ₁ ≤ μ α . τ =
   let β₁ = fresh in
-  let C₁ = τ₁ ≤ ∀ {β₁ → ?} ⟨(τ₀ & .l β₁) ≤ unroll (μ α . τ)⟩ . β₁ in
+  let C₁ = τ₁ ≤ ∀ {β₁ ≤ ?} ⟨(τ₀ & .l β₁) ≤ unroll (μ α . τ)⟩ . β₁ in
   C₁
 
 make_field_constraint _ ⊢ _ * _ ≤ _ = none
@@ -511,10 +511,10 @@ subst Δ (τ₁ -> τ₂) = (subst Δ τ₁) -> (subst Δ τ₂)
 subst Δ (τ₁ & τ₂) = (subst Δ τ₁) & (subst Δ τ₂)
 subst Δ (τ₁ | τ₂) = (subst Δ τ₁) | (subst Δ τ₂)
 subst Δ (∀ Δ' ⟨C⟩ . τ) = 
-  let Δ = filter Δ ((α → _)  => α ∉ Δ') in
+  let Δ = filter Δ ((α ≤ _)  => α ∉ Δ') in
   (∀ Δ' ⟨subst Δ C⟩ . (subst Δ τ))
 subst Δ (μ β . τ) = 
-  let Δ = filter Δ ((α → _)  => α ≠ β) in
+  let Δ = filter Δ ((α ≤ _)  => α ≠ β) in
   subst Δ (μ β . τ)
 ```
 
@@ -527,15 +527,15 @@ subst Δ (C₁ ∧ C₂) = (subst Δ C₁) ∧ (subst Δ C₂)
 
 `unroll μ α . τ = τ`
 ```
-unroll μ α . τ = subst {α → μ α . τ} τ
+unroll μ α . τ = subst {α ≤ μ α . τ} τ
 ```
 
 `rename m Δ`
 ```
 rename m Δ = 
-  fmap Δ (α → τ =>
+  fmap Δ (α ≤ τ =>
     let β = m α in
-    {β → subst m τ}
+    {β ≤ subst m τ}
   )
 ```
 
@@ -750,7 +750,7 @@ infer Γ Δ ⊢ fix t : τ =
 infer Γ Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   let Δ₁,τ₁ = τ₁[?/fresh] in
   map (infer Γ Δ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁' , τ₁' => 
-  map (infer (Γ ∪ {x → (∀ Δ₁' . τ₁')}) Δ ⊢ t₂ : τ₂) (Δ₂' , τ₂' =>
+  map (infer (Γ ∪ {x : (∀ Δ₁' . τ₁')}) Δ ⊢ t₂ : τ₂) (Δ₂' , τ₂' =>
     -- τ₁' is generalized in τ₂'
     some(Δ₂' , τ₂')
   ))
