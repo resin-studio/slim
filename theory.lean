@@ -706,7 +706,7 @@ infer Γ Δ ⊢ (#l t₁) : τ =
   map (solve Δ ⊢ (∀ {α} . (#l α)) ≤ τ) (Δ' => 
   map (infer Γ (Δ ∪ Δ') ⊢ t₁ : α) (Δ₁,τ₁ => 
     some (Δ' ∪ Δ₁ , #l τ₁)
-  )
+  ))
 
 infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
   let Δ₁, τ₁ = τ₁[?/fresh] in
