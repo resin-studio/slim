@@ -45,7 +45,7 @@ The unknown type (i.e. ?) has special subtyping semantics
 - infer type from form and context 
 ```
 #zero()
--- infer _ _ ⊢ #zero() : _ = _, #zero[]
+-- infer _ _ ⊢ #zero() : _ = some _, #zero[]
 ```
 
 ### propagated type
@@ -78,13 +78,13 @@ The unknown type (i.e. ?) has special subtyping semantics
 (for i2n : int -> nat => 
 (for s2n : str -> nat => 
   (for x : ? => (i2n x, s2n x))
-  -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = _ , int & str -> [nat;nat] 
-    -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) : _ = _ , nat;nat
-    -- solve {α ≤ ?} ⊢ α ≤ int = {α ≤ int & ?}  
-    -- solve {α ≤ int & ?} ⊢ α ≤ str = {α ≤ int & str & ?}  
-      -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ str = {β ≤ str & ?}  
-        -- solve {...} ⊢ int ≤ str ∨ β ≤ str = {β ≤ str & ?}  
-          -- solve {...} ⊢ β ≤ str = {β ≤ str & ?}  
+  -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = some _ , int & str -> [nat;nat] 
+    -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) : _ = some _ , nat;nat
+    -- solve {α ≤ ?} ⊢ α ≤ int = some {α ≤ int & ?}  
+    -- solve {α ≤ int & ?} ⊢ α ≤ str = some {α ≤ int & str & ?}  
+      -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ str = some {β ≤ str & ?}  
+        -- solve {...} ⊢ int ≤ str ∨ β ≤ str = some {β ≤ str & ?}  
+          -- solve {...} ⊢ β ≤ str = some {β ≤ str & ?}  
 
 ))
 ```
@@ -106,9 +106,9 @@ The unknown type (i.e. ?) has special subtyping semantics
   -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
     -- solve {α ≤ ?} ⊢ int ≤ α = some {α ≤ int | ?} 
     -- solve {α ≤ int | ?} ⊢ str ≤ α = some {α ≤ int | str | ?} 
-      -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int | β  = {β ≤ str | ?} 
-        -- solve {...} ⊢ str ≤ int ∨ str ≤ β = {β ≤ str | ?}
-          -- solve {...} ⊢ str ≤ β = {β ≤ str | ?}
+      -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int | β  = some {β ≤ str | ?} 
+        -- solve {...} ⊢ str ≤ int ∨ str ≤ β = some {β ≤ str | ?}
+          -- solve {...} ⊢ str ≤ β = some {β ≤ str | ?}
 )))
 ```
 
@@ -118,17 +118,20 @@ The unknown type (i.e. ?) has special subtyping semantics
 - how types map to types 
 
 ### record type
+```
+let pair = (for x, y =>
+  .left x .right y
+  -- infer {x : α, y : β} _ ⊢ (.left x .right y) : _ = some _ , (.left α) & (.right β)
+)
+```
 
 ### function type
 ```
-fix (size => (
-  -- size : α
+fix (size =>
   for #nil() => #zero()
   for #cons(_, xs) => #succ(size xs)
-  -- solve ⊢ (α -> β) ≤ (#nil[] -> #zero[] & #cons[_;α] -> #succ[β])
-))
--- infer ... ⊢ fix (size -> ...) = ∀ {α} . (#nil[] -> #zero[]) & (#cons[α;list[α]] -> #succ[nat])
-...
+  -- infer {size : α -> β} _ ⊢ (for ... for ...) : α = some _ , (#nil[] -> #zero[]) & (#cons[_;α] -> #succ[β])
+)
 ```
 
 
@@ -161,30 +164,27 @@ fix (size => (
 
 ### generalized type
 ```
-(for (one, hello) : [nat;str] =>
-let f = fn x => x in
--- Γ = {f : ∀ {α} . α -> α}
+(for one : nat =>
+(for hello : str =>
+
+let f = for x => x in
 
 let one' = f one in 
--- Γ = {f : ∀ {α} . α -> α}, one' : (nat | ?)} 
-  -- Γ = {f : ∀ {α} . α -> α}, one' : (∀ {α ≤ (nat | β), β ≤ ?} . α)} 
-    -- infer {f : ∀ {α} . α -> α} ; {...} ⊢ f one : ? = ∀ {α ≤ (nat | β), β ≤ ?} . α    
-      -- solve {α ≤ ?} ⊢ one ≤ α = {α ≤ nat | β, β ≤ ?}
+-- infer {f : ∀ {α} . α -> α} _ ⊢ (f one) : _ = some _ , nat 
 
 let hello' = f hello in
--- same as above
-...
+-- infer {f : ∀ {α} . α -> α} _ ⊢ (f hello) : _ = some _ , str 
 )
 ```
 
 ### specialized type 
 ```
-(for (one, hello) : [nat;str] =>
-(for f => 
-  -- Γ = {f : α} ; Δ = {α ≤ ?}
+(for one : nat =>
+(for hello : str =>
 
+(for f => 
   let one' = f one in
-  -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & β₃, β₃ ≤ ?} ⊢ f one : ? = ∀ {β₂ ≤ ?} . β₂    
+  -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & β₃, β₃ ≤ ?} ⊢ f one : _ = ∀ {β₂ ≤ ?} . β₂    
 
   let hello' = f hello in
   -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ f hello : ? = none
@@ -193,7 +193,7 @@ let hello' = f hello in
         -- solve {...} ⊢ str ≤ nat ∧ str ≤ str = none
           -- solve {...} ⊢ str ≤ nat = none
   ...
-)(fn x => x)
+)(for x => x)
 )
 ```
 -/
