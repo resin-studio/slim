@@ -577,13 +577,17 @@ completeness: N/A
 /-
 # examples 
 
-## actual type
+## inferred type
+- infer actual type 
+  - from form and context 
 ```
 #zero()
 -- infer _ _ ⊢ #zero() : _ = _, #zero[]
 ```
 
-## expected type
+## propagated type
+- propagate expected type
+  - to solve type constraints locally 
 ```
 (for n : nat =>
   let first = (for (x,y) : [str;?] => x) in
@@ -595,7 +599,7 @@ completeness: N/A
 ```
 
 ## narrowed type
-- maintain  while increasing strictness
+- maintain leniency while increasing strictness
   - combine intersection (i.e. &) with unknown type (i.e. ?)
 - lenient
   - maintain bottom actual type
