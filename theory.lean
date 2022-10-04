@@ -48,6 +48,7 @@ The unknown type (i.e. ?) has special subtyping semantics
 - infer type from form and context 
 ```
 #zero()
+
 -- infer _ _ ⊢ #zero() : _ = some _, #zero[]
 ```
 
@@ -57,6 +58,7 @@ The unknown type (i.e. ?) has special subtyping semantics
 (for n : nat =>
   let first = (for (x,y) : [str;?] => x) in
   first (n, _) 
+
   -- infer {n : nat} ⊢ first (n, _) : _ = none
     -- infer {n : nat} ⊢ (n,_) : [str;?]  = none
       -- solve _ ⊢ nat ≤ str = none
@@ -81,6 +83,7 @@ The unknown type (i.e. ?) has special subtyping semantics
 (for i2n : int -> nat => 
 (for s2n : str -> nat => 
   (for x : ? => (i2n x, s2n x))
+
   -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = some _ , int & str -> [nat;nat] 
     -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) : _ = some _ , nat;nat
     -- solve {α ≤ ?} ⊢ α ≤ int = some {α ≤ int & ?}  
@@ -106,6 +109,7 @@ The unknown type (i.e. ?) has special subtyping semantics
 (n : int => 
 (s : str => 
   pair n s
+
   -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
     -- solve {α ≤ ?} ⊢ int ≤ α = some {α ≤ int | ?} 
     -- solve {α ≤ int | ?} ⊢ str ≤ α = some {α ≤ int | str | ?} 
@@ -122,6 +126,7 @@ The unknown type (i.e. ?) has special subtyping semantics
 ```
 let pair = (for x, y =>
   .left x .right y
+
   -- infer {x : α, y : β} _ ⊢ (.left x .right y) : _ = some _ , (.left α) & (.right β)
 )
 ```
@@ -131,6 +136,7 @@ let pair = (for x, y =>
 fix (size =>
   for #nil() => #zero()
   for #cons(_, xs) => #succ(size xs)
+
   -- infer {size : α -> β} _ ⊢ (for ... for ...) : α = some _ , (#nil[] -> #zero[]) & (#cons[_;α] -> #succ[β])
 )
 ```
@@ -171,9 +177,11 @@ fix (size =>
 let f = for x => x in
 
 let one' = f one in 
+
 -- infer {f : ∀ {α} . α -> α} _ ⊢ (f one) : _ = some _ , nat 
 
 let hello' = f hello in
+
 -- infer {f : ∀ {α} . α -> α} _ ⊢ (f hello) : _ = some _ , str 
 )
 ```
@@ -185,17 +193,16 @@ let hello' = f hello in
 
 (for f => 
   let one' = f one in
-  -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & β₃, β₃ ≤ ?} ⊢ f one : _ = ∀ {β₂ ≤ ?} . β₂    
+
+  -- infer {f : α} _ ⊢ (f one) = some {α ≤ nat -> ?} , _
 
   let hello' = f hello in
-  -- infer {f : α} ; {α ≤ β₁ -> β₂, β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ f hello : ? = none
-    -- solve {β₁ ≤ nat & str & β₃, β₃ ≤ ?} ⊢ str ≤ β₁ = none
-      -- solve {...} ⊢ str ≤ nat & str = none
-        -- solve {...} ⊢ str ≤ nat ∧ str ≤ str = none
-          -- solve {...} ⊢ str ≤ nat = none
+
+  -- infer {f : α} _ ⊢ (f hello) = none 
+
   ...
 )(for x => x)
-)
+))
 ```
 -/
 
@@ -280,6 +287,7 @@ beyond scope
 -- static semantics 
 /-
 
+consistent constraint subtyping   
 `Δ ⊢ C`
 ```
 Δ ⊢ .
@@ -373,10 +381,10 @@ beyond scope
 Δ ⊢ τ' ≤ τ₁ & τ₂  
 ```
 
+constraint typing  
 `Γ Δ C ⊢ t : τ`
 ```
----
-Γ Δ C ⊢ t : τ
+TODO: fill in constraint typing rules
 ```
 
 -/
@@ -533,9 +541,9 @@ unroll μ α . τ = subst {α ≤ μ α . τ} τ
 `rename m Δ`
 ```
 rename m Δ = 
-  fmap Δ (α ≤ τ =>
+  map Δ (α / τ =>
     let β = m α in
-    {β ≤ subst m τ}
+    {β / subst m τ}
   )
 ```
 
@@ -559,14 +567,14 @@ guard α τ =
 `refresh τ = Δ, C, τ`
 ```
 refresh (∀ Δ ⟨C⟩ τ) =
-  let rmap = fmap Δ (α → _ => {α → fresh}) in
+  let rmap = map Δ (α / _ => {α / fresh}) in
   let Δ = rename rmap Δ in
   let C = subst rmap C in
   let τ = subst rmap τ in
   Δ, C, τ 
 
 refresh τ = 
-  {}, ? ≤ ?, τ
+  {}, ., τ
 ```
 
 `solve Δ ⊢ C = o[Δ]`
@@ -579,14 +587,14 @@ solve Δ ⊢ C₁ ∨ C₂ =
 
 solve Δ ⊢ α ≤ τ =
   let τ' = Δ α in (
-    let β = fresh in some {α → ((guard α τ) & β), β → ?}
+    let β = fresh in some {α ≤ ((guard α τ) & β), β ≤ ?}
     if τ' = ? else
     solve Δ ⊢ τ' ≤ τ
   )
 
 solve Δ ⊢ τ' ≤ α =
   let τ = Δ α in (
-    let β = fresh in some {α → ((guard α τ') | β), β → ?}  
+    let β = fresh in some {α ≤ ((guard α τ') | β), β ≤ ?}  
     if τ = ? else
     (solve Δ ⊢ τ' ≤ τ)
   )
@@ -601,7 +609,7 @@ solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
 
 solve Δ ⊢ τ' ≤ (∀ Δ' ⟨C⟩ . τ) =
   -- quantified Δ' assumed to not be in Δ 
-  map (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ'' =>
+  map (solve Δ ∪ Δ' ⊢ C ∧ τ' ≤ τ) (Δ'' =>
     some (map Δ' (α ≤ _ =>
       {α ≤ Δ''(α)}
     )) 
@@ -638,15 +646,16 @@ solve Δ ⊢ μ α . τ' ≤ .l τ  =
 
 
 solve Δ ⊢ τ' ≤ μ α . τ =
-  let true = ? ≤ ?
   map (linearze_record τ') (τ' =>
-  map (make_field_constraint Δ ⊢ true * τ' ≤ μ α . τ) (C =>
+  map (make_field_constraint Δ ⊢ . * τ' ≤ μ α . τ) (C =>
     solve Δ ⊢ C 
   ))
 
-
 solve Δ ⊢ μ α . τ' ≤ τ  =  
-  solve_induct Δ ⊢ μ α . τ' ≤ τ
+  map (linearze_record τ') (τ' =>
+  map (make_field_constraint Δ ⊢ . * μ α . τ' ≤ τ) (C =>
+    solve Δ ⊢ C 
+  ))
 
 solve Δ ⊢ #l' τ' ≤ #l τ =
   solve Δ ⊢ τ' ≤ τ
