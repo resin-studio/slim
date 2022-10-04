@@ -22,7 +22,7 @@ inference and synthesis for unityped languages
   - narrowing an expected type increases strictness
   - narrowing an actual type increases leniency 
 
-- the unknown type (i.e. ?) has special subtyping semantics
+- the unknown type (i.e. ?) has special consistent subtyping semantics
   - behaves like a bottom type for actual types
   - behaves like a top type for expected types
 -/
@@ -326,7 +326,7 @@ consistent constraint subtyping
 Δ ⊢ τ' ≤ τ  
 
 
-  {α → τ} ⊆ Δ
+  {α ≤ τ} ⊆ Δ
 ---
 Δ ⊢ α ≤ τ  
 
@@ -347,10 +347,10 @@ consistent constraint subtyping
 Δ₀ ⊢ unroll (μ α . τ) ≤ (μ α . τ)
 
 
-  Δ ⊢ τ₁' <: τ₁ 
-  Δ ⊢ τ₂' <: τ₂ 
+  Δ ⊢ τ₁' ≤ τ₁ 
+  Δ ⊢ τ₂' ≤ τ₂ 
 ---
-Δ ⊢ τ₁ -> τ₂' <: τ₁' -> τ₂
+Δ ⊢ τ₁ -> τ₂' ≤ τ₁' -> τ₂
 
 
   Δ ⊢ τ' ≤ τ
