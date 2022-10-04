@@ -458,98 +458,100 @@ solve τ ≤ τ = some {}
 solve _ = none 
 ```
 
-`patvars t = Γ;Δ`
+`patvars t = o[Γ]`
 ```
-patvars x = 
-  let α = fresh in
-  {x : α}, {α ≤ ?} 
-patvars .l t = patvars t
-patvars .l t fs =
-  let Γ₁, Δ₁ = (patvars t) in
-  let Γ₂, Δ₂ = (patvars fs) in
-  (Γ₁ ∪ Γ₂), (Δ₁ ∪ Δ₂) 
+patvars x τ = 
+  some {x : τ}
+patvars (.l t₁) τ = 
+  map (project τ l) (τ₁ =>
+    patvars t₁ τ₁
+  )
+patvars (.l t fs) τ =
+  map (patvars (.l t) τ) (Γ₁ =>
+  map (patvars fs τ) (Γ₂ =>
+    some (Γ₁ ∪ Γ₂)
+  ))
 ...
 ```
 
-`infer Γ ; Δ ⊢ t : τ = o[Δ;τ]`
+`infer Γ Δ ⊢ t : τ = o[Δ;τ]`
 ```
 
-infer Γ ; Δ ⊢ () : τ =
+infer Γ Δ ⊢ () : τ =
   map (solve Δ ⊢ C ∧ [] ≤ τ in) (Δ' =>
     some (Δ' , [])
   )
 
-infer Γ ; Δ ⊢ x : τ = 
+infer Γ Δ ⊢ x : τ = 
   let τ' = Γ x in
   let Δ', C, τ' = refresh τ' in
   map (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ' =>
     some (Δ' , τ')
   )
 
-infer Γ ; Δ ⊢ (#l t₁) : τ =
+infer Γ Δ ⊢ (#l t₁) : τ =
   let α = fresh in
   map (solve Δ ⊢ (∀ {α} . (#l α)) ≤ τ) (Δ' => 
-  map (infer Γ ; Δ ∪ Δ' ⊢ t₁ : α) (Δ₁,τ₁ => 
+  map (infer Γ (Δ ∪ Δ') ⊢ t₁ : α) (Δ₁,τ₁ => 
     some (Δ' ∪ Δ₁ , #l τ₁)
   )
 
-infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
-  let Γ₀, Δ₀ = patvars t₁ in
+infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
   let Δ₁, τ₁ = τ₁[?/fresh] in
+  let Γ₁ = patvars t₁ τ₁ in
   let β = fresh in
-  map (infer Γ₀ ; Δ₀ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁',τ₁' => 
-  map (solve Δ ⊢ (∀ Δ₁' ∪ {β} . τ₁' -> β) ≤ τ) (Δ' => 
-  map (infer Γ ∪ Γ₁ ; Δ, Δ' ⊢ t₂ : β) (Δ₂', τ₂' =>
+  map (solve Δ ⊢ (∀ Δ₁ ∪ {β} . τ₁ -> β) ≤ τ) (Δ' => 
+  map (infer (Γ ∪ Γ₁) (Δ ∪ Δ') ⊢ t₂ : β) (Δ₂', τ₂' =>
     -- patvars (Γ₁) are NOT generalized in τ₂'
-    some (Δ' ∪ Δ₂' , τ₁' -> τ₂')
-  )))
+    some (Δ' ∪ Δ₂' , τ₁ -> τ₂')
+  ))
 
 
-infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) cs : τ =
-  map (infer Γ ; Δ ⊢ (for t₁ : τ₁ => t₂) : τ) (Δ', τ' =>
-  map (infer Γ ; Δ ∪ Δ' ⊢ cs : τ₂) (Δ'', τ'' => 
+infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) cs : τ =
+  map (infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ) (Δ', τ' =>
+  map (infer Γ Δ ∪ Δ' ⊢ cs : τ₂) (Δ'', τ'' => 
     some (Δ' ∪ Δ'' , τ' & τ'')
   ))
 
-infer Γ ; Δ ⊢ t t₁ : τ₂ =
-  map (infer Γ ; Δ ⊢ t : ? -> τ₂ in) (Δ',τ' => 
+infer Γ Δ ⊢ t t₁ : τ₂ =
+  map (infer Γ Δ ⊢ t : ? -> τ₂ in) (Δ',τ' => 
   map (functify τ') (τ₁,τ₂' => 
   -- break type (possibly intersection) into premise and conclusion 
-  map (infer Γ ; Δ ∪ Δ' ⊢ t₁ : τ₁) (Δ₁',τ₁' =>
+  map (infer Γ (Δ ∪ Δ') ⊢ t₁ : τ₁) (Δ₁',τ₁' =>
   map (solve Δ ∪ Δ' ∪ Δ₁' ⊢ τ' ≤ (τ₁' -> τ₂)) (Δ' =>
     some(Δ' , τ₂' & τ₂)
   ))))
 
-infer Γ ; Δ ⊢ (.l t₁) : τ =
+infer Γ Δ ⊢ (.l t₁) : τ =
   let α = fresh in
   map (solve Δ ⊢ (∀ {α} . (.l α)) ≤ τ) (Δ' =>
-  map (infer Γ ; Δ ∪ Δ' ⊢ t₁ : α) (Δ₁ , τ₁ =>  
+  map (infer Γ (Δ ∪ Δ') ⊢ t₁ : α) (Δ₁ , τ₁ =>  
     some(Δ' ∪ Δ₁ , .l τ₁)
   ))
 
-infer Γ ; Δ ⊢ (.l t₁) fs : τ =
-  map (infer Γ ; Δ ⊢ (.l t₁) : τ) (Δ' , τ' =>
-  map (infer Γ ; Δ ∪ Δ' ⊢ fs : τ) (Δ'' , τ'' =>
+infer Γ Δ ⊢ (.l t₁) fs : τ =
+  map (infer Γ Δ ⊢ (.l t₁) : τ) (Δ' , τ' =>
+  map (infer Γ (Δ ∪ Δ') ⊢ fs : τ) (Δ'' , τ'' =>
     some(Δ' ∪ Δ'' , τ' & τ'')
   ))
 
-infer Γ ; Δ ⊢ t.l : τ₂ =
-  map (infer Γ ; Δ ⊢ t : (.l τ₂)) (Δ' , τ' =>
+infer Γ Δ ⊢ t.l : τ₂ =
+  map (infer Γ Δ ⊢ t : (.l τ₂)) (Δ' , τ' =>
   map (project τ' l) (τ₂' => 
     some(Δ' , τ₂')
   ))
 
-infer Γ ; Δ ⊢ fix t : τ =
-  map (infer Γ ; Δ ⊢ t : (τ -> τ)) (Δ',τ' =>
+infer Γ Δ ⊢ fix t : τ =
+  map (infer Γ Δ ⊢ t : (τ -> τ)) (Δ',τ' =>
   map (functify τ') (τ₁', τ₂' =>
     -- extract premise and conclusion 
     some(Δ' , τ₂')
   ))
 
-infer Γ ; Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
-  let Δ₁ , τ₁ = τ₁[?/fresh] in
-  map (infer Γ ; Δ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁' , τ₁' => 
-  map (infer Γ, {x → (∀ Δ₁' . τ₁')} ; Δ ⊢ t₂ : τ₂) (Δ₂' , τ₂' =>
+infer Γ Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
+  let Δ₁,τ₁ = τ₁[?/fresh] in
+  map (infer Γ Δ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁' , τ₁' => 
+  map (infer (Γ ∪ {x → (∀ Δ₁' . τ₁')}) Δ ⊢ t₂ : τ₂) (Δ₂' , τ₂' =>
     -- τ₁' is generalized in τ₂'
     some(Δ₂' , τ₂')
   ))
@@ -579,23 +581,20 @@ completeness: N/A
 -- TODO: check derivations 
 
 ## actual type
-what is the type of `x`?
--- NOTE: compare to lenient/strict for complete program
 ```
 #zero()
--- infer ⊢ x : #zero() = _, #zero[]
+-- infer _ _ ⊢ #zero() : _ = _, #zero[]
 ```
 
 ## expected type
 ```
--- NOTE: compare to lenient/strict for incomplete program 
 (for n : nat =>
-(for (x,y) : [str;?] => 
-  x 
-) (n, _) 
+  let first = (for (x,y) : [str;?] => x) in
+  first (n, _) 
+  -- infer {n : nat} ⊢ first (n, _) : _ = none
+    -- infer {n : nat} ⊢ (n,_) : [str;?]  = none
+      -- solve _ ⊢ nat ≤ str = none
 )
--- infer {n : nat} ⊢ (... => ...)(n, _) = none
-  -- solve _ ⊢ nat ≤ str = none
 ```
 
 ## sub variable type
