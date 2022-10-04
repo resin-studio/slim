@@ -1,6 +1,6 @@
--- a unityped language: checking, inference, and synthesis
+-- a unityped language: inference and synthesis
 
---background
+-- background
 /-
 A unityped language allows all terms to belong to the same type, known as top (i.e. ⊤).
 In addition to belonging to a common top type, terms may belong to more restrictive types. 
@@ -15,29 +15,24 @@ Types may be widened by the union operator (i.e. |).
 Types may be narrowed by the intersection operator (i.e. &).
   - narrowing an expected type increases strictness
   - narrowing an actual type increases leniency 
--/
-
--- innovation
-/-
-inference of types while balancing strictness and leniency:
-We want to reject bad programs without rejecting good programs
-When a type us used as both an actual type and an expected type:
-  - we want to simultaneously to widen an unknown actual type without narrowing the expected type 
-  - we want to simultaneously to narrow an expected type without widening the actual type 
 The unknown type (i.e. ?) has special subtyping semantics
   - behaves like a bottom type for actual types
   - behaves like a top type for expected types
 -/
 
+-- innovation 
+/-
+- inference of types while balancing strictness and leniency.
+- synthesis of terms while balancing precision and expressiveness. 
+-/
+
 -- conventions 
 /-
-
 - premises are indented relative to conclusions
 - forward style rules place premises above conclusions 
 - backward style rules place premises below conclusions 
 - declarative rules are written as predicates in forward style
 - procedural rules are written as functions in backward style
-
 -/
 
 /-
@@ -47,16 +42,14 @@ The unknown type (i.e. ?) has special subtyping semantics
 - how types flow between contexts
 
 ### inferred type
-- infer type 
-  - from form and context 
+- infer type from form and context 
 ```
 #zero()
 -- infer _ _ ⊢ #zero() : _ = _, #zero[]
 ```
 
 ### propagated type
-- propagate type
-  - to solve type constraints locally 
+- propagate type to solve type constraints locally 
 ```
 (for n : nat =>
   let first = (for (x,y) : [str;?] => x) in
@@ -79,6 +72,8 @@ The unknown type (i.e. ?) has special subtyping semantics
 - strict
   - narrow unknown expected type from known expected type
   - τ & ? = τ & ⊤ = τ 
+
+- maintain expressiveness while increasing precision
 ```
 (for i2n : int -> nat => 
 (for s2n : str -> nat => 
@@ -86,7 +81,7 @@ The unknown type (i.e. ?) has special subtyping semantics
   -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = _ , int & str -> [nat;nat] 
     -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) : _ = _ , nat;nat
     -- solve {α ≤ ?} ⊢ α ≤ int = {α ≤ int & ?}  
-    -- solve {α ≤ int & ?} ⊢ α ≤ nat = {α ≤ int & str & ?}  
+    -- solve {α ≤ int & ?} ⊢ α ≤ str = {α ≤ int & str & ?}  
       -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ str = {β ≤ str & ?}  
         -- solve {...} ⊢ int ≤ str ∨ β ≤ str = {β ≤ str & ?}  
           -- solve {...} ⊢ β ≤ str = {β ≤ str & ?}  
