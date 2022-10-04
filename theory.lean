@@ -58,9 +58,9 @@ inference and synthesis for unityped languages
 - derivations are written as propositions in backward style
 -/
 
-/-
-# examples 
 
+-- examples 
+/-
 ## type flow
 - how types move between contexts
 
