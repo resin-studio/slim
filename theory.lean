@@ -31,11 +31,12 @@ The unknown type (i.e. ?) has special subtyping semantics
 
 -- conventions 
 /-
-- premises are indented relative to conclusions
 - forward style rules place premises above conclusions 
-- backward style rules place premises below conclusions 
+- backward style rules place premises below conclusions
+- premises are indented relative to conclusions
 - declarative rules are written as predicates in forward style
 - procedural rules are written as functions in backward style
+- derivations are written as propositions in backward style
 -/
 
 /-
