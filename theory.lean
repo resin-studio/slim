@@ -15,12 +15,18 @@ Types may be widened by the union operator (i.e. |).
 Types may be narrowed by the intersection operator (i.e. &).
   - narrowing an expected type increases strictness
   - narrowing an actual type increases leniency 
+-/
+
+-- innovation
+/-
+inference of types while balancing strictness and leniency:
+We want to reject bad programs without rejecting good programs
 When a type us used as both an actual type and an expected type:
-
-
-
-- 
-
+  - we want to simultaneously to widen an unknown actual type without narrowing the expected type 
+  - we want to simultaneously to narrow an expected type without widening the actual type 
+The unknown type (i.e. ?) has special subtyping semantics
+  - behaves like a bottom type for actual types
+  - behaves like a top type for expected types
 -/
 
 -- conventions 
