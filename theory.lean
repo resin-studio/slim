@@ -25,12 +25,14 @@ inference and synthesis for unityped languages
 - the unknown type (i.e. ?) has special consistent subtyping semantics
   - behaves like a bottom type for actual types
   - behaves like a top type for expected types
+
+- the singleton type (e.g. #l []) corresponds to a single literal term
 -/
 
 -- innovations 
 /-
 - inference of types while balancing strictness and leniency
-- synthesis of terms while balancing precision and expressiveness
+- synthesis of terms from context, examples, and types 
 -/
 
 -- related languages 
@@ -56,6 +58,12 @@ inference and synthesis for unityped languages
 - declarative rules are written as predicates in forward style
 - procedural rules are written as functions in backward style
 - derivations are written as propositions in backward style
+-/
+
+
+-- tasks
+/-
+- consider adding exclusion type (i.e. τ / τ ≈ τ & ¬ τ)
 -/
 
 
