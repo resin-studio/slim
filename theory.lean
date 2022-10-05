@@ -43,10 +43,11 @@ inference and synthesis for unityped languages
 
 -- related techniques 
 /-
-- consistent subtyping 
-- roundtrip typing 
-- hindley-milner type inference 
-- let-polymorphism
+- consistent subtyping (Siek)
+- roundtrip typing (Polikarpova)
+- type inference (Hindley/Milner)
+- let-polymorphism (Damas)
+- synthesis from examples as types (Walker)
 -/
 
 
