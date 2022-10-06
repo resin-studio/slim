@@ -3,6 +3,7 @@
 inference and synthesis for unityped languages
 -/
 
+
 -- background
 /-
 - a unityped language allows all terms to belong to the same type, known as top (i.e. ⊤)
@@ -64,7 +65,17 @@ inference and synthesis for unityped languages
 
 -- tasks
 /-
-- consider adding exclusion type (i.e. τ / τ ≈ τ & ¬ τ)
+- consider adding relative complement type 
+  - i.e. binary negation type operator
+  - i.e. (τ₁ \ τ₂) ≤ (τ₁ & ¬ τ₂), where ⊤ / τ₂ = ¬ τ₂)
+- write paper
+  - type-directed synthesis for dynamic languages
+  - explain static unitype view of dynamic types
+  - state of the art
+  - weaknesses of state of the art
+  - refinement types vs unityped subtyping
+  - solution
+  - evidence
 -/
 
 
