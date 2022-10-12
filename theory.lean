@@ -65,6 +65,9 @@ inference and synthesis for unityped languages
 
 -- tasks
 /-
+- [x] learn PHOAS for pattern matching
+- [x] learn macros in Lean 
+- [_] learn termination for PHOAS in Lean 
 - consider adding relative complement type 
   - i.e. binary negation type operator
   - i.e. (τ₁ \ τ₂) ≤ (τ₁ & ¬ τ₂), where ⊤ / τ₂ = ¬ τ₂)
@@ -253,14 +256,14 @@ l ∈ String                        label
 
 cs ::=                            cases
   for t => t                      case singleton 
-  cs for t => t                   cases extended 
+  for t => t cs                   cases extended 
 
 fs ::=                            fields 
   .l t                            field singleton 
-  fs .l t                         fields extended 
+  .l t fs                         fields extended 
 
 t ::=                             term
-  _                               hole / irrelevant pattern
+  __                              hole / irrelevant pattern
   x                               variable expression / pattern
   ()                              unit expression / pattern
   #l t                            variant expression / pattern
