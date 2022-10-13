@@ -43,9 +43,9 @@ def Tm.num_vars {α : Type} (default : α) : Tm α -> Nat
   | Tm.hole => 0 
   | Tm.var _ => 1 
   | Tm.abs (Sigma.mk n (Case.mk p f)) =>
-      let (vars, _, _) := Pat.fresh 0 (λ _ => default) p 
-      have : sizeOf (f vars) < 1 + (1 + n + (1 + n + sizeOf p + sizeOf f)) := sorry
+      let (vars, p', i) := Pat.fresh 0 (λ _ => default) p 
+      have : sizeOf (f vars) < 1 + (1 + n + (1 + n + sizeOf p + sizeOf f)) := by 
+        sorry
       let t' := f vars
       n + (Tm.num_vars default t')
   | Tm.app f a => (Tm.num_vars default f) + (Tm.num_vars default a)
-  termination_by Tm.num_vars x t => t
