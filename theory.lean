@@ -20,13 +20,17 @@ inference and synthesis for unityped languages
       - types are solved 
         - slim: 
           - subtyping
+          - no gradual increasing of strictness as new type info arrives
+            - maintain leniency and increase strictness
           - accept all constraints where expected type is unbounded (top) 
           - maintain leniency of expected type while 
             - recording previously seen types (ty | ?)
             - bounding actual types (ty | ?)
           - reject constraints with contradictions without  
-        - HM: strict with no subtyping
+        - HM: reject unsolved or contradiction; with no subtyping
         - roundtrip: strict with liquid refinement types   
+          - accept or reject; 
+          - no gradual increasing of strictness as new type info arrives
         - type-example-directed: strict with refinement types 
         - bidirectional: none?   
       - types are propagated 
