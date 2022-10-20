@@ -21,6 +21,9 @@ inference and synthesis for unityped languages
     - types propagated for all rules 
       - similar to roundtrip, which propagates on all rules 
       - different from bidirectional, which only propagates for introduction rules
+        - the checking/introduction rules of bidirectional type recostruction is merely a degenerate case of program synthesis
+          - where the a term's missing annotation may be simply filled in
+
 -/
 
 -- background
