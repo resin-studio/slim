@@ -1,5 +1,7 @@
 #eval Lean.versionString
 
+
+
 @[reducible] def TupleN (α : Type) : Nat -> Type
   | 0 => Unit 
   | n + 1 => α × (TupleN α n)  

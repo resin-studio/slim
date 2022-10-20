@@ -4,8 +4,23 @@
   | 0 => Unit 
   | n + 1 => α × (TupleN α n)  
 
+#check (() : TupleN Nat 0)
 #check ((1, 2, ()) : TupleN Nat 2)
 #check ((2, ()))
+
+inductive ListN : (α : Type) -> (n : Nat) -> Type
+  | nil : ListN α 0 
+  | cons : α -> ListN α n -> ListN α (n + 1)
+
+infix:67 " :: " => 
+ListN.cons
+
+notation "[" "]" => 
+ListN.nil
+
+def ListN.map {α β : Type} : (xs : ListN α n) -> (f : α -> β) -> ListN β n
+  | [] => λ _ => [] 
+  | x :: ys => λ f => (f x) :: (ListN.map ys f)
 
 
 inductive Pat : (α : Type) -> Nat -> Type where
