@@ -3,31 +3,49 @@
 inference and synthesis for unityped languages
 -/
 
--- problem 
+-- introduction  
 /-
-- synthesize terms from context with missing type annotations in a dynamic language
-  - infer actual types from terms  
-    - types inferred for all rules 
-      - different from roundtrip, which only infers on elimination rules  
-      - different from bidirectional, which only infers on elimination rules 
-    - solve typing constraints locally
-      - accept all constraints where expected type is unbounded (top) 
-      - maintain leniency of expected type while 
-        - recording previously seen types (ty | ?)
-        - bounding actual types (ty | ?)
-      - reject constraints with contradictions without  
 
-  - synthesize terms from local types 
-    - types propagated for all rules 
-      - similar to roundtrip, which propagates on all rules 
-      - different from bidirectional, which only propagates for introduction rules
-        - the checking/introduction rules of bidirectional type recostruction is merely a degenerate case of program synthesis
-          - where the a term's missing annotation may be simply filled in
+- problem
+  - synthesize terms from context with missing type annotations in a dynamic language
+
+- solution
+  - types have become the standard currency of static semantics
+    - we break down our semantics by how types flow through semantics 
+      - types are synthesized from term structure 
+        - slim: all rules
+        - HM: all rules
+        - roundtrip: elimination rules 
+        - bidirectional: elimination rules 
+      - types are solved 
+        - slim: 
+          - subtyping
+          - accept all constraints where expected type is unbounded (top) 
+          - maintain leniency of expected type while 
+            - recording previously seen types (ty | ?)
+            - bounding actual types (ty | ?)
+          - reject constraints with contradictions without  
+        - HM: no subtyping
+        - roundtrip: liquid refinement types   
+        - type-example-directed: refinement   
+        - bidirectional: ?   
+      - types are propagated 
+        - slim: all rules
+        - roundtrip: all rules 
+        - bidirectional: introduction rules 
+        - HM: none
+    - these three kinds of type-flows may be leveraged for
+      - type checking
+      - type reconstruction
+      - program synthesis 
+    - type reconstruction may be viewed as a degenerate case of program synthesis
+      - where only the type annotations within a program need be synthesized
 
 -/
 
 -- background
 /-
+
 - a unityped language allows all terms to belong to the same type, known as top (i.e. ⊤)
 
 - a subtyping language enables terms to be reused across different levels of restriction
