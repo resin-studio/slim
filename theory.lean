@@ -25,10 +25,10 @@ inference and synthesis for unityped languages
             - recording previously seen types (ty | ?)
             - bounding actual types (ty | ?)
           - reject constraints with contradictions without  
-        - HM: no subtyping
-        - roundtrip: liquid refinement types   
-        - type-example-directed: refinement   
-        - bidirectional: ?   
+        - HM: strict with no subtyping
+        - roundtrip: strict with liquid refinement types   
+        - type-example-directed: strict with refinement types 
+        - bidirectional: none?   
       - types are propagated 
         - slim: all rules
         - roundtrip: all rules 
