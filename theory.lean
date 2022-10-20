@@ -7,7 +7,9 @@ inference and synthesis for unityped languages
 /-
 - synthesize terms from context with missing type annotations in a dynamic language
   - infer actual types from terms  
-    - inference for all term cases
+    - types inferred for all rules 
+      - different from roundtrip, which only infers on elimination rules  
+      - different from bidirectional, which only infers on elimination rules 
     - solve typing constraints locally
       - accept all constraints where expected type is unbounded (top) 
       - maintain leniency of expected type while 
@@ -16,6 +18,9 @@ inference and synthesis for unityped languages
       - reject constraints with contradictions without  
 
   - synthesize terms from local types 
+    - types propagated for all rules 
+      - similar to roundtrip, which propagates on all rules 
+      - different from bidirectional, which only propagates for introduction rules
 -/
 
 -- background
