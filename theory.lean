@@ -9,41 +9,65 @@ inference and synthesis for unityped languages
 - problem
   - synthesize terms from context with missing type annotations in a dynamic language
 
-- solution
-  - types have become the standard currency of static semantics
-    - we break down our semantics by how types flow through semantics 
-      - types are synthesized from term structure 
-        - slim: all rules
-        - HM: all rules
-        - roundtrip: elimination rules 
-        - bidirectional: elimination rules 
-      - types are solved 
-        - slim: 
-          - subtyping
-          - no gradual increasing of strictness as new type info arrives
-            - maintain leniency and increase strictness
-          - accept all constraints where expected type is unbounded (top) 
-          - maintain leniency of expected type while 
-            - recording previously seen types (ty | ?)
-            - bounding actual types (ty | ?)
-          - reject constraints with contradictions without  
-        - HM: reject unsolved or contradiction; with no subtyping
-        - roundtrip: strict with liquid refinement types   
-          - accept or reject; 
-          - no gradual increasing of strictness as new type info arrives
-        - type-example-directed: strict with refinement types 
-        - bidirectional: none?   
-      - types are propagated 
-        - slim: all rules
-        - roundtrip: all rules 
-        - bidirectional: introduction rules 
-        - HM: none
-    - these three kinds of type-flows may be leveraged for
-      - type checking
-      - type reconstruction
-      - program synthesis 
-    - type reconstruction may be viewed as a degenerate case of program synthesis
-      - where only the type annotations within a program need be synthesized
+- type semantic mechanisms may categoried by the direction in which types flow through the system
+  - upward: actual types are composed and popped up 
+    - enables:
+      - type inference
+  - downward: expected types are pushed down and decomposed
+    - enables:
+      - program synthesis
+      - local type reconstruction of annotations
+      - local type checking
+
+- there are two coarse layers to consider 
+  - term-type relations
+  - typing constraints
+
+- our solution can be described in terms of these two concepts 
+  - direction
+    - we must flow up for all rules
+      - because we aren't guranteed any annotations 
+    - we must flow down for all rules
+      - because we aren't guranteed complete terms
+  - layers
+    - term-type relations: how do we choose which types are asocciated with which terms
+    - typing constraints: how do we choose which types are associated with which constraints 
+
+
+- examples:
+  - interactive theorem proving
+    - downward for all rules
+      - annotations (proposition to prove is provided)
+  - slim 
+    - upward for all rules
+    - downard for all rules
+    - bidrectional solving: 
+      - subtyping
+      - gradual increasing of details as new type info arrives
+        - added details maintain leniency in one position of constraint
+        - added details increase strictness in the other position of constraint
+      - accept all constraints where expected type is unbounded (top) 
+      - maintain leniency of expected type while 
+        - recording previously seen types (ty | ?)
+        - bounding actual types (ty | ?)
+      - maintain leniency of actual type while 
+        - recording previously seen types (ty & ?)
+        - bounding expected types (ty & ?)
+      - reject constraints with contradictions
+  - bidirectional
+    - upward inference of type from term for elimination rules
+    - downward checking of type and term for introduction rules
+    - bidirectional solving of type constraint
+  - roundtrip
+    - upward inference of type from term for eliminatin rules 
+    - downward checking of type and term for all rules
+    - bidirectional solving of type constraints
+      - accept or reject; 
+      - no gradual increasing of strictness as new type info arrives
+  - HM
+    - upward inference of type from term for all rules
+    - bidirectional solving of type constraints
+
 
 -/
 
