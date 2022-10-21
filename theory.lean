@@ -9,39 +9,23 @@ inference and synthesis for unityped languages
 - problem
   - synthesize terms from context with missing type annotations in a dynamic language
 
-- type semantic mechanisms may categoried by the direction in which types flow through the system
-  - upward: actual types are composed and popped up 
-    - enables:
-      - type inference
-  - downward: expected types are pushed down and decomposed
-    - enables:
-      - program synthesis
-      - local type reconstruction of annotations
-      - local type checking
 
-- there are two coarse layers to consider 
-  - term-type relations
-  - typing constraints
-
-- our solution can be described in terms of these two concepts 
-  - direction
-    - we must flow up for all rules
+- our solution can be described in terms of these two by two concepts 
+  - direction:
+    - upward: when do we compose types and pop up
+      - we must flow up for all rules
       - because we aren't guranteed any annotations 
-    - we must flow down for all rules
+    - downward: when do we push down types and decompose
+      - we must flow down for all rules
       - because we aren't guranteed complete terms
-  - layers
-    - term-type relations: how do we choose which types are asocciated with which terms
-    - typing constraints: how do we choose which types are associated with which constraints 
-
-
-- examples:
-  - interactive theorem proving
-    - downward for all rules
-      - annotations (proposition to prove is provided)
-  - slim 
-    - upward for all rules
-    - downard for all rules
-    - bidrectional solving: 
+  - relation:
+    - term-type relations: which types are asocciated with which terms
+      - generalization of let terms
+      - records with relational type **novel?**
+      - records with intersection type
+      - pattern matching with intersection type
+      - application of variants for elimination of unions
+    - typing constraints: which types are associated with which constraints 
       - subtyping
       - gradual increasing of details as new type info arrives
         - added details maintain leniency in one position of constraint
@@ -54,6 +38,12 @@ inference and synthesis for unityped languages
         - recording previously seen types (ty & ?)
         - bounding expected types (ty & ?)
       - reject constraints with contradictions
+  
+
+- related work:
+  - interactive theorem proving
+    - downward for all rules
+      - annotations (proposition to prove is provided)
   - bidirectional
     - upward inference of type from term for elimination rules
     - downward checking of type and term for introduction rules
@@ -67,7 +57,6 @@ inference and synthesis for unityped languages
   - HM
     - upward inference of type from term for all rules
     - bidirectional solving of type constraints
-
 
 -/
 
