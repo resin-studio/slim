@@ -4,43 +4,49 @@ inference and synthesis for unityped languages
 -/
 
 -- introduction  
+
+-- problem
 /-
+- synthesize terms from context with missing type annotations in a dynamic language
+-/
 
-- problem
-  - synthesize terms from context with missing type annotations in a dynamic language
 
-
-- our solution can be described in terms of these two by two concepts 
-  - direction:
-    - upward: when do we compose types and pop up
+-- solution
+/-
+- type flow:
+  - two directions
+    - upward: when do we compose actual types and pop up
       - we must flow up for all rules
       - because we aren't guranteed any annotations 
-    - downward: when do we push down types and decompose
+    - downward: when do we push down expected types and decompose
       - we must flow down for all rules
       - because we aren't guranteed complete terms
-  - relation:
-    - term-type relations: which types are asocciated with which terms
-      - generalization of let terms
-      - records with relational type **novel?**
-      - records with intersection type
-      - pattern matching with intersection type
-      - application of variants for elimination of unions
-    - typing constraints: which types are associated with which constraints 
-      - subtyping
-      - gradual increasing of details as new type info arrives
-        - added details maintain leniency in one position of constraint
-        - added details increase strictness in the other position of constraint
-      - accept all constraints where expected type is unbounded (top) 
+
+- type adaptation 
+  - two sides 
+    - widening
       - maintain leniency of expected type while 
         - recording previously seen types (ty | ?)
         - bounding actual types (ty | ?)
+    - narrowing
       - maintain leniency of actual type while 
         - recording previously seen types (ty & ?)
         - bounding expected types (ty & ?)
-      - reject constraints with contradictions
-  
 
-- related work:
+- type expressiveness 
+  - two modes 
+    - intersection-based types
+      - function
+      - record
+      - inductive record, i.e. "relational types"
+    - union-based types
+      - variants 
+      - inductive variants  
+  
+-/
+
+-- related work:
+/-
   - interactive theorem proving
     - downward for all rules
       - annotations (proposition to prove is provided)
@@ -58,6 +64,182 @@ inference and synthesis for unityped languages
     - upward inference of type from term for all rules
     - bidirectional solving of type constraints
 
+-/
+
+
+
+-- examples 
+/-
+## type flow
+- how types move between contexts
+
+### inferred type
+- infer type from form and context 
+```
+#zero()
+
+-- infer _ _ ⊢ #zero() : _ = some _, #zero[]
+```
+
+### propagated type
+- propagate type to solve type constraints locally 
+```
+(for n : nat =>
+  let first = (for (x,y) : [str;?] => x) in
+  first (n, _) 
+
+  -- infer {n : nat} ⊢ first (n, _) : _ = none
+    -- infer {n : nat} ⊢ (n,_) : [str;?]  = none
+      -- solve _ ⊢ nat ≤ str = none
+)
+```
+
+## type adaptation 
+- how types adjust to changing contexts 
+
+### narrowed type
+```
+(for i2n : int -> nat => 
+(for s2n : str -> nat => 
+  (for x : ? => (i2n x, s2n x))
+
+  -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = some _ , int & str -> [nat;nat] 
+    -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) : _ = some _ , nat;nat
+    -- solve {α ≤ ?} ⊢ α ≤ int = some {α ≤ int & ?}  
+    -- solve {α ≤ int & ?} ⊢ α ≤ str = some {α ≤ int & str & ?}  
+      -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ str = some {β ≤ str & ?}  
+        -- solve {...} ⊢ int ≤ str ∨ β ≤ str = some {β ≤ str & ?}  
+          -- solve {...} ⊢ β ≤ str = some {β ≤ str & ?}  
+
+))
+```
+- maintain leniency while increasing strictness
+  - combine intersection (i.e. &) with unknown type (i.e. ?)
+- lenient
+  - maintain bottom actual type
+  - τ & ? = τ & ⊥ = ⊥
+- strict
+  - narrow unknown expected type from known expected type
+  - τ & ? = τ & ⊤ = τ 
+
+
+### widened type
+```
+(pair : ∀ α . α -> α -> [α ; α] => 
+(n : int => 
+(s : str => 
+  pair n s
+
+  -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
+    -- solve {α ≤ ?} ⊢ int ≤ α = some {α ≤ int | ?} 
+    -- solve {α ≤ int | ?} ⊢ str ≤ α = some {α ≤ int | str | ?} 
+      -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int | β  = some {β ≤ str | ?} 
+        -- solve {...} ⊢ str ≤ int ∨ str ≤ β = some {β ≤ str | ?}
+          -- solve {...} ⊢ str ≤ β = some {β ≤ str | ?}
+)))
+```
+- maintain leniency while increasing strictness
+  - combine union (i.e. |) with unknown type (i.e. ?)
+- lenient
+  - maintain top expected type 
+  - τ | ? = τ | ⊤ = ⊤ 
+- strict
+  - widen unknown actual type from known actual type
+  - τ | ? = τ | ⊥ = τ  
+
+## type mapping
+- how types index into types 
+
+### record type
+```
+let pair = (for x, y =>
+  .left x .right y
+
+  -- infer {x : α, y : β} _ ⊢ (.left x .right y) : _ = some _ , (.left α) & (.right β)
+)
+```
+
+### function type
+```
+fix (size =>
+  for #nil() => #zero()
+  for #cons(_, xs) => #succ(size xs)
+
+  -- infer {size : α -> β} _ ⊢ (for ... for ...) : α = some _ , (#nil[] -> #zero[]) & (#cons[_;α] -> #succ[β])
+)
+```
+
+
+## type induction
+- how types are founded on themselves
+
+### sum type
+```
+∀ {α} . μ list .  
+  #nil[] | 
+  #cons[α;list]
+```
+```
+μ nat . 
+  #zero[] | 
+  #succ[nat]
+```
+
+### product type 
+
+```
+∀ {α} . μ list_len .
+  [#nil[] ; #zero[]] |
+  ∀ {list,nat} [list;nat] ≤ list_len ∨ .  
+    [#cons[α;list] ; #succ[nat]]
+```
+
+```
+∀ {α} . μ list_len .
+  [#nil[] ; #zero[]] |
+  ∀ {list,nat} [list;nat] ≤ list_len .  
+    [#cons[α;list] ; #succ[nat]]
+```
+
+
+## type range
+- how types may be used over various terms 
+
+### generalized type
+```
+(for one : nat =>
+(for hello : str =>
+
+let f = for x => x in
+
+let one' = f one in 
+
+-- infer {f : ∀ {α} . α -> α} _ ⊢ (f one) : _ = some _ , nat 
+
+let hello' = f hello in
+
+-- infer {f : ∀ {α} . α -> α} _ ⊢ (f hello) : _ = some _ , str 
+)
+```
+
+### specialized type 
+```
+(for one : nat =>
+(for hello : str =>
+
+(for f => 
+  let one' = f one in
+
+  -- infer {f : α} _ ⊢ (f one) = some {α ≤ nat -> ?} , _
+
+  let hello' = f hello in
+
+  -- infer {f : α} _ ⊢ (f hello) = none 
+
+  ...
+)(for x => x)
+))
+```
 -/
 
 -- background
@@ -1368,171 +1550,4 @@ completeness: ...
 /-
 soundness: N/A
 completeness: N/A
--/
-
-
--- examples 
-/-
-## type flow
-- how types move between contexts
-
-### inferred type
-- infer type from form and context 
-```
-#zero()
-
--- infer _ _ ⊢ #zero() : _ = some _, #zero[]
-```
-
-### propagated type
-- propagate type to solve type constraints locally 
-```
-(for n : nat =>
-  let first = (for (x,y) : [str;?] => x) in
-  first (n, _) 
-
-  -- infer {n : nat} ⊢ first (n, _) : _ = none
-    -- infer {n : nat} ⊢ (n,_) : [str;?]  = none
-      -- solve _ ⊢ nat ≤ str = none
-)
-```
-
-## type adaptation 
-- how types adjust to changing contexts 
-
-### narrowed type
-```
-(for i2n : int -> nat => 
-(for s2n : str -> nat => 
-  (for x : ? => (i2n x, s2n x))
-
-  -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = some _ , int & str -> [nat;nat] 
-    -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) : _ = some _ , nat;nat
-    -- solve {α ≤ ?} ⊢ α ≤ int = some {α ≤ int & ?}  
-    -- solve {α ≤ int & ?} ⊢ α ≤ str = some {α ≤ int & str & ?}  
-      -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ str = some {β ≤ str & ?}  
-        -- solve {...} ⊢ int ≤ str ∨ β ≤ str = some {β ≤ str & ?}  
-          -- solve {...} ⊢ β ≤ str = some {β ≤ str & ?}  
-
-))
-```
-- maintain leniency while increasing strictness
-  - combine intersection (i.e. &) with unknown type (i.e. ?)
-- lenient
-  - maintain bottom actual type
-  - τ & ? = τ & ⊥ = ⊥
-- strict
-  - narrow unknown expected type from known expected type
-  - τ & ? = τ & ⊤ = τ 
-
-
-### widened type
-```
-(pair : ∀ α . α -> α -> [α ; α] => 
-(n : int => 
-(s : str => 
-  pair n s
-
-  -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
-    -- solve {α ≤ ?} ⊢ int ≤ α = some {α ≤ int | ?} 
-    -- solve {α ≤ int | ?} ⊢ str ≤ α = some {α ≤ int | str | ?} 
-      -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int | β  = some {β ≤ str | ?} 
-        -- solve {...} ⊢ str ≤ int ∨ str ≤ β = some {β ≤ str | ?}
-          -- solve {...} ⊢ str ≤ β = some {β ≤ str | ?}
-)))
-```
-- maintain leniency while increasing strictness
-  - combine union (i.e. |) with unknown type (i.e. ?)
-- lenient
-  - maintain top expected type 
-  - τ | ? = τ | ⊤ = ⊤ 
-- strict
-  - widen unknown actual type from known actual type
-  - τ | ? = τ | ⊥ = τ  
-
-## type mapping
-- how types index into types 
-
-### record type
-```
-let pair = (for x, y =>
-  .left x .right y
-
-  -- infer {x : α, y : β} _ ⊢ (.left x .right y) : _ = some _ , (.left α) & (.right β)
-)
-```
-
-### function type
-```
-fix (size =>
-  for #nil() => #zero()
-  for #cons(_, xs) => #succ(size xs)
-
-  -- infer {size : α -> β} _ ⊢ (for ... for ...) : α = some _ , (#nil[] -> #zero[]) & (#cons[_;α] -> #succ[β])
-)
-```
-
-
-## type induction
-- how types are founded on themselves
-
-### scalar type
-```
-∀ {α} . μ list .  
-  #nil[] | 
-  #cons[α;list]
-```
-```
-μ nat . 
-  #zero[] | 
-  #succ[nat]
-```
-
-### relational type 
-```
-∀ {α} . μ list_len .
-  [#nil[] ; #zero[]] |
-  ∀ {list,nat} [list;nat] ≤ list_len .  
-    [#cons[α;list] ; #succ[nat]]
-```
-
-
-## type range
-- how types may be used over various terms 
-
-### generalized type
-```
-(for one : nat =>
-(for hello : str =>
-
-let f = for x => x in
-
-let one' = f one in 
-
--- infer {f : ∀ {α} . α -> α} _ ⊢ (f one) : _ = some _ , nat 
-
-let hello' = f hello in
-
--- infer {f : ∀ {α} . α -> α} _ ⊢ (f hello) : _ = some _ , str 
-)
-```
-
-### specialized type 
-```
-(for one : nat =>
-(for hello : str =>
-
-(for f => 
-  let one' = f one in
-
-  -- infer {f : α} _ ⊢ (f one) = some {α ≤ nat -> ?} , _
-
-  let hello' = f hello in
-
-  -- infer {f : α} _ ⊢ (f hello) = none 
-
-  ...
-)(for x => x)
-))
-```
 -/
