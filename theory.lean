@@ -1,9 +1,18 @@
 -- title
 /-
-inference and synthesis for unityped languages
+type-guided synthesis for dynamic languages
 -/
 
--- introduction  
+-- premise
+/-
+- types are the lingua franca of specification / static semantics
+  - examples, propositions, abstract values, etc. may be encoded in the language of types
+  - type are merely phrases that may be more abstract than terms 
+
+- a dynamic language is one where terms are not required to have static restrictions  
+  - from a static view, it is unityped. Every term may belong to the same type
+
+-/
 
 -- problem
 /-
@@ -13,35 +22,37 @@ inference and synthesis for unityped languages
 
 -- solution
 /-
-- type flow:
-  - two directions
+
+- how do we produce useful types to guide synthesis 
+  - type expressiveness
+    - intersection: how can types express behvaior that must be present at runtime 
+      - function
+      - record
+      - inductive record, i.e. "relational types"
+    - union: how can types express behavior that may be present at runtime 
+      - variants 
+      - inductive variants  
+  - type flow
     - upward: when do we compose actual types and pop up
       - we must flow up for all rules
       - because we aren't guranteed any annotations 
     - downward: when do we push down expected types and decompose
       - we must flow down for all rules
       - because we aren't guranteed complete terms
-
-- type adaptation 
-  - two sides 
-    - widening
+  - type adaptation
+    - widening: the interaction of type flow with expresive types
       - maintain leniency of expected type while 
         - recording previously seen types (ty | ?)
         - bounding actual types (ty | ?)
-    - narrowing
+    - narrowing: the interaction of type flow with expresive types
       - maintain leniency of actual type while 
         - recording previously seen types (ty & ?)
         - bounding expected types (ty & ?)
 
-- type expressiveness 
-  - two modes 
-    - intersection-based types
-      - function
-      - record
-      - inductive record, i.e. "relational types"
-    - union-based types
-      - variants 
-      - inductive variants  
+- how do we leverage types to synthesize programs 
+  - leverage learn-to-syntheize tools
+  - sequent-calc symbolic search
+
   
 -/
 
