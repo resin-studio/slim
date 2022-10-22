@@ -31,12 +31,12 @@ type-guided synthesis for dynamic languages
   - type expressiveness
     - intersection: how can types express behvaior that must be present at runtime 
       - function type
-      - inductive function type  
+      - inductive function type, i.e. (indexed record) 
       - record type
     - union: how can types express behavior that may be present at runtime 
-      - inductive record of variants type, i.e. "relational type"
+      - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
       - variants type
-      - inductive variants type
+      - inductive variants type 
 
   - type flow
     - upward: when do we compose actual types and pop up
