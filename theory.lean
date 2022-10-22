@@ -24,14 +24,20 @@ type-guided synthesis for dynamic languages
 /-
 
 - how do we produce useful types to guide synthesis 
+
+  - type 
+
+
   - type expressiveness
     - intersection: how can types express behvaior that must be present at runtime 
-      - function
-      - record
-      - inductive record, i.e. "relational types"
+      - function type
+      - inductive function type  
+      - record type
     - union: how can types express behavior that may be present at runtime 
-      - variants 
-      - inductive variants  
+      - inductive record of variants type, i.e. "relational type"
+      - variants type
+      - inductive variants type
+
   - type flow
     - upward: when do we compose actual types and pop up
       - we must flow up for all rules
@@ -158,7 +164,7 @@ type-guided synthesis for dynamic languages
   - widen unknown actual type from known actual type
   - τ | ? = τ | ⊥ = τ  
 
-## type mapping
+## type expression 
 - how types index into types 
 
 ### record type
@@ -181,10 +187,7 @@ fix (size =>
 ```
 
 
-## type induction
-- how types are founded on themselves
-
-### sum type
+### variants induction type
 ```
 ∀ {α} . μ list .  
   #nil[] | 
@@ -196,20 +199,21 @@ fix (size =>
   #succ[nat]
 ```
 
-### product type 
-
-```
-∀ {α} . μ list_len .
-  [#nil[] ; #zero[]] |
-  ∀ {list,nat} [list;nat] ≤ list_len ∨ .  
-    [#cons[α;list] ; #succ[nat]]
-```
-
+### relational induction type 
 ```
 ∀ {α} . μ list_len .
   [#nil[] ; #zero[]] |
   ∀ {list,nat} [list;nat] ≤ list_len .  
     [#cons[α;list] ; #succ[nat]]
+```
+
+### function induction type 
+
+```
+∀ {α} . μ list_to_len .
+  [#nil[] -> #zero[]] & 
+  ∀ {list,nat} [list -> nat] ≤ list_to_len .  
+    [#cons[α;list] -> #succ[nat]]
 ```
 
 
