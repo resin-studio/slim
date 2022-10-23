@@ -23,29 +23,18 @@ type-guided synthesis for dynamic languages
 -- solution
 /-
 
+- what kind of types can tightly bound runtime behavior 
+  - function type
+  - inductive function type, i.e. (indexed record) 
+    - related to Π types in dependent type theory
+  - record type
+  - variants type
+  - inductive variants type 
+  - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
+    - one column indexes the other column
+    - related to Σ types in dependent type theory
+
 - how do we produce useful types to guide synthesis 
-
-  - type primitives
-    - function type, variant type
-    - universal type, existential type
-    - intersection type, union type
-  - extensions
-    - records, existentials are derived forms
-
-  - type expressiveness
-    - intersection: how can types express behavior that must be present at runtime 
-      - function type
-      - inductive function type, i.e. (indexed record) 
-        - related to Π types in dependent type theory
-      - record type
-    - union: how can types express behavior that may be present at runtime 
-      - variants type
-      - inductive variants type 
-    - combined
-      - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
-        - one column indexes the other column
-        - related to Σ types in dependent type theory
-
   - type flow
     - upward: when do we compose actual types and pop up
       - we must flow up for all rules
@@ -54,11 +43,11 @@ type-guided synthesis for dynamic languages
       - we must flow down for all rules
       - because we aren't guranteed complete terms
   - type adaptation
-    - widening: the interaction of type flow with expresive types
+    - widening: infer types from arguments
       - maintain leniency of expected type while 
         - recording previously seen types (ty | ?)
         - bounding actual types (ty | ?)
-    - narrowing: the interaction of type flow with expresive types
+    - narrowing: infer types from parameter types
       - maintain leniency of actual type while 
         - recording previously seen types (ty & ?)
         - bounding expected types (ty & ?)
