@@ -29,14 +29,18 @@ type-guided synthesis for dynamic languages
 
 
   - type expressiveness
-    - intersection: how can types express behvaior that must be present at runtime 
+    - intersection: how can types express behavior that must be present at runtime 
       - function type
       - inductive function type, i.e. (indexed record) 
+        - related to ∀ predicates / Π types in dependent type theory
       - record type
     - union: how can types express behavior that may be present at runtime 
-      - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
       - variants type
       - inductive variants type 
+    - combined
+      - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
+        - one column indexes the other column
+        - related to ∃ predicates / Σ types in dependent type theory
 
   - type flow
     - upward: when do we compose actual types and pop up
@@ -206,6 +210,23 @@ fix (size =>
   ∀ {list,nat} [list;nat] ≤ list_len .  
     [#cons[α;list] ; #succ[nat]]
 ```
+
+```
+∀ {α} . μ nat_list .
+  [#zero[] ; #nil[]] |
+  ∀ {nat,list} [nat;list] ≤ nat_list .  
+    [#succ[nat] ; #cons[α;list]]
+```
+-- note than the union operator drops any uninhabitable types created by poor arguments to the universal case 
+-- equivalences with existential type 
+```
+type dlist (n ≤ nat) := n;list ≤ nat_list . list 
+
+∃ n ≤ nat . dlist n ≡ nat_list 
+
+(∃ n ≤ nat . n;list ≤ nat_list . list) ≡ nat_list 
+```
+
 
 ### function induction type 
 
