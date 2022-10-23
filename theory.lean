@@ -199,7 +199,7 @@ fix (size =>
 ```
 μ list .  
   #nil[] | 
-  #cons[α;list] for α ≤ ?
+  ∃ α . #cons[α;list]
 ```
 ```
 μ nat . 
@@ -211,16 +211,10 @@ fix (size =>
 ```
 μ list_len .
   [#nil[] ; #zero[]] |
-  [#cons[α;list] ; #succ[nat]]
-    for {list,nat} [list;nat] ≤ list_len
+  ∃ {list,nat} [list;nat] ≤ list_len
+    [#cons[α;list] ; #succ[nat]]
 ```
 
-```
-μ nat_list .
-  [#zero[] ; #nil[]] |
-  [#succ[nat] ; #cons[α;list]]
-    for {nat,list} [nat;list] ≤ nat_list
-```
 
 ```
 μ nat_list .
@@ -231,11 +225,10 @@ fix (size =>
 
 -- equivalent to the notion
 ```
-  [#nil[] ; #zero[]] ≤ list_len  
+  [#nil[] ; #zero[]] ≤ list_len ∧
 
-  ∀ list;nat
-  [list;nat] ≤ list_len -->
-  [#cons[α;list] ; #succ[nat]] ≤ list_len
+  ∀ list;nat ,
+    ([list;nat] ≤ list_len --> [#cons[α;list] ; #succ[nat]] ≤ list_len)
 ```
 
 -- related to the sigma type from dependent type theory

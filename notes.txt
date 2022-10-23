@@ -316,7 +316,7 @@ example: is `first (x, ...` well-typed?
 consider:
 ```
 let x = [] 
--- x : (∀ α ≤ ? . list[α])
+-- x : (list[?])
 
 let first : list[str] ; ? -> list[str] 
 let first = (a , b) => a 
@@ -351,7 +351,7 @@ example: is `first(x, x)` well-typed?
 consider:
 ```
 let x = [] 
--- x : (∀ α ≤ ? . list[α])
+-- x : (list[?])
 
 let first : list[str] ; ? -> list[str] 
 let first = (a , b) => a 
