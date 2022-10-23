@@ -25,14 +25,18 @@ type-guided synthesis for dynamic languages
 
 - how do we produce useful types to guide synthesis 
 
-  - type 
-
+  - type primitives
+    - function type, variant type
+    - universal type, existential type
+    - intersection type, union type
+  - extensions
+    - records, existentials are derived forms
 
   - type expressiveness
     - intersection: how can types express behavior that must be present at runtime 
       - function type
       - inductive function type, i.e. (indexed record) 
-        - related to ∀ predicates / Π types in dependent type theory
+        - related to Π types in dependent type theory
       - record type
     - union: how can types express behavior that may be present at runtime 
       - variants type
@@ -40,7 +44,7 @@ type-guided synthesis for dynamic languages
     - combined
       - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
         - one column indexes the other column
-        - related to ∃ predicates / Σ types in dependent type theory
+        - related to Σ types in dependent type theory
 
   - type flow
     - upward: when do we compose actual types and pop up
@@ -193,9 +197,9 @@ fix (size =>
 
 ### variants induction type
 ```
-∀ {α} . μ list .  
+μ list .  
   #nil[] | 
-  #cons[α;list]
+  #cons[α;list] for α ≤ ?
 ```
 ```
 μ nat . 
@@ -205,33 +209,49 @@ fix (size =>
 
 ### relational induction type 
 ```
-∀ {α} . μ list_len .
+μ list_len .
   [#nil[] ; #zero[]] |
-  ∀ {list,nat} [list;nat] ≤ list_len .  
-    [#cons[α;list] ; #succ[nat]]
+  [#cons[α;list] ; #succ[nat]]
+    for {list,nat} [list;nat] ≤ list_len
 ```
 
 ```
-∀ {α} . μ nat_list .
+μ nat_list .
   [#zero[] ; #nil[]] |
-  ∀ {nat,list} [nat;list] ≤ nat_list .  
+  [#succ[nat] ; #cons[α;list]]
+    for {nat,list} [nat;list] ≤ nat_list
+```
+
+```
+μ nat_list .
+  [#zero[] ; #nil[]] |
+  ∃ {nat,list} [nat;list] ≤ nat_list .
     [#succ[nat] ; #cons[α;list]]
 ```
--- note than the union operator drops any uninhabitable types created by poor arguments to the universal case 
--- equivalences with existential type 
+
+-- equivalent to the notion
 ```
-type dlist (n ≤ nat) := n;list ≤ nat_list . list 
+  [#nil[] ; #zero[]] ≤ list_len  
 
-∃ n ≤ nat . dlist n ≡ nat_list 
+  ∀ list;nat
+  [list;nat] ≤ list_len -->
+  [#cons[α;list] ; #succ[nat]] ≤ list_len
+```
 
-(∃ n ≤ nat . n;list ≤ nat_list . list) ≡ nat_list 
+-- related to the sigma type from dependent type theory
+```
+type dlist (n ≤ nat) := list for n;list ≤ nat_list 
+
+(Σ n ≤ nat . dlist n) ≡ nat_list 
+
+(Σ n ≤ nat . list for n;list ≤ nat_list . list) ≡ nat_list 
 ```
 
 
 ### function induction type 
 
 ```
-∀ {α} . μ list_to_len .
+μ list_to_len .
   [#nil[] -> #zero[]] & 
   ∀ {list,nat} [list -> nat] ≤ list_to_len .  
     [#cons[α;list] -> #succ[nat]]
