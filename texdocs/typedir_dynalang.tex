@@ -14,15 +14,12 @@
 
 \section{Introduction}
 \subsection*{Background}
-Some of the most popular programming languages today are 
-dynamic programming languages, which includes Javascript and Python. 
-Javascript is become the language of the web, while Python the most popular
-for data science and machine learning projects. 
-
 Dynamic programming languages can make writing programs quick and easy 
 because they don't require specifying static bounds on behavior.
-The cost of this efficiency it may be impossible to statically decide 
-if a program is has errors.  
+Two of the most popular programming languages today, Javascript and Python,  are 
+dynamic programming languages. 
+Javascript is the language of the web, while Python the most popular choice
+for data science and machine learning projects. 
 
 Although dynamic languages already offer programming ease and efficiency, it
 may be possible to increase the ease of writing program by autocompletion,
@@ -33,7 +30,15 @@ This article presents a theoretical system that synthesizes terms from context
 in a dynamic language. In keeping with the spirit of dynamic languages, 
 type annotations are not required, but they are optional. 
 
-\subsection*{Evaluation}
+Synthesis of of programs for a dynamic language introduces a fundamental tension. 
+While dynamic language programs benefit from a lack of static bounds, program synthesis
+must be a terminating procedure driven by static bounds representing the goals of synthesis.   
+
+
+\subsection*{Type-directed synthesis}
+% - types have become the lingua franca of formal specification
+%   - examples, propositions, abstract values, etc. may be encoded in the language of types
+%   - type are merely phrases that may be more abstract than terms 
 
 
 
@@ -42,9 +47,6 @@ type annotations are not required, but they are optional.
 % -- introduction
 % /-
 
-% - types have become the lingua franca of formal specification
-%   - examples, propositions, abstract values, etc. may be encoded in the language of types
-%   - type are merely phrases that may be more abstract than terms 
 
 % - types have long been used to verify correct behavior of programs.
 % - More recent work has demonstrated the utility of types to represent goals in 
@@ -61,13 +63,13 @@ type annotations are not required, but they are optional.
 % - type inference
 %   - ML-like languages
 %     - type inference is sound. 
-%       - a term is instrinsicly associated with a static countable/inductive representation to type check 
+%       - a term is intrinsically associated with a static countable/inductive representation to type check 
 %       - a type that is broader than the term but still finitely representable may be inferred
 
 %   - dynamic languages
 %     - type inference is unsound 
 %       - idiomatic representation of term should be accepted without enumerating all cases   
-%       - a term is not intrinsicly associated with some finitely representable/countable type
+%       - a term is not intrinsically associated with some finitely representable/countable type
 %       - sound inference would thus be overly restrictive  
 
 % -/
