@@ -19,7 +19,7 @@ typically without rejecting terms that would be accepted dynamically.
 It is also a straightforward search to synthesize a term from a type, 
 since a type are limited to finite set of constructor primitives.  
 
-In a dynamic language, dynamically accepted terms are not limited those taken from a countable set. 
+In a dynamic language, dynamically accepted terms are not limited to those taken from a countable set. 
 As such, dynamically accepted terms cannot be finitely represented. 
 A sound static type system that restricts terms to those from countable sets would reject idiomatic programs that are accepted dynamically. 
 
