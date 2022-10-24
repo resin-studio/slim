@@ -1,5 +1,5 @@
-\documentclass{article}
-% \documentclass[sigplan,screen]{acmart}
+% \documentclass{article}
+\documentclass[]{acmart}
 % \documentclass[sigplan,screen]{acmart}
 
 % \usepackage[utf8]{inputenc}
@@ -13,8 +13,105 @@
 \maketitle
 
 \section{Introduction}
+\subsection*{Background}
+Some of the most popular programming languages today are 
+dynamic programming languages, which includes Javascript and Python. 
+Javascript is become the language of the web, while Python the most popular
+for data science and machine learning projects. 
+
+Dynamic programming languages can make writing programs quick and easy 
+because they don't require specifying static bounds on behavior.
+The cost of this efficiency it may be impossible to statically decide 
+if a program is has errors.  
+
+Although dynamic languages already offer programming ease and efficiency, it
+may be possible to increase the ease of writing program by autocompletion,
+or synthesis of programs from surrounding context. 
+
+\subsection*{Challenge}
+This work presents a theoretical system that synthesizes terms from context 
+in a dynamic language. In keeping with the spirit of dynamic languages, 
+type annotations are required, but they are optional. 
+
+\subsection*{Evaluation}
 
 
+
+
+
+% -- introduction
+% /-
+
+% - types have become the lingua franca of formal specification
+%   - examples, propositions, abstract values, etc. may be encoded in the language of types
+%   - type are merely phrases that may be more abstract than terms 
+
+% - types have long been used to verify correct behavior of programs.
+% - More recent work has demonstrated the utility of types to represent goals in 
+%   - (dependently-typed) theorem proving
+%   - program synthesis with refinement types
+
+% - In using types as goals, the key idea is to propagate types down the syntax tree for decomposition
+%   - providing smaller goals for local proofs/programs. 
+
+% - a dynamic language is one where terms are not required to have static restrictions  
+%   - from a static view, it is unityped. Every term may belong to the same type
+
+
+% - type inference
+%   - ML-like languages
+%     - type inference is sound. 
+%       - a term is instrinsicly associated with a static countable/inductive representation to type check 
+%       - a type that is broader than the term but still finitely representable may be inferred
+
+%   - dynamic languages
+%     - type inference is unsound 
+%       - idiomatic representation of term should be accepted without enumerating all cases   
+%       - a term is not intrinsicly associated with some finitely representable/countable type
+%       - sound inference would thus be overly restrictive  
+
+% -/
+
+
+% -- solution
+% /-
+
+% - what kind of terms can express useful behavior 
+%   - function, record, variant
+%   - 
+%   - fix 
+% - what kind of types can tightly bound runtime behavior 
+%   - function type
+%   - inductive function type, i.e. (indexed record) 
+%     - related to Π types in dependent type theory
+%   - record type
+%   - variants type
+%   - inductive variants type 
+%   - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
+%     - one column indexes the other column
+%     - related to Σ types in dependent type theory
+
+% - how do we produce useful types to guide synthesis 
+%   - type flow
+%     - upward: when do we compose actual types and pop up
+%       - we must flow up for all rules
+%       - because we aren't guranteed any annotations 
+%     - downward: when do we push down expected types and decompose
+%       - we must flow down for all rules
+%       - because we aren't guranteed complete terms
+%   - type adaptation
+%     - widening: infer types from arguments
+%       - maintain leniency of expected type while 
+%         - recording previously seen types (ty | ?)
+%         - bounding actual types (ty | ?)
+%     - narrowing: infer types from parameter types
+%       - maintain leniency of actual type while 
+%         - recording previously seen types (ty & ?)
+%         - bounding expected types (ty & ?)
+
+% - how do we leverage types to synthesize programs 
+%   - leverage learn-to-syntheize tools
+%   - sequent-calc symbolic search
 
 
 % \begin{enumerate}
