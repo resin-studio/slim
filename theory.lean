@@ -11,17 +11,71 @@ type-guided synthesis for dynamic languages
 -- introduction
 /-
 
-Previous work in program synthesis and type inference has assumed ML-family languages, possibly enriched with refinement types.
-ML terms are dynamically limited to those defined by some countable set of constructions, defined using ML's datatype mechanism. 
+- ML-family languages
+  - type inference is sound. 
+    - a term is instrinsicly associated with a static countable/inductive representation to type check 
+    - a type that is broader than the term but still finitely representable may be inferred
+  - type inference is complete. 
+    - the term is instrinsicly associated with a most general inductive type.
+
+- dynamic languages
+  - type inference is unsound 
+    - idiomatic representation of term should be accepted without enumerating all cases   
+    - a term is not intrinsicly associated with some finitely representable/countable type
+    - sound inference would thus be overly restrictive  
+  - type inference could be incomplete
+    - the unknown type can be used when no reasonable static bound can be found 
+
+
+skecthing:
+...
+
+Previous work in program synthesis and type inference \cite{} has assumed ML-style languages, 
+possibly enriched with refinement types.
+ML terms are dynamically limited to those defined by some countable set of constructions, 
+defined using ML's datatype mechanism. 
 As such, it is always possible to infer a type with a countable bound, 
 that is sound without rejecting too many idiomatic programs. 
+
+It is also a straightforward search to synthesize a term from a type, 
+since a type are limited to finite set of constructor primitives.  
+
+In a dynamic language, dynamically accepted terms are not limited to those taken 
+from a countable set. 
+A type system that always restricts terms to countable sets,
+would reject many idiomatic programs that are accepted dynamically. 
+However, having no restrictions would also allow many erroneous programs to slip through.
+Finding the balance of when to restrict terms statically is a key challenge. 
+
+Manually typing programs has been shown to be error-prone \cite{}. %python types in the wild
+
+To alleviate the error-prone task of specifying types, we infer types
+striking the balance between strict types and lenient types. 
+
+
+Previous work in program synthesis and type inference has assumed ML-family languages, possibly enriched with refinement types.
+
+Terms in ML-style languages are limited to those defined inductively (using ML's datatype mechanism). 
+This inductively definied set of terms may be finitely represented as a type.
+Thus, every term is associated with a principal type. 
+
+As such, it is always possible to infer a type with a countable bound, 
+that is sound without rejecting too many idiomatic programs. 
+It is natural to write terms by specificying all finite number of constructors.
+Thus, even if though the type checker may reject good programs, it is natural 
+to modify a program so that an equivalent version would pass the type checker.  
+
+
 typically without rejecting terms that would be accepted dynamically.
+
 It is also a straightforward search to synthesize a term from a type, 
 since a type are limited to finite set of constructor primitives.  
 
 In a dynamic language, dynamically accepted terms are not limited to those taken from a countable set. 
-As such, dynamically accepted terms cannot be finitely represented. 
-A sound static type system that restricts terms to those from countable sets would reject idiomatic programs that are accepted dynamically. 
+This allows for very expressive programs,  
+
+A sound static type system that a term be taken from a countable set 
+would reject idiomatic programs that are accepted dynamically. 
 
 -/
 
