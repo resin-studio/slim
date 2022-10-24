@@ -3,6 +3,28 @@
 type-guided synthesis for dynamic languages
 -/
 
+-- problem
+/-
+- synthesize terms from context with missing type annotations in a dynamic language
+-/
+
+-- introduction
+/-
+
+Previous work in program synthesis and type inference has assumed ML-family languages, possibly enriched with refinement types.
+ML terms are dynamically limited to those defined by some countable set of constructions, defined using ML's datatype mechanism. 
+As such, it is always possible to infer a type with a countable bound, 
+that is sound without rejecting too many idiomatic programs. 
+typically without rejecting terms that would be accepted dynamically.
+It is also a straightforward search to synthesize a term from a type, 
+since a type are limited to finite set of constructor primitives.  
+
+In a dynamic language, dynamically accepted terms are not limited those taken from a countable set. 
+As such, dynamically accepted terms cannot be finitely represented. 
+A sound static type system that restricts terms to those from countable sets would reject idiomatic programs that are accepted dynamically. 
+
+-/
+
 -- premise
 /-
 - types are the lingua franca of specification / static semantics
@@ -14,15 +36,15 @@ type-guided synthesis for dynamic languages
 
 -/
 
--- problem
-/-
-- synthesize terms from context with missing type annotations in a dynamic language
--/
 
 
 -- solution
 /-
 
+- what kind of terms can express useful behavior 
+  - function, record, variant
+  - 
+  - fix 
 - what kind of types can tightly bound runtime behavior 
   - function type
   - inductive function type, i.e. (indexed record) 
