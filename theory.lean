@@ -11,9 +11,17 @@ synthesis for dynamic languages
 -- introduction
 /-
 
-- types are the lingua franca of specification / static semantics
+- types have become the lingua franca of formal specification
   - examples, propositions, abstract values, etc. may be encoded in the language of types
   - type are merely phrases that may be more abstract than terms 
+
+- types have long been used to verify correct behavior of programs.
+- More recent work has demonstrated the utility of types to represent goals in 
+  - (dependently-typed) theorem proving
+  - program synthesis with refinement types
+
+- In using types as goals, the key idea is to propagate types down the syntax tree for decomposition
+  - providing smaller goals for local proofs/programs. 
 
 - a dynamic language is one where terms are not required to have static restrictions  
   - from a static view, it is unityped. Every term may belong to the same type
