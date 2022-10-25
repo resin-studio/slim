@@ -13,7 +13,6 @@
 \maketitle
 
 \section{Introduction}
-\subsection*{Background}
 Dynamic programming languages can make writing programs quick and easy 
 because they don't require specifying static bounds on behavior.
 Two of the most popular programming languages today, Javascript and Python,  are 
@@ -21,63 +20,53 @@ dynamic programming languages.
 Javascript is the language of the web, while Python the most popular choice
 for data science and machine learning projects. 
 
-Although dynamic languages already offer programming ease and efficiency, it
-may be possible to increase the ease of writing program by autocompletion,
+Although dynamic languages already offer ease and efficiency for writing programs, it
+may be possible to supplement this facility with autocompletion,
 or synthesis of programs from surrounding context. 
-
-\subsection*{Challenge}
 This article presents a theoretical system that synthesizes terms from context 
-in a dynamic language. In keeping with the spirit of dynamic languages, 
-type annotations are not required, but they are optional. 
-
+in a dynamic language.
 Synthesis of of programs for a dynamic language introduces a fundamental tension. 
 While dynamic language programs benefit from a lack of static bounds, program synthesis
 must be a terminating procedure driven by static bounds representing the goals of synthesis.   
 
+Types have become the lingua franca of formal specification of static bounds.
+Others have shown how various forms of specification, including examples, abstract values, 
+pure propositions, and modal propositions, can be encoded as types.
+Types have been used successfully for verifying programs, 
+guiding program synthesis in ML-family languages, 
+and guiding humans in dependently-typed interactive theorem proving. 
 
-\subsection*{Type-directed synthesis}
-% - types have become the lingua franca of formal specification
-%   - examples, propositions, abstract values, etc. may be encoded in the language of types
-%   - type are merely phrases that may be more abstract than terms 
+Using types, it may be possible to synthesize programs for dynamic languages.
+To maintain the spirit of dynamic languages, type annotations must remain optional.
+If type annotations are provided, they can be propagated and decomposed, 
+as is the case in theorem proving systems, local type checking, and synthesis of ML-family programs.
+
+However, if type annotations are not available, then types must be inferred from context. 
+Taking advantage of type inference techniques from ML-family languages is a good starting point,
+but it's not sufficient. ML-family type inference is sound, because an ML term is 
+intrinsically associated with a static bound in accordance with ML's datatype mechanism.
+% insert example?
+Terms in dynamic languages are not intrinsically limited to such static bounds, as that would be akin
+to specifying static bounds for all terms, which is antithetical to dynamic languages. 
+Type inference for dynamic languages cannot be sound without violating 
+the assumed definition of dynamic languages. 
+Thus, it is necessary to devise a method of type inference that is unsound, yet still provides   
+sufficient information to guide efficient program synthesis.
+Additionally, despite being unsound, it should be able to prune/reject 
+a significant portion of bad programs. 
+It may reject good programs, but only if it can infer static bounds.
 
 
 
 
-
-% -- introduction
-% /-
-
-
-% - types have long been used to verify correct behavior of programs.
-% - More recent work has demonstrated the utility of types to represent goals in 
-%   - (dependently-typed) theorem proving
-%   - program synthesis with refinement types
-
-% - In using types as goals, the key idea is to propagate types down the syntax tree for decomposition
-%   - providing smaller goals for local proofs/programs. 
-
-% - a dynamic language is one where terms are not required to have static restrictions  
-%   - from a static view, it is unityped. Every term may belong to the same type
-
-
-% - type inference
-%   - ML-like languages
-%     - type inference is sound. 
-%       - a term is intrinsically associated with a static countable/inductive representation to type check 
-%       - a type that is broader than the term but still finitely representable may be inferred
-
-%   - dynamic languages
-%     - type inference is unsound 
-%       - idiomatic representation of term should be accepted without enumerating all cases   
-%       - a term is not intrinsically associated with some finitely representable/countable type
-%       - sound inference would thus be overly restrictive  
-
-% -/
 
 
 % -- solution
 % /-
 
+% - how do we leverage types to synthesize programs 
+%   - leverage learn-to-synthesize tools
+%   - sequent-calc symbolic search
 % - what kind of terms can express useful behavior 
 %   - function, record, variant
 %   - 
@@ -92,28 +81,21 @@ must be a terminating procedure driven by static bounds representing the goals o
 %   - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
 %     - one column indexes the other column
 %     - related to Σ types in dependent type theory
-
-% - how do we produce useful types to guide synthesis 
-%   - type flow
-%     - upward: when do we compose actual types and pop up
-%       - we must flow up for all rules
-%       - because we aren't guranteed any annotations 
-%     - downward: when do we push down expected types and decompose
-%       - we must flow down for all rules
-%       - because we aren't guranteed complete terms
+% - type propagation: when do we push down expected types and decompose
+%   - we must flow down for all rules
+%   - because we aren't guaranteed complete terms
+% - type inference: when do we compose actual types and pop up
+%   - we must flow up for all rules
+%   - because we aren't guaranteed any annotations 
 %   - type adaptation
-%     - widening: infer types from arguments
-%       - maintain leniency of expected type while 
-%         - recording previously seen types (ty | ?)
-%         - bounding actual types (ty | ?)
-%     - narrowing: infer types from parameter types
-%       - maintain leniency of actual type while 
-%         - recording previously seen types (ty & ?)
-%         - bounding expected types (ty & ?)
-
-% - how do we leverage types to synthesize programs 
-%   - leverage learn-to-syntheize tools
-%   - sequent-calc symbolic search
+%- type widening: infer types from arguments
+%  - maintain leniency of expected type while 
+%  - recording previously seen types (ty | ?)
+%  - bounding actual types (ty | ?)
+%- type narrowing: infer types from parameter types
+%  - maintain leniency of actual type while 
+%    - recording previously seen types (ty & ?)
+%    - bounding expected types (ty & ?)
 
 
 % \begin{enumerate}
