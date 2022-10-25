@@ -65,11 +65,11 @@ expressivity comparable to typical decidable predicate logics.
 %     - related to Σ types in dependent type theory
 
 \subsection*{Subtyping}
-Because terms of dynamic languages are not intrinsically tied to particular static bounds,
-it is possible for the static bounds of of a term to be less strict than the static bounds 
+Because terms of dynamic languages are not intrinsically tied to particular types,
+it is possible for the type of a term to be tighter than the type 
 of an interface's expected term. In order to limit the disruption dynamic language programming,
-it is necessary to support subtyping, allowing smaller bounds (subtypes) 
-to be valid with respect to larger bounds (supertypes). 
+it is necessary to support subtyping, allowing actual types (subtypes) 
+to be valid with respect to larger expected types (supertypes). 
 
 
 \subsection*{Type holes}
