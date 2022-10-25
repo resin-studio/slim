@@ -13,6 +13,8 @@
 \maketitle
 
 \section{Introduction}
+
+\subsection*{Dynamic programming languages}
 Dynamic programming languages can make writing programs quick and easy 
 because they don't require specifying static bounds on behavior.
 Two of the most popular programming languages today, Javascript and Python,  are 
@@ -20,6 +22,8 @@ dynamic programming languages.
 Javascript is the language of the web, while Python the most popular choice
 for data science and machine learning projects. 
 
+
+\subsection*{Synthesis}
 Although dynamic languages already offer ease and efficiency for writing programs, it
 may be possible to supplement this facility with autocompletion,
 or synthesis of programs from surrounding context. 
@@ -29,6 +33,7 @@ Synthesis of of programs for a dynamic language introduces a fundamental tension
 While dynamic language programs benefit from a lack of static bounds, program synthesis
 must be a terminating procedure driven by static bounds representing the goals of synthesis.   
 
+\subsection*{Type systems}
 Types have become the lingua franca of formal specification of static bounds.
 Others have shown how various forms of specification, including examples, abstract values, 
 pure propositions, and modal propositions, can be encoded as types.
@@ -36,8 +41,19 @@ Types have been used successfully for verifying programs,
 guiding program synthesis in ML-family languages, 
 and guiding humans in dependently-typed interactive theorem proving. 
 
+\subsection*{Type propagation}
+Using types, it may be possible to synthesize programs for dynamic languages.
+To maintain the spirit of dynamic languages, type annotations must remain optional.
+If type annotations are provided, they can be propagated and decomposed, 
+as is the case in theorem proving systems, local type checking, 
+and synthesis of ML-family programs.
 
-TODO: what kind of types can tightly bound runtime behavior 
+\subsection*{Type expressivity}
+In order to efficiently guide program synthesis, types must be able to express 
+fairly precise information. 
+The system presented here offers types with 
+expressivity comparable to typical decidable predicate logics. 
+% example:
 %   - function type
 %   - inductive function type, i.e. (indexed record) 
 %     - related to Π types in dependent type theory
@@ -48,16 +64,20 @@ TODO: what kind of types can tightly bound runtime behavior
 %     - one column indexes the other column
 %     - related to Σ types in dependent type theory
 
+\subsection*{Subtyping}
+Because terms of dynamic languages are not intrinsically tied to particular static bounds,
+it is possible for the static bounds of of a term to be less strict than the static bounds 
+of an interface's expected term. In order to limit the disruption dynamic language programming,
+it is necessary to support subtyping, allowing smaller bounds (subtypes) 
+to be valid with respect to larger bounds (supertypes). 
 
-Using types, it may be possible to synthesize programs for dynamic languages.
-To maintain the spirit of dynamic languages, type annotations must remain optional.
-If type annotations are provided, they can be propagated and decomposed, 
-as is the case in theorem proving systems, local type checking, and synthesis of ML-family programs.
 
-TODO: type propagation: when do we push down expected types and decompose
-%   - we must flow down for all rules
-%   - because we aren't guaranteed complete terms
+\subsection*{Type holes}
+In order to have fine-grained control over where static bounds are utilized, 
+types may have holes, represented by "?" to indicate that any subterm corresponding to that
+portion of the type will not be subject to static constraints.
 
+\subsection*{Type inference}
 However, if type annotations are not available, then types must be inferred from context. 
 Taking advantage of type inference techniques from ML-family languages is a good starting point,
 but it's not sufficient. ML-family type inference is sound, because an ML term is 
@@ -69,6 +89,7 @@ TODO: type inference: when do we compose actual types and pop up
 %   - type adaptation
 % insert example?
 
+\subsection*{Type inference for dynamic languages}
 Terms in dynamic languages are not intrinsically limited to such static bounds, as that would be akin
 to specifying static bounds for all terms, which is antithetical to dynamic languages. 
 Type inference for dynamic languages cannot be sound without violating 
@@ -79,11 +100,13 @@ Additionally, despite being unsound, it should be able to prune/reject
 a significant portion of bad programs. 
 It may reject good programs, but only if it can infer static bounds.
 
+\subsection*{Type widening}
 TODO: type widening: infer types from arguments
 %  - maintain leniency of expected type while 
 %  - recording previously seen types (ty | ?)
 %  - bounding actual types (ty | ?)
 
+\subsection*{Type narrowing}
 TODO: type narrowing: infer types from parameter types
 %  - maintain leniency of actual type while 
 %    - recording previously seen types (ty & ?)
