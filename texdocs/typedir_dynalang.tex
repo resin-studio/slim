@@ -36,16 +36,39 @@ Types have been used successfully for verifying programs,
 guiding program synthesis in ML-family languages, 
 and guiding humans in dependently-typed interactive theorem proving. 
 
+
+TODO: what kind of types can tightly bound runtime behavior 
+%   - function type
+%   - inductive function type, i.e. (indexed record) 
+%     - related to Π types in dependent type theory
+%   - record type
+%   - variants type
+%   - inductive variants type 
+%   - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
+%     - one column indexes the other column
+%     - related to Σ types in dependent type theory
+
+
 Using types, it may be possible to synthesize programs for dynamic languages.
 To maintain the spirit of dynamic languages, type annotations must remain optional.
 If type annotations are provided, they can be propagated and decomposed, 
 as is the case in theorem proving systems, local type checking, and synthesis of ML-family programs.
 
+TODO: type propagation: when do we push down expected types and decompose
+%   - we must flow down for all rules
+%   - because we aren't guaranteed complete terms
+
 However, if type annotations are not available, then types must be inferred from context. 
 Taking advantage of type inference techniques from ML-family languages is a good starting point,
 but it's not sufficient. ML-family type inference is sound, because an ML term is 
 intrinsically associated with a static bound in accordance with ML's datatype mechanism.
+
+TODO: type inference: when do we compose actual types and pop up
+%   - we must flow up for all rules
+%   - because we aren't guaranteed any annotations 
+%   - type adaptation
 % insert example?
+
 Terms in dynamic languages are not intrinsically limited to such static bounds, as that would be akin
 to specifying static bounds for all terms, which is antithetical to dynamic languages. 
 Type inference for dynamic languages cannot be sound without violating 
@@ -56,46 +79,29 @@ Additionally, despite being unsound, it should be able to prune/reject
 a significant portion of bad programs. 
 It may reject good programs, but only if it can infer static bounds.
 
-
-
-
-
-
-% -- solution
-% /-
-
-% - how do we leverage types to synthesize programs 
-%   - leverage learn-to-synthesize tools
-%   - sequent-calc symbolic search
-% - what kind of terms can express useful behavior 
-%   - function, record, variant
-%   - 
-%   - fix 
-% - what kind of types can tightly bound runtime behavior 
-%   - function type
-%   - inductive function type, i.e. (indexed record) 
-%     - related to Π types in dependent type theory
-%   - record type
-%   - variants type
-%   - inductive variants type 
-%   - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
-%     - one column indexes the other column
-%     - related to Σ types in dependent type theory
-% - type propagation: when do we push down expected types and decompose
-%   - we must flow down for all rules
-%   - because we aren't guaranteed complete terms
-% - type inference: when do we compose actual types and pop up
-%   - we must flow up for all rules
-%   - because we aren't guaranteed any annotations 
-%   - type adaptation
-%- type widening: infer types from arguments
+TODO: type widening: infer types from arguments
 %  - maintain leniency of expected type while 
 %  - recording previously seen types (ty | ?)
 %  - bounding actual types (ty | ?)
-%- type narrowing: infer types from parameter types
+
+TODO: type narrowing: infer types from parameter types
 %  - maintain leniency of actual type while 
 %    - recording previously seen types (ty & ?)
 %    - bounding expected types (ty & ?)
+
+
+
+
+\section{Overview}
+
+\section{Technical Details}
+
+\section{Evaluation}
+
+\section{Related work}
+
+
+
 
 
 % \begin{enumerate}
