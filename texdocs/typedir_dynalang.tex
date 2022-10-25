@@ -65,16 +65,19 @@ expressivity comparable to typical decidable predicate logics.
 %     - related to Σ types in dependent type theory
 
 \subsection*{Subtyping}
-Because terms of dynamic languages are not intrinsically tied to particular types,
-it is possible for the type of a term to be tighter than the type 
-of an interface's expected term. In order to limit the disruption dynamic language programming,
-it is necessary to support subtyping, allowing actual types (subtypes) 
-to be valid with respect to larger expected types (supertypes). 
+Dynamically, two interfaces may have the same correctness result for some inputs,
+while differing on other inputs.  
+In order to maintain some semblance of the dynamic style programming,
+while also adding safety with static behavior,  
+Subtyping is used as the criteria for deciding if a term's 
+composition is statically invalid.   
+With subtyping it is possible to statically catch invalid compositions,
+without translating terms from one type to another disjoint type.
 
 
 \subsection*{Type holes}
-In order to have fine-grained control over where static bounds are utilized, 
-types may have holes, represented by "?" to indicate that any subterm corresponding to that
+In order to have fine-grained control over where types are utilized or avoided, 
+types are allowed to have holes, represented by "?" to indicate that any subterm corresponding to that
 portion of the type will not be subject to static constraints.
 
 \subsection*{Type inference}
