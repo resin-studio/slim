@@ -155,6 +155,13 @@ type dlist (n ≤ nat) := list for n;list ≤ nat_list
     [#cons[α;list] -> #succ[nat]]
 ```
 
+```
+μ nat_to_list .
+  [#nil[] -> #zero[]] & 
+  ∀ {nat,list} [nat -> list] ≤ nat_to_list .  
+    [#succ[nat] -> #cons[α;list]]
+```
+
 
 ## type range
 - how types may be used over various terms 

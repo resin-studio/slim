@@ -2,8 +2,17 @@
 % \documentclass[]{acmart}
 \documentclass[sigplan,screen]{acmart}
 
-\usepackage[utf8]{inputenc}
+\usepackage{mathtools}
 \usepackage{listings}
+\lstset{
+    % identifierstyle=\color{purple},
+    % keywordstyle=\color{black},
+    % keywordstyle=\textbf,
+    basicstyle=\ttfamily\small,
+    showspaces=false
+}
+\usepackage[utf8]{inputenc}
+% \usepackage[T1]{fontenc}
 
 \title{Type-guided synthesis for dynamically typed languages}
 \author{Thomas Logan}
@@ -71,6 +80,30 @@ In order to efficiently guide program synthesis,
 types must be able to \textbf{express} fairly precise information. 
 The system presented here offers types with 
 expressivity comparable to typical decidable predicate logics. 
+For example, the types are expressive enough to precisely specify
+a function that takes a natural number "n" and an element "x", 
+and returns list of n elements.
+
+\begin{lstlisting}[mathescape=true]
+replicate : 
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
+    *zero $\rightarrow$ *nil & 
+    $\forall$ nat list . (nat $\rightarrow$ list) $\le$ nat_to_list .
+        *succ nat $\rightarrow$ *cons ($\alpha$ $\times$ list)
+\end{lstlisting}
+
+\noindent Correspondingly, types can also specify a pair of a list and its length.
+
+\begin{lstlisting}[mathescape=true]
+measurment : 
+$\exists$ $\alpha$ . $\mu$ nat_and_list .
+    *zero $\rightarrow$ *nil | 
+    $\exists$ nat list . (nat $\times$ list) $\le$ nat_and_list .
+        *succ nat $\times$ *cons ($\alpha$ $\times$ list)
+\end{lstlisting}
+
+
+
 % example:
 %   - function type
 %   - inductive function type, i.e. (indexed record) 
@@ -86,7 +119,7 @@ Dynamically, two interfaces may have the same correctness result for some inputs
 while differing on other inputs.  
 In order to maintain some semblance of the dynamically typed programming,
 while also adding safety with static behavior,  
-\textbf{Subtyping} is used to decide if a term's 
+\textbf{subtyping} is used to decide if a term's 
 composition is statically invalid.   
 
 
@@ -96,7 +129,8 @@ that any subterm corresponding to that portion of the type
 will not be subject to static constraints.
 
 However, if type annotations are not available, then \textbf{types are inferred} from context. 
-Taking advantage of type inference techniques from ML-family languages is a good starting point,
+Taking advantage of type inference techniques from ML-family languages 
+is a good starting point,
 but it's not sufficient. ML-family type inference is sound, because an ML term is 
 intrinsically associated with a static bound in accordance with ML's datatype mechanism.
 Terms in dynamically typed languages are not intrinsically associated with a principal type. 
