@@ -9,7 +9,7 @@
     % textcolor=blue,
     % keywordstyle=\color{blue},
     % keywordstyle=\textbf,
-    basicstyle=\ttfamily\small,
+    basicstyle=\ttfamily,
     mathescape=true,
     showspaces=false
 }
@@ -90,8 +90,8 @@ and returns list of n elements.
 \begin{lstlisting}[]
 replicate : 
 $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
-    *zero $\rightarrow$ *nil & 
-    $\forall$ nat list . (nat $\rightarrow$ list) $\le$ nat_to_list .
+    *zero $\rightarrow$ *nil $\cap$ 
+    $\forall$ nat list | (nat $\rightarrow$ list) $\subseteq$ nat_to_list .
         *succ nat $\rightarrow$ *cons ($\alpha$ $\times$ list)
 \end{lstlisting}
 
@@ -100,8 +100,8 @@ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
 \begin{lstlisting}[]
 measurment : 
 $\exists$ $\alpha$ . $\mu$ nat_and_list .
-    *zero $\rightarrow$ *nil | 
-    $\exists$ nat list . (nat $\times$ list) $\le$ nat_and_list .
+    *zero $\times$ *nil $\cup$ 
+    $\exists$ nat list | (nat $\times$ list) $\subseteq$ nat_and_list .
         *succ nat $\times$ *cons ($\alpha$ $\times$ list)
 \end{lstlisting}
 
@@ -155,12 +155,12 @@ This system tackles the tension in these goals by combining the union combinator
 with the dynamic type. 
 
 Once \lstinline{pair} is applied to an integer its generic type is specialized to 
-\lstinline{int | ?}, 
+\lstinline{int $\cup$ ?}, 
 in which union with the dynamic type behaves like the top type $\top$, 
 accommodating receiving a string as a the subsequent input.
-Thus, the generic type is specialized to \lstinline{int | str | ?}.
+Thus, the generic type is specialized to \lstinline{int $\cup$ str $\cup$ ?}.
 The result type for \lstinline{pair n s} ends up as 
-\lstinline{(int | string) $\times$ (int | string)}. 
+\lstinline{(int $\cup$ string) $\times$ (int $\cup$ string)}. 
 The semantics of union with the dynamic type result in the dynamic type 
 falling away for actual types.
 
@@ -180,11 +180,11 @@ The argument type must avail itself to internal parameter types of unforeseen co
 while the external parameter type should be \textbf{narrowed} and restricted 
 to the internal parameter types of previously seen compositions.
 Once \lstinline{i2n} is applied to \lstinline{x}, 
-the type for \lstinline{x} is specialized to \lstinline{int & ?}, 
-in which intersection with the dynamic type behaves like the bottom type,
+the type for \lstinline{x} is specialized to \lstinline{int $\cap$ ?}, 
+in which intersection with the dynamic type behaves like the bottom type $\bot$,
 availing itself to be used in subsequent applications. 
-Thus, the dynamic type is inferred to be \lstinline{int & str & ?}.
-The external parameter type for ends up as \lstinline{int & str}. 
+Thus, the dynamic type is inferred to be \lstinline{int $\cap$ str $\cap$ ?}.
+The external parameter type for ends up as \lstinline{int $\cap$ str}. 
 The semantics of intersection with the dynamic type result in the dynamic type
 falling away for expected types.
 
