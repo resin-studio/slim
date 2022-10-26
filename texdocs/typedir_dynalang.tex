@@ -2,7 +2,8 @@
 % \documentclass[]{acmart}
 \documentclass[sigplan,screen]{acmart}
 
-% \usepackage[utf8]{inputenc}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
 
 \title{Type-guided synthesis for dynamic languages}
 \author{Thomas Logan}
@@ -16,10 +17,30 @@
 
 \textbf{Dynamic programming languages} can make writing programs quick and easy 
 because they don't require specifying static bounds on behavior.
-Two of the most popular programming languages today, Javascript and Python,  are 
-dynamic programming languages. 
-Javascript is the language of the web, while Python the most popular choice
-for data science and machine learning projects. 
+Two of the most popular programming languages today, Javascript and Python, 
+are dynamic programming languages. 
+Javascript is the language of the web, while Python is the most popular choice
+for data science and machine learning projects. Consider a Python program that operates on strings or integers. 
+
+\begin{lstlisting}[language=Python]
+def foo(x):
+    if isinstance(x, int):
+        return x + 1 
+    elif isinstance(x, str): 
+        return x + "..."
+\end{lstlisting}
+
+\noindent The dynamic language program avoids the extra step of associating terms with
+static bounds as seen in ML-like languages with the datatype mechanism. 
+
+\begin{lstlisting}[language=ML]
+datatype iors = 
+    Int of int | 
+    Str of string
+
+fun foo(Int x) = x + 1
+  | foo(Str x) = x ^ "..."
+\end{lstlisting}
 
 
 Although dynamic languages already offer ease and efficiency for writing programs, 
@@ -77,10 +98,10 @@ However, if type annotations are not available, then \textbf{types are inferred}
 Taking advantage of type inference techniques from ML-family languages is a good starting point,
 but it's not sufficient. ML-family type inference is sound, because an ML term is 
 intrinsically associated with a static bound in accordance with ML's datatype mechanism.
-
 Terms in dynamic languages are not intrinsically associated with a principal type. 
 Type inference for dynamic languages cannot be sound without greatly violating the 
 liberal reuse of terms in dynamic languages. 
+
 Thus, it is necessary to devise a method of type inference that is unsound, 
 yet still provides sufficient information to guide efficient program synthesis.
 Additionally, despite being unsound, it should be able to prune/reject 
