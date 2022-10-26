@@ -17,9 +17,9 @@
 
 \textbf{Dynamic programming languages} can make writing programs quick and easy 
 because they don't require specifying static bounds on behavior.
-Two of the most popular programming languages today, Javascript and Python, 
+Two of the most popular programming languages today, JavaScript and Python, 
 are dynamic programming languages. 
-Javascript is the language of the web, while Python is the most popular choice
+JavaScript is the language of the web, while Python is the most popular choice
 for data science and machine learning projects. 
 Consider a Python program that operates on strings or integers. 
 
@@ -35,7 +35,7 @@ def foo(x):
 static bounds as seen in ML-like languages using the datatype mechanism. 
 
 \begin{lstlisting}[language=ML]
-datatype iors = 
+datatype int_str = 
     Int of int | 
     Str of string
 
@@ -86,7 +86,7 @@ Dynamically, two interfaces may have the same correctness result for some inputs
 while differing on other inputs.  
 In order to maintain some semblance of the dynamic style programming,
 while also adding safety with static behavior,  
-\textbf{Subtyping} is used as the criteria for deciding if a term's 
+\textbf{Subtyping} is used to decide if a term's 
 composition is statically invalid.   
 
 
