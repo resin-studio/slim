@@ -5,7 +5,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
 
-\title{Type-guided synthesis for dynamic languages}
+\title{Type-guided synthesis for dynamically typed languages}
 \author{Thomas Logan}
 \date{October 2022}
 
@@ -15,10 +15,10 @@
 
 \section{Introduction}
 
-\textbf{Dynamic programming languages} can make writing programs quick and easy 
+\textbf{Dynamically typed} languages can make writing programs quick and easy 
 because they don't require specifying static bounds on behavior.
 Two of the most popular programming languages today, JavaScript and Python, 
-are dynamic programming languages. 
+are dynamically typed. 
 JavaScript is the language of the web, while Python is the most popular choice
 for data science and machine learning projects. 
 Consider a Python program that operates on strings or integers. 
@@ -28,10 +28,10 @@ def foo(x):
     if isinstance(x, int):
         return x + 1 
     elif isinstance(x, str): 
-        return x + "..."
+        return x + "abc"
 \end{lstlisting}
 
-\noindent The dynamic language program avoids the extra step of associating terms with
+\noindent The dynamically typed program avoids the extra step of associating terms with
 static bounds as seen in ML-like languages using the datatype mechanism. 
 
 \begin{lstlisting}[language=ML]
@@ -40,17 +40,17 @@ datatype int_str =
     Str of string
 
 fun foo(Int x) = x + 1
-  | foo(Str x) = x ^ "..."
+  | foo(Str x) = x ^ "abc"
 \end{lstlisting}
 
 
-Although dynamic languages already offer ease and efficiency for writing programs, 
+Although dynamically typed languages already offer ease and efficiency for writing programs, 
 this facility can be enhanced with \textbf{synthesis of programs} 
 from surrounding context. 
 This article presents a system that synthesizes terms from context 
-in a dynamic language.
-Synthesis of of programs for a dynamic language introduces a fundamental tension. 
-While dynamic language programs benefit from a lack of static bounds, program synthesis
+in a dynamically typed language.
+Synthesis of programs for a dynamically typed language introduces a fundamental tension. 
+While dynamically typed programs benefit from a lack of static bounds, program synthesis
 must be a terminating procedure driven by static bounds representing the goals of synthesis.   
 
 \textbf{Types} have become the lingua franca of formal specification of static bounds.
@@ -61,8 +61,8 @@ guiding program synthesis in ML-family languages,
 and guiding humans in dependently-typed interactive theorem proving. 
 
 By \textbf{propagating} and decomposing types, 
-it is possible to guide the synthesis of programs for dynamic languages.
-To maintain the spirit of dynamic languages, type annotations must remain optional.
+it is possible to guide the synthesis of programs.
+To maintain the spirit of dynamic types, type annotations must remain optional.
 Previous work has demonstrated the utility of propagating types 
 in theorem proving systems, local type checking, 
 and synthesis of ML-family programs.
@@ -84,14 +84,14 @@ expressivity comparable to typical decidable predicate logics.
 
 Dynamically, two interfaces may have the same correctness result for some inputs,
 while differing on other inputs.  
-In order to maintain some semblance of the dynamic style programming,
+In order to maintain some semblance of the dynamically typed programming,
 while also adding safety with static behavior,  
 \textbf{Subtyping} is used to decide if a term's 
 composition is statically invalid.   
 
 
 In order to have fine-grained control over where types are utilized or avoided, 
-types may be composed of \textbf{unknown types}, represented by "?" to indicate 
+types may be composed of \textbf{dynamic types}, represented by "?" to indicate 
 that any subterm corresponding to that portion of the type 
 will not be subject to static constraints.
 
@@ -99,9 +99,9 @@ However, if type annotations are not available, then \textbf{types are inferred}
 Taking advantage of type inference techniques from ML-family languages is a good starting point,
 but it's not sufficient. ML-family type inference is sound, because an ML term is 
 intrinsically associated with a static bound in accordance with ML's datatype mechanism.
-Terms in dynamic languages are not intrinsically associated with a principal type. 
-Type inference for dynamic languages cannot be sound without greatly violating the 
-liberal reuse of terms in dynamic languages. 
+Terms in dynamically typed languages are not intrinsically associated with a principal type. 
+Type inference for dynamically typed languages cannot be sound without greatly violating the 
+liberal reuse of terms afforded by dynamic types. 
 
 Thus, it is necessary to devise a method of type inference that is unsound, 
 yet still provides sufficient information to guide efficient program synthesis.
@@ -113,7 +113,7 @@ In parametric types where a generic input type must be the same as a generic out
 The dynamic nature of terms is at odds with inferring types.
 % example
 These generic types can be specialized based on the terms that are witnessed as inputs. 
-Since dynamic languages cannot infer a principal type, 
+Since a principal type cannot be inferred in dynamically typed languages, 
 The parameter type must accommodate types of unforeseen arguments, 
 while the return type should be \textbf{widened} but restricted to previously arguments.
 This system tackles the tension in these goals by combining the union combinator  
