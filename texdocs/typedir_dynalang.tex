@@ -107,7 +107,7 @@ Thus, it is necessary to devise a method of type inference that is unsound,
 yet still provides sufficient information to guide efficient program synthesis.
 Additionally, despite being unsound, it should be able to prune/reject 
 a significant portion of bad programs. 
-It may reject good programs, but only if it can infer a type.
+It may reject good programs, but only if it can infer a static type.
 
 In parametric types where a generic input type must be the same as a generic output type,
 The dynamic nature of terms is at odds with inferring types.
@@ -115,7 +115,8 @@ The dynamic nature of terms is at odds with inferring types.
 These generic types can be specialized based on the terms that are witnessed as inputs. 
 Since a principal type cannot be inferred in dynamically typed languages, 
 The parameter type must accommodate types of unforeseen arguments, 
-while the return type should be \textbf{widened} but restricted to previously arguments.
+while the return type should be \textbf{widened} but restricted 
+to previously seen arguments.
 This system tackles the tension in these goals by combining the union combinator  
 with the unknown type. 
 % example
