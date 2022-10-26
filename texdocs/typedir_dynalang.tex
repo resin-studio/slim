@@ -5,10 +5,12 @@
 \usepackage{mathtools}
 \usepackage{listings}
 \lstset{
-    % identifierstyle=\color{purple},
-    % keywordstyle=\color{black},
+    identifierstyle=\color{blue},
+    % textcolor=blue,
+    % keywordstyle=\color{blue},
     % keywordstyle=\textbf,
     basicstyle=\ttfamily\small,
+    mathescape=true,
     showspaces=false
 }
 \usepackage[utf8]{inputenc}
@@ -44,7 +46,7 @@ def foo(x):
 static bounds as seen in ML-like languages using the datatype mechanism. 
 
 \begin{lstlisting}[language=ML]
-datatype int_str = 
+datatype int_or_str = 
     Int of int | 
     Str of string
 
@@ -81,10 +83,11 @@ types must be able to \textbf{express} fairly precise information.
 The system presented here offers types with 
 expressivity comparable to typical decidable predicate logics. 
 For example, the types are expressive enough to precisely specify
-a function that takes a natural number "n" and an element "x", 
+a function that takes a natural number lstinline{n} 
+and an element lstinline{x}, 
 and returns list of n elements.
 
-\begin{lstlisting}[mathescape=true]
+\begin{lstlisting}[]
 replicate : 
 $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
     *zero $\rightarrow$ *nil & 
@@ -94,7 +97,7 @@ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
 
 \noindent Correspondingly, types can also specify a pair of a list and its length.
 
-\begin{lstlisting}[mathescape=true]
+\begin{lstlisting}[]
 measurment : 
 $\exists$ $\alpha$ . $\mu$ nat_and_list .
     *zero $\rightarrow$ *nil | 
@@ -103,17 +106,6 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
 \end{lstlisting}
 
 
-
-% example:
-%   - function type
-%   - inductive function type, i.e. (indexed record) 
-%     - related to Π types in dependent type theory
-%   - record type
-%   - variants type
-%   - inductive variants type 
-%   - inductive record of variants type, i.e. "relational type", i.e.(indexed variants) 
-%     - one column indexes the other column
-%     - related to Σ types in dependent type theory
 
 Dynamically, two interfaces may have the same correctness result for some inputs,
 while differing on other inputs.  
@@ -145,32 +137,56 @@ It may reject good programs, but only if it can infer a static type.
 
 In parametric types where a generic input type must be the same as a generic output type,
 The dynamic nature of terms is at odds with inferring types.
-% example
-These generic types can be specialized based on the terms that are witnessed as inputs. 
+
+
+\begin{lstlisting}
+($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
+($\lambda$ n : int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
+  pair n s
+)))
+\end{lstlisting}
+
+\noindent These generic types can be specialized based on the terms that are witnessed as inputs. 
 Since a principal type cannot be inferred in dynamically typed languages, 
 The parameter type must accommodate types of unforeseen arguments, 
 while the return type should be \textbf{widened} but restricted 
 to previously seen arguments.
 This system tackles the tension in these goals by combining the union combinator  
-with the unknown type. 
-% example
-%  - maintain leniency of expected type while 
-%  - recording previously seen types (ty | ?)
-%  - bounding actual types (ty | ?)
+with the dynamic type. 
+
+Once \lstinline{pair} is applied to an integer its generic type is specialized to 
+\lstinline{int | ?}, 
+in which union with the dynamic type behaves like the top type $\top$, 
+accommodating receiving a string as a the subsequent input.
+Thus, the generic type is specialized to \lstinline{int | str | ?}.
+The result type for \lstinline{pair n s} ends up as 
+\lstinline{(int | string) $\times$ (int | string)}. 
+The semantics of union with the dynamic type result in the dynamic type 
+falling away for actual types.
 
 In functions where a parameter has an unknown type and that parameter is 
 internally used as an argument to an application, the dynamic nature of terms  
 adds some complications to type inference.
+
+\begin{lstlisting}
+($\lambda$ i2n : int $\rightarrow$ nat $\Rightarrow$ 
+($\lambda$ s2n : str $\rightarrow$ nat $\Rightarrow$ 
+  $\lambda$ x : ? $\Rightarrow$ (i2n x, s2n x)
+))
+
+\end{lstlisting}
+
 The argument type must avail itself to internal parameter types of unforeseen compositions,
 while the external parameter type should be \textbf{narrowed} and restricted 
 to the internal parameter types of previously seen compositions.
-% example
-%  - maintain leniency of actual type while 
-%    - recording previously seen types (ty & ?)
-%    - bounding expected types (ty & ?)
-
-
-
+Once \lstinline{i2n} is applied to \lstinline{x}, 
+the type for \lstinline{x} is specialized to \lstinline{int & ?}, 
+in which intersection with the dynamic type behaves like the bottom type,
+availing itself to be used in subsequent applications. 
+Thus, the dynamic type is inferred to be \lstinline{int & str & ?}.
+The external parameter type for ends up as \lstinline{int & str}. 
+The semantics of intersection with the dynamic type result in the dynamic type
+falling away for expected types.
 
 \section{Overview}
 
@@ -179,10 +195,6 @@ to the internal parameter types of previously seen compositions.
 \section{Evaluation}
 
 \section{Related work}
-
-
-
-
 
 % \begin{enumerate}
 % \item hello everybody
