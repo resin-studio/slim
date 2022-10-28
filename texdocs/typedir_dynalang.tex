@@ -43,7 +43,7 @@ def foo(x):
 \end{lstlisting}
 
 \noindent The dynamically typed program avoids the extra step of associating terms with
-static bounds as seen in ML-like languages using the datatype mechanism. 
+static bounds as seen in ML-family languages using the datatype mechanism. 
 
 \begin{lstlisting}[language=ML]
 datatype int_or_str = 
@@ -71,12 +71,23 @@ Types have been used successfully for verifying programs,
 guiding program synthesis in ML-family languages, 
 and guiding humans in dependently-typed interactive theorem proving. 
 
+Dynamically, two interfaces may have the same correctness result for some inputs,
+while differing on other inputs. \textbf{subtyping} is used to decide if a term's 
+composition is statically invalid, maintaining semblance to dynamically typed programming,
+while also adding safety with static behavior.
+
 By \textbf{propagating} and decomposing types, 
 it is possible to guide the synthesis of programs.
 To maintain the spirit of dynamic types, type annotations must remain optional.
 Previous work has demonstrated the utility of propagating types 
 in theorem proving systems, local type checking, 
 and synthesis of ML-family programs.
+
+\begin{lstlisting}
+$\lambda$ n : nat $\Rightarrow$
+  $\circ$ first = ($\lambda$ (x,y) $\in$ (str $\times$ ?) $\Rightarrow$ x) .
+  first (n, _) 
+\end{lstlisting}
 
 In order to efficiently guide program synthesis, 
 types must be able to \textbf{express} fairly precise information. 
@@ -88,31 +99,24 @@ and an element lstinline{x},
 and returns list of n elements.
 
 \begin{lstlisting}[]
-replicate : 
+$\circ$ replicate $\in$ 
 $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
-    #zero $\diamond$ $\rightarrow$ #nil $\diamond$ $\cap$ 
-    $\forall$ nat list | (nat $\rightarrow$ list) $\subseteq$ nat_to_list .
-        #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\cap$ 
+  $\forall$ nat list | 
+    (nat $\rightarrow$ list) $\subseteq$ nat_to_list .
+    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
 
 \noindent Correspondingly, types can also specify a pair of a list and its length.
 
 \begin{lstlisting}[]
-measurment : 
+$\circ$ measurment $\in$ 
 $\exists$ $\alpha$ . $\mu$ nat_and_list .
-    #zero $\diamond$ $\times$ #nil $\diamond$ $\cup$ 
-    $\exists$ nat list | (nat $\times$ list) $\subseteq$ nat_and_list .
-        #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\cup$ 
+  $\exists$ nat list | 
+    (nat $\times$ list) $\subseteq$ nat_and_list .
+    #succ nat $\times$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
-
-
-
-Dynamically, two interfaces may have the same correctness result for some inputs,
-while differing on other inputs.  
-In order to maintain some semblance of the dynamically typed programming,
-while also adding safety with static behavior,  
-\textbf{subtyping} is used to decide if a term's 
-composition is statically invalid.   
 
 
 In order to have fine-grained control over where types are utilized or avoided, 
