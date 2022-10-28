@@ -330,7 +330,8 @@ mutual
     | union : Ty -> Ty -> Ty
     | inter : Ty -> Ty -> Ty
     | func : Ty -> Ty -> Ty
-    | univ : List Ty -> Constr -> Ty -> Ty
+    | univ : Nat -> Constr -> Ty -> Ty
+    | exis : Nat -> Constr -> Ty -> Ty
     | induct : Ty -> Ty
 
   inductive Constr : Type
@@ -355,6 +356,8 @@ syntax:60 slm:60 "∪" slm:61 : slm
 syntax:70 slm:70 "∩" slm:71 : slm
 syntax "∀" slm slm "." slm : slm 
 syntax "∀" slm "." slm : slm 
+syntax "∃" slm slm "." slm : slm 
+syntax "∃" slm "." slm : slm 
 syntax "μ 0 ." slm : slm 
 
 syntax:30 slm:30 "∨" slm:31 : slm
@@ -386,7 +389,9 @@ macro_rules
   | `([: $a ∪ $b :]) => `(Ty.union [: $a :] [: $b :])
   | `([: $a ∩ $b :]) => `(Ty.inter [: $a :] [: $b :])
   | `([: ∀ $a:slm $b:slm . $c:slm :]) => `(Ty.univ [: $a :] [: $b :] [: $c :])
-  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: (? ≤ ?) :] [: $b :] )
+  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: £$a ≤ ? :] [: $b :] )
+  | `([: ∃ $a:slm $b:slm . $c:slm :]) => `(Ty.exis [: $a :] [: $b :] [: $c :])
+  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] [: £$a ≤ ? :] [: $b :] )
   | `([: μ 0 . $a :]) => `(Ty.induct [: $a :])
 -- Constr
   | `([: $a:slm ≤ $b:slm :]) => `(Constr.subtype [: $a :] [: $b :])
@@ -414,10 +419,10 @@ def x := Ty.bvar 1
 
 
 #check [: £0 ∩ ? :]
-#check [: ∀ [?] (? ≤ ?) . ⟨x⟩ :]
-#check [: ∀ [?] (? ≤ ?) . £0 :]
-#check [: ∀ [?, ?] (? ≤ ?) . £0 :]
-#check [: ∀ [?, ?] . £0 :]
+#check [: ∀ 1 (£0 ≤ ?) . ⟨x⟩ :]
+#check [: ∀ 1 (£0 ≤ ?) . £0 :]
+#check [: ∀ 2 (? ≤ ?) . £0 :]
+#check [: ∀ 2 . £0 :]
 #check [: ◇ :]
 #check [: @24 :]
 #check [: #foo ◇ ∪ #boo ◇ :]
@@ -441,17 +446,19 @@ mutual
     | union : Ty.has_size ty₁ n₁ -> Ty.has_size ty₂ n₂ -> Ty.has_size (.union ty₁ ty₂) (n₁ + n₂ + 1)
     | inter : Ty.has_size ty₁ n₁ -> Ty.has_size ty₂ n₂ -> Ty.has_size (.inter ty₁ ty₂) (n₁ + n₂ + 1)
     | func : Ty.has_size ty₁ n₁ -> Ty.has_size ty₂ n₂ -> Ty.has_size (.func ty₁ ty₂) (n₁ + n₂ + 1)
-    | univ : ListTy.has_size ctx ns -> Constr.has_size c n_ty -> Ty.has_size ty n_ty -> 
-        Ty.has_size (Ty.univ ctx c ty) (ns + n_c + n_ty + 1)
+    | univ : Constr.has_size c n_ty -> Ty.has_size ty n_ty -> 
+        Ty.has_size (Ty.univ n c ty) (n + n_c + n_ty + 1)
+    | exis : Constr.has_size c n_ty -> Ty.has_size ty n_ty -> 
+        Ty.has_size (Ty.exis n c ty) (n + n_c + n_ty + 1)
     | induct : Ty.has_size ty n -> Ty.has_size (Ty.induct ty) (n + 1) 
 
-  inductive ListTy.has_size : (List Ty) -> Nat -> Type
-    | nil : 
-        ListTy.has_size [] 0
-    | cons : 
-        Ty.has_size ty n_ty -> 
-        ListTy.has_size tys n_tys -> 
-        ListTy.has_size (ty::tys) (n_tys + n_ty)
+  -- inductive ListTy.has_size : (List Ty) -> Nat -> Type
+  --   | nil : 
+  --       ListTy.has_size [] 0
+  --   | cons : 
+  --       Ty.has_size ty n_ty -> 
+  --       ListTy.has_size tys n_tys -> 
+  --       ListTy.has_size (ty::tys) (n_tys + n_ty)
 
   inductive Constr.has_size : Constr -> Nat -> Type
     | subtype : 
@@ -882,11 +889,8 @@ mutual
     -- | .union ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
     | .inter ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
     | .func ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
-    | .univ ctx c ty => (
-      (List.any ctx (λ cty => Ty.occurs key cty)) ∨
-      (Constr.occurs key c) ∨
-      (Ty.occurs key ty)
-    )
+    | .univ n c ty => (Constr.occurs key c) ∨ (Ty.occurs key ty)
+    | .exis n c ty => (Constr.occurs key c) ∨ (Ty.occurs key ty)
     | .induct ty => (Ty.occurs key ty)
 
   partial def Constr.occurs (key : Nat) : Constr -> Bool
@@ -911,8 +915,11 @@ mutual
       (Ty.eq ty₁ ty₃) ∧ (Ty.eq ty₂ ty₄)
     | .func ty₁ ty₂, .func ty₃ ty₄  => 
       (Ty.eq ty₁ ty₃) ∧ (Ty.eq ty₂ ty₄)
-    | .univ ctx₁ c₁ ty₁, .univ ctx₂ c₂ ty₂ =>
-      (List.isEqv ctx₁ ctx₂ (fun cty₁ cty₂ => Ty.eq cty₁ cty₂)) ∧
+    | .univ n₁ c₁ ty₁, .univ n₂ c₂ ty₂ =>
+      n₁ = n₂ ∧
+      (Constr.eq c₁ c₂) ∧ (Ty.eq ty₁ ty₂)
+    | .exis n₁ c₁ ty₁, .univ n₂ c₂ ty₂ =>
+      n₁ = n₂ ∧
       (Constr.eq c₁ c₂) ∧ (Ty.eq ty₁ ty₂)
     | .induct ty₁, .induct ty₂ => (Ty.eq ty₁ ty₂)
     | _, _ => false
@@ -946,8 +953,13 @@ mutual
     | .union ty₁ ty₂ => .union (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
     | .inter ty₁ ty₂ => .inter (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
     | .func ty₁ ty₂ => .func (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
-    | .univ ctx c ty => (.univ
-      (List.map (λ cty => Ty.free_subst m cty) ctx) 
+    | .univ n c ty => (.univ
+      n
+      (Constr.free_subst m c) 
+      (Ty.free_subst m ty)
+    )
+    | .exis n c ty => (.exis
+      n
       (Constr.free_subst m c) 
       (Ty.free_subst m ty)
     )
@@ -1002,10 +1014,15 @@ mutual
     | .union ty₁ ty₂ => .union (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
     | .inter ty₁ ty₂ => .inter (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
     | .func ty₁ ty₂ => .func (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
-    | .univ ctx c ty => (.univ
-      (List.map (λ cty => Ty.raise_binding (start + ctx.length) args cty) ctx) 
-      (Constr.raise_binding (start + ctx.length) args c) 
-      (Ty.raise_binding (start + ctx.length) args ty)
+    | .univ n c ty => (.univ
+      n
+      (Constr.raise_binding (start + n) args c) 
+      (Ty.raise_binding (start + n) args ty)
+    )
+    | .exis n c ty => (.exis
+      n
+      (Constr.raise_binding (start + n) args c) 
+      (Ty.raise_binding (start + n) args ty)
     )
     | .induct ty => .induct (Ty.raise_binding (start + 1) args ty)
 
@@ -1074,10 +1091,15 @@ mutual
     | .union ty₁ ty₂ => .union (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
     | .inter ty₁ ty₂ => .inter (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
     | .func ty₁ ty₂ => .func (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
-    | .univ ctx c ty => (.univ
-      (List.map (λ cty => Ty.lower_binding (depth + ctx.length) cty) ctx) 
-      (Constr.lower_binding (depth + ctx.length) c) 
-      (Ty.lower_binding (depth + ctx.length) ty)
+    | .univ n c ty => (.univ
+      n
+      (Constr.lower_binding (depth + n) c) 
+      (Ty.lower_binding (depth + n) ty)
+    )
+    | .exis n c ty => (.exis
+      n
+      (Constr.lower_binding (depth + n) c) 
+      (Ty.lower_binding (depth + n) ty)
     )
     | .induct ty => .induct (Ty.lower_binding (depth + 1) ty)
 
@@ -1113,27 +1135,26 @@ partial def roll (key : Nat) (τ : Ty) : Ty :=
 -/
 
 
-def liberate (i : Nat) : List Ty -> List (Nat × Ty) 
-  | [] => []
-  | cty :: ctx => (i, cty) :: (liberate (i + 1) ctx)
+def liberate (i : Nat) : Nat -> List (Nat × Ty) 
+  | 0 => []
+  | n + 1 => (i, [: ? :]) :: (liberate (i + 1) n)
 
-def refresh (i : Nat) (ctx : List Ty) : (Nat × List (Nat × Ty) × List Ty) := 
-  let args := (List.range ctx.length).map (fun j => .fvar (i + j))
-  let f : Ty -> Ty := Ty.raise_binding 0 args 
-  let Δ' := liberate i (ctx.map f)
-  let i' := i + ctx.length
+def refresh (i : Nat) (n : Nat) : (Nat × List (Nat × Ty) × List Ty) := 
+  let args := (List.range n).map (fun j => .fvar (i + j))
+  let Δ' :=  liberate i n 
+  let i' := i + n 
   (i', Δ', args)
 
 
 def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> Option Constr
   | (.field l ty'), mu_ty => 
-      let ty := .univ [Ty.unknown] (Constr.subtype 
+      let ty := .exis 1 (Constr.subtype 
         (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))) (Ty.lower_binding 1 (unroll mu_ty))
       ) (.bvar 0)
       some (Constr.subtype ty' ty)
   | .inter (.field l ty') rem_ty, mu_ty => 
       let ty := 
-      [: ∀ [?] ((⟨prev_ty⟩↓1 ∩ (#⟨l⟩ £0) ∩ ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1) . £0 :]
+      [: ∃ 1 ((⟨prev_ty⟩↓1 ∩ (#⟨l⟩ £0) ∩ ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1) . £0 :]
 
       Option.bind (
         make_record_constraint_sub (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
@@ -1142,7 +1163,7 @@ def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> Option Constr
       ))
   | .inter rem_ty (.field l ty'), mu_ty => 
       -- copy and paste above case (for terminateion proved by structure)
-      let ty := .univ [Ty.unknown] (Constr.subtype 
+      let ty := .exis 1 (Constr.subtype 
         (Ty.inter (
           Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))) 
           (Ty.lower_binding 1 rem_ty)
@@ -1158,13 +1179,13 @@ def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> Option Constr
 
 def make_record_constraint_super (prev : Ty) : Ty -> Ty -> Option Constr
   | mu_ty, (.field l ty') => 
-      let ty := .univ [Ty.unknown] (Constr.subtype 
+      let ty := .exis 1 (Constr.subtype 
         (Ty.lower_binding 1 (unroll mu_ty))
         (Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
       ) (.bvar 0)
       some (Constr.subtype ty' ty)
   | mu_ty, .inter (.field l ty') rem_ty => 
-      let ty := .univ [Ty.unknown] (Constr.subtype 
+      let ty := .exis 1 (Constr.subtype 
         (Ty.lower_binding 1 (unroll mu_ty))
         (Ty.inter (
           Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
@@ -1179,7 +1200,7 @@ def make_record_constraint_super (prev : Ty) : Ty -> Ty -> Option Constr
       ))
   | mu_ty, .inter rem_ty (.field l ty') => 
       -- copy and paste above case (for terminateion proved by structure)
-      let ty := .univ [Ty.unknown] (Constr.subtype 
+      let ty := .exis 1 (Constr.subtype 
         (Ty.lower_binding 1 (unroll mu_ty))
         (Ty.inter (
           Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
@@ -1269,14 +1290,14 @@ mutual
       else
         none
 
-    | ty, .univ ctx c τ =>
-      let (i, Δ, args) := refresh i ctx
+    | ty, .exis n c τ =>
+      let (i, Δ, args) := refresh i n 
       let c := Constr.raise_binding 0 args c
       let τ := Ty.raise_binding 0 args τ
       Constr.solve i Δ (Constr.conj c (Constr.subtype ty τ))
 
-    | .univ ctx c τ, ty =>
-      let (i, Δ, args) := refresh i ctx
+    | .exis n c τ, ty =>
+      let (i, Δ, args) := refresh i n 
       let c := Constr.raise_binding 0 args c
       let τ := Ty.raise_binding 0 args τ
       Constr.solve i Δ (Constr.conj c (Constr.subtype τ ty))
