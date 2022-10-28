@@ -308,12 +308,11 @@ l ∈ terminal                      label
   τ ∪ τ                           union
   τ ∩ τ                           intersection
   τ -> τ                          func 
-  ∀ Δ C τ                         universal schema 
-  ∃ Δ C τ                         existential schema 
+  ∀ αᵢ | C . τ                    universal schema 
+  ∃ αᵢ | C . τ                    existential schema 
   μ α . τ                         induction
 
 C ::=                             constraint
-  .                               true
   τ ≤ τ                           subtyping 
   C ∨ C                           disjunction
   C ∧ C                           conjunction
@@ -335,7 +334,6 @@ mutual
     | induct : Ty -> Ty
 
   inductive Constr : Type
-    | tru : Constr
     | subtype : Ty -> Ty -> Constr
     | disj : Constr -> Constr -> Constr
     | conj : Constr -> Constr -> Constr
@@ -351,8 +349,6 @@ syntax "@"slm:90 : slm
 syntax "◇" : slm
 syntax "#"slm:90 slm : slm
 syntax "."slm:90 slm : slm
-syntax "(_)" : slm
-syntax "(=)" : slm
 syntax "?" : slm
 syntax:50 slm:50 "->" slm:51 : slm
 syntax:60 slm:60 "∪" slm:61 : slm
@@ -390,10 +386,9 @@ macro_rules
   | `([: $a ∪ $b :]) => `(Ty.union [: $a :] [: $b :])
   | `([: $a ∩ $b :]) => `(Ty.inter [: $a :] [: $b :])
   | `([: ∀ $a:slm $b:slm . $c:slm :]) => `(Ty.univ [: $a :] [: $b :] [: $c :])
-  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: (=) :] [: $b :] )
+  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: (? ≤ ?) :] [: $b :] )
   | `([: μ 0 . $a :]) => `(Ty.induct [: $a :])
 -- Constr
-  | `([: (=) :]) => `(Constr.tru)
   | `([: $a:slm ≤ $b:slm :]) => `(Constr.subtype [: $a :] [: $b :])
   | `([: $a ∨ $b :]) => `(Constr.disj [: $a :] [: $b :])
   | `([: $a ∧ $b :]) => `(Constr.conj [: $a :] [: $b :])
@@ -419,9 +414,9 @@ def x := Ty.bvar 1
 
 
 #check [: £0 ∩ ? :]
-#check [: ∀ [?] (=) . ⟨x⟩ :]
-#check [: ∀ [?] (=) . £0 :]
-#check [: ∀ [?, ?] (=) . £0 :]
+#check [: ∀ [?] (? ≤ ?) . ⟨x⟩ :]
+#check [: ∀ [?] (? ≤ ?) . £0 :]
+#check [: ∀ [?, ?] (? ≤ ?) . £0 :]
 #check [: ∀ [?, ?] . £0 :]
 #check [: ◇ :]
 #check [: @24 :]
@@ -432,8 +427,8 @@ def x := Ty.bvar 1
 #check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? -> @1 ∪ @2 :]
 #check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? :]
 #check [: ? :]
-#check [: (=) ∧ (=) :]
-#check [: ? ≤ ? ∩ £0 ∧ (=) :]
+#check [: (? ≤ ?) ∧ (? ≤ ?) :]
+#check [: ? ≤ ? ∩ £0 ∧ (? ≤ ?) :]
 
 mutual 
   inductive Ty.has_size : Ty -> Nat -> Type
@@ -459,8 +454,6 @@ mutual
         ListTy.has_size (ty::tys) (n_tys + n_ty)
 
   inductive Constr.has_size : Constr -> Nat -> Type
-    | tru : 
-        Constr.has_size Constr.tru 0  
     | subtype : 
         Ty.has_size ty₁ n₁ -> Ty.has_size ty₂ n₂ -> 
         Constr.has_size (Constr.subtype ty₁ ty₂) (n₁ + n₂ + 1) 
@@ -897,7 +890,6 @@ mutual
     | .induct ty => (Ty.occurs key ty)
 
   partial def Constr.occurs (key : Nat) : Constr -> Bool
-    | Constr.tru => false 
     | Constr.subtype ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
     | Constr.conj c₁ c₂ => (Constr.occurs key c₁) ∨ (Constr.occurs key c₂)
     | Constr.disj c₁ c₂ => (Constr.occurs key c₁) ∨ (Constr.occurs key c₂)
@@ -926,7 +918,6 @@ mutual
     | _, _ => false
 
   partial def Constr.eq : Constr -> Constr -> Bool
-    | Constr.tru, Constr.tru => true 
     | Constr.subtype ty₁ ty₂, Constr.subtype ty₃ ty₄ => 
       (Ty.eq ty₁ ty₃) ∧ (Ty.eq ty₂ ty₄)
     | Constr.conj c₁ c₂, Constr.conj c₃ c₄ =>
@@ -963,7 +954,6 @@ mutual
     | .induct ty => .induct (Ty.free_subst m ty)
 
   partial def Constr.free_subst (m : List (Nat × Ty)) : Constr -> Constr
-    | Constr.tru => Constr.tru
     | Constr.subtype ty₁ ty₂ => Constr.subtype (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
     | Constr.conj c₁ c₂ => Constr.conj (Constr.free_subst m c₁) (Constr.free_subst m c₂)
     | Constr.disj c₁ c₂ => Constr.disj (Constr.free_subst m c₁) (Constr.free_subst m c₂)
@@ -1020,7 +1010,6 @@ mutual
     | .induct ty => .induct (Ty.raise_binding (start + 1) args ty)
 
   partial def Constr.raise_binding (start : Nat) (args : List Ty) : Constr -> Constr
-    | .tru => .tru 
     | .subtype ty₁ ty₂ => .subtype (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
     | .conj c₁ c₂ => .conj (Constr.raise_binding start args c₁) (Constr.raise_binding start args c₂)
     | .disj c₁ c₂ => .disj (Constr.raise_binding start args c₁) (Constr.raise_binding start args c₂)
@@ -1093,7 +1082,6 @@ mutual
     | .induct ty => .induct (Ty.lower_binding (depth + 1) ty)
 
   partial def Constr.lower_binding (depth : Nat) : Constr -> Constr
-    | Constr.tru => Constr.tru
     | Constr.subtype ty₁ ty₂ => Constr.subtype (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
     | Constr.conj c₁ c₂ => Constr.conj (Constr.lower_binding depth c₁) (Constr.lower_binding depth c₂)
     | Constr.disj c₁ c₂ => Constr.disj (Constr.lower_binding depth c₁) (Constr.lower_binding depth c₂)
@@ -1305,7 +1293,6 @@ mutual
     | _, _ => none
 
   partial def Constr.solve (i : Nat) (Δ : List (Nat × Ty)) : Constr -> Option (Nat × List (Nat × Ty))
-    | Constr.tru => some (i, []) 
     | Constr.subtype ty₁ ty₂ => Ty.unify i Δ ty₁ ty₂
     | Constr.conj c₁ c₂ => 
         Option.bind (Constr.solve i Δ c₁) (fun (i, Δ₁) => 
