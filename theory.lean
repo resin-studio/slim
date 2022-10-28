@@ -20,7 +20,7 @@
 
   -- infer {n : nat} ⊢ first (n, _) : _ = none
     -- infer {n : nat} ⊢ (n,_) : [str;?]  = none
-      -- solve _ ⊢ nat ≤ str = none
+      -- solve _ ⊢ nat ⊆ str = none
 )
 ```
 
@@ -34,12 +34,12 @@
   (for x : ? => (i2n x, s2n x))
 
   -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = some _ , int & str -> [nat;nat] 
-    -- infer {x : α} {α ≤ ?} ⊢ (i2n x, s2n x) : _ = some _ , nat;nat
-    -- solve {α ≤ ?} ⊢ α ≤ int = some {α ≤ int & ?}  
-    -- solve {α ≤ int & ?} ⊢ α ≤ str = some {α ≤ int & str & ?}  
-      -- solve {α ≤ int & β, β ≤ ?} ⊢ int & β ≤ str = some {β ≤ str & ?}  
-        -- solve {...} ⊢ int ≤ str ∨ β ≤ str = some {β ≤ str & ?}  
-          -- solve {...} ⊢ β ≤ str = some {β ≤ str & ?}  
+    -- infer {x : α} {α ⊆ ?} ⊢ (i2n x, s2n x) : _ = some _ , nat;nat
+    -- solve {α ⊆ ?} ⊢ α ⊆ int = some {α ⊆ int & ?}  
+    -- solve {α ⊆ int & ?} ⊢ α ⊆ str = some {α ⊆ int & str & ?}  
+      -- solve {α ⊆ int & β, β ⊆ ?} ⊢ int & β ⊆ str = some {β ⊆ str & ?}  
+        -- solve {...} ⊢ int ⊆ str ∨ β ⊆ str = some {β ⊆ str & ?}  
+          -- solve {...} ⊢ β ⊆ str = some {β ⊆ str & ?}  
 
 ))
 ```
@@ -61,11 +61,11 @@
   pair n s
 
   -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
-    -- solve {α ≤ ?} ⊢ int ≤ α = some {α ≤ int | ?} 
-    -- solve {α ≤ int | ?} ⊢ str ≤ α = some {α ≤ int | str | ?} 
-      -- solve {α ≤ int | β, β ≤ ?} ⊢ str ≤ int | β  = some {β ≤ str | ?} 
-        -- solve {...} ⊢ str ≤ int ∨ str ≤ β = some {β ≤ str | ?}
-          -- solve {...} ⊢ str ≤ β = some {β ≤ str | ?}
+    -- solve {α ⊆ ?} ⊢ int ⊆ α = some {α ⊆ int | ?} 
+    -- solve {α ⊆ int | ?} ⊢ str ⊆ α = some {α ⊆ int | str | ?} 
+      -- solve {α ⊆ int | β, β ⊆ ?} ⊢ str ⊆ int | β  = some {β ⊆ str | ?} 
+        -- solve {...} ⊢ str ⊆ int ∨ str ⊆ β = some {β ⊆ str | ?}
+          -- solve {...} ⊢ str ⊆ β = some {β ⊆ str | ?}
 )))
 ```
 - maintain leniency while increasing strictness
@@ -116,7 +116,7 @@ fix (size =>
 ```
 μ list_len .
   [#nil[] ; #zero[]] |
-  ∃ {list,nat} [list;nat] ≤ list_len
+  ∃ {list,nat} [list;nat] ⊆ list_len
     [#cons[α;list] ; #succ[nat]]
 ```
 
@@ -124,25 +124,25 @@ fix (size =>
 ```
 μ nat_list .
   [#zero[] ; #nil[]] |
-  ∃ {nat,list} [nat;list] ≤ nat_list .
+  ∃ {nat,list} [nat;list] ⊆ nat_list .
     [#succ[nat] ; #cons[α;list]]
 ```
 
 -- equivalent to the notion
 ```
-  [#nil[] ; #zero[]] ≤ list_len ∧
+  [#nil[] ; #zero[]] ⊆ list_len ∧
 
   ∀ list;nat ,
-    ([list;nat] ≤ list_len --> [#cons[α;list] ; #succ[nat]] ≤ list_len)
+    ([list;nat] ⊆ list_len --> [#cons[α;list] ; #succ[nat]] ⊆ list_len)
 ```
 
 -- related to the sigma type from dependent type theory
 ```
-type dlist (n ≤ nat) := list for n;list ≤ nat_list 
+type dlist (n ⊆ nat) := list for n;list ⊆ nat_list 
 
-(Σ n ≤ nat . dlist n) ≡ nat_list 
+(Σ n ⊆ nat . dlist n) ≡ nat_list 
 
-(Σ n ≤ nat . list for n;list ≤ nat_list . list) ≡ nat_list 
+(Σ n ⊆ nat . list for n;list ⊆ nat_list . list) ≡ nat_list 
 ```
 
 
@@ -151,14 +151,14 @@ type dlist (n ≤ nat) := list for n;list ≤ nat_list
 ```
 μ list_to_len .
   [#nil[] -> #zero[]] & 
-  ∀ {list,nat} [list -> nat] ≤ list_to_len .  
+  ∀ {list,nat} [list -> nat] ⊆ list_to_len .  
     [#cons[α;list] -> #succ[nat]]
 ```
 
 ```
 μ nat_to_list .
   [#nil[] -> #zero[]] & 
-  ∀ {nat,list} [nat -> list] ≤ nat_to_list .  
+  ∀ {nat,list} [nat -> list] ⊆ nat_to_list .  
     [#succ[nat] -> #cons[α;list]]
 ```
 
@@ -191,7 +191,7 @@ let hello' = f hello in
 (for f => 
   let one' = f one in
 
-  -- infer {f : α} _ ⊢ (f one) = some {α ≤ nat -> ?} , _
+  -- infer {f : α} _ ⊢ (f one) = some {α ⊆ nat -> ?} , _
 
   let hello' = f hello in
 
@@ -279,7 +279,7 @@ let hello' = f hello in
 
 - consider adding relative complement type 
   - i.e. binary negation type operator
-  - i.e. (τ₁ \ τ₂) ≤ (τ₁ & ¬ τ₂), where ⊤ / τ₂ = ¬ τ₂)
+  - i.e. (τ₁ \ τ₂) ⊆ (τ₁ & ¬ τ₂), where ⊤ / τ₂ = ¬ τ₂)
 - write paper
   - type-directed synthesis for dynamic languages
   - explain static unitype view of dynamic types
@@ -297,7 +297,7 @@ l ∈ terminal                      label
 
 Δ ::=                             subtyping environment 
   ⬝                                empty
-  Δ ; α ≤ τ                       extension
+  Δ ; α ⊆ τ                       extension
 
 τ ::=                             type
   ?                               unknown
@@ -313,7 +313,7 @@ l ∈ terminal                      label
   μ α . τ                         induction
 
 C ::=                             constraint
-  τ ≤ τ                           subtyping 
+  τ ⊆ τ                           subtyping 
   C ∨ C                           disjunction
   C ∧ C                           conjunction
 
@@ -353,7 +353,9 @@ syntax "."slm:90 slm : slm
 syntax "?" : slm
 syntax:50 slm:50 "->" slm:51 : slm
 syntax:60 slm:60 "∪" slm:61 : slm
+syntax:60 slm:60 "+" slm:61 : slm
 syntax:70 slm:70 "∩" slm:71 : slm
+syntax:70 slm:70 "×" slm:71 : slm
 syntax "∀" slm slm "." slm : slm 
 syntax "∀" slm "." slm : slm 
 syntax "∃" slm slm "." slm : slm 
@@ -362,7 +364,7 @@ syntax "μ 0 ." slm : slm
 
 syntax:30 slm:30 "∨" slm:31 : slm
 syntax:40 slm:40 "∧" slm:41 : slm
-syntax:50 slm:50 "≤" slm:51 : slm
+syntax:50 slm:50 "⊆" slm:51 : slm
 
 syntax "(" slm ")" : slm
 
@@ -387,14 +389,16 @@ macro_rules
   | `([: ? :]) => `(Ty.unknown)
   | `([: $a -> $b :]) => `(Ty.func [: $a :] [: $b :])
   | `([: $a ∪ $b :]) => `(Ty.union [: $a :] [: $b :])
+  | `([: $a + $b :]) => `(Ty.union [: #inl $a :] [: #inr $b :])
   | `([: $a ∩ $b :]) => `(Ty.inter [: $a :] [: $b :])
+  | `([: $a × $b :]) => `(Ty.inter [: .left $a :] [: .right $b :])
   | `([: ∀ $a:slm $b:slm . $c:slm :]) => `(Ty.univ [: $a :] [: $b :] [: $c :])
-  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: £$a ≤ ? :] [: $b :] )
+  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: £$a ⊆ ? :] [: $b :] )
   | `([: ∃ $a:slm $b:slm . $c:slm :]) => `(Ty.exis [: $a :] [: $b :] [: $c :])
-  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] [: £$a ≤ ? :] [: $b :] )
+  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] [: £$a ⊆ ? :] [: $b :] )
   | `([: μ 0 . $a :]) => `(Ty.induct [: $a :])
 -- Constr
-  | `([: $a:slm ≤ $b:slm :]) => `(Constr.subtype [: $a :] [: $b :])
+  | `([: $a:slm ⊆ $b:slm :]) => `(Constr.subtype [: $a :] [: $b :])
   | `([: $a ∨ $b :]) => `(Constr.disj [: $a :] [: $b :])
   | `([: $a ∧ $b :]) => `(Constr.conj [: $a :] [: $b :])
 
@@ -417,11 +421,13 @@ def x := Ty.bvar 1
 -- #check [: #foo ◇ ∪ #boo ◇ :]
 -- #check [: #foo * ∪ #boo * :]
 
-
+#check [: £0 ∪ ? :]
 #check [: £0 ∩ ? :]
-#check [: ∀ 1 (£0 ≤ ?) . ⟨x⟩ :]
-#check [: ∀ 1 (£0 ≤ ?) . £0 :]
-#check [: ∀ 2 (? ≤ ?) . £0 :]
+#check [: £0 × ? :]
+#check [: £0 + ? :]
+#check [: ∀ 1 (£0 ⊆ ?) . ⟨x⟩ :]
+#check [: ∀ 1 (£0 ⊆ ?) . £0 :]
+#check [: ∀ 2 (? ⊆ ?) . £0 :]
 #check [: ∀ 2 . £0 :]
 #check [: ◇ :]
 #check [: @24 :]
@@ -432,8 +438,8 @@ def x := Ty.bvar 1
 #check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? -> @1 ∪ @2 :]
 #check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? :]
 #check [: ? :]
-#check [: (? ≤ ?) ∧ (? ≤ ?) :]
-#check [: ? ≤ ? ∩ £0 ∧ (? ≤ ?) :]
+#check [: (? ⊆ ?) ∧ (? ⊆ ?) :]
+#check [: ? ⊆ ? ∩ £0 ∧ (? ⊆ ?) :]
 
 mutual 
   inductive Ty.has_size : Ty -> Nat -> Type
@@ -649,76 +655,76 @@ consistent constraint subtyping
 ---
 Δ ⊢ C₁ ∨ C₂ 
 
-Δ ⊢ τ ≤ τ
+Δ ⊢ τ ⊆ τ
 
-Δ ⊢ τ ≤ ? 
+Δ ⊢ τ ⊆ ? 
 
-Δ ⊢ ? ≤ τ 
+Δ ⊢ ? ⊆ τ 
 
-  Γ ⊢ τ' ≤ τₘ
-  Γ ⊢ τₘ ≤ τ
+  Γ ⊢ τ' ⊆ τₘ
+  Γ ⊢ τₘ ⊆ τ
   τₘ ≠ ?
 ---
-Δ ⊢ τ' ≤ τ  
+Δ ⊢ τ' ⊆ τ  
 
 
-  {α ≤ τ} ⊆ Δ
+  {α ⊆ τ} ⊆ Δ
 ---
-Δ ⊢ α ≤ τ  
+Δ ⊢ α ⊆ τ  
 
 
-  Δ₀, Δ' ⊢ C' ∧ τ' ≤ τ
+  Δ₀, Δ' ⊢ C' ∧ τ' ⊆ τ
 ---
-Δ₀ ⊢ (∀ Δ' C' τ') ≤ τ
+Δ₀ ⊢ (∀ Δ' C' τ') ⊆ τ
 
 
-  Δ₀, Δ ⊢ C ∧ τ' ≤ τ
+  Δ₀, Δ ⊢ C ∧ τ' ⊆ τ
 ---
-Δ₀ ⊢ τ' ≤ (∀ Δ C τ)
+Δ₀ ⊢ τ' ⊆ (∀ Δ C τ)
 
 
-Δ₀ ⊢ (μ α . τ) ≤ unroll (μ α . τ)
+Δ₀ ⊢ (μ α . τ) ⊆ unroll (μ α . τ)
 
 
-Δ₀ ⊢ unroll (μ α . τ) ≤ (μ α . τ)
+Δ₀ ⊢ unroll (μ α . τ) ⊆ (μ α . τ)
 
 
-  Δ ⊢ τ₁' ≤ τ₁ 
-  Δ ⊢ τ₂' ≤ τ₂ 
+  Δ ⊢ τ₁' ⊆ τ₁ 
+  Δ ⊢ τ₂' ⊆ τ₂ 
 ---
-Δ ⊢ τ₁ -> τ₂' ≤ τ₁' -> τ₂
+Δ ⊢ τ₁ -> τ₂' ⊆ τ₁' -> τ₂
 
 
-  Δ ⊢ τ' ≤ τ
+  Δ ⊢ τ' ⊆ τ
 ---
-Δ ⊢ .l τ' ≤ .l τ  
+Δ ⊢ .l τ' ⊆ .l τ  
 
 
-  Δ ⊢ τ' ≤ τ  
+  Δ ⊢ τ' ⊆ τ  
 ---
-Δ ⊢ #l τ' ≤ #l τ
+Δ ⊢ #l τ' ⊆ #l τ
 
 
-Δ ⊢ τ' ≤ (τ' | τ)  
+Δ ⊢ τ' ⊆ (τ' | τ)  
 
-Δ ⊢ τ' ≤ (τ | τ')  
+Δ ⊢ τ' ⊆ (τ | τ')  
 
 
-  Δ ⊢ τ₁ ≤ τ   
-  Δ ⊢ τ₂ ≤ τ  
+  Δ ⊢ τ₁ ⊆ τ   
+  Δ ⊢ τ₂ ⊆ τ  
 ---
-Δ ⊢ (τ₁ | τ₂) ≤ τ 
+Δ ⊢ (τ₁ | τ₂) ⊆ τ 
 
 
-Δ ⊢ (τ & τ') ≤ τ
+Δ ⊢ (τ & τ') ⊆ τ
 
-Δ ⊢ (τ' & τ) ≤ τ  
+Δ ⊢ (τ' & τ) ⊆ τ  
 
 
-  Δ ⊢ τ' ≤ τ₁  
-  Δ ⊢ τ' ≤ τ₂  
+  Δ ⊢ τ' ⊆ τ₁  
+  Δ ⊢ τ' ⊆ τ₂  
 ---
-Δ ⊢ τ' ≤ τ₁ & τ₂  
+Δ ⊢ τ' ⊆ τ₁ & τ₂  
 ```
 
 constraint typing  
@@ -736,9 +742,9 @@ TODO: fill in constraint typing rules
 `merge Δ Δ = Δ`
 ```
 merge op Δ₁ Δ₂ =
-  fmap Δ₁ (α ≤ τ₁ =>
-  fmap Δ₂ (β ≤ τ₂ =>
-    {α ≤ τ₁ op (Δ₂ α), β ≤ (Δ₁ β) op τ₂}
+  fmap Δ₁ (α ⊆ τ₁ =>
+  fmap Δ₂ (β ⊆ τ₂ =>
+    {α ⊆ τ₁ op (Δ₂ α), β ⊆ (Δ₁ β) op τ₂}
   ))
 ```
 
@@ -787,19 +793,19 @@ linearize_record τ₁ & τ₂ =
   none
 ```
 
-`make_record_constraint Δ ⊢ τ * τ ≤ τ = o[C]`
+`make_record_constraint Δ ⊢ τ * τ ⊆ τ = o[C]`
 ```
-make_record_constraint Δ ⊢ τ₀ * .l τ₁ & τ₂ ≤ μ α . τ =
+make_record_constraint Δ ⊢ τ₀ * .l τ₁ & τ₂ ⊆ μ α . τ =
   let β₁ = fresh in
-  let C₁ = τ₁ ≤ ∀ {β₁ ≤ ?} ⟨(τ₀ & .l β₁ & τ₂) ≤ unroll (μ α . τ)⟩ . β₁ in
-  C₁ ∧ make_record_constraint (Δ ⊢ τ₀ & .l τ₁ * τ₂ ≤ μ α . τ)
+  let C₁ = τ₁ ⊆ ∀ {β₁ ⊆ ?} ⟨(τ₀ & .l β₁ & τ₂) ⊆ unroll (μ α . τ)⟩ . β₁ in
+  C₁ ∧ make_record_constraint (Δ ⊢ τ₀ & .l τ₁ * τ₂ ⊆ μ α . τ)
 
-make_record_constraint Δ ⊢ τ₀ * .l τ₁ ≤ μ α . τ =
+make_record_constraint Δ ⊢ τ₀ * .l τ₁ ⊆ μ α . τ =
   let β₁ = fresh in
-  let C₁ = τ₁ ≤ ∀ {β₁ ≤ ?} ⟨(τ₀ & .l β₁) ≤ unroll (μ α . τ)⟩ . β₁ in
+  let C₁ = τ₁ ⊆ ∀ {β₁ ⊆ ?} ⟨(τ₀ & .l β₁) ⊆ unroll (μ α . τ)⟩ . β₁ in
   C₁
 
-make_record_constraint _ ⊢ _ * _ ≤ _ = none
+make_record_constraint _ ⊢ _ * _ ⊆ _ = none
 ```
 
 `match o o = b`
@@ -842,7 +848,7 @@ well_founded α τ₁ | τ₂ =
   well_founded α τ₁ andalso
   well_founded α τ₂
 
-well_founded α ∀ Δ ⟨τ' ≤ α⟩ . τ = 
+well_founded α ∀ Δ ⟨τ' ⊆ α⟩ . τ = 
   α ∈ Δ orelse
   decreasing τ τ' 
 ```
@@ -870,7 +876,7 @@ occurs α (μ β . t) =
 
 `occurs α C`
 ```
-occurs α (τ' ≤ τ) = (occurs α τ') orelse (occurs α τ)
+occurs α (τ' ⊆ τ) = (occurs α τ') orelse (occurs α τ)
 occurs α (C₁ ∨ C₂) = (occurs α C₁) orelse (occurs α C₂)
 occurs α (C₁ ∧ C₂) = (occurs α C₁) orelse (occurs α C₂)
 ```
@@ -1050,7 +1056,7 @@ def τ := [: ? :]
 /-
 `unroll μ α . τ = τ`
 ```
-unroll μ α . τ = subst {α ≤ μ α . τ} τ
+unroll μ α . τ = subst {α ⊆ μ α . τ} τ
 ```
 -/
 partial def unroll (τ : Ty) : Ty := 
@@ -1154,7 +1160,7 @@ def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> Option Constr
       some (Constr.subtype ty' ty)
   | .inter (.field l ty') rem_ty, mu_ty => 
       let ty := 
-      [: ∃ 1 ((⟨prev_ty⟩↓1 ∩ (#⟨l⟩ £0) ∩ ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1) . £0 :]
+      [: ∃ 1 ((⟨prev_ty⟩↓1 ∩ (#⟨l⟩ £0) ∩ ⟨rem_ty⟩↓1) ⊆ ⟨unroll mu_ty⟩↓1) . £0 :]
 
       Option.bind (
         make_record_constraint_sub (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
@@ -1238,6 +1244,9 @@ mutual
     | .induct τ', (.variant l τ) =>
       Ty.unify i Δ (unroll τ') (.variant l τ) 
 
+
+    -- TODO: check function against induction type 
+
     | τ', .induct τ =>
       Option.bind (make_record_constraint_sub Ty.unknown τ' τ) (fun c =>
         Constr.solve i Δ c
@@ -1290,6 +1299,8 @@ mutual
       else
         none
 
+    -- TODO: check subtyping for universals without unification 
+
     | ty, .exis n c τ =>
       let (i, Δ, args) := refresh i n 
       let c := Constr.raise_binding 0 args c
@@ -1337,74 +1348,74 @@ solve Δ ⊢ C₁ ∧ C₂ =
 solve Δ ⊢ C₁ ∨ C₂ = 
   merge | (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
 
-solve Δ ⊢ α ≤ τ =
+solve Δ ⊢ α ⊆ τ =
   let τ' = Δ α in (
-    let β = fresh in some {α ≤ ((roll α τ) & β), β ≤ ?}
+    let β = fresh in some {α ⊆ ((roll α τ) & β), β ⊆ ?}
     if τ' = ? else
-    solve Δ ⊢ τ' ≤ τ
+    solve Δ ⊢ τ' ⊆ τ
   )
 
-solve Δ ⊢ τ' ≤ α =
+solve Δ ⊢ τ' ⊆ α =
   let τ = Δ α in (
-    let β = fresh in some {α ≤ ((roll α τ') | β), β ≤ ?}  
+    let β = fresh in some {α ⊆ ((roll α τ') | β), β ⊆ ?}  
     if τ = ? else
-    (solve Δ ⊢ τ' ≤ τ)
+    (solve Δ ⊢ τ' ⊆ τ)
   )
 
-solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ≤ τ =
+solve Δ ⊢ (∀ Δ' ⟨C⟩ . τ') ⊆ τ =
 ...
 
-solve Δ ⊢ τ' ≤ (∀ Δ' ⟨C⟩ . τ) =
+solve Δ ⊢ τ' ⊆ (∀ Δ' ⟨C⟩ . τ) =
 ...
 
-solve Δ ⊢ τ₁ | τ₂ ≤ τ =
-  solve Δ ⊢ τ₁ ≤ τ ∧ τ₂ ≤ τ
+solve Δ ⊢ τ₁ | τ₂ ⊆ τ =
+  solve Δ ⊢ τ₁ ⊆ τ ∧ τ₂ ⊆ τ
 
-solve Δ ⊢ τ ≤ τ₁ | τ₂ =
-  solve Δ ⊢ τ ≤ τ₁ ∨ τ ≤ τ₂
-
-
-solve Δ ⊢ τ ≤ τ₁ & τ₂ =
-  solve Δ ⊢ τ ≤ τ₁ ∧ τ ≤ τ₂
-
-solve Δ ⊢ τ₁ & τ₂ ≤ τ =
-  solve Δ ⊢ τ₁ ≤ τ ∨ τ₂ ≤ τ
-
-solve Δ ⊢ τ₁ -> τ₂' ≤ τ₁' -> τ₂ =
-  solve Δ ⊢ τ₁' ≤ τ₁ ∧ τ₂' ≤ τ₂
+solve Δ ⊢ τ ⊆ τ₁ | τ₂ =
+  solve Δ ⊢ τ ⊆ τ₁ ∨ τ ⊆ τ₂
 
 
-solve Δ ⊢ *l τ' ≤ μ α . τ =  
-  solve Δ ⊢ *l τ' ≤ unroll (μ α . τ)  
+solve Δ ⊢ τ ⊆ τ₁ & τ₂ =
+  solve Δ ⊢ τ ⊆ τ₁ ∧ τ ⊆ τ₂
 
-solve Δ ⊢ μ α . τ' ≤ *l τ  =  
-  solve Δ ⊢ unroll (μ α . τ') ≤ *l τ
+solve Δ ⊢ τ₁ & τ₂ ⊆ τ =
+  solve Δ ⊢ τ₁ ⊆ τ ∨ τ₂ ⊆ τ
 
-solve Δ ⊢ .l τ' ≤ μ α . τ =  
-  solve Δ ⊢ .l τ' ≤ unroll (μ α . τ)  
-
-solve Δ ⊢ μ α . τ' ≤ .l τ  =  
-  solve Δ ⊢ unroll (μ α . τ') ≤ .l τ
+solve Δ ⊢ τ₁ -> τ₂' ⊆ τ₁' -> τ₂ =
+  solve Δ ⊢ τ₁' ⊆ τ₁ ∧ τ₂' ⊆ τ₂
 
 
-solve Δ ⊢ τ' ≤ μ α . τ =
+solve Δ ⊢ *l τ' ⊆ μ α . τ =  
+  solve Δ ⊢ *l τ' ⊆ unroll (μ α . τ)  
+
+solve Δ ⊢ μ α . τ' ⊆ *l τ  =  
+  solve Δ ⊢ unroll (μ α . τ') ⊆ *l τ
+
+solve Δ ⊢ .l τ' ⊆ μ α . τ =  
+  solve Δ ⊢ .l τ' ⊆ unroll (μ α . τ)  
+
+solve Δ ⊢ μ α . τ' ⊆ .l τ  =  
+  solve Δ ⊢ unroll (μ α . τ') ⊆ .l τ
+
+
+solve Δ ⊢ τ' ⊆ μ α . τ =
   map (linearze_record τ') (τ' =>
-  map (make_record_constraint Δ ⊢ . * τ' ≤ μ α . τ) (C =>
+  map (make_record_constraint Δ ⊢ . * τ' ⊆ μ α . τ) (C =>
     solve Δ ⊢ C 
   ))
 
-solve Δ ⊢ μ α . τ' ≤ τ  =  
+solve Δ ⊢ μ α . τ' ⊆ τ  =  
   map (linearze_record τ') (τ' =>
-  map (make_record_constraint Δ ⊢ . * μ α . τ' ≤ τ) (C =>
+  map (make_record_constraint Δ ⊢ . * μ α . τ' ⊆ τ) (C =>
     solve Δ ⊢ C 
   ))
 
-solve Δ ⊢ *l' τ' ≤ *l τ =
-  solve Δ ⊢ τ' ≤ τ
+solve Δ ⊢ *l' τ' ⊆ *l τ =
+  solve Δ ⊢ τ' ⊆ τ
   if l' = l else
   none
 
-solve τ ≤ τ = some {} 
+solve τ ⊆ τ = some {} 
 solve _ = none 
 ```
 
@@ -1431,20 +1442,20 @@ TODO:
 - raise type binding at application in "infer/generation of constrations"
 
 infer Γ Δ ⊢ () : τ =
-  map (solve Δ ⊢ C ∧ [] ≤ τ in) (Δ' =>
+  map (solve Δ ⊢ C ∧ [] ⊆ τ in) (Δ' =>
     some (Δ' , [])
   )
 
 infer Γ Δ ⊢ x : τ = 
   let τ' = Γ x in
   let Δ', C, τ' = refresh τ' in
-  map (solve Δ, Δ' ⊢ C ∧ τ' ≤ τ) (Δ' =>
+  map (solve Δ, Δ' ⊢ C ∧ τ' ⊆ τ) (Δ' =>
     some (Δ' , τ')
   )
 
 infer Γ Δ ⊢ (#l t₁) : τ =
   let α = fresh in
-  map (solve Δ ⊢ (∀ {α} . (#l α)) ≤ τ) (Δ' => 
+  map (solve Δ ⊢ (∀ {α} . (#l α)) ⊆ τ) (Δ' => 
   map (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁,τ₁ => 
     some (Δ' ++ Δ₁ , #l τ₁)
   ))
@@ -1453,7 +1464,7 @@ infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
   let Δ₁, τ₁ = τ₁[?/fresh] in
   let Γ₁ = patvars t₁ τ₁ in
   let β = fresh in
-  map (solve Δ ⊢ (∀ Δ₁ ++ {β} . τ₁ -> β) ≤ τ) (Δ' => 
+  map (solve Δ ⊢ (∀ Δ₁ ++ {β} . τ₁ -> β) ⊆ τ) (Δ' => 
   map (infer (Γ ++ Γ₁) (Δ ++ Δ') ⊢ t₂ : β) (Δ₂', τ₂' =>
     -- patvars (Γ₁) are NOT generalized in τ₂'
     some (Δ' ++ Δ₂' , τ₁ -> τ₂')
@@ -1471,13 +1482,13 @@ infer Γ Δ ⊢ t t₁ : τ₂ =
   map (functify τ') (τ₁,τ₂' => 
   -- break type (possibly intersection) into premise and conclusion 
   map (infer Γ (Δ ++ Δ') ⊢ t₁ : τ₁) (Δ₁',τ₁' =>
-  map (solve Δ ++ Δ' ++ Δ₁' ⊢ τ' ≤ (τ₁' -> τ₂)) (Δ' =>
+  map (solve Δ ++ Δ' ++ Δ₁' ⊢ τ' ⊆ (τ₁' -> τ₂)) (Δ' =>
     some(Δ' , τ₂' & τ₂)
   ))))
 
 infer Γ Δ ⊢ (.l t₁) : τ =
   let α = fresh in
-  map (solve Δ ⊢ (∀ {α} . (.l α)) ≤ τ) (Δ' =>
+  map (solve Δ ⊢ (∀ {α} . (.l α)) ⊆ τ) (Δ' =>
   map (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁ , τ₁ =>  
     some(Δ' ++ Δ₁ , .l τ₁)
   ))
