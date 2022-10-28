@@ -302,19 +302,18 @@ l ∈ terminal                      label
 τ ::=                             type
   ?                               unknown
   α                               variable
-  []                              unit
+  *                               unit
   #l τ                            variant
   .l τ                            field
-  τ | τ                           union
-  τ & τ                           intersection
+  τ ∪ τ                           union
+  τ ∩ τ                           intersection
   τ -> τ                          func 
   ∀ Δ C τ                         universal schema 
+  ∃ Δ C τ                         existential schema 
   μ α . τ                         induction
-  [τ]                             group
 
 C ::=                             constraint
   .                               true
-  ⟨C⟩                             grouped constraint 
   τ ≤ τ                           subtyping 
   C ∨ C                           disjunction
   C ∧ C                           conjunction
@@ -349,15 +348,15 @@ syntax ident : slm
 syntax "[" slm,+ "]" : slm 
 syntax "£"slm:90 : slm
 syntax "@"slm:90 : slm
+syntax "◇" : slm
 syntax "#"slm:90 slm : slm
 syntax "."slm:90 slm : slm
 syntax "(_)" : slm
-syntax "(-)" : slm
 syntax "(=)" : slm
 syntax "?" : slm
 syntax:50 slm:50 "->" slm:51 : slm
-syntax:60 slm:60 "|" slm:61 : slm
-syntax:70 slm:70 "&" slm:71 : slm
+syntax:60 slm:60 "∪" slm:61 : slm
+syntax:70 slm:70 "∩" slm:71 : slm
 syntax "∀" slm slm "." slm : slm 
 syntax "∀" slm "." slm : slm 
 syntax "μ 0 ." slm : slm 
@@ -383,16 +382,16 @@ macro_rules
 -- Ty 
   | `([: £$n :]) => `(Ty.bvar [: $n :])
   | `([: @$n:slm :]) => `(Ty.fvar [: $n :])
+  | `([: ◇ :]) => `(Ty.unit)
   | `([: #$a $b:slm :]) => `(Ty.variant [: $a :] [: $b :])
   | `([: .$a $b:slm :]) => `(Ty.field [: $a :] [: $b :])
   | `([: ? :]) => `(Ty.unknown)
   | `([: $a -> $b :]) => `(Ty.func [: $a :] [: $b :])
-  | `([: $a | $b :]) => `(Ty.union [: $a :] [: $b :])
-  | `([: $a & $b :]) => `(Ty.inter [: $a :] [: $b :])
+  | `([: $a ∪ $b :]) => `(Ty.union [: $a :] [: $b :])
+  | `([: $a ∩ $b :]) => `(Ty.inter [: $a :] [: $b :])
   | `([: ∀ $a:slm $b:slm . $c:slm :]) => `(Ty.univ [: $a :] [: $b :] [: $c :])
   | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: (=) :] [: $b :] )
   | `([: μ 0 . $a :]) => `(Ty.induct [: $a :])
-  | `([: (-) :]) => `(Ty.unit)
 -- Constr
   | `([: (=) :]) => `(Constr.tru)
   | `([: $a:slm ≤ $b:slm :]) => `(Constr.subtype [: $a :] [: $b :])
@@ -413,23 +412,28 @@ def z := 1
 #check [: @⟨z⟩ :]
 def x := Ty.bvar 1
 
+-- #check [: ~foo ? ∪ ~boo ? :]
+-- #check [: #foo ? ∪ #boo ? :]
+-- #check [: #foo ◇ ∪ #boo ◇ :]
+-- #check [: #foo * ∪ #boo * :]
 
-#check [: £0 & ? :]
+
+#check [: £0 ∩ ? :]
 #check [: ∀ [?] (=) . ⟨x⟩ :]
 #check [: ∀ [?] (=) . £0 :]
 #check [: ∀ [?, ?] (=) . £0 :]
 #check [: ∀ [?, ?] . £0 :]
-#check [: (-) :]
+#check [: ◇ :]
 #check [: @24 :]
-#check [: #foo ? | #boo ? :]
+#check [: #foo ◇ ∪ #boo ◇ :]
 #check [: μ 0 . #foo £0 :]
-#check [: μ 0 . #foo £0  & ? | @2 & ?:]
-#check [: £3 & ? -> @1 | @2 :]
-#check [: μ 0 . #foo £0  & ? | @2 & ? -> @1 | @2 :]
-#check [: μ 0 . #foo £0  & ? | @2 & ? :]
+#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ?:]
+#check [: £3 ∩ ? -> @1 ∪ @2 :]
+#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? -> @1 ∪ @2 :]
+#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? :]
 #check [: ? :]
 #check [: (=) ∧ (=) :]
-#check [: ? ≤ ? & £0 ∧ (=) :]
+#check [: ? ≤ ? ∩ £0 ∧ (=) :]
 
 mutual 
   inductive Ty.has_size : Ty -> Nat -> Type
@@ -881,7 +885,7 @@ mutual
     | .unit => false 
     | .variant l ty => (Ty.occurs key ty) 
     | .field l ty => (Ty.occurs key ty)
-    | [: ⟨ty₁⟩ | ⟨ty₂⟩ :] => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
+    | [: ⟨ty₁⟩ ∪ ⟨ty₂⟩ :] => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
     -- | .union ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
     | .inter ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
     | .func ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
@@ -1141,7 +1145,7 @@ def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> Option Constr
       some (Constr.subtype ty' ty)
   | .inter (.field l ty') rem_ty, mu_ty => 
       let ty := 
-      [: ∀ [?] ((⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1) . £0 :]
+      [: ∀ [?] ((⟨prev_ty⟩↓1 ∩ (#⟨l⟩ £0) ∩ ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1) . £0 :]
 
       Option.bind (
         make_record_constraint_sub (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
@@ -1362,11 +1366,11 @@ solve Δ ⊢ τ₁ -> τ₂' ≤ τ₁' -> τ₂ =
   solve Δ ⊢ τ₁' ≤ τ₁ ∧ τ₂' ≤ τ₂
 
 
-solve Δ ⊢ #l τ' ≤ μ α . τ =  
-  solve Δ ⊢ #l τ' ≤ unroll (μ α . τ)  
+solve Δ ⊢ *l τ' ≤ μ α . τ =  
+  solve Δ ⊢ *l τ' ≤ unroll (μ α . τ)  
 
-solve Δ ⊢ μ α . τ' ≤ #l τ  =  
-  solve Δ ⊢ unroll (μ α . τ') ≤ #l τ
+solve Δ ⊢ μ α . τ' ≤ *l τ  =  
+  solve Δ ⊢ unroll (μ α . τ') ≤ *l τ
 
 solve Δ ⊢ .l τ' ≤ μ α . τ =  
   solve Δ ⊢ .l τ' ≤ unroll (μ α . τ)  
@@ -1387,7 +1391,7 @@ solve Δ ⊢ μ α . τ' ≤ τ  =
     solve Δ ⊢ C 
   ))
 
-solve Δ ⊢ #l' τ' ≤ #l τ =
+solve Δ ⊢ *l' τ' ≤ *l τ =
   solve Δ ⊢ τ' ≤ τ
   if l' = l else
   none

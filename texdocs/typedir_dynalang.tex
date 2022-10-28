@@ -90,9 +90,9 @@ and returns list of n elements.
 \begin{lstlisting}[]
 replicate : 
 $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
-    *zero $\rightarrow$ *nil $\cap$ 
+    #zero $\diamond$ $\rightarrow$ #nil $\diamond$ $\cap$ 
     $\forall$ nat list | (nat $\rightarrow$ list) $\subseteq$ nat_to_list .
-        *succ nat $\rightarrow$ *cons ($\alpha$ $\times$ list)
+        #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
 
 \noindent Correspondingly, types can also specify a pair of a list and its length.
@@ -100,9 +100,9 @@ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
 \begin{lstlisting}[]
 measurment : 
 $\exists$ $\alpha$ . $\mu$ nat_and_list .
-    *zero $\times$ *nil $\cup$ 
+    #zero $\diamond$ $\times$ #nil $\diamond$ $\cup$ 
     $\exists$ nat list | (nat $\times$ list) $\subseteq$ nat_and_list .
-        *succ nat $\times$ *cons ($\alpha$ $\times$ list)
+        #succ nat $\times$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
 
 
