@@ -83,53 +83,39 @@ Previous work has demonstrated the utility of propagating types
 in theorem proving systems, local type checking, 
 and synthesis of ML-family programs.
 
+For example, in a program that extracts 
+the first element of a pair of a particular type, 
+it's possible to detect an error before knowing the second element.
+
+to detect an error of a pairt of a   
 \begin{lstlisting}
-$\lambda$ n : nat $\Rightarrow$
-  $\circ$ first = ($\lambda$ (x,y) $\in$ (str $\times$ ?) $\Rightarrow$ x) .
+$\lambda$ n $\in$ nat $\Rightarrow$
+  $\circ$ first = ($\lambda$ (x,y) $\in$ (str $\times$ str) $\Rightarrow$ x) .
   first (n, _) 
 \end{lstlisting}
 
-In order to efficiently guide program synthesis, 
-types must be able to \textbf{express} fairly precise information. 
-The system presented here offers types with 
-expressivity comparable to typical decidable predicate logics. 
-For example, the types are expressive enough to precisely specify
-a function that takes a natural number lstinline{n} 
-and an element lstinline{x}, 
-and returns list of n elements.
-
-\begin{lstlisting}[]
-$\circ$ replicate $\in$ 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
-  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\cap$ 
-  $\forall$ nat list | 
-    (nat $\rightarrow$ list) $\subseteq$ nat_to_list .
-    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
-\end{lstlisting}
-
-\newpage
-
-\noindent Correspondingly, types can also specify a pair of a list and its length.
-
-\begin{lstlisting}[]
-$\circ$ measurment $\in$ 
-$\exists$ $\alpha$ . $\mu$ nat_and_list .
-  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\cup$ 
-  $\exists$ nat list | 
-    (nat $\times$ list) $\subseteq$ nat_and_list .
-    #succ nat $\times$ #cons ($\alpha$ $\times$ list)
-\end{lstlisting}
-
+\noindent The  applications' argument type \lstinline{(nat $\times$ ?)} 
+is propagated and decomposed such that the subtyping constraint 
+\lstinline{nat $\subseteq$ str} is decided. 
 
 In order to have fine-grained control over where types are utilized or avoided, 
 types may be composed of \textbf{dynamic types}, represented by "?" to indicate 
 that any subterm corresponding to that portion of the type 
 will not be subject to static constraints.
 
-However, if type annotations are not available, then \textbf{types are inferred} from context. 
-Taking advantage of type inference techniques from ML-family languages 
-is a good starting point,
-but it's not sufficient. ML-family type inference is sound, because an ML term is 
+If type annotations are not available, then \textbf{types are inferred} from context. 
+The actual type of a term can be inferred in an obvious way.  
+
+\begin{lstlisting}
+
+#cons("hello",#cons("world",#nil())) $\in$ 
+#cons(str $\times$ #cons(str $\times$ #nil$\diamondsuit$))
+
+\end{lstlisting}
+
+To infer expected types, type inference techniques for ML-family languages 
+are a good starting point.
+ML-family type inference is sound, because an ML term is 
 intrinsically associated with a static bound in accordance with ML's datatype mechanism.
 Terms in dynamically typed languages are not intrinsically associated with a principal type. 
 Type inference for dynamically typed languages cannot be sound without greatly violating the 
@@ -144,10 +130,9 @@ It may reject good programs, but only if it can infer a static type.
 In parametric types where a generic input type must be the same as a generic output type,
 The dynamic nature of terms is at odds with inferring types.
 
-
 \begin{lstlisting}
-($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
-($\lambda$ n : int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
+($\lambda$ pair $\in$ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
+($\lambda$ n $\in$ int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
   pair n s
 )))
 \end{lstlisting}
@@ -175,9 +160,9 @@ internally used as an argument to an application, the dynamic nature of terms
 adds some complications to type inference.
 
 \begin{lstlisting}
-($\lambda$ i2n : int $\rightarrow$ nat $\Rightarrow$ 
-($\lambda$ s2n : str $\rightarrow$ nat $\Rightarrow$ 
-  $\lambda$ x : ? $\Rightarrow$ (i2n x, s2n x)
+($\lambda$ i2n $\in$ int $\rightarrow$ nat $\Rightarrow$ 
+($\lambda$ s2n $\in$ str $\rightarrow$ nat $\Rightarrow$ 
+  $\lambda$ x $\Rightarrow$ (i2n x, s2n x)
 ))
 
 \end{lstlisting}
@@ -193,6 +178,39 @@ Thus, the dynamic type is inferred to be \lstinline{int $\cap$ str $\cap$ ?}.
 The external parameter type for ends up as \lstinline{int $\cap$ str}. 
 The semantics of intersection with the dynamic type result in the dynamic type
 falling away for expected types.
+
+
+
+In order to efficiently guide program synthesis, 
+types must be able to \textbf{express} fairly precise information. 
+The system presented here offers types with 
+expressivity comparable to typical decidable predicate logics. 
+For example, the types are expressive enough to precisely specify
+a function that takes a natural number \lstinline{n} 
+and an element \lstinline{x}, 
+and returns list of n elements.
+
+\begin{lstlisting}[]
+$\circ$ replicate $\in$ 
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
+  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\cap$ 
+  $\forall$ nat list | 
+    (nat $\rightarrow$ list) $\subseteq$ nat_to_list .
+    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+\end{lstlisting}
+
+\noindent Correspondingly, types can also specify a pair of a list and its length.
+
+\begin{lstlisting}[]
+$\circ$ measurment $\in$ 
+$\exists$ $\alpha$ . $\mu$ nat_and_list .
+  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\cup$ 
+  $\exists$ nat list | 
+    (nat $\times$ list) $\subseteq$ nat_and_list .
+    #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+\end{lstlisting}
+
+
 
 \section{Overview}
 
