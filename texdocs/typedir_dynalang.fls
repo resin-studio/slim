@@ -1260,10 +1260,10 @@ INPUT /usr/local/texlive/2022/texmf-dist/fonts/vf/public/libertine/LinBiolinumT-
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/libertine/LinBiolinumT-tlf-t1--base.tfm
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/vf/public/libertine/LinLibertineTB-tlf-t1.vf
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/libertine/LinLibertineTB-tlf-t1--base.tfm
-INPUT /usr/local/texlive/2022/texmf-dist/fonts/vf/public/libertine/LinLibertineTB-tlf-t1.vf
-INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/libertine/LinLibertineTB-tlf-t1--base.tfm
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/vf/public/libertine/LinLibertineT-tlf-t1.vf
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-t1--base.tfm
+INPUT /usr/local/texlive/2022/texmf-dist/fonts/vf/public/libertine/LinLibertineTB-tlf-t1.vf
+INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/libertine/LinLibertineTB-tlf-t1--base.tfm
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/vf/public/libertine/LinLibertineT-tlf-t1.vf
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-t1--base.tfm
 INPUT /usr/local/texlive/2022/texmf-dist/fonts/vf/public/libertine/LinLibertineTI-tlf-t1.vf

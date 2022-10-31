@@ -26,6 +26,17 @@
 
 \section{Introduction}
 
+Novel contributions: This system is the first to have:
+\begin{enumerate}
+  \item program synthesis from partial programs with missing annotations  
+  \item type inference without principal type schemes: 
+    \begin{enumerate}
+      \item lenient (but unsound) static type inference
+      \item expanding type info with union and intersection and dynamic type
+    \end{enumerate}
+  \item interleaving constraint generation and solving with dynamic type 
+\end{enumerate}
+
 \textbf{Dynamically typed} languages can make writing programs quick and easy 
 because they don't require specifying static bounds on behavior.
 Two of the most popular programming languages today, JavaScript and Python, 
@@ -220,6 +231,19 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
 
 \section{Related work}
 
+
+There exists work on type inference for gradually typed programs.
+To the best of my knowledge, they are all sounds and complete.
+They do not exhibit the notion of intersection and union to keep types open.
+This notion results in the inference being unsound.
+Other gradual type inference systems separate 
+generating constraints from solving constraints.
+Our system toggles between generating and solving constraints incrementally.
+Other gradual typing systems use the dynamic type "?" to indicate 
+that dynamic checks should be used.
+In contrast, our system will still try 
+to find lenient static bounds for parts of types marked "?"
+
 \begin{enumerate}
 \item Refinement types for ML by Tim Freeman and Frank Pfenning 
 \item Refinement types as proof irrelevance by William Lovas and Frank Pfenning 
@@ -230,6 +254,15 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
 \item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
 \item Gradual typing for objects by Jeremy G. Siek and Walid Taha 
 \item Gradual typing with unification-based inference by Siek and Manish Vachharajani 
+\item Dynamic Type Inference for Gradual Hindley–Milner Typing - https://dl.acm.org/doi/pdf/10.1145/3290331
+\item Principal type schemes for gradual programs - https://www.cs.ubc.ca/~rxg/ptsgp.pdf
+\item Gradual Liquid Type Inference - https://arxiv.org/pdf/1807.02132.pdf
+\item Gradual typing with union and intersection types - https://dl.acm.org/doi/pdf/10.1145/3110285
+\item Gradual typing: a new perspective - unions, intersections, dynamic type, and type inference - https://www.irif.fr/~gc/papers/popl19.pdf
+\item Gradual refinement types (via abstract interpretation) - https://pleiad.cl/papers/2017/lehmannTanter-popl2017.pdf
+\item Consistent subtyping for all - https://xnning.github.io/papers/consistent-subtyping-for-all-toplas.pdf
+
+
 \end{enumerate}
 
 \end{document}
