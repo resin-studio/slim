@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  28 OCT 2022 15:12
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  31 OCT 2022 11:30
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -866,7 +866,7 @@ File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )
 Overfull \hbox (12.82556pt too wide) in paragraph at lines 25--25
-\T1/LinuxLibertineT-TLF/m/n/9 (-20) New York, NY, USA, [][]2[][] pages. [][]$\T1/LinuxBiolinumT-TLF/m/n/9 (-20) h^^]ps : / / doi . org / 10 . 1145 / nnnnnnn . nnnnnnn$[][] 
+\T1/LinuxLibertineT-TLF/m/n/9 (-20) New York, NY, USA, [][]3[][] pages. [][]$\T1/LinuxBiolinumT-TLF/m/n/9 (-20) h^^]ps : / / doi . org / 10 . 1145 / nnnnnnn . nnnnnnn$[][] 
  []
 
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/b/n' will be
@@ -896,8 +896,8 @@ File: lstlang2.sty 2020/03/24 1.8d listings language file
 LaTeX Font Info:    Font shape `OT1/LinuxLibertineT-TLF/m/n' will be
 (Font)              scaled to size 10.0pt on input line 92.
 
-Overfull \hbox (7.52716pt too wide) in paragraph at lines 93--94
-[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][] 
+Overfull \hbox (20.55736pt too wide) in paragraph at lines 93--94
+[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
 
@@ -907,34 +907,40 @@ Overfull \hbox (9.48842pt too wide) in paragraph at lines 97--100
 
 [1.1{/usr/local/texlive/2022/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
 
-] (/usr/local/texlive/2022/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
+]
+LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/m/n' will be
+(Font)              scaled to size 10.0pt on input line 233.
+ [2.2] (/usr/local/texlive/2022/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 File: se-pdfdoc.def 2019/11/29 v1.12 stringenc: PDFDocEncoding
 ) (/usr/local/texlive/2022/texmf-dist/tex/generic/stringenc/se-utf8.def
 File: se-utf8.def 2019/11/29 v1.12 stringenc: UTF-8
 )
 
-Package balance Warning: You have called \balance in second column
-(balance)                Columns might not be balanced.
+Class acmart Warning: ACM keywords are mandatory for papers over two pages.
 
-LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/m/n' will be
-(Font)              scaled to size 10.0pt on input line 227.
-[2.2] (./typedir_dynalang.aux)
+
+Class acmart Warning: CCS concepts are mandatory for papers over two pages.
+
+
+Overfull \vbox (2.18001pt too high) has occurred while \output is active []
+
+ [3.3] (./typedir_dynalang.aux)
 Package rerunfilecheck Info: File `typedir_dynalang.out' has not changed.
 (rerunfilecheck)             Checksum: C8258B66B97E6384724B8725E2ED5D6D;581.
  ) 
 Here is how much of TeX's memory you used:
- 23164 strings out of 478268
- 373027 string characters out of 5846346
+ 23180 strings out of 478268
+ 373231 string characters out of 5846346
  910901 words of memory out of 5000000
  40481 multiletter control sequences out of 15000+600000
- 594616 words of font info for 263 fonts, out of 8000000 for 9000
+ 595162 words of font info for 267 fonts, out of 8000000 for 9000
  1302 hyphenation exceptions out of 8191
  84i,11n,131p,1053b,1345s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/inconsolata/i4-t1-4.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_25tcsq.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_76gpa5.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_nh77jq.enc}</usr/local/texlive/2022/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4b.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
-Output written on typedir_dynalang.pdf (2 pages, 351860 bytes).
+Output written on typedir_dynalang.pdf (3 pages, 355226 bytes).
 PDF statistics:
- 149 PDF objects out of 1000 (max. 8388607)
- 124 compressed objects within 2 object streams
- 53 named destinations out of 1000 (max. 500000)
+ 164 PDF objects out of 1000 (max. 8388607)
+ 138 compressed objects within 2 object streams
+ 63 named destinations out of 1000 (max. 500000)
  66617 words of extra memory for PDF output out of 74296 (max. 10000000)
 

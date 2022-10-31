@@ -90,7 +90,7 @@ it's possible to detect an error before knowing the second element.
 to detect an error of a pairt of a   
 \begin{lstlisting}
 $\lambda$ n $\in$ nat $\Rightarrow$
-  $\circ$ first = ($\lambda$ (x,y) $\in$ (str $\times$ str) $\Rightarrow$ x) .
+  let first = ($\lambda$ (x,y) $\in$ (str $\times$ str) $\Rightarrow$ x) .
   first (n, _) 
 \end{lstlisting}
 
@@ -191,7 +191,7 @@ and an element \lstinline{x},
 and returns list of n elements.
 
 \begin{lstlisting}[]
-$\circ$ replicate $\in$ 
+let replicate $\in$ 
 $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
   #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\cap$ 
   $\forall$ nat list | 
@@ -202,7 +202,7 @@ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
 \noindent Correspondingly, types can also specify a pair of a list and its length.
 
 \begin{lstlisting}[]
-$\circ$ measurment $\in$ 
+let measurment $\in$ 
 $\exists$ $\alpha$ . $\mu$ nat_and_list .
   #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\cup$ 
   $\exists$ nat list | 
@@ -220,8 +220,16 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
 
 \section{Related work}
 
-% \begin{enumerate}
-% \item hello everybody
-% \end{enumerate}
+\begin{enumerate}
+\item Refinement types for ML by Tim Freeman and Frank Pfenning 
+\item Refinement types as proof irrelevance by William Lovas and Frank Pfenning 
+\item Local type inference by Benjamin C. Pierce and David N. Turner
+\item Program synthesis from polymorphic refinement types by Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama
+\item Example-directed synthesis: a type-theoretic interpretation by Frankle, Osera, Walker, and Zdancewic
+\item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
+\item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
+\item Gradual typing for objects by Jeremy G. Siek and Walid Taha 
+\item Gradual typing with unification-based inference by Siek and Manish Vachharajani 
+\end{enumerate}
 
 \end{document}
