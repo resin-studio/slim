@@ -29,12 +29,13 @@
 Novel contributions: This system is the first to have:
 \begin{enumerate}
   \item program synthesis from partial programs with missing annotations  
-  \item type inference without principal type schemes: 
+  \item type unification without principal type schemes: 
     \begin{enumerate}
       \item lenient (but unsound) static type inference
       \item expanding type info with union and intersection and dynamic type
     \end{enumerate}
-  \item interleaving constraint generation and solving with dynamic type 
+  \item full type synthesis with full type propagation (for all rules)
+  \item interleaving type constraint generation and solving with dynamic type 
 \end{enumerate}
 
 How gradually typed inference typically works:
