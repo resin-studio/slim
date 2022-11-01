@@ -29,6 +29,11 @@
 Novel contributions: This system is the first to have:
 \begin{enumerate}
   \item program synthesis from partial programs with missing annotations  
+  \item algorithmic subsumption allows simple subtyping rule with dynamic type
+    \begin{enumerate}
+      \item subtyping can having a dynamic type on either side without risk of   
+        a subsumption rule accepting any arbitrary type
+    \end{enumerate}
   \item type unification without principal type schemes: 
     \begin{enumerate}
       \item lenient (but unsound) static type inference
@@ -43,7 +48,6 @@ How gradually typed inference typically works:
 \begin{enumerate}
   \item infer either a strict static type or a dynamic type
   \item let annotations implicitly guide the usage of static vs dynamic checks 
-  \item no subtyping rules for intersection and union
 \end{enumerate}
 
 
@@ -271,6 +275,9 @@ to find lenient static bounds for parts of types marked "?"
 \item Gradual typing: a new perspective - unions, intersections, dynamic type, and type inference - https://www.irif.fr/~gc/papers/popl19.pdf
 \item Gradual refinement types (via abstract interpretation) - https://pleiad.cl/papers/2017/lehmannTanter-popl2017.pdf
 \item Consistent subtyping for all - https://xnning.github.io/papers/consistent-subtyping-for-all-toplas.pdf
+\item Polymorphic functions with set-theoretic types, part 1 - https://www.irif.fr/~gc/papers/polydeuces-part1.pdf
+\item Polymorphic functions with set-theoretic types, part 2 - https://www.irif.fr/~gc/papers/polydeuces-part2.pdf
+\item 
 
 
 \end{enumerate}
