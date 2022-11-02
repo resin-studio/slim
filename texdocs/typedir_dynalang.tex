@@ -242,6 +242,13 @@ Novel contributions: This system is the first to have:
   \item an expressive predicate logic 
     based on intersection, union, and recursive types;
     without dependent types
+  \item a type system that meets with all three properties:
+    \begin{enumerate}
+      \item allows dynamic type 
+      \item sound modulo absence of dynamic type 
+        or static type union/intersect with dynamic
+      \item types behave either leniently or strict depending on usage as actual type or expected type
+    \end{enumerate}
 \end{enumerate}
 
 How gradually typed inference typically works:
