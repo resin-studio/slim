@@ -310,7 +310,7 @@ l ∈ terminal                      label
   τ -> τ                          func 
   ∀ αᵢ | C . τ                    universal schema 
   ∃ αᵢ | C . τ                    existential schema 
-  μ α . τ                         induction
+  μ α . τ                         recursive type 
 
 C ::=                             constraint
   τ ⊆ τ                           subtyping 
@@ -349,9 +349,9 @@ syntax:60 slm:60 "∪" slm:61 : slm
 syntax:60 slm:60 "+" slm:61 : slm
 syntax:70 slm:70 "∩" slm:71 : slm
 syntax:70 slm:70 "×" slm:71 : slm
-syntax "∀" slm "|" slm "⊆" slm "." slm : slm 
+syntax "∀" slm "|" slm "<:" slm "." slm : slm 
 syntax "∀" slm "." slm : slm 
-syntax "∃" slm "|" slm "⊆" slm  "." slm : slm 
+syntax "∃" slm "|" slm "<:" slm  "." slm : slm 
 syntax "∃" slm "." slm : slm 
 syntax "μ 0 ." slm : slm 
 
@@ -383,15 +383,11 @@ macro_rules
   | `([: $a + $b :]) => `(Ty.union [: #inl $a :] [: #inr $b :])
   | `([: $a ∩ $b :]) => `(Ty.inter [: $a :] [: $b :])
   | `([: $a × $b :]) => `(Ty.inter [: .left $a :] [: .right $b :])
-  | `([: ∀ $a:slm $b:slm . $c:slm :]) => `(Ty.univ [: $a :] [: $b :] [: $c :])
-  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: £$a ⊆ ? :] [: $b :] )
-  | `([: ∃ $a:slm $b:slm . $c:slm :]) => `(Ty.exis [: $a :] [: $b :] [: $c :])
-  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] [: £$a ⊆ ? :] [: $b :] )
-  | `([: μ 0 . $a :]) => `(Ty.induct [: $a :])
--- Constr
-  | `([: $a:slm ⊆ $b:slm :]) => `(Constr.subtype [: $a :] [: $b :])
-  | `([: $a ∨ $b :]) => `(Constr.disj [: $a :] [: $b :])
-  | `([: $a ∧ $b :]) => `(Constr.conj [: $a :] [: $b :])
+  | `([: ∀ $a | $b <: $c . $d :]) => `(Ty.univ [: $a :] ([: $b :], [: $c :]) [: $d :])
+  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] ([: £$a :], [: ? :]) [: $b :] )
+  | `([: ∃ $a | $b <: $c . $d  :]) => `(Ty.exis [: $a :] ([: $b :], [: $c :]) [: $d :])
+  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] ([: £$a :], [: ? :]) [: $b :] )
+  | `([: μ 0 . $a :]) => `(Ty.recur [: $a :])
 
 -- generic
   | `([: ($a) :]) => `([: $a :])
@@ -416,9 +412,9 @@ def x := Ty.bvar 1
 #check [: £0 ∩ ? :]
 #check [: £0 × ? :]
 #check [: £0 + ? :]
-#check [: ∀ 1 (£0 ⊆ ?) . ⟨x⟩ :]
-#check [: ∀ 1 (£0 ⊆ ?) . £0 :]
-#check [: ∀ 2 (? ⊆ ?) . £0 :]
+#check [: ∀ 1 | £0 <: ? . ⟨x⟩ :]
+#check [: ∀ 1 | £0 <: ? . £0 :]
+#check [: ∀ 2 | ? <: ? . £0 :]
 #check [: ∀ 2 . £0 :]
 #check [: ◇ :]
 #check [: @24 :]
@@ -429,8 +425,6 @@ def x := Ty.bvar 1
 #check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? -> @1 ∪ @2 :]
 #check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? :]
 #check [: ? :]
-#check [: (? ⊆ ?) ∧ (? ⊆ ?) :]
-#check [: ? ⊆ ? ∩ £0 ∧ (? ⊆ ?) :]
 
 mutual 
   inductive Ty.has_size : Ty -> Nat -> Type
@@ -447,7 +441,7 @@ mutual
         Ty.has_size (Ty.univ n c ty) (n + n_c + n_ty + 1)
     | exis : Constr.has_size c n_ty -> Ty.has_size ty n_ty -> 
         Ty.has_size (Ty.exis n c ty) (n + n_c + n_ty + 1)
-    | induct : Ty.has_size ty n -> Ty.has_size (Ty.induct ty) (n + 1) 
+    | recur : Ty.has_size ty n -> Ty.has_size (Ty.recur ty) (n + 1) 
 
   -- inductive ListTy.has_size : (List Ty) -> Nat -> Type
   --   | nil : 
@@ -888,7 +882,7 @@ mutual
     | .func ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
     | .univ n c ty => (Constr.occurs key c) ∨ (Ty.occurs key ty)
     | .exis n c ty => (Constr.occurs key c) ∨ (Ty.occurs key ty)
-    | .induct ty => (Ty.occurs key ty)
+    | .recur ty => (Ty.occurs key ty)
 
   partial def Constr.occurs (key : Nat) : Constr -> Bool
     | Constr.subtype ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
@@ -918,7 +912,7 @@ mutual
     | .exis n₁ c₁ ty₁, .univ n₂ c₂ ty₂ =>
       n₁ = n₂ ∧
       (Constr.eq c₁ c₂) ∧ (Ty.eq ty₁ ty₂)
-    | .induct ty₁, .induct ty₂ => (Ty.eq ty₁ ty₂)
+    | .recur ty₁, .recur ty₂ => (Ty.eq ty₁ ty₂)
     | _, _ => false
 
   partial def Constr.eq : Constr -> Constr -> Bool
@@ -960,7 +954,7 @@ mutual
       (Constr.free_subst m c) 
       (Ty.free_subst m ty)
     )
-    | .induct ty => .induct (Ty.free_subst m ty)
+    | .recur ty => .recur (Ty.free_subst m ty)
 
   partial def Constr.free_subst (m : List (Nat × Ty)) : Constr -> Constr
     | Constr.subtype ty₁ ty₂ => Constr.subtype (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
@@ -1021,7 +1015,7 @@ mutual
       (Constr.raise_binding (start + n) args c) 
       (Ty.raise_binding (start + n) args ty)
     )
-    | .induct ty => .induct (Ty.raise_binding (start + 1) args ty)
+    | .recur ty => .recur (Ty.raise_binding (start + 1) args ty)
 
   partial def Constr.raise_binding (start : Nat) (args : List Ty) : Constr -> Constr
     | .subtype ty₁ ty₂ => .subtype (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
@@ -1051,7 +1045,7 @@ unroll μ α . τ = subst {α ⊆ μ α . τ} τ
 ```
 -/
 partial def unroll (τ : Ty) : Ty := 
-  -- Ty.raise_binding 0 [Ty.induct τ] τ 
+  -- Ty.raise_binding 0 [Ty.recur τ] τ 
   [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
 
 /-
@@ -1098,7 +1092,7 @@ mutual
       (Constr.lower_binding (depth + n) c) 
       (Ty.lower_binding (depth + n) ty)
     )
-    | .induct ty => .induct (Ty.lower_binding (depth + 1) ty)
+    | .recur ty => .recur (Ty.lower_binding (depth + 1) ty)
 
   partial def Constr.lower_binding (depth : Nat) : Constr -> Constr
     | Constr.subtype ty₁ ty₂ => Constr.subtype (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
@@ -1226,24 +1220,24 @@ mutual
       | some Ty.unknown => some (i + 2, [(i, .union (roll id τ₁) (Ty.fvar (i + 1)))]) 
       | some τ₂ => Ty.unify i Δ τ₁ τ₂ 
 
-    | .induct τ', .induct τ =>
+    | .recur τ', .recur τ =>
       Ty.unify i Δ τ' τ 
 
-    | .variant l' τ', .induct τ =>
+    | .variant l' τ', .recur τ =>
       Ty.unify i Δ (.variant l' τ') (unroll τ)
 
-    | .induct τ', (.variant l τ) =>
+    | .recur τ', (.variant l τ) =>
       Ty.unify i Δ (unroll τ') (.variant l τ) 
 
 
     -- TODO: check function against induction type 
 
-    | τ', .induct τ =>
+    | τ', .recur τ =>
       Option.bind (make_record_constraint_sub Ty.unknown τ' τ) (fun c =>
         Constr.solve i Δ c
       )
 
-    | .induct τ', τ =>
+    | .recur τ', τ =>
       Option.bind (make_record_constraint_super Ty.unknown τ' τ) (fun c =>
         Constr.solve i Δ c
       )
