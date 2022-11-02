@@ -23,32 +23,7 @@
 \begin{document}
 
 \maketitle
-
 \section{Introduction}
-
-Novel contributions: This system is the first to have:
-\begin{enumerate}
-  \item program synthesis from partial programs with missing annotations  
-  \item algorithmic subsumption allows simple subtyping rule with dynamic type
-    \begin{enumerate}
-      \item subtyping can having a dynamic type on either side without risk of   
-        a subsumption rule accepting any arbitrary type
-    \end{enumerate}
-  \item type unification without principal type schemes: 
-    \begin{enumerate}
-      \item lenient (but unsound) static type inference
-      \item expanding type info with union and intersection and dynamic type
-      \item subtyping rules for intersection and union 
-    \end{enumerate}
-  \item full type synthesis with full type propagation (for all rules)
-  \item interleaving type constraint generation and solving with dynamic type 
-\end{enumerate}
-
-How gradually typed inference typically works:
-\begin{enumerate}
-  \item infer either a strict static type or a dynamic type
-  \item let annotations implicitly guide the usage of static vs dynamic checks 
-\end{enumerate}
 
 
 \textbf{Dynamically typed} languages can make writing programs quick and easy 
@@ -245,19 +220,47 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
 
 \section{Related work}
 
+\section*{Notes}
+
+Novel contributions: This system is the first to have:
+\begin{enumerate}
+  \item program synthesis from partial programs with missing annotations  
+  \item algorithmic subsumption allows simple subtyping rule with dynamic type
+    \begin{enumerate}
+      \item subtyping can having a dynamic type on either side without risk of   
+        a subsumption rule accepting any arbitrary type
+    \end{enumerate}
+  \item type unification without principal type schemes: 
+    \begin{enumerate}
+      \item lenient (but unsound) static type inference
+      \item expanding type info with union and intersection and dynamic type
+      \item subtyping rules for intersection and union 
+    \end{enumerate}
+  \item full type synthesis with full type propagation (for all rules)
+  \item interleaving type constraint generation and solving with dynamic type 
+\end{enumerate}
+
+How gradually typed inference typically works:
+\begin{enumerate}
+  \item infer either a strict static type or a dynamic type
+  \item let annotations implicitly guide the usage of static vs dynamic checks 
+\end{enumerate}
+
 
 There exists work on type inference for gradually typed programs.
-To the best of my knowledge, they are all sounds and complete.
-They do not exhibit the notion of intersection and union to keep types open.
+To the best of my knowledge, they are all sound and complete.
 This notion results in the inference being unsound.
 Other gradual type inference systems separate 
 generating constraints from solving constraints.
 Our system toggles between generating and solving constraints incrementally.
 Other gradual typing systems use the dynamic type "?" to indicate 
 that dynamic checks should be used.
-In contrast, our system will still try 
-to find lenient static bounds for parts of types marked "?"
+They do not contain the idea of using intersection and union to keep types open.
+Gradual typing systems separate subtyping from the relation 
+between dynamic to static types to avoid all terms typing via the subsumption rule.
 
+
+\subsection*{references}
 \begin{enumerate}
 \item Refinement types for ML by Tim Freeman and Frank Pfenning 
 \item Refinement types as proof irrelevance by William Lovas and Frank Pfenning 
@@ -281,5 +284,7 @@ to find lenient static bounds for parts of types marked "?"
 
 
 \end{enumerate}
+
+
 
 \end{document}
