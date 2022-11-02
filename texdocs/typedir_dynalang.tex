@@ -2,6 +2,7 @@
 % \documentclass[]{acmart}
 \documentclass[sigplan,screen]{acmart}
 
+\usepackage{hyperref}
 \usepackage{mathtools}
 \usepackage{listings}
 \lstset{
@@ -238,6 +239,9 @@ Novel contributions: This system is the first to have:
     \end{enumerate}
   \item full type synthesis with full type propagation (for all rules)
   \item interleaving type constraint generation and solving with dynamic type 
+  \item an expressive predicate logic 
+    based on intersection, union, and recursive types;
+    without dependent types
 \end{enumerate}
 
 How gradually typed inference typically works:
@@ -265,22 +269,22 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 \item Refinement types for ML by Tim Freeman and Frank Pfenning 
 \item Refinement types as proof irrelevance by William Lovas and Frank Pfenning 
 \item Local type inference by Benjamin C. Pierce and David N. Turner
+\item Liquid types - \url{http://goto.ucsd.edu/~rjhala/papers/liquid_types.pdf}
 \item Program synthesis from polymorphic refinement types by Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama
 \item Example-directed synthesis: a type-theoretic interpretation by Frankle, Osera, Walker, and Zdancewic
 \item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
 \item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
 \item Gradual typing for objects by Jeremy G. Siek and Walid Taha 
 \item Gradual typing with unification-based inference by Siek and Manish Vachharajani 
-\item Dynamic Type Inference for Gradual Hindley–Milner Typing - https://dl.acm.org/doi/pdf/10.1145/3290331
-\item Principal type schemes for gradual programs - https://www.cs.ubc.ca/~rxg/ptsgp.pdf
-\item Gradual Liquid Type Inference - https://arxiv.org/pdf/1807.02132.pdf
-\item Gradual typing with union and intersection types - https://dl.acm.org/doi/pdf/10.1145/3110285
-\item Gradual typing: a new perspective - unions, intersections, dynamic type, and type inference - https://www.irif.fr/~gc/papers/popl19.pdf
-\item Gradual refinement types (via abstract interpretation) - https://pleiad.cl/papers/2017/lehmannTanter-popl2017.pdf
-\item Consistent subtyping for all - https://xnning.github.io/papers/consistent-subtyping-for-all-toplas.pdf
-\item Polymorphic functions with set-theoretic types, part 1 - https://www.irif.fr/~gc/papers/polydeuces-part1.pdf
-\item Polymorphic functions with set-theoretic types, part 2 - https://www.irif.fr/~gc/papers/polydeuces-part2.pdf
-\item 
+\item Dynamic Type Inference for Gradual Hindley–Milner Typing - \url{https://dl.acm.org/doi/pdf/10.1145/3290331}
+\item Principal type schemes for gradual programs - \url{https://www.cs.ubc.ca/~rxg/ptsgp.pdf}
+\item Gradual Liquid Type Inference - \url{https://arxiv.org/pdf/1807.02132.pdf}
+\item Gradual typing with union and intersection types - \url{https://dl.acm.org/doi/pdf/10.1145/3110285}
+\item Gradual typing: a new perspective - unions, intersections, dynamic type, and type inference - \url{https://www.irif.fr/~gc/papers/popl19.pdf}
+\item Gradual refinement types (via abstract interpretation) - \url{https://pleiad.cl/papers/2017/lehmannTanter-popl2017.pdf}
+\item Consistent subtyping for all - \url{https://xnning.github.io/papers/consistent-subtyping-for-all-toplas.pdf}
+\item Polymorphic functions with set-theoretic types, part 1 - \url{https://www.irif.fr/~gc/papers/polydeuces-part1.pdf}
+\item Polymorphic functions with set-theoretic types, part 2 - \url{https://www.irif.fr/~gc/papers/polydeuces-part2.pdf}
 
 
 \end{enumerate}
