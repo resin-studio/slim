@@ -1342,12 +1342,6 @@ end
 
 `solve Δ ⊢ C = o[Δ]`
 ```
-solve Δ ⊢ C₁ ∧ C₂ =  
-  merge & (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
-
-solve Δ ⊢ C₁ ∨ C₂ = 
-  merge | (solve Δ ⊢ C₁) (solve Δ ⊢ C₂)
-
 solve Δ ⊢ α ⊆ τ =
   let τ' = Δ α in (
     let β = fresh in some {α ⊆ ((roll α τ) & β), β ⊆ ?}
@@ -1369,21 +1363,19 @@ solve Δ ⊢ τ' ⊆ (∀ Δ' ⟨C⟩ . τ) =
 ...
 
 solve Δ ⊢ τ₁ | τ₂ ⊆ τ =
-  solve Δ ⊢ τ₁ ⊆ τ ∧ τ₂ ⊆ τ
+  merge & (solve Δ ⊢ τ₁ ⊆ τ) (solve Δ ⊢ τ₂ ⊆ τ)
 
 solve Δ ⊢ τ ⊆ τ₁ | τ₂ =
-  solve Δ ⊢ τ ⊆ τ₁ ∨ τ ⊆ τ₂
-
+  merge | (solve Δ ⊢ τ ⊆ τ₁) (solve Δ ⊢ τ ⊆ τ₂)
 
 solve Δ ⊢ τ ⊆ τ₁ & τ₂ =
-  solve Δ ⊢ τ ⊆ τ₁ ∧ τ ⊆ τ₂
+  merge & (solve Δ ⊢ τ ⊆ τ₁) (solve Δ ⊢ τ ⊆ τ₂)
 
 solve Δ ⊢ τ₁ & τ₂ ⊆ τ =
-  solve Δ ⊢ τ₁ ⊆ τ ∨ τ₂ ⊆ τ
+  merge | (solve Δ ⊢ τ₁ ⊆ τ) (solve Δ ⊢ τ₂ ⊆ τ)
 
 solve Δ ⊢ τ₁ -> τ₂' ⊆ τ₁' -> τ₂ =
-  solve Δ ⊢ τ₁' ⊆ τ₁ ∧ τ₂' ⊆ τ₂
-
+  merge & (solve Δ ⊢ τ₁' ⊆ τ₁) (solve Δ ⊢ τ₂' ⊆ τ₂)
 
 solve Δ ⊢ *l τ' ⊆ μ α . τ =  
   solve Δ ⊢ *l τ' ⊆ unroll (μ α . τ)  
@@ -1439,7 +1431,7 @@ patvars (.l t fs) τ =
 `infer Γ Δ ⊢ t : τ = o[Δ;τ]`
 ```
 TODO:
-- raise type binding at application in "infer/generation of constrations"
+- raise universal type binding at application in "infer/generation of constrations"
 
 infer Γ Δ ⊢ () : τ =
   map (solve Δ ⊢ C ∧ [] ⊆ τ in) (Δ' =>
