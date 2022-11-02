@@ -319,26 +319,19 @@ C ::=                             constraint
 
 -/
 
-mutual 
-  inductive Ty : Type
-    | unknown : Ty
-    | bvar : Nat -> Ty  
-    | fvar : Nat -> Ty
-    | unit : Ty
-    | variant : String -> Ty -> Ty
-    | field : String -> Ty -> Ty
-    | union : Ty -> Ty -> Ty
-    | inter : Ty -> Ty -> Ty
-    | func : Ty -> Ty -> Ty
-    | univ : Nat -> Constr -> Ty -> Ty
-    | exis : Nat -> Constr -> Ty -> Ty
-    | induct : Ty -> Ty
-
-  inductive Constr : Type
-    | subtype : Ty -> Ty -> Constr
-    | disj : Constr -> Constr -> Constr
-    | conj : Constr -> Constr -> Constr
-end
+inductive Ty : Type
+  | unknown : Ty
+  | bvar : Nat -> Ty  
+  | fvar : Nat -> Ty
+  | unit : Ty
+  | variant : String -> Ty -> Ty
+  | field : String -> Ty -> Ty
+  | union : Ty -> Ty -> Ty
+  | inter : Ty -> Ty -> Ty
+  | func : Ty -> Ty -> Ty
+  | univ : Nat -> Ty × Ty -> Ty -> Ty
+  | exis : Nat -> Ty × Ty -> Ty -> Ty
+  | recur : Ty -> Ty
 
 
 declare_syntax_cat slm
@@ -356,14 +349,12 @@ syntax:60 slm:60 "∪" slm:61 : slm
 syntax:60 slm:60 "+" slm:61 : slm
 syntax:70 slm:70 "∩" slm:71 : slm
 syntax:70 slm:70 "×" slm:71 : slm
-syntax "∀" slm slm "." slm : slm 
+syntax "∀" slm "|" slm "⊆" slm "." slm : slm 
 syntax "∀" slm "." slm : slm 
-syntax "∃" slm slm "." slm : slm 
+syntax "∃" slm "|" slm "⊆" slm  "." slm : slm 
 syntax "∃" slm "." slm : slm 
 syntax "μ 0 ." slm : slm 
 
-syntax:30 slm:30 "∨" slm:31 : slm
-syntax:40 slm:40 "∧" slm:41 : slm
 syntax:50 slm:50 "⊆" slm:51 : slm
 
 syntax "(" slm ")" : slm

@@ -139,7 +139,7 @@ The dynamic nature of terms is at odds with inferring types.
 \end{lstlisting}
 
 \noindent These generic types can be specialized based on the terms that are witnessed as inputs. 
-Since a principal type cannot be inferred in dynamically typed languages, 
+Since the principal type of any term in dynamically typed languages is top, 
 The parameter type must accommodate types of unforeseen arguments, 
 while the return type should be \textbf{widened} but restricted 
 to previously seen arguments.
@@ -231,8 +231,9 @@ Novel contributions: This system is the first to have:
       \item subtyping can having a dynamic type on either side without risk of   
         a subsumption rule accepting any arbitrary type
     \end{enumerate}
-  \item type unification without principal type schemes: 
+  \item type unification without intrinsically typed terms (as in ML): 
     \begin{enumerate}
+      \item the principal type of all terms is top
       \item lenient (but unsound) static type inference
       \item expanding type info with union and intersection and dynamic type
       \item subtyping rules for intersection and union 
