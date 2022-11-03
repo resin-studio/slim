@@ -276,6 +276,8 @@ def τ := [: ? :]
 /-
 -- TODO: determine how to add co-recursive types (ν)  
 -- TODO: pay attention to how recursive and co-recursive types are unrolled
+-- ν and ∀ should be handled in similar ways. Don't unroll/raise until some application
+  mandates a witness
 
 ---
 recursive types
@@ -325,6 +327,20 @@ distribute
     &> (nat -> list) ≤ nat_to_list .
 
 tags distribute over intersection type (&) in universal type (&>) in co-recursive (ν) type 
+
+---
+recursive stream
+μ stream . unit -> #succ stream 
+
+unroll
+unit -> #succ (μ stream . unit -> #succ stream) 
+
+---
+co-recursive stream
+ν stream . #succ stream 
+
+unroll
+#succ (ν stream . #succ stream)
 
 -/
 
