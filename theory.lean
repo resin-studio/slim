@@ -1,3 +1,670 @@
+inductive Ty : Type
+  | unknown : Ty
+  | bvar : Nat -> Ty  
+  | fvar : Nat -> Ty
+  | unit : Ty
+  | variant : String -> Ty -> Ty
+  | field : String -> Ty -> Ty
+  | union : Ty -> Ty -> Ty
+  | inter : Ty -> Ty -> Ty
+  | func : Ty -> Ty -> Ty
+  | univ : Nat -> Ty × Ty -> Ty -> Ty
+  | exis : Nat -> Ty × Ty -> Ty -> Ty
+  | recur : Ty -> Ty
+
+
+declare_syntax_cat slm
+syntax num : slm 
+syntax ident : slm
+syntax "[" slm,+ "]" : slm 
+syntax "£"slm:90 : slm
+syntax "@"slm:90 : slm
+syntax "♢" : slm
+syntax "#"slm:90 slm : slm
+syntax "."slm:90 slm : slm
+syntax "?" : slm
+syntax:50 slm:50 "->" slm:51 : slm
+syntax:60 slm:60 "∪" slm:61 : slm
+syntax:60 slm:60 "+" slm:61 : slm
+syntax:70 slm:70 "∩" slm:71 : slm
+syntax:70 slm:70 "×" slm:71 : slm
+syntax "∀" slm "|" slm "<:" slm "." slm : slm 
+syntax "∀" slm "." slm : slm 
+syntax "∃" slm "|" slm "<:" slm  "." slm : slm 
+syntax "∃" slm "." slm : slm 
+syntax "μ 0 ." slm : slm 
+
+syntax:50 slm:50 "⊆" slm:51 : slm
+
+syntax "(" slm ")" : slm
+
+syntax "⟨" term "⟩" : slm 
+
+syntax "[: " slm ":]" : term
+
+macro_rules
+
+-- terminals
+  | `([: $n:num :]) => `($n)
+  | `([: $a:ident:]) => `($(Lean.quote (toString a.getId)))
+-- context 
+  | `([: [$x:slm] :]) => `([ [: $x :] ])
+  | `([: [$x,$xs:slm,*] :]) => `([: $x :] :: [: [$xs,*] :])
+-- Ty 
+  | `([: £$n :]) => `(Ty.bvar [: $n :])
+  | `([: @$n:slm :]) => `(Ty.fvar [: $n :])
+  | `([: ♢ :]) => `(Ty.unit)
+  | `([: #$a $b:slm :]) => `(Ty.variant [: $a :] [: $b :])
+  | `([: .$a $b:slm :]) => `(Ty.field [: $a :] [: $b :])
+  | `([: ? :]) => `(Ty.unknown)
+  | `([: $a -> $b :]) => `(Ty.func [: $a :] [: $b :])
+  | `([: $a ∪ $b :]) => `(Ty.union [: $a :] [: $b :])
+  | `([: $a + $b :]) => `(Ty.union [: #inl $a :] [: #inr $b :])
+  | `([: $a ∩ $b :]) => `(Ty.inter [: $a :] [: $b :])
+  | `([: $a × $b :]) => `(Ty.inter [: .left $a :] [: .right $b :])
+  | `([: ∀ $a | $b <: $c . $d :]) => `(Ty.univ [: $a :] ([: $b :], [: $c :]) [: $d :])
+  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] ([: £$a :], [: ? :]) [: $b :] )
+  | `([: ∃ $a | $b <: $c . $d  :]) => `(Ty.exis [: $a :] ([: $b :], [: $c :]) [: $d :])
+  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] ([: £$a :], [: ? :]) [: $b :] )
+  | `([: μ 0 . $a :]) => `(Ty.recur [: $a :])
+
+-- generic
+  | `([: ($a) :]) => `([: $a :])
+
+--escape 
+  | `([: ⟨ $e ⟩ :]) => pure e
+
+#check [: £0 ∪ ? :]
+#check [: £0 ∩ ? :]
+#check [: £0 × ? :]
+#check [: £0 + ? :]
+def x := 0
+#check [: ∀ 1 | £0 <: ? . £⟨x⟩ :]
+#check [: ∀ 1 | £0 <: ? . £0 :]
+#check [: ∀ 2 | ? <: ? . £0 :]
+#check [: ∀ 2 . £0 :]
+#check [: ♢ :]
+#check [: @24 :]
+#check [: #foo ♢ ∪ #boo ♢ :]
+#check [: μ 0 . #foo £0 :]
+#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ?:]
+#check [: £3 ∩ ? -> @1 ∪ @2 :]
+#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? -> @1 ∪ @2 :]
+#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? :]
+#check [: ? :]
+
+def lookup (key : Nat) : List (Nat × T) -> Option T
+  | (k,v) :: bs => if key = k then some v else lookup key bs 
+  | [] => none
+
+
+partial def merge (op : T -> T -> T) (df : T) (Δ₁ : List (Nat × T))  (Δ₂ : List (Nat × T)) : List (Nat × T) :=
+  List.bind Δ₁ (fun (key₁, v₁) =>
+  List.bind Δ₂ (fun (key₂, v₂) =>
+    let uno := match lookup key₁ Δ₂ with
+      | Option.some v₂ => [(key₁, op v₁ v₂)]
+      | Option.none => [(key₁, op v₁ df)] 
+
+    let dos := match lookup key₂ Δ₁ with
+      | Option.some _ => [] 
+      | Option.none => [(key₂, op v₂ df)]
+    uno ++ dos
+  ))
+
+/-
+`match o o = b`
+```
+match (some x₁) (some ×₂) = 
+  x₁ = x₂
+match none _ = false
+match _ none = false
+```
+
+`cases_normal τ τ = b`
+```
+cases_normal (#l₁ τ₁) (#l₂ τ₂) = true
+cases_normal τ₁ τ₂ = 
+  fmap (keys τ₁) (ks₁ =>
+  fmap (keys τ₂) (ks₂ =>
+    some (ks₁ = ks₂)
+  )) = Some true
+  (keys τ₁) = (keys τ₂) 
+```
+
+
+`decreasing τ τ = b`
+```
+decreasing (#l τ) τ = true 
+decreasing τ₁ τ₂ =  
+  any τ₁ (.l τ => decreasing τ (project τ₂ l)) andalso
+  all τ₁ (.l τ => ¬ increasing τ (project τ₂ l))
+```
+
+`increasing τ τ = b`
+```
+increasing τ₁ τ₂ = decreasing τ₂ τ₁
+```
+
+`well_founded α τ = b`
+```
+well_founded α τ₁ | τ₂ = 
+  cases_normal τ₁ τ₂ andalso
+  well_founded α τ₁ andalso
+  well_founded α τ₂
+
+well_founded α ∀ Δ ⟨τ' ⊆ α⟩ . τ = 
+  α ∈ Δ orelse
+  decreasing τ τ' 
+```
+-/
+
+def Ty.occurs (key : Nat)  : Ty -> Bool 
+  | [: ? :] => false 
+  | .bvar id => false 
+  | .fvar id => key = id 
+  | .unit => false 
+  | .variant l ty => (Ty.occurs key ty) 
+  | .field l ty => (Ty.occurs key ty)
+  | [: ⟨ty₁⟩ ∪ ⟨ty₂⟩ :] => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
+  -- | .union ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
+  | .inter ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
+  | .func ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
+  | .univ n (cty1, cty2) ty => (Ty.occurs key cty1) ∨ (Ty.occurs key cty2) ∨ (Ty.occurs key ty)
+  | .exis n (cty1, cty2) ty => (Ty.occurs key cty1) ∨ (Ty.occurs key cty2) ∨ (Ty.occurs key ty)
+  | .recur ty => (Ty.occurs key ty)
+
+def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
+  | .unknown => .unknown 
+  | .bvar id => .bvar id 
+  | .fvar id => (match lookup id m with
+    | some ty => ty 
+    | none => .fvar id
+  )
+  | .unit => .unit
+  | .variant l ty => .variant l (Ty.free_subst m ty) 
+  | .field l ty => .field l (Ty.free_subst m ty)
+  | .union ty₁ ty₂ => .union (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
+  | .inter ty₁ ty₂ => .inter (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
+  | .func ty₁ ty₂ => .func (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
+  | .univ n (ct1, ct2) ty => (.univ
+    n
+    (Ty.free_subst m ct1, Ty.free_subst m ct2) 
+    (Ty.free_subst m ty)
+  )
+  | .exis n (ct1, ct2) ty => (.exis
+    n
+    (Ty.free_subst m ct1, Ty.free_subst m ct2) 
+    (Ty.free_subst m ty)
+  )
+  | .recur ty => .recur (Ty.free_subst m ty)
+
+
+declare_syntax_cat sub
+syntax slm "/" slm : sub 
+syntax "[" sub,+ "]" : sub
+syntax "[sub:" sub ":]" : term 
+
+macro_rules
+  | `([sub: $a:slm / $b:slm :]) => `(([: $a :], [: $b :])) 
+
+macro_rules
+  | `([sub: [$x:sub] :]) => `([ [sub: $x :] ])
+  | `([sub: [$x,$xs:sub,*] :]) => `([sub: $x :] :: [sub: [$xs,*] :])
+
+
+syntax slm "%" sub : slm 
+macro_rules
+  | `([: $a % $b:sub :]) => `(Ty.free_subst [sub: $b :] [: $a :])
+
+
+-- #check [: (£1) % [1 / ?] :]
+#check [: (£1) % [1/?] :]
+
+#check Fin
+
+def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
+  | .unknown => .unknown 
+  | .bvar id => 
+      if h : start ≤ id ∧ (id - start) < args.length then
+        let i : Fin args.length := {
+          val := (id - start),
+          isLt := (match h with | And.intro _ h' => h') 
+        } 
+        args.get i 
+      else
+        .bvar id
+  | .fvar id => .fvar id 
+  | .unit => .unit
+  | .variant l ty => .variant l (Ty.raise_binding start args ty) 
+  | .field l ty => .field l (Ty.raise_binding start args ty)
+  | .union ty₁ ty₂ => .union (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
+  | .inter ty₁ ty₂ => .inter (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
+  | .func ty₁ ty₂ => .func (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
+  | .univ n (ct1, ct2) ty => (.univ
+    n
+    (Ty.raise_binding (start + n) args ct1, Ty.raise_binding (start + n) args ct2)
+    (Ty.raise_binding (start + n) args ty)
+  )
+  | .exis n (ct1, ct2) ty => (.exis
+    n
+    (Ty.raise_binding (start + n) args ct1, Ty.raise_binding (start + n) args ct2)
+    (Ty.raise_binding (start + n) args ty)
+  )
+  | .recur ty => .recur (Ty.raise_binding (start + 1) args ty)
+
+syntax slm "↑" slm "/" slm : slm 
+
+macro_rules
+  | `([: $a ↑ $b / $c :]) => `(Ty.raise_binding [: $b :] [: $c :] [: $a :])
+
+
+def τ := [: ? :]
+#check [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
+
+
+partial def unroll (τ : Ty) : Ty := 
+  -- Ty.raise_binding 0 [Ty.recur τ] τ 
+  [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
+
+def Ty.lower_binding (depth : Nat) : Ty -> Ty
+  | .unknown => .unknown 
+  | .bvar id => .bvar (id + depth)
+  | .fvar id => .fvar id 
+  | .unit => .unit
+  | .variant l ty => .variant l (Ty.lower_binding depth ty) 
+  | .field l ty => .field l (Ty.lower_binding depth ty)
+  | .union ty₁ ty₂ => .union (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
+  | .inter ty₁ ty₂ => .inter (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
+  | .func ty₁ ty₂ => .func (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
+  | .univ n (ct1, ct2) ty => (.univ
+    n
+    (Ty.lower_binding (depth + n) ct1, Ty.lower_binding (depth + n) ct2)
+    (Ty.lower_binding (depth + n) ty)
+  )
+  | .exis n (ct1, ct2) ty => (.exis
+    n
+    (Ty.lower_binding (depth + n) ct1, Ty.lower_binding (depth + n) ct2)
+    (Ty.lower_binding (depth + n) ty)
+  )
+  | .recur ty => .recur (Ty.lower_binding (depth + 1) ty)
+
+syntax slm "↓" num : slm 
+
+macro_rules
+  | `([: $b:slm ↓ $a:num :]) => `(Ty.lower_binding $a [: $b :])
+
+
+partial def roll (key : Nat) (τ : Ty) : Ty :=
+  if Ty.occurs key τ then
+    [: (μ 0 . ⟨τ⟩↓1) % [⟨key⟩ / £0] :]
+  else
+    τ
+
+
+def liberate (i : Nat) : Nat -> List (Nat × Ty) 
+  | 0 => []
+  | n + 1 => (i, [: ? :]) :: (liberate (i + 1) n)
+
+def refresh (i : Nat) (n : Nat) : (Nat × List (Nat × Ty) × List Ty) := 
+  let args := (List.range n).map (fun j => .fvar (i + j))
+  let Δ' :=  liberate i n 
+  let i' := i + n 
+  (i', Δ', args)
+
+
+def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
+  | (.field l ty'), mu_ty => 
+      let ty := .exis 1 ( 
+        (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
+        (Ty.lower_binding 1 (unroll mu_ty))
+      ) (.bvar 0)
+      [(ty', ty)]
+  | .inter (.field l ty') rem_ty, mu_ty => 
+      let ty := 
+      [: ∃ 1 | (⟨prev_ty⟩↓1 ∩ (#⟨l⟩ £0) ∩ ⟨rem_ty⟩↓1) <: ⟨unroll mu_ty⟩↓1 . £0 :]
+
+      let rem := make_record_constraint_sub (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
+      if rem.length = 0 then
+        []
+      else 
+        (ty', ty) :: rem
+  | .inter rem_ty (.field l ty'), mu_ty => 
+      -- copy and paste above case (for terminateion proved by structure)
+      let ty := .exis 1 ( 
+        (Ty.inter (
+          Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))) 
+          (Ty.lower_binding 1 rem_ty)
+        ),
+         (Ty.lower_binding 1 (unroll mu_ty))
+      ) (.bvar 0)
+
+      let rem := make_record_constraint_sub (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
+      if rem.length = 0 then
+        []
+      else 
+        (ty', ty) :: rem
+  | _, _ => [] 
+
+def make_record_constraint_super (prev : Ty) : Ty -> Ty -> List (Ty × Ty) 
+  | mu_ty, (.field l ty') => 
+      let ty := .exis 1 ( 
+        (Ty.lower_binding 1 (unroll mu_ty)),
+        (Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
+      ) (.bvar 0)
+      [(ty', ty)]
+  | mu_ty, .inter (.field l ty') rem_ty => 
+      let ty := .exis 1 (
+        (Ty.lower_binding 1 (unroll mu_ty)),
+        (Ty.inter (
+          Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
+          (Ty.lower_binding 1 rem_ty)
+        ) 
+      ) (.bvar 0)
+
+      let rem := make_record_constraint_super (Ty.inter prev (.field l ty')) mu_ty rem_ty
+      if rem.length = 0 then
+        []
+      else
+        (ty', ty) :: rem
+  | mu_ty, .inter rem_ty (.field l ty') => 
+      -- copy and paste above case (for terminateion proved by structure)
+      let ty := .exis 1 ( 
+        (Ty.lower_binding 1 (unroll mu_ty)),
+        (Ty.inter (
+          Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
+          (Ty.lower_binding 1 rem_ty)
+        ) 
+      ) (.bvar 0)
+
+      let rem := make_record_constraint_super (Ty.inter prev (.field l ty')) mu_ty rem_ty
+      if rem.length = 0 then
+        []
+      else
+        (ty', ty) :: rem
+  | _, _ => [] 
+
+
+partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
+
+  | .fvar id, τ₂  => match lookup id Δ with 
+    | none => some (i + 2, [(i, .inter (roll id τ₂) (Ty.fvar (i + 1)))]) 
+    | some Ty.unknown => some (i + 2, [(i, .inter (roll id τ₂) (Ty.fvar (i + 1)))]) 
+    | some τ₁ => Ty.unify i Δ τ₁ τ₂ 
+
+  | τ₁, .fvar id  => match lookup id Δ with 
+    | none => some (i + 2, [(i, .union (roll id τ₁) (Ty.fvar (i + 1)))]) 
+    | some Ty.unknown => some (i + 2, [(i, .union (roll id τ₁) (Ty.fvar (i + 1)))]) 
+    | some τ₂ => Ty.unify i Δ τ₁ τ₂ 
+
+  | .recur τ', .recur τ =>
+    Ty.unify i Δ τ' τ 
+
+  | .variant l' τ', .recur τ =>
+    Ty.unify i Δ (.variant l' τ') (unroll τ)
+
+  | .recur τ', (.variant l τ) =>
+    Ty.unify i Δ (unroll τ') (.variant l τ) 
+
+
+  -- TODO: check function against induction type 
+
+  | τ', .recur τ =>
+    let cs := (make_record_constraint_sub Ty.unknown τ' τ)
+    if cs.length = 0 then
+      none
+    else
+      List.foldl (fun 
+        | some (i, Δ), (ct1, ct2) => Ty.unify i Δ ct1 ct2
+        | none, _ => none
+      ) (some (i, Δ)) cs
+
+  | .recur τ', τ =>
+    let cs := (make_record_constraint_super Ty.unknown τ' τ) 
+    if cs.length = 0 then
+      none
+    else
+      List.foldl (fun 
+        | some (i, Δ), (ct1, ct2) => Ty.unify i Δ ct1 ct2
+        | none, _ => none
+      ) (some (i, Δ)) cs
+
+  | .union τ₁ τ₂, τ => 
+    Option.bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ') => 
+    Option.bind (Ty.unify i Δ' τ₂ τ) (fun (i, Δ'') =>
+      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
+    ))
+
+  | τ, .union τ₁ τ₂ => 
+    Option.bind (Ty.unify i Δ τ τ₁) (fun (i, Δ₁) => 
+    Option.bind (Ty.unify i Δ τ τ₂) (fun (i, Δ₂) =>
+      some (i, merge Ty.union Ty.unknown Δ₁ Δ₂)
+    ))
+
+  | τ, .inter τ₁ τ₂ => 
+    Option.bind (Ty.unify i Δ τ τ₁) (fun (i, Δ') => 
+    Option.bind (Ty.unify i Δ' τ τ₂) (fun (i, Δ'') =>
+      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
+    ))
+
+  | .inter τ₁ τ₂, τ => 
+    Option.bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ₁) => 
+    Option.bind (Ty.unify i Δ τ₂ τ) (fun (i, Δ₂) =>
+      some (i, merge Ty.union Ty.unknown Δ₁ Δ₂)
+    ))
+
+  | .func τ₁ τ₂', .func τ₁' τ₂ =>
+    Option.bind (Ty.unify i Δ τ₁' τ₁) (fun (i, Δ') => 
+    Option.bind (Ty.unify i Δ' τ₂' τ₂) (fun (i, Δ'') =>
+      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
+    ))
+
+  | .variant l' τ', .variant l τ =>
+    if l' = l then
+      Ty.unify i Δ τ' τ
+    else
+      none
+
+  | .field l' τ', .field l τ =>
+    if l' = l then
+      Ty.unify i Δ τ' τ
+    else
+      none
+
+  -- TODO: check subtyping for universals without unification 
+
+  | ty, .exis n (ct1, ct2) τ =>
+    let (i, Δ, args) := refresh i n 
+    let ct1 := Ty.raise_binding 0 args ct1
+    let ct2 := Ty.raise_binding 0 args ct2
+    let τ := Ty.raise_binding 0 args τ
+    Option.bind (Ty.unify i Δ ct1 ct2) (fun (i, Δ') => 
+    Option.bind (Ty.unify i Δ' ty τ) (fun (i, Δ'') =>
+      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
+    ))
+
+  | .exis n (ct1, ct2) τ, ty =>
+    let (i, Δ, args) := refresh i n 
+    let ct1 := Ty.raise_binding 0 args ct1
+    let ct2 := Ty.raise_binding 0 args ct2
+    let τ := Ty.raise_binding 0 args τ
+    Option.bind (Ty.unify i Δ ct1 ct2) (fun (i, Δ') => 
+    Option.bind (Ty.unify i Δ' ty τ) (fun (i, Δ'') =>
+      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
+    ))
+
+  | .bvar id₁, .bvar id₂  =>
+    if id₁ = id₂ then 
+      some (i, [])
+    else
+      none
+
+  | .unit, .unit => some (i, []) 
+  | .unknown, _ => some (i, []) 
+  | _, .unknown => some (i, []) 
+  | _, _ => none
+
+
+-- inductive PatRec : (T : Type) -> Nat -> Type where
+--   | single {n : Nat} : String -> Pat T n -> PatRec T n 
+--   | exten {n₁ n₂ : Nat} : String -> Pat T n₁ -> PatRec T n₂-> PatRec T (n₁ + n₂)
+
+/-
+t ::=                             term
+  _                               hole 
+  x                               variable
+  ()                              unit
+  #l t                            variant
+  fs                              record
+  cs                              function
+  t.l                             projection
+  t t                             application
+  let x : τ = t in t              binding
+  fix t                           recursion
+
+cs ::=                            cases
+  for p => t                      singleton 
+  cs ; for p => t                 extension 
+
+fs ::=                            fields 
+  .l t                            singleton 
+  fs ; .l t                       extension
+-/
+
+
+/-
+
+m ::=                             substitution map
+  ⬝                                empty
+  α / τ :: m                      extension
+
+Γ ::=                             typing environment 
+  ⬝                                empty
+  x : τ :: Γ                      extension
+
+-/
+
+inductive Tm : Type
+  | hole : Tm 
+  | bvar : Nat -> Tm 
+  | fvar : Nat -> Tm 
+  | unit : Tm
+  | variant : String -> Tm -> Tm
+  | record : List (String × Tm) -> Tm
+  | func : List (Tm × Tm) -> Tm
+  | proj : Tm -> String -> Tm
+  | app : Tm -> Tm -> Tm
+  | letb : Tm -> Ty -> Tm -> Tm
+  | fix : Tm -> Tm
+
+/-
+
+`patvars t = o[Γ]`
+```
+patvars x τ = 
+  some {x : τ}
+patvars (.l t₁) τ = 
+  map (project τ l) (τ₁ =>
+    patvars t₁ τ₁
+  )
+patvars (.l t fs) τ =
+  map (patvars (.l t) τ) (Γ₁ =>
+  map (patvars fs τ) (Γ₂ =>
+    some (Γ₁ ++ Γ₂)
+  ))
+...
+```
+-/
+
+/-
+
+`infer Γ Δ ⊢ t : τ = o[Δ;τ]`
+```
+TODO:
+- raise universal type binding at application in "infer/generation of constrations"
+
+infer Γ Δ ⊢ () : τ =
+  map (solve Δ ⊢ C ∧ [] ⊆ τ in) (Δ' =>
+    some (Δ' , [])
+  )
+
+infer Γ Δ ⊢ x : τ = 
+  let τ' = Γ x in
+  let Δ', C, τ' = refresh τ' in
+  map (solve Δ, Δ' ⊢ C ∧ τ' ⊆ τ) (Δ' =>
+    some (Δ' , τ')
+  )
+
+infer Γ Δ ⊢ (#l t₁) : τ =
+  let α = fresh in
+  map (solve Δ ⊢ (∀ {α} . (#l α)) ⊆ τ) (Δ' => 
+  map (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁,τ₁ => 
+    some (Δ' ++ Δ₁ , #l τ₁)
+  ))
+
+infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
+  let Δ₁, τ₁ = τ₁[?/fresh] in
+  let Γ₁ = patvars t₁ τ₁ in
+  let β = fresh in
+  map (solve Δ ⊢ (∀ Δ₁ ++ {β} . τ₁ -> β) ⊆ τ) (Δ' => 
+  map (infer (Γ ++ Γ₁) (Δ ++ Δ') ⊢ t₂ : β) (Δ₂', τ₂' =>
+    -- patvars (Γ₁) are NOT generalized in τ₂'
+    some (Δ' ++ Δ₂' , τ₁ -> τ₂')
+  ))
+
+
+infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) cs : τ =
+  map (infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ) (Δ', τ' =>
+  map (infer Γ Δ ++ Δ' ⊢ cs : τ₂) (Δ'', τ'' => 
+    some (Δ' ++ Δ'' , τ' & τ'')
+  ))
+
+infer Γ Δ ⊢ t t₁ : τ₂ =
+  map (infer Γ Δ ⊢ t : ? -> τ₂ in) (Δ',τ' => 
+  map (functify τ') (τ₁,τ₂' => 
+  -- break type (possibly intersection) into premise and conclusion 
+  map (infer Γ (Δ ++ Δ') ⊢ t₁ : τ₁) (Δ₁',τ₁' =>
+  map (solve Δ ++ Δ' ++ Δ₁' ⊢ τ' ⊆ (τ₁' -> τ₂)) (Δ' =>
+    some(Δ' , τ₂' & τ₂)
+  ))))
+
+infer Γ Δ ⊢ (.l t₁) : τ =
+  let α = fresh in
+  map (solve Δ ⊢ (∀ {α} . (.l α)) ⊆ τ) (Δ' =>
+  map (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁ , τ₁ =>  
+    some(Δ' ++ Δ₁ , .l τ₁)
+  ))
+
+infer Γ Δ ⊢ (.l t₁) fs : τ =
+  map (infer Γ Δ ⊢ (.l t₁) : τ) (Δ' , τ' =>
+  map (infer Γ (Δ ++ Δ') ⊢ fs : τ) (Δ'' , τ'' =>
+    some(Δ' ++ Δ'' , τ' & τ'')
+  ))
+
+infer Γ Δ ⊢ t.l : τ₂ =
+  map (infer Γ Δ ⊢ t : (.l τ₂)) (Δ' , τ' =>
+  map (project τ' l) (τ₂' => 
+    some(Δ' , τ₂')
+  ))
+
+infer Γ Δ ⊢ fix t : τ =
+  map (infer Γ Δ ⊢ t : (τ -> τ)) (Δ',τ' =>
+  map (functify τ') (τ₁', τ₂' =>
+    -- extract premise and conclusion 
+    some(Δ' , τ₂')
+  ))
+
+infer Γ Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
+  let Δ₁,τ₁ = τ₁[?/fresh] in
+  map (infer Γ Δ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁' , τ₁' => 
+  map (infer (Γ ++ {x : (∀ Δ₁' . τ₁')}) Δ ⊢ t₂ : τ₂) (Δ₂' , τ₂' =>
+    -- τ₁' is generalized in τ₂'
+    some(Δ₂' , τ₂')
+  ))
+```
+
+-/
+
+
 -- examples 
 /-
 ## type flow
@@ -230,1063 +897,8 @@ let hello' = f hello in
 - the singleton type (e.g. #l []) corresponds to a single literal term
 -/
 
--- innovations 
 /-
-- inference of types while balancing strictness and leniency
-- synthesis of terms from context, examples, and types 
--/
-
--- related languages 
-/-
-- python
-- typescript
--/
-
--- related techniques 
-/-
-- consistent subtyping (Siek)
-- roundtrip typing (Polikarpova)
-- type inference (Hindley/Milner)
-- let-polymorphism (Damas)
-- synthesis from examples as types (Walker)
--/
-
-
--- conventions 
-/-
-- forward style rules place premises above conclusions 
-- backward style rules place premises below conclusions
-- premises are indented relative to conclusions
-- declarative rules are written as predicates in forward style
-- procedural rules are written as functions in backward style
-- derivations are written as propositions in backward style
--/
-
-
--- tasks
-/-
-- [x] learn PHOAS for pattern matching
-- [x] learn macros in Lean 
-- [_] learn termination for PHOAS in Lean 
-  - difficulty due to mutual inductive defs and Sigma
-- [_] determine how to represent bound variables 
-  - locally nameless de bruijn
-- [_] determine how to represent free variables
-  - free var natural number
-    - natural number = 1 + max(prev natural numbers)
-    - assoc list of (free var, type) independent of term
-  - dependent phoas / de bruijn: all variables are free with a local context
-
 - consider adding relative complement type 
   - i.e. binary negation type operator
   - i.e. (τ₁ \ τ₂) ⊆ (τ₁ & ¬ τ₂), where ⊤ / τ₂ = ¬ τ₂)
-- write paper
-  - type-directed synthesis for dynamic languages
-  - explain static unitype view of dynamic types
-  - state of the art
-  - weaknesses of state of the art
-  - refinement types vs unityped subtyping
-  - solution
-  - evidence
--/
-
--- syntax 
-/-
-α ∈ terminal                      type variable
-l ∈ terminal                      label
-
-Δ ::=                             subtyping environment 
-  ⬝                                empty
-  Δ ; α ⊆ τ                       extension
-
-τ ::=                             type
-  ?                               unknown
-  α                               variable
-  *                               unit
-  #l τ                            variant
-  .l τ                            field
-  τ ∪ τ                           union
-  τ ∩ τ                           intersection
-  τ -> τ                          func 
-  ∀ αᵢ | C . τ                    universal schema 
-  ∃ αᵢ | C . τ                    existential schema 
-  μ α . τ                         recursive type 
-
-C ::=                             constraint
-  τ ⊆ τ                           subtyping 
-  C ∨ C                           disjunction
-  C ∧ C                           conjunction
-
--/
-
-inductive Ty : Type
-  | unknown : Ty
-  | bvar : Nat -> Ty  
-  | fvar : Nat -> Ty
-  | unit : Ty
-  | variant : String -> Ty -> Ty
-  | field : String -> Ty -> Ty
-  | union : Ty -> Ty -> Ty
-  | inter : Ty -> Ty -> Ty
-  | func : Ty -> Ty -> Ty
-  | univ : Nat -> Ty × Ty -> Ty -> Ty
-  | exis : Nat -> Ty × Ty -> Ty -> Ty
-  | recur : Ty -> Ty
-
-
-declare_syntax_cat slm
-syntax num : slm 
-syntax ident : slm
-syntax "[" slm,+ "]" : slm 
-syntax "£"slm:90 : slm
-syntax "@"slm:90 : slm
-syntax "♢" : slm
-syntax "#"slm:90 slm : slm
-syntax "."slm:90 slm : slm
-syntax "?" : slm
-syntax:50 slm:50 "->" slm:51 : slm
-syntax:60 slm:60 "∪" slm:61 : slm
-syntax:60 slm:60 "+" slm:61 : slm
-syntax:70 slm:70 "∩" slm:71 : slm
-syntax:70 slm:70 "×" slm:71 : slm
-syntax "∀" slm "|" slm "<:" slm "." slm : slm 
-syntax "∀" slm "." slm : slm 
-syntax "∃" slm "|" slm "<:" slm  "." slm : slm 
-syntax "∃" slm "." slm : slm 
-syntax "μ 0 ." slm : slm 
-
-syntax:50 slm:50 "⊆" slm:51 : slm
-
-syntax "(" slm ")" : slm
-
-syntax "⟨" term "⟩" : slm 
-
-syntax "[: " slm ":]" : term
-
-macro_rules
-
--- terminals
-  | `([: $n:num :]) => `($n)
-  | `([: $a:ident:]) => `($(Lean.quote (toString a.getId)))
--- context 
-  | `([: [$x:slm] :]) => `([ [: $x :] ])
-  | `([: [$x,$xs:slm,*] :]) => `([: $x :] :: [: [$xs,*] :])
--- Ty 
-  | `([: £$n :]) => `(Ty.bvar [: $n :])
-  | `([: @$n:slm :]) => `(Ty.fvar [: $n :])
-  | `([: ♢ :]) => `(Ty.unit)
-  | `([: #$a $b:slm :]) => `(Ty.variant [: $a :] [: $b :])
-  | `([: .$a $b:slm :]) => `(Ty.field [: $a :] [: $b :])
-  | `([: ? :]) => `(Ty.unknown)
-  | `([: $a -> $b :]) => `(Ty.func [: $a :] [: $b :])
-  | `([: $a ∪ $b :]) => `(Ty.union [: $a :] [: $b :])
-  | `([: $a + $b :]) => `(Ty.union [: #inl $a :] [: #inr $b :])
-  | `([: $a ∩ $b :]) => `(Ty.inter [: $a :] [: $b :])
-  | `([: $a × $b :]) => `(Ty.inter [: .left $a :] [: .right $b :])
-  | `([: ∀ $a | $b <: $c . $d :]) => `(Ty.univ [: $a :] ([: $b :], [: $c :]) [: $d :])
-  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] ([: £$a :], [: ? :]) [: $b :] )
-  | `([: ∃ $a | $b <: $c . $d  :]) => `(Ty.exis [: $a :] ([: $b :], [: $c :]) [: $d :])
-  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] ([: £$a :], [: ? :]) [: $b :] )
-  | `([: μ 0 . $a :]) => `(Ty.recur [: $a :])
-
--- generic
-  | `([: ($a) :]) => `([: $a :])
-
---escape 
-  | `([: ⟨ $e ⟩ :]) => pure e
-
-
--- #check [: @⟨1⟩ :]
-
-
-def z := 1
-#check [: @⟨z⟩ :]
-def x := Ty.bvar 1
-
--- #check [: ~foo ? ∪ ~boo ? :]
--- #check [: #foo ? ∪ #boo ? :]
--- #check [: #foo ♢ ∪ #boo ♢ :]
--- #check [: #foo * ∪ #boo * :]
-
-#check [: £0 ∪ ? :]
-#check [: £0 ∩ ? :]
-#check [: £0 × ? :]
-#check [: £0 + ? :]
-#check [: ∀ 1 | £0 <: ? . ⟨x⟩ :]
-#check [: ∀ 1 | £0 <: ? . £0 :]
-#check [: ∀ 2 | ? <: ? . £0 :]
-#check [: ∀ 2 . £0 :]
-#check [: ♢ :]
-#check [: @24 :]
-#check [: #foo ♢ ∪ #boo ♢ :]
-#check [: μ 0 . #foo £0 :]
-#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ?:]
-#check [: £3 ∩ ? -> @1 ∪ @2 :]
-#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? -> @1 ∪ @2 :]
-#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? :]
-#check [: ? :]
-
-
-
-/-
-x ∈ terminal                      term variable
-
-p ::=                             term
-  _                               hole
-  x                               variable
-  ()                              unit
-  #l p                            variant
-  ps                              record
-
-ps ::=                            fields 
-  .l p                            field singleton 
-  ps .l p                         fields extended 
--/
-
-
-mutual
-  inductive Pat : (T : Type) -> Nat -> Type where
-    | hole : Pat T 0 
-    | bvar : T -> Ty -> Pat T 1
-    | unit : Pat T 0 
-    | variant : String -> Pat T 0 
-    | record {n : Nat} : PatRec T n -> Pat T n 
-
-  inductive PatRec : (T : Type) -> Nat -> Type where
-    | single {n : Nat} : String -> Pat T n -> PatRec T n 
-    | exten {n₁ n₂ : Nat} : String -> Pat T n₁ -> PatRec T n₂-> PatRec T (n₁ + n₂)
-end
-
-/-
-t ::=                             term
-  _                               hole 
-  x                               variable
-  ()                              unit
-  #l t                            variant
-  fs                              record
-  cs                              function
-  t.l                             projection
-  t t                             application
-  let x : τ = t in t              binding
-  fix t                           recursion
-
-cs ::=                            cases
-  for p => t                      singleton 
-  cs for p => t                   extension 
-
-fs ::=                            fields 
-  .l t                            singleton 
-  fs .l t                         extension
--/
-
-mutual
-  inductive Tm (T : Type): Type
-    | hole : Tm T 
-    | bvar : T -> Tm T 
-    | fvar : Nat -> Tm T 
-    | unit : Tm T
-    | variant : String -> Tm T -> Tm T
-    | record : List (String × Tm T) -> Tm T
-    | func : List (Σ n, Case T n) -> Tm T
-    | proj : Tm T -> String -> Tm T
-    | app : Tm T -> Tm T -> Tm T
-    | letb : Tm T -> Ty -> (T -> Tm T) -> Tm T
-    | fix : Tm T -> Tm T
-
-  inductive Case (T : Type) : Nat -> Type
-    | mk {n : Nat} : Pat T n -> Tm T -> Case T n
-
-end
-
-
-/-
-
-m ::=                             substitution map
-  ⬝                                empty
-  α / τ :: m                      extension
-
-Γ ::=                             typing environment 
-  ⬝                                empty
-  x : τ :: Γ                      extension
-
--/
-
-
-
-
--- dynamic semantics 
-/-
--/
-
--- dynamic implementation 
-/-
-beyond scope
--/
-
--- dynamic semantics/implementation theorems
-/-
-beyond scope
--/
-
--- static semantics 
-/-
-
-consistent constraint subtyping   
-`Δ ⊢ C`
-```
-Δ ⊢ .
-
-  Δ ⊢ C 
----
-Δ ⊢ ⟨C⟩ 
-
-  Δ ⊢ C₁ 
-  Δ ⊢ C₂
----
-Δ ⊢ C₁ ∧ C₂ 
-
-  Δ ⊢ C₁ 
----
-Δ ⊢ C₁ ∨ C₂ 
-
-  Δ ⊢ C₂
----
-Δ ⊢ C₁ ∨ C₂ 
-
-Δ ⊢ τ ⊆ τ
-
-Δ ⊢ τ ⊆ ? 
-
-Δ ⊢ ? ⊆ τ 
-
-  Γ ⊢ τ' ⊆ τₘ
-  Γ ⊢ τₘ ⊆ τ
-  τₘ ≠ ?
----
-Δ ⊢ τ' ⊆ τ  
-
-
-  {α ⊆ τ} ⊆ Δ
----
-Δ ⊢ α ⊆ τ  
-
-
-  Δ₀, Δ' ⊢ C' ∧ τ' ⊆ τ
----
-Δ₀ ⊢ (∀ Δ' C' τ') ⊆ τ
-
-
-  Δ₀, Δ ⊢ C ∧ τ' ⊆ τ
----
-Δ₀ ⊢ τ' ⊆ (∀ Δ C τ)
-
-
-Δ₀ ⊢ (μ α . τ) ⊆ unroll (μ α . τ)
-
-
-Δ₀ ⊢ unroll (μ α . τ) ⊆ (μ α . τ)
-
-
-  Δ ⊢ τ₁' ⊆ τ₁ 
-  Δ ⊢ τ₂' ⊆ τ₂ 
----
-Δ ⊢ τ₁ -> τ₂' ⊆ τ₁' -> τ₂
-
-
-  Δ ⊢ τ' ⊆ τ
----
-Δ ⊢ .l τ' ⊆ .l τ  
-
-
-  Δ ⊢ τ' ⊆ τ  
----
-Δ ⊢ #l τ' ⊆ #l τ
-
-
-Δ ⊢ τ' ⊆ (τ' | τ)  
-
-Δ ⊢ τ' ⊆ (τ | τ')  
-
-
-  Δ ⊢ τ₁ ⊆ τ   
-  Δ ⊢ τ₂ ⊆ τ  
----
-Δ ⊢ (τ₁ | τ₂) ⊆ τ 
-
-
-Δ ⊢ (τ & τ') ⊆ τ
-
-Δ ⊢ (τ' & τ) ⊆ τ  
-
-
-  Δ ⊢ τ' ⊆ τ₁  
-  Δ ⊢ τ' ⊆ τ₂  
----
-Δ ⊢ τ' ⊆ τ₁ & τ₂  
-```
-
-constraint typing  
-`Γ Δ C ⊢ t : τ`
-```
-TODO: fill in constraint typing rules
-```
-
--/
-
--- static implementation 
-/-
-
-
-`merge Δ Δ = Δ`
-```
-merge op Δ₁ Δ₂ =
-  fmap Δ₁ (α ⊆ τ₁ =>
-  fmap Δ₂ (β ⊆ τ₂ =>
-    {α ⊆ τ₁ op (Δ₂ α), β ⊆ (Δ₁ β) op τ₂}
-  ))
-```
-
-`merge o[Δ] o[Δ] = o[Δ]`
-```
-merge _ none none = none 
-merge _ none o = o 
-merge _ o none = o 
-merge op (some Δ₁) (some Δ₂) = some (merge op Δ₁ Δ₂)
-```
--/
-
-
-def lookup (key : Nat) : List (Nat × T) -> Option T
-  | (k,v) :: bs => if key = k then some v else lookup key bs 
-  | [] => none
-
-
-#check List.bind
-partial def merge (op : T -> T -> T) (df : T) (Δ₁ : List (Nat × T))  (Δ₂ : List (Nat × T)) : List (Nat × T) :=
-  List.bind Δ₁ (fun (key₁, v₁) =>
-  List.bind Δ₂ (fun (key₂, v₂) =>
-    let uno := match lookup key₁ Δ₂ with
-      | Option.some v₂ => [(key₁, op v₁ v₂)]
-      | Option.none => [(key₁, op v₁ df)] 
-
-    let dos := match lookup key₂ Δ₁ with
-      | Option.some _ => [] 
-      | Option.none => [(key₂, op v₂ df)]
-    uno ++ dos
-  ))
-
-
-/-
-
-
-`linearize_record τ = o[fs]`
-```
-linearize_record .l₁ τ₁ & .l₂ τ₂ =
-  some (.l₁ τ₁ & .l₂ τ₂)
-linearize_record .l τ₁ & τ₂ =
-  some .l τ₁ & (linearize_record τ₂)
-linearize_record τ₁ & .l τ₂ =
-  some .l τ₂ & (linearize_record τ₁)
-linearize_record τ₁ & τ₂ =
-  none
-```
-
-`make_record_constraint Δ ⊢ τ * τ ⊆ τ = o[C]`
-```
-make_record_constraint Δ ⊢ τ₀ * .l τ₁ & τ₂ ⊆ μ α . τ =
-  let β₁ = fresh in
-  let C₁ = τ₁ ⊆ ∀ {β₁ ⊆ ?} ⟨(τ₀ & .l β₁ & τ₂) ⊆ unroll (μ α . τ)⟩ . β₁ in
-  C₁ ∧ make_record_constraint (Δ ⊢ τ₀ & .l τ₁ * τ₂ ⊆ μ α . τ)
-
-make_record_constraint Δ ⊢ τ₀ * .l τ₁ ⊆ μ α . τ =
-  let β₁ = fresh in
-  let C₁ = τ₁ ⊆ ∀ {β₁ ⊆ ?} ⟨(τ₀ & .l β₁) ⊆ unroll (μ α . τ)⟩ . β₁ in
-  C₁
-
-make_record_constraint _ ⊢ _ * _ ⊆ _ = none
-```
-
-`match o o = b`
-```
-match (some x₁) (some ×₂) = 
-  x₁ = x₂
-match none _ = false
-match _ none = false
-```
-
-`cases_normal τ τ = b`
-```
-cases_normal (#l₁ τ₁) (#l₂ τ₂) = true
-cases_normal τ₁ τ₂ = 
-  fmap (keys τ₁) (ks₁ =>
-  fmap (keys τ₂) (ks₂ =>
-    some (ks₁ = ks₂)
-  )) = Some true
-  (keys τ₁) = (keys τ₂) 
-```
-
-
-`decreasing τ τ = b`
-```
-decreasing (#l τ) τ = true 
-decreasing τ₁ τ₂ =  
-  any τ₁ (.l τ => decreasing τ (project τ₂ l)) andalso
-  all τ₁ (.l τ => ¬ increasing τ (project τ₂ l))
-```
-
-`increasing τ τ = b`
-```
-increasing τ₁ τ₂ = decreasing τ₂ τ₁
-```
-
-`well_founded α τ = b`
-```
-well_founded α τ₁ | τ₂ = 
-  cases_normal τ₁ τ₂ andalso
-  well_founded α τ₁ andalso
-  well_founded α τ₂
-
-well_founded α ∀ Δ ⟨τ' ⊆ α⟩ . τ = 
-  α ∈ Δ orelse
-  decreasing τ τ' 
-```
--/
-
-/-
-
-`occurs α τ`
-```
-occurs α α = true
-occurs α ? = false 
-occurs α ⟨⟩ = false 
-occurs α (#l τ) = occurs α τ 
-occurs α (.l τ) = occurs α τ 
-occurs α (τ₁ -> τ₂) = (occurs α τ₁) orelse (occurs α τ₂)
-occurs α (τ₁ & τ₂) = (occurs α τ₁) orelse (occurs α τ₂)
-occurs α (τ₁ | τ₂) = (occurs α τ₁) orelse (occurs α τ₂)
-occurs α (∀ Δ ⟨C⟩ . τ) = 
-  α ∉ Δ andalso
-  (occurs α C) orelse (occurs α τ)
-occurs α (μ β . t) = 
-  α ≠ β andalso 
-  (occurs α τ)
-```
-
-`occurs α C`
-```
-occurs α (τ' ⊆ τ) = (occurs α τ') orelse (occurs α τ)
-occurs α (C₁ ∨ C₂) = (occurs α C₁) orelse (occurs α C₂)
-occurs α (C₁ ∧ C₂) = (occurs α C₁) orelse (occurs α C₂)
-```
--/
-
-def Ty.occurs (key : Nat)  : Ty -> Bool 
-  | [: ? :] => false 
-  | .bvar id => false 
-  | .fvar id => key = id 
-  | .unit => false 
-  | .variant l ty => (Ty.occurs key ty) 
-  | .field l ty => (Ty.occurs key ty)
-  | [: ⟨ty₁⟩ ∪ ⟨ty₂⟩ :] => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
-  -- | .union ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
-  | .inter ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
-  | .func ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
-  | .univ n (cty1, cty2) ty => (Ty.occurs key cty1) ∨ (Ty.occurs key cty2) ∨ (Ty.occurs key ty)
-  | .exis n (cty1, cty2) ty => (Ty.occurs key cty1) ∨ (Ty.occurs key cty2) ∨ (Ty.occurs key ty)
-  | .recur ty => (Ty.occurs key ty)
-
-def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
-  | .unknown => .unknown 
-  | .bvar id => .bvar id 
-  | .fvar id => (match lookup id m with
-    | some ty => ty 
-    | none => .fvar id
-  )
-  | .unit => .unit
-  | .variant l ty => .variant l (Ty.free_subst m ty) 
-  | .field l ty => .field l (Ty.free_subst m ty)
-  | .union ty₁ ty₂ => .union (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
-  | .inter ty₁ ty₂ => .inter (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
-  | .func ty₁ ty₂ => .func (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
-  | .univ n (ct1, ct2) ty => (.univ
-    n
-    (Ty.free_subst m ct1, Ty.free_subst m ct2) 
-    (Ty.free_subst m ty)
-  )
-  | .exis n (ct1, ct2) ty => (.exis
-    n
-    (Ty.free_subst m ct1, Ty.free_subst m ct2) 
-    (Ty.free_subst m ty)
-  )
-  | .recur ty => .recur (Ty.free_subst m ty)
-
-
-declare_syntax_cat sub
-syntax slm "/" slm : sub 
-syntax "[" sub,+ "]" : sub
-syntax "[sub:" sub ":]" : term 
-
-macro_rules
-  | `([sub: $a:slm / $b:slm :]) => `(([: $a :], [: $b :])) 
-
-macro_rules
-  | `([sub: [$x:sub] :]) => `([ [sub: $x :] ])
-  | `([sub: [$x,$xs:sub,*] :]) => `([sub: $x :] :: [sub: [$xs,*] :])
-
-
-syntax slm "%" sub : slm 
-macro_rules
-  | `([: $a % $b:sub :]) => `(Ty.free_subst [sub: $b :] [: $a :])
-
-
--- #check [: (£1) % [1 / ?] :]
-#check [: (£1) % [1/?] :]
-
-#check Fin
-
-def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
-  | .unknown => .unknown 
-  | .bvar id => 
-      if h : start ≤ id ∧ (id - start) < args.length then
-        let i : Fin args.length := {
-          val := (id - start),
-          isLt := (match h with | And.intro _ h' => h') 
-        } 
-        args.get i 
-      else
-        .bvar id
-  | .fvar id => .fvar id 
-  | .unit => .unit
-  | .variant l ty => .variant l (Ty.raise_binding start args ty) 
-  | .field l ty => .field l (Ty.raise_binding start args ty)
-  | .union ty₁ ty₂ => .union (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
-  | .inter ty₁ ty₂ => .inter (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
-  | .func ty₁ ty₂ => .func (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
-  | .univ n (ct1, ct2) ty => (.univ
-    n
-    (Ty.raise_binding (start + n) args ct1, Ty.raise_binding (start + n) args ct2)
-    (Ty.raise_binding (start + n) args ty)
-  )
-  | .exis n (ct1, ct2) ty => (.exis
-    n
-    (Ty.raise_binding (start + n) args ct1, Ty.raise_binding (start + n) args ct2)
-    (Ty.raise_binding (start + n) args ty)
-  )
-  | .recur ty => .recur (Ty.raise_binding (start + 1) args ty)
-
-syntax slm "↑" slm "/" slm : slm 
-
-macro_rules
-  | `([: $a ↑ $b / $c :]) => `(Ty.raise_binding [: $b :] [: $c :] [: $a :])
-
-
-def τ := [: ? :]
-#check [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
-
--- termination_by 
---   Ty.subst _ ty => (some ty, none)
---   Constr.subst _ c => (none, some c)
--- decreasing_by sorry
-
-
-/-
-`unroll μ α . τ = τ`
-```
-unroll μ α . τ = subst {α ⊆ μ α . τ} τ
-```
--/
-partial def unroll (τ : Ty) : Ty := 
-  -- Ty.raise_binding 0 [Ty.recur τ] τ 
-  [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
-
-/-
-
-`rename m Δ`
-```
-rename m Δ = 
-  map Δ (α / τ =>
-    let β = m α in
-    {β / subst m τ}
-  )
-```
--/
-
-
-/-
-`roll α τ`
-```
-roll α τ = 
-  μ α . τ
-  if occurs α τ else
-  τ
-```
--/
-
-def Ty.lower_binding (depth : Nat) : Ty -> Ty
-  | .unknown => .unknown 
-  | .bvar id => .bvar (id + depth)
-  | .fvar id => .fvar id 
-  | .unit => .unit
-  | .variant l ty => .variant l (Ty.lower_binding depth ty) 
-  | .field l ty => .field l (Ty.lower_binding depth ty)
-  | .union ty₁ ty₂ => .union (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
-  | .inter ty₁ ty₂ => .inter (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
-  | .func ty₁ ty₂ => .func (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
-  | .univ n (ct1, ct2) ty => (.univ
-    n
-    (Ty.lower_binding (depth + n) ct1, Ty.lower_binding (depth + n) ct2)
-    (Ty.lower_binding (depth + n) ty)
-  )
-  | .exis n (ct1, ct2) ty => (.exis
-    n
-    (Ty.lower_binding (depth + n) ct1, Ty.lower_binding (depth + n) ct2)
-    (Ty.lower_binding (depth + n) ty)
-  )
-  | .recur ty => .recur (Ty.lower_binding (depth + 1) ty)
-
-syntax slm "↓" num : slm 
-
-macro_rules
-  | `([: $b:slm ↓ $a:num :]) => `(Ty.lower_binding $a [: $b :])
-
-
-partial def roll (key : Nat) (τ : Ty) : Ty :=
-  if Ty.occurs key τ then
-    [: (μ 0 . ⟨τ⟩↓1) % [⟨key⟩ / £0] :]
-  else
-    τ
-
-
-/-
-`Δ α = τ` 
-```
-Δ α =  
-  τ
-  if {α → τ} ⊆ Δ else
-  ?
-```
-
--/
-
-
-def liberate (i : Nat) : Nat -> List (Nat × Ty) 
-  | 0 => []
-  | n + 1 => (i, [: ? :]) :: (liberate (i + 1) n)
-
-def refresh (i : Nat) (n : Nat) : (Nat × List (Nat × Ty) × List Ty) := 
-  let args := (List.range n).map (fun j => .fvar (i + j))
-  let Δ' :=  liberate i n 
-  let i' := i + n 
-  (i', Δ', args)
-
-
-def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
-  | (.field l ty'), mu_ty => 
-      let ty := .exis 1 ( 
-        (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
-        (Ty.lower_binding 1 (unroll mu_ty))
-      ) (.bvar 0)
-      [(ty', ty)]
-  | .inter (.field l ty') rem_ty, mu_ty => 
-      let ty := 
-      [: ∃ 1 | (⟨prev_ty⟩↓1 ∩ (#⟨l⟩ £0) ∩ ⟨rem_ty⟩↓1) <: ⟨unroll mu_ty⟩↓1 . £0 :]
-
-      let rem := make_record_constraint_sub (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
-      if rem.length = 0 then
-        []
-      else 
-        (ty', ty) :: rem
-  | .inter rem_ty (.field l ty'), mu_ty => 
-      -- copy and paste above case (for terminateion proved by structure)
-      let ty := .exis 1 ( 
-        (Ty.inter (
-          Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))) 
-          (Ty.lower_binding 1 rem_ty)
-        ),
-         (Ty.lower_binding 1 (unroll mu_ty))
-      ) (.bvar 0)
-
-      let rem := make_record_constraint_sub (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
-      if rem.length = 0 then
-        []
-      else 
-        (ty', ty) :: rem
-  | _, _ => [] 
-
-def make_record_constraint_super (prev : Ty) : Ty -> Ty -> List (Ty × Ty) 
-  | mu_ty, (.field l ty') => 
-      let ty := .exis 1 ( 
-        (Ty.lower_binding 1 (unroll mu_ty)),
-        (Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
-      ) (.bvar 0)
-      [(ty', ty)]
-  | mu_ty, .inter (.field l ty') rem_ty => 
-      let ty := .exis 1 (
-        (Ty.lower_binding 1 (unroll mu_ty)),
-        (Ty.inter (
-          Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
-          (Ty.lower_binding 1 rem_ty)
-        ) 
-      ) (.bvar 0)
-
-      let rem := make_record_constraint_super (Ty.inter prev (.field l ty')) mu_ty rem_ty
-      if rem.length = 0 then
-        []
-      else
-        (ty', ty) :: rem
-  | mu_ty, .inter rem_ty (.field l ty') => 
-      -- copy and paste above case (for terminateion proved by structure)
-      let ty := .exis 1 ( 
-        (Ty.lower_binding 1 (unroll mu_ty)),
-        (Ty.inter (
-          Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
-          (Ty.lower_binding 1 rem_ty)
-        ) 
-      ) (.bvar 0)
-
-      let rem := make_record_constraint_super (Ty.inter prev (.field l ty')) mu_ty rem_ty
-      if rem.length = 0 then
-        []
-      else
-        (ty', ty) :: rem
-  | _, _ => [] 
-
-
-partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
-
-  | .fvar id, τ₂  => match lookup id Δ with 
-    | none => some (i + 2, [(i, .inter (roll id τ₂) (Ty.fvar (i + 1)))]) 
-    | some Ty.unknown => some (i + 2, [(i, .inter (roll id τ₂) (Ty.fvar (i + 1)))]) 
-    | some τ₁ => Ty.unify i Δ τ₁ τ₂ 
-
-  | τ₁, .fvar id  => match lookup id Δ with 
-    | none => some (i + 2, [(i, .union (roll id τ₁) (Ty.fvar (i + 1)))]) 
-    | some Ty.unknown => some (i + 2, [(i, .union (roll id τ₁) (Ty.fvar (i + 1)))]) 
-    | some τ₂ => Ty.unify i Δ τ₁ τ₂ 
-
-  | .recur τ', .recur τ =>
-    Ty.unify i Δ τ' τ 
-
-  | .variant l' τ', .recur τ =>
-    Ty.unify i Δ (.variant l' τ') (unroll τ)
-
-  | .recur τ', (.variant l τ) =>
-    Ty.unify i Δ (unroll τ') (.variant l τ) 
-
-
-  -- TODO: check function against induction type 
-
-  | τ', .recur τ =>
-    let cs := (make_record_constraint_sub Ty.unknown τ' τ)
-    if cs.length = 0 then
-      none
-    else
-      List.foldl (fun 
-        | some (i, Δ), (ct1, ct2) => Ty.unify i Δ ct1 ct2
-        | none, _ => none
-      ) (some (i, Δ)) cs
-
-  | .recur τ', τ =>
-    let cs := (make_record_constraint_super Ty.unknown τ' τ) 
-    if cs.length = 0 then
-      none
-    else
-      List.foldl (fun 
-        | some (i, Δ), (ct1, ct2) => Ty.unify i Δ ct1 ct2
-        | none, _ => none
-      ) (some (i, Δ)) cs
-
-  | .union τ₁ τ₂, τ => 
-    Option.bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ') => 
-    Option.bind (Ty.unify i Δ' τ₂ τ) (fun (i, Δ'') =>
-      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
-    ))
-
-  | τ, .union τ₁ τ₂ => 
-    Option.bind (Ty.unify i Δ τ τ₁) (fun (i, Δ₁) => 
-    Option.bind (Ty.unify i Δ τ τ₂) (fun (i, Δ₂) =>
-      some (i, merge Ty.union Ty.unknown Δ₁ Δ₂)
-    ))
-
-  | τ, .inter τ₁ τ₂ => 
-    Option.bind (Ty.unify i Δ τ τ₁) (fun (i, Δ') => 
-    Option.bind (Ty.unify i Δ' τ τ₂) (fun (i, Δ'') =>
-      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
-    ))
-
-  | .inter τ₁ τ₂, τ => 
-    Option.bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ₁) => 
-    Option.bind (Ty.unify i Δ τ₂ τ) (fun (i, Δ₂) =>
-      some (i, merge Ty.union Ty.unknown Δ₁ Δ₂)
-    ))
-
-  | .func τ₁ τ₂', .func τ₁' τ₂ =>
-    Option.bind (Ty.unify i Δ τ₁' τ₁) (fun (i, Δ') => 
-    Option.bind (Ty.unify i Δ' τ₂' τ₂) (fun (i, Δ'') =>
-      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
-    ))
-
-  | .variant l' τ', .variant l τ =>
-    if l' = l then
-      Ty.unify i Δ τ' τ
-    else
-      none
-
-  | .field l' τ', .field l τ =>
-    if l' = l then
-      Ty.unify i Δ τ' τ
-    else
-      none
-
-  -- TODO: check subtyping for universals without unification 
-
-  | ty, .exis n (ct1, ct2) τ =>
-    let (i, Δ, args) := refresh i n 
-    let ct1 := Ty.raise_binding 0 args ct1
-    let ct2 := Ty.raise_binding 0 args ct2
-    let τ := Ty.raise_binding 0 args τ
-    Option.bind (Ty.unify i Δ ct1 ct2) (fun (i, Δ') => 
-    Option.bind (Ty.unify i Δ' ty τ) (fun (i, Δ'') =>
-      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
-    ))
-
-  | .exis n (ct1, ct2) τ, ty =>
-    let (i, Δ, args) := refresh i n 
-    let ct1 := Ty.raise_binding 0 args ct1
-    let ct2 := Ty.raise_binding 0 args ct2
-    let τ := Ty.raise_binding 0 args τ
-    Option.bind (Ty.unify i Δ ct1 ct2) (fun (i, Δ') => 
-    Option.bind (Ty.unify i Δ' ty τ) (fun (i, Δ'') =>
-      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
-    ))
-
-  | .bvar id₁, .bvar id₂  =>
-    if id₁ = id₂ then 
-      some (i, [])
-    else
-      none
-
-  | .unit, .unit => some (i, []) 
-  | .unknown, _ => some (i, []) 
-  | _, .unknown => some (i, []) 
-  | _, _ => none
-
-
-/-
-
-`patvars t = o[Γ]`
-```
-patvars x τ = 
-  some {x : τ}
-patvars (.l t₁) τ = 
-  map (project τ l) (τ₁ =>
-    patvars t₁ τ₁
-  )
-patvars (.l t fs) τ =
-  map (patvars (.l t) τ) (Γ₁ =>
-  map (patvars fs τ) (Γ₂ =>
-    some (Γ₁ ++ Γ₂)
-  ))
-...
-```
-
-
-`infer Γ Δ ⊢ t : τ = o[Δ;τ]`
-```
-TODO:
-- raise universal type binding at application in "infer/generation of constrations"
-
-infer Γ Δ ⊢ () : τ =
-  map (solve Δ ⊢ C ∧ [] ⊆ τ in) (Δ' =>
-    some (Δ' , [])
-  )
-
-infer Γ Δ ⊢ x : τ = 
-  let τ' = Γ x in
-  let Δ', C, τ' = refresh τ' in
-  map (solve Δ, Δ' ⊢ C ∧ τ' ⊆ τ) (Δ' =>
-    some (Δ' , τ')
-  )
-
-infer Γ Δ ⊢ (#l t₁) : τ =
-  let α = fresh in
-  map (solve Δ ⊢ (∀ {α} . (#l α)) ⊆ τ) (Δ' => 
-  map (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁,τ₁ => 
-    some (Δ' ++ Δ₁ , #l τ₁)
-  ))
-
-infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
-  let Δ₁, τ₁ = τ₁[?/fresh] in
-  let Γ₁ = patvars t₁ τ₁ in
-  let β = fresh in
-  map (solve Δ ⊢ (∀ Δ₁ ++ {β} . τ₁ -> β) ⊆ τ) (Δ' => 
-  map (infer (Γ ++ Γ₁) (Δ ++ Δ') ⊢ t₂ : β) (Δ₂', τ₂' =>
-    -- patvars (Γ₁) are NOT generalized in τ₂'
-    some (Δ' ++ Δ₂' , τ₁ -> τ₂')
-  ))
-
-
-infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) cs : τ =
-  map (infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ) (Δ', τ' =>
-  map (infer Γ Δ ++ Δ' ⊢ cs : τ₂) (Δ'', τ'' => 
-    some (Δ' ++ Δ'' , τ' & τ'')
-  ))
-
-infer Γ Δ ⊢ t t₁ : τ₂ =
-  map (infer Γ Δ ⊢ t : ? -> τ₂ in) (Δ',τ' => 
-  map (functify τ') (τ₁,τ₂' => 
-  -- break type (possibly intersection) into premise and conclusion 
-  map (infer Γ (Δ ++ Δ') ⊢ t₁ : τ₁) (Δ₁',τ₁' =>
-  map (solve Δ ++ Δ' ++ Δ₁' ⊢ τ' ⊆ (τ₁' -> τ₂)) (Δ' =>
-    some(Δ' , τ₂' & τ₂)
-  ))))
-
-infer Γ Δ ⊢ (.l t₁) : τ =
-  let α = fresh in
-  map (solve Δ ⊢ (∀ {α} . (.l α)) ⊆ τ) (Δ' =>
-  map (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁ , τ₁ =>  
-    some(Δ' ++ Δ₁ , .l τ₁)
-  ))
-
-infer Γ Δ ⊢ (.l t₁) fs : τ =
-  map (infer Γ Δ ⊢ (.l t₁) : τ) (Δ' , τ' =>
-  map (infer Γ (Δ ++ Δ') ⊢ fs : τ) (Δ'' , τ'' =>
-    some(Δ' ++ Δ'' , τ' & τ'')
-  ))
-
-infer Γ Δ ⊢ t.l : τ₂ =
-  map (infer Γ Δ ⊢ t : (.l τ₂)) (Δ' , τ' =>
-  map (project τ' l) (τ₂' => 
-    some(Δ' , τ₂')
-  ))
-
-infer Γ Δ ⊢ fix t : τ =
-  map (infer Γ Δ ⊢ t : (τ -> τ)) (Δ',τ' =>
-  map (functify τ') (τ₁', τ₂' =>
-    -- extract premise and conclusion 
-    some(Δ' , τ₂')
-  ))
-
-infer Γ Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
-  let Δ₁,τ₁ = τ₁[?/fresh] in
-  map (infer Γ Δ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁' , τ₁' => 
-  map (infer (Γ ++ {x : (∀ Δ₁' . τ₁')}) Δ ⊢ t₂ : τ₂) (Δ₂' , τ₂' =>
-    -- τ₁' is generalized in τ₂'
-    some(Δ₂' , τ₂')
-  ))
-```
-
--/
-
--- static implementation/semantics theorems
-/-
-soundness: ...
-completeness: ...
--/
-
-
--- static/dynamic semantics theorems
-/-
-soundness: N/A
-completeness: N/A
 -/
