@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  2 NOV 2022 12:17
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  3 NOV 2022 08:17
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -940,18 +940,18 @@ Package rerunfilecheck Info: File `typedir_dynalang.out' has not changed.
 (rerunfilecheck)             Checksum: C8258B66B97E6384724B8725E2ED5D6D;581.
  ) 
 Here is how much of TeX's memory you used:
- 23233 strings out of 478268
- 374007 string characters out of 5846346
+ 23234 strings out of 478268
+ 374014 string characters out of 5846346
  910901 words of memory out of 5000000
  40481 multiletter control sequences out of 15000+600000
  597407 words of font info for 282 fonts, out of 8000000 for 9000
  1302 hyphenation exceptions out of 8191
  84i,11n,131p,1053b,1345s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/inconsolata/i4-t1-4.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_25tcsq.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_76gpa5.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_nh77jq.enc}</usr/local/texlive/2022/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4b.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
-Output written on typedir_dynalang.pdf (3 pages, 362478 bytes).
+Output written on typedir_dynalang.pdf (3 pages, 362595 bytes).
 PDF statistics:
- 217 PDF objects out of 1000 (max. 8388607)
- 191 compressed objects within 2 object streams
- 94 named destinations out of 1000 (max. 500000)
+ 220 PDF objects out of 1000 (max. 8388607)
+ 194 compressed objects within 2 object streams
+ 95 named destinations out of 1000 (max. 500000)
  68665 words of extra memory for PDF output out of 74296 (max. 10000000)
 
