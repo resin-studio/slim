@@ -191,106 +191,64 @@ a function that takes a natural number \lstinline{n}
 and an element \lstinline{x}, 
 and returns list of n elements.
 
-\begin{lstlisting}[]
-let replicate $\in$ 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
-  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\cap$ 
-  $\forall$ nat list | 
-    (nat $\rightarrow$ list) $\subseteq$ nat_to_list .
-    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
-\end{lstlisting}
-
-\begin{lstlisting}[]
-let replicate $\in$ 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
-  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\cap$ 
-  $\forall$ (nat $\rightarrow$ list) $\subseteq$ nat_to_list .
-    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
-\end{lstlisting}
-
-\begin{lstlisting}[]
-let replicate $\in$ 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
-  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\cap$ 
-  #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
-    $\bigcap$  (nat $\rightarrow$ list) $\subseteq$ nat_to_list
-\end{lstlisting}
 
 \begin{lstlisting}[]
 let replicate : 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
-  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\wedge$ 
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
+  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
   #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
-    $\bigwedge$  (nat $\rightarrow$ list) $\leq$ nat_to_list
 \end{lstlisting}
+
+\noindent which is syntactic sugar for:
 
 \begin{lstlisting}[]
 let replicate : 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
   #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
   #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
-    && (nat $\rightarrow$ list) $\leq$ nat_to_list
+    &> (nat $\rightarrow$ list) $\leq$ nat_to_list
 \end{lstlisting}
+
+\noindent which is syntactic sugar for:
 
 \begin{lstlisting}[]
-let replicate : ? $\rightarrow$ $\mu$ nat_to_list .
+let replicate : 
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
   #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
-  #succ nat $\rightarrow$ #cons (? $\times$ list)
-    && (nat $\rightarrow$ list) $\leq$ nat_to_list
+  $\forall$ nat list :: 
+    (nat $\rightarrow$ list) $\leq$ nat_to_list .
+    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
 
+\newpage
 \noindent Correspondingly, types can also specify a pair of a list and its length.
 
 \begin{lstlisting}[]
-let measurment $\in$ 
-$\exists$ $\alpha$ . $\mu$ nat_and_list .
-  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\cup$ 
-  $\exists$ nat list | 
-    (nat $\times$ list) $\subseteq$ nat_and_list .
-    #succ nat $\times$ #cons ($\alpha$ $\times$ list)
-\end{lstlisting}
-
-\begin{lstlisting}[]
-let measurment $\in$ 
-$\exists$ $\alpha$ . $\mu$ nat_and_list .
-  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\cup$ 
-  $\exists$ (nat $\times$ list) $\subseteq$ nat_and_list .
-    #succ nat $\times$ #cons ($\alpha$ $\times$ list)
-\end{lstlisting}
-
-\begin{lstlisting}[]
-let measurment $\in$ 
-$\exists$ $\alpha$ . $\mu$ nat_and_list .
-  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\cup$ 
-  #succ nat $\times$ #cons ($\alpha$ $\times$ list)
-    $\bigcup$ (nat $\times$ list) $\subseteq$ nat_and_list
-\end{lstlisting}
-
-\begin{lstlisting}[]
-let measurment : 
-$\exists$ $\alpha$ . $\mu$ nat_and_list .
-  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\vee$ 
-  #succ nat $\times$ #cons ($\alpha$ $\times$ list)
-    $\bigvee$ (nat $\times$ list) $\leq$ nat_and_list
-\end{lstlisting}
-
-\begin{lstlisting}[]
-let measurment : 
-$\exists$ $\alpha$ . $\mu$ nat_and_list .
-  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
-  #succ nat $\times$ #cons ($\alpha$ $\times$ list)
-    || (nat $\times$ list) $\leq$ nat_and_list
-\end{lstlisting}
-
-\begin{lstlisting}[]
-let measurment : $\mu$ nat_and_list .
+let measurment : $\mu$ (nat $\times$ list) .
   #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
   #succ nat $\times$ #cons (? $\times$ list)
-    || (nat $\times$ list) $\leq$ nat_and_list
 \end{lstlisting}
 
+\noindent which is syntactic sugar for:
 
+\begin{lstlisting}[]
+let measurment : 
+$\exists$ $\alpha$ . $\mu$ nat_and_list .
+  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
+  #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+    |> (nat $\times$ list) $\leq$ nat_and_list
+\end{lstlisting}
 
+\noindent which is syntactic sugar for:
+
+\begin{lstlisting}[]
+let measurment : 
+$\exists$ $\alpha$ . $\mu$ nat_and_list .
+  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
+  $\exists$ nat list :: 
+    (nat $\times$ list) $\leq$ nat_and_list .
+    #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+\end{lstlisting}
 
 \section{Overview}
 
