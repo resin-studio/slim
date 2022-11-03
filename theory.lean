@@ -272,6 +272,62 @@ def τ := [: ? :]
 #check [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
 
 
+
+/-
+-- TODO: determine how to add co-recursive types (ν)  
+-- TODO: pay attention to how recursive and co-recursive types are unrolled
+
+---
+recursive types
+
+μ nat . #zero | #succ nat 
+
+unroll
+
+#zero | #succ (μ nat . #zero | #succ nat)
+
+distribute
+
+#zero | (μ nat . #succ #zero | #succ #succ nat)
+
+tag distributes over union in recursive type 
+
+---
+co-recursive types
+
+ν (nat -> list) . 
+  #zero -> #nil & 
+  #succ nat -> #cons (? × list)
+
+desugar 
+
+ν nat_to_list . 
+  #zero -> #nil & 
+  #succ nat -> #cons (? × list)
+    &> (nat -> list) ≤ nat_to_list .
+
+unroll
+
+#zero -> #nil & 
+#succ nat -> #cons (? × list)
+  &> (nat -> list) ≤ (ν nat_to_list . 
+    #zero -> #nil & 
+    #succ nat -> #cons (? × list)
+      &> (nat -> list) ≤ nat_to_list .
+  ).
+
+distribute
+
+#zero -> #nil & 
+ν nat_to_list . 
+  #succ #zero -> #cons (? × #nil) & 
+  #succ #succ nat -> #cons (? × #cons (? × list))
+    &> (nat -> list) ≤ nat_to_list .
+
+tags distribute over intersection in co-recursive type 
+
+-/
+
 partial def unroll (τ : Ty) : Ty := 
   -- Ty.raise_binding 0 [Ty.recur τ] τ 
   [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]

@@ -90,8 +90,8 @@ it's possible to detect an error before knowing the second element.
 
 to detect an error of a pairt of a   
 \begin{lstlisting}
-$\lambda$ n $\in$ nat $\Rightarrow$
-  let first = ($\lambda$ (x,y) $\in$ (str $\times$ str) $\Rightarrow$ x) .
+$\lambda$ n : nat $\Rightarrow$
+  let first = ($\lambda$ (x,y) : (str $\times$ str) $\Rightarrow$ x) .
   first (n, _) 
 \end{lstlisting}
 
@@ -109,7 +109,7 @@ The actual type of a term can be inferred in an obvious way.
 
 \begin{lstlisting}
 
-#cons("hello",#cons("world",#nil())) $\in$ 
+#cons("hello",#cons("world",#nil())) : 
 #cons(str $\times$ #cons(str $\times$ #nil$\diamondsuit$))
 
 \end{lstlisting}
@@ -132,8 +132,8 @@ In parametric types where a generic input type must be the same as a generic out
 The dynamic nature of terms is at odds with inferring types.
 
 \begin{lstlisting}
-($\lambda$ pair $\in$ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
-($\lambda$ n $\in$ int $\Rightarrow$ ($\lambda$ s $\in$ str $\Rightarrow$ 
+($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
+($\lambda$ n : int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
   pair n s
 )))
 \end{lstlisting}
@@ -161,8 +161,8 @@ internally used as an argument to an application, the dynamic nature of terms
 adds some complications to type inference.
 
 \begin{lstlisting}
-($\lambda$ i2n $\in$ int $\rightarrow$ nat $\Rightarrow$ 
-($\lambda$ s2n $\in$ str $\rightarrow$ nat $\Rightarrow$ 
+($\lambda$ i2n : int $\rightarrow$ nat $\Rightarrow$ 
+($\lambda$ s2n : str $\rightarrow$ nat $\Rightarrow$ 
   $\lambda$ x $\Rightarrow$ (i2n x, s2n x)
 ))
 
@@ -274,7 +274,7 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
         all terms being accepted by typing rules (i.e. everything typing)
     \end{enumerate}
   \item an expressive type system 
-    based on intersection, union, and recursive types
+    based on intersection, union, recursive, and co-recursive types
     \begin{enumerate}
       \item without dependent types 
       \item comparable to prolog 
