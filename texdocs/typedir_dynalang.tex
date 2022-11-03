@@ -200,6 +200,45 @@ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
     #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
 
+\begin{lstlisting}[]
+let replicate $\in$ 
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
+  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\cap$ 
+  $\forall$ (nat $\rightarrow$ list) $\subseteq$ nat_to_list .
+    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+\end{lstlisting}
+
+\begin{lstlisting}[]
+let replicate $\in$ 
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
+  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\cap$ 
+  #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+    $\bigcap$  (nat $\rightarrow$ list) $\subseteq$ nat_to_list
+\end{lstlisting}
+
+\begin{lstlisting}[]
+let replicate : 
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
+  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ $\wedge$ 
+  #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+    $\bigwedge$  (nat $\rightarrow$ list) $\leq$ nat_to_list
+\end{lstlisting}
+
+\begin{lstlisting}[]
+let replicate : 
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\mu$ nat_to_list .
+  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
+  #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+    && (nat $\rightarrow$ list) $\leq$ nat_to_list
+\end{lstlisting}
+
+\begin{lstlisting}[]
+let replicate : ? $\rightarrow$ $\mu$ nat_to_list .
+  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
+  #succ nat $\rightarrow$ #cons (? $\times$ list)
+    && (nat $\rightarrow$ list) $\leq$ nat_to_list
+\end{lstlisting}
+
 \noindent Correspondingly, types can also specify a pair of a list and its length.
 
 \begin{lstlisting}[]
@@ -210,6 +249,46 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
     (nat $\times$ list) $\subseteq$ nat_and_list .
     #succ nat $\times$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
+
+\begin{lstlisting}[]
+let measurment $\in$ 
+$\exists$ $\alpha$ . $\mu$ nat_and_list .
+  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\cup$ 
+  $\exists$ (nat $\times$ list) $\subseteq$ nat_and_list .
+    #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+\end{lstlisting}
+
+\begin{lstlisting}[]
+let measurment $\in$ 
+$\exists$ $\alpha$ . $\mu$ nat_and_list .
+  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\cup$ 
+  #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+    $\bigcup$ (nat $\times$ list) $\subseteq$ nat_and_list
+\end{lstlisting}
+
+\begin{lstlisting}[]
+let measurment : 
+$\exists$ $\alpha$ . $\mu$ nat_and_list .
+  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ $\vee$ 
+  #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+    $\bigvee$ (nat $\times$ list) $\leq$ nat_and_list
+\end{lstlisting}
+
+\begin{lstlisting}[]
+let measurment : 
+$\exists$ $\alpha$ . $\mu$ nat_and_list .
+  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
+  #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+    || (nat $\times$ list) $\leq$ nat_and_list
+\end{lstlisting}
+
+\begin{lstlisting}[]
+let measurment : $\mu$ nat_and_list .
+  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
+  #succ nat $\times$ #cons (? $\times$ list)
+    || (nat $\times$ list) $\leq$ nat_and_list
+\end{lstlisting}
+
 
 
 
@@ -264,12 +343,11 @@ How gradually typed inference typically works:
 \end{enumerate}
 There exists work on type inference for gradually typed programs.
 To the best of my knowledge, they are all sound and complete.
-This notion results in the inference being unsound.
 Other gradual type inference systems separate 
 generating constraints from solving constraints.
-Our system toggles between generating and solving constraints incrementally.
-Other gradual typing systems use the dynamic type "?" to indicate 
+Gradual typing systems use the dynamic type "?" to indicate 
 that dynamic checks should be used.
+Gradual type inference relies on ML types with union extension.
 They do not contain the idea of using intersection and union to keep types open.
 Gradual typing systems separate subtyping from the relation 
 between dynamic to static types to avoid all terms typing via the subsumption rule.
