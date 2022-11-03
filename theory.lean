@@ -102,12 +102,12 @@ partial def merge (op : T -> T -> T) (df : T) (Δ₁ : List (Nat × T))  (Δ₂ 
   List.bind Δ₁ (fun (key₁, v₁) =>
   List.bind Δ₂ (fun (key₂, v₂) =>
     let uno := match lookup key₁ Δ₂ with
-      | Option.some v₂ => [(key₁, op v₁ v₂)]
-      | Option.none => [(key₁, op v₁ df)] 
+      | some v₂ => [(key₁, op v₁ v₂)]
+      | none => [(key₁, op v₁ df)] 
 
     let dos := match lookup key₂ Δ₁ with
-      | Option.some _ => [] 
-      | Option.none => [(key₂, op v₂ df)]
+      | some _ => [] 
+      | none => [(key₂, op v₂ df)]
     uno ++ dos
   ))
 
@@ -429,32 +429,32 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
       ) (some (i, Δ)) cs
 
   | .union τ₁ τ₂, τ => 
-    Option.bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ') => 
-    Option.bind (Ty.unify i Δ' τ₂ τ) (fun (i, Δ'') =>
+    bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ') => 
+    bind (Ty.unify i Δ' τ₂ τ) (fun (i, Δ'') =>
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
   | τ, .union τ₁ τ₂ => 
-    Option.bind (Ty.unify i Δ τ τ₁) (fun (i, Δ₁) => 
-    Option.bind (Ty.unify i Δ τ τ₂) (fun (i, Δ₂) =>
+    bind (Ty.unify i Δ τ τ₁) (fun (i, Δ₁) => 
+    bind (Ty.unify i Δ τ τ₂) (fun (i, Δ₂) =>
       some (i, merge Ty.union Ty.unknown Δ₁ Δ₂)
     ))
 
   | τ, .inter τ₁ τ₂ => 
-    Option.bind (Ty.unify i Δ τ τ₁) (fun (i, Δ') => 
-    Option.bind (Ty.unify i Δ' τ τ₂) (fun (i, Δ'') =>
+    bind (Ty.unify i Δ τ τ₁) (fun (i, Δ') => 
+    bind (Ty.unify i Δ' τ τ₂) (fun (i, Δ'') =>
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
   | .inter τ₁ τ₂, τ => 
-    Option.bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ₁) => 
-    Option.bind (Ty.unify i Δ τ₂ τ) (fun (i, Δ₂) =>
+    bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ₁) => 
+    bind (Ty.unify i Δ τ₂ τ) (fun (i, Δ₂) =>
       some (i, merge Ty.union Ty.unknown Δ₁ Δ₂)
     ))
 
   | .func τ₁ τ₂', .func τ₁' τ₂ =>
-    Option.bind (Ty.unify i Δ τ₁' τ₁) (fun (i, Δ') => 
-    Option.bind (Ty.unify i Δ' τ₂' τ₂) (fun (i, Δ'') =>
+    bind (Ty.unify i Δ τ₁' τ₁) (fun (i, Δ') => 
+    bind (Ty.unify i Δ' τ₂' τ₂) (fun (i, Δ'') =>
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
@@ -477,8 +477,8 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
     let ct1 := Ty.raise_binding 0 args ct1
     let ct2 := Ty.raise_binding 0 args ct2
     let τ := Ty.raise_binding 0 args τ
-    Option.bind (Ty.unify i Δ ct1 ct2) (fun (i, Δ') => 
-    Option.bind (Ty.unify i Δ' ty τ) (fun (i, Δ'') =>
+    bind (Ty.unify i Δ ct1 ct2) (fun (i, Δ') => 
+    bind (Ty.unify i Δ' ty τ) (fun (i, Δ'') =>
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
@@ -487,8 +487,8 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
     let ct1 := Ty.raise_binding 0 args ct1
     let ct2 := Ty.raise_binding 0 args ct2
     let τ := Ty.raise_binding 0 args τ
-    Option.bind (Ty.unify i Δ ct1 ct2) (fun (i, Δ') => 
-    Option.bind (Ty.unify i Δ' ty τ) (fun (i, Δ'') =>
+    bind (Ty.unify i Δ ct1 ct2) (fun (i, Δ') => 
+    bind (Ty.unify i Δ' ty τ) (fun (i, Δ'') =>
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
@@ -594,6 +594,11 @@ def infer
   | .unit => bind (Ty.unify i Δ Ty.unit ty) (fun (i, Δ) =>
       (i, Δ, Ty.unit)
     )
+  | .bvar _ => none
+  | .fvar x =>
+    bind (lookup x Γ) (fun ty' =>
+      -- TODO: instantiate/raise universal with free var
+    )  
   | _ => none
 
 /-
@@ -605,10 +610,6 @@ infer Γ Δ ⊢ x : τ =
   map (solve Δ, Δ' ⊢ C ∧ τ' ⊆ τ) (Δ' =>
     some (Δ' , τ')
   )
-
-TODO:
-- raise universal type binding at application in "infer/generation of constrations"
-
 
 infer Γ Δ ⊢ (#l t₁) : τ =
   let α = fresh in
