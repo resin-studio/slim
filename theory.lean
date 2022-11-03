@@ -587,7 +587,7 @@ infer Γ Δ ⊢ () : τ =
 ```
 -/
 
-def instantiate : Ty -> Ty
+def instantiate (i : Nat) : Ty -> (Nat × Ty)
   | .univ n (ct1, ct2) ty => 
     -- TODO: instantiate/raise universal with free var
     let (i, Δ₁, args) := refresh i n
@@ -604,7 +604,7 @@ def infer
   | .bvar _ => none
   | .fvar x =>
     bind (lookup x Γ) (fun ty' =>
-      let inst_ty := instantiate ty
+      let (i, inst_ty) := instantiate i ty
     )  
   | _ => none
 
