@@ -579,13 +579,25 @@ patvars (.l t fs) τ =
 
 `infer Γ Δ ⊢ t : τ = o[Δ;τ]`
 ```
-TODO:
-- raise universal type binding at application in "infer/generation of constrations"
 
 infer Γ Δ ⊢ () : τ =
   map (solve Δ ⊢ C ∧ [] ⊆ τ in) (Δ' =>
     some (Δ' , [])
   )
+```
+-/
+
+def infer 
+  (i : Nat)
+  (Δ : List (Nat × Ty)) (Γ : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
+  Option (Nat × List (Nat × Ty) × Ty) := match t with
+  | .unit => bind (Ty.unify i Δ Ty.unit ty) (fun (i, Δ) =>
+      (i, Δ, Ty.unit)
+    )
+  | _ => none
+
+/-
+```
 
 infer Γ Δ ⊢ x : τ = 
   let τ' = Γ x in
@@ -593,6 +605,10 @@ infer Γ Δ ⊢ x : τ =
   map (solve Δ, Δ' ⊢ C ∧ τ' ⊆ τ) (Δ' =>
     some (Δ' , τ')
   )
+
+TODO:
+- raise universal type binding at application in "infer/generation of constrations"
+
 
 infer Γ Δ ⊢ (#l t₁) : τ =
   let α = fresh in
