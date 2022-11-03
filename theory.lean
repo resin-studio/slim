@@ -97,6 +97,16 @@ def lookup (key : Nat) : List (Nat × T) -> Option T
   | (k,v) :: bs => if key = k then some v else lookup key bs 
   | [] => none
 
+def liberate (i : Nat) : Nat -> List (Nat × Ty) 
+  | 0 => []
+  | n + 1 => (i, [: ? :]) :: (liberate (i + 1) n)
+
+def refresh (i : Nat) (n : Nat) : (Nat × List (Nat × Ty) × List Ty) := 
+  let args := (List.range n).map (fun j => .fvar (i + j))
+  let Δ' :=  liberate i n 
+  let i' := i + n 
+  (i', Δ', args)
+
 
 partial def merge (op : T -> T -> T) (df : T) (Δ₁ : List (Nat × T))  (Δ₂ : List (Nat × T)) : List (Nat × T) :=
   List.bind Δ₁ (fun (key₁, v₁) =>
@@ -300,16 +310,6 @@ partial def roll (key : Nat) (τ : Ty) : Ty :=
   else
     τ
 
-
-def liberate (i : Nat) : Nat -> List (Nat × Ty) 
-  | 0 => []
-  | n + 1 => (i, [: ? :]) :: (liberate (i + 1) n)
-
-def refresh (i : Nat) (n : Nat) : (Nat × List (Nat × Ty) × List Ty) := 
-  let args := (List.range n).map (fun j => .fvar (i + j))
-  let Δ' :=  liberate i n 
-  let i' := i + n 
-  (i', Δ', args)
 
 
 def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
@@ -587,6 +587,13 @@ infer Γ Δ ⊢ () : τ =
 ```
 -/
 
+def instantiate : Ty -> Ty
+  | .univ n (ct1, ct2) ty => 
+    -- TODO: instantiate/raise universal with free var
+    let (i, Δ₁, args) := refresh i n
+    ty
+  | ty => ty
+
 def infer 
   (i : Nat)
   (Δ : List (Nat × Ty)) (Γ : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
@@ -597,7 +604,7 @@ def infer
   | .bvar _ => none
   | .fvar x =>
     bind (lookup x Γ) (fun ty' =>
-      -- TODO: instantiate/raise universal with free var
+      let inst_ty := instantiate ty
     )  
   | _ => none
 

@@ -223,36 +223,37 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
 
 \section*{Notes}
 
-Novel contributions: This system is the first to have:
+\subsection*{contributions}
 \begin{enumerate}
-  \item program synthesis from partial programs with missing annotations  
+  \item program synthesis such that:
+    \begin{enumerate}
+      \item goal defined by partial programs with missing annotations  
+      \item goal transformed into type specification 
+      \item type specification may contain dynamic type  
+    \end{enumerate}
   \item algorithmic subsumption allows simple subtyping rule with dynamic type
     \begin{enumerate}
       \item subtyping can having a dynamic type on either side without risk of   
         a subsumption rule accepting any arbitrary type
     \end{enumerate}
-  \item type unification without intrinsically typed terms (as in ML): 
-    \begin{enumerate}
-      \item the principal type of all terms is top
-      \item lenient (but unsound) static type inference
-      \item expanding type info with union and intersection and dynamic type
-      \item subtyping rules for intersection and union 
-    \end{enumerate}
-  \item full type synthesis with full type propagation (for all rules)
-  \item interleaving type constraint generation and solving with dynamic type 
-  \item an expressive predicate logic 
+  \item an expressive type system 
     based on intersection, union, and recursive types
     \begin{enumerate}
       \item without dependent types 
       \item comparable to prolog 
-    \end{enumerate}
-  \item a type system that meets with all three properties:
-    \begin{enumerate}
       \item allows dynamic type 
       \item sound modulo absence of dynamic type 
         or static type union/intersect with dynamic
       \item types behave either leniently or strict depending on usage as actual type or expected type
     \end{enumerate}
+  \item full type synthesis with full type propagation (for all rules)
+  \item type unification such that: 
+    \begin{enumerate}
+      \item the principal type of all terms is top
+      \item lenient (but unsound) static type inference
+      \item expanding type info with union and intersection and dynamic type
+    \end{enumerate}
+  \item interleaving type constraint generation and solving with dynamic type 
 \end{enumerate}
 
 How gradually typed inference typically works:
@@ -262,6 +263,7 @@ How gradually typed inference typically works:
 \end{enumerate}
 
 
+\subsection*{gradual typing}
 There exists work on type inference for gradually typed programs.
 To the best of my knowledge, they are all sound and complete.
 This notion results in the inference being unsound.
