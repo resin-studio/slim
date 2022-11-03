@@ -324,7 +324,7 @@ distribute
   #succ #succ nat -> #cons (? × #cons (? × list))
     &> (nat -> list) ≤ nat_to_list .
 
-tags distribute over intersection in co-recursive type 
+tags distribute over intersection type (&) in universal type (&>) in co-recursive (ν) type 
 
 -/
 
