@@ -288,7 +288,8 @@ unroll
 
 #zero | #succ (μ nat . #zero | #succ nat)
 
-unroll
+unroll on rhs of subtyping
+can't unroll on lhs 
 
 #zero | #succ #zero | #succ (μ nat . #zero | #succ nat)
 
@@ -307,7 +308,8 @@ desugar
   #succ nat -> #cons (? × list)
     &> (nat -> list) ≤ nat_to_list .
 
-cannot unroll
+unroll on lhs of subtyping
+can't unroll on rhs
 -/
 
 

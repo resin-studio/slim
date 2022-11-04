@@ -6,13 +6,14 @@
 \usepackage{mathtools}
 \usepackage{listings}
 \lstset{
-    identifierstyle=\color{blue},
+    identifierstyle=\color{violet},
     % textcolor=blue,
     % keywordstyle=\color{blue},
-    % keywordstyle=\textbf,
+    keywordstyle=\text,
     basicstyle=\ttfamily,
     mathescape=true,
-    showspaces=false
+    showspaces=false,
+    keywords={let}
 }
 \usepackage[utf8]{inputenc}
 % \usepackage[T1]{fontenc}
@@ -147,12 +148,12 @@ This system tackles the tension in these goals by combining the union combinator
 with the dynamic type. 
 
 Once \lstinline{pair} is applied to an integer its generic type is specialized to 
-\lstinline{int $\cup$ ?}, 
+\lstinline{int | ?}, 
 in which union with the dynamic type behaves like the top type $\top$, 
 accommodating receiving a string as a the subsequent input.
-Thus, the generic type is specialized to \lstinline{int $\cup$ str $\cup$ ?}.
+Thus, the generic type is specialized to \lstinline{int | str | ?}.
 The result type for \lstinline{pair n s} ends up as 
-\lstinline{(int $\cup$ string) $\times$ (int $\cup$ string)}. 
+\lstinline{(int | string) $\times$ (int | string)}. 
 The semantics of union with the dynamic type result in the dynamic type 
 falling away for actual types.
 
@@ -172,11 +173,11 @@ The argument type must avail itself to internal parameter types of unforeseen co
 while the external parameter type should be \textbf{narrowed} and restricted 
 to the internal parameter types of previously seen compositions.
 Once \lstinline{i2n} is applied to \lstinline{x}, 
-the type for \lstinline{x} is specialized to \lstinline{int $\cap$ ?}, 
+the type for \lstinline{x} is specialized to \lstinline{int & ?}, 
 in which intersection with the dynamic type behaves like the bottom type $\bot$,
 availing itself to be used in subsequent applications. 
-Thus, the dynamic type is inferred to be \lstinline{int $\cap$ str $\cap$ ?}.
-The external parameter type for ends up as \lstinline{int $\cap$ str}. 
+Thus, the dynamic type is inferred to be \lstinline{int & str & ?}.
+The external parameter type for ends up as \lstinline{int & str}. 
 The semantics of intersection with the dynamic type result in the dynamic type
 falling away for expected types.
 
@@ -185,61 +186,19 @@ falling away for expected types.
 In order to efficiently guide program synthesis, 
 types must be able to \textbf{express} fairly precise information. 
 The system presented here offers types with 
-expressivity comparable to typical decidable predicate logics. 
-For example, the types are expressive enough to precisely specify
-a function that takes a natural number \lstinline{n} 
-and an element \lstinline{x}, 
-and returns list of n elements.
-
-
-\begin{lstlisting}[]
-let replicate : 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
-  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
-  #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
-\end{lstlisting}
-
-\noindent which is syntactic sugar for:
-
-\begin{lstlisting}[]
-let replicate : 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
-  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
-  #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
-    &> (nat $\rightarrow$ list) $\leq$ nat_to_list
-\end{lstlisting}
-
-\noindent which is syntactic sugar for:
-
-\begin{lstlisting}[]
-let replicate : 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
-  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
-  $\forall$ nat list :: 
-    (nat $\rightarrow$ list) $\leq$ nat_to_list .
-    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
-\end{lstlisting}
-
-\newpage
-\noindent Correspondingly, types can also specify a pair of a list and its length.
+expressivity comparable to typical decidable predicate logics. \\
+\hfill \\
+For example, types can also specify a pair of a list and its length.
 
 \begin{lstlisting}[]
 let measurment : $\mu$ (nat $\times$ list) .
   #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
   #succ nat $\times$ #cons (? $\times$ list)
-\end{lstlisting}
+\end{lstlisting} 
 
-\noindent which is syntactic sugar for:
+\hfill
 
-\begin{lstlisting}[]
-let measurment : 
-$\exists$ $\alpha$ . $\mu$ nat_and_list .
-  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
-  #succ nat $\times$ #cons ($\alpha$ $\times$ list)
-    |> (nat $\times$ list) $\leq$ nat_and_list
-\end{lstlisting}
-
-\noindent which is syntactic sugar for:
+\noindent This is syntactic sugar for:
 
 \begin{lstlisting}[]
 let measurment : 
@@ -249,6 +208,40 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
     (nat $\times$ list) $\leq$ nat_and_list .
     #succ nat $\times$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
+
+
+\noindent Correspondingly, the types are expressive enough to precisely specify
+a function that takes a natural number \lstinline{n} 
+and an element, and returns a list of \lstinline{n} elements.
+
+\begin{lstlisting}[]
+let replicate : 
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
+  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
+  #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+\end{lstlisting}
+
+\hfill
+
+\noindent This is syntactic sugar for:
+
+\begin{lstlisting}[]
+let replicate : 
+$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
+  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
+  $\forall$ nat list :: 
+    nat_to_list $\leq$ (nat $\rightarrow$ list) .
+    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+\end{lstlisting}
+
+
+\noindent The type of \lstinline{replicate} is co-recursive rather than recursive. 
+When expanded to the type with a universal type and constraint, 
+the universally typed variables appear on the right hand side 
+of the subtyping constraint, while the co-recursive variable
+appears on the left hand side. This is consistent with the notion
+that a intersection of types is a subtype of any one of its parts.
+
 
 \section{Overview}
 
