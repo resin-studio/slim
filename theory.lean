@@ -310,6 +310,13 @@ desugar
 cannot unroll
 -/
 
+
+/-
+
+--TODO: what's the intuition behind instantiation of universal?
+
+-/
+
 partial def unroll (τ : Ty) : Ty := 
   -- Ty.raise_binding 0 [Ty.recur τ] τ 
   [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
