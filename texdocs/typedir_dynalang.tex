@@ -101,7 +101,7 @@ is propagated and decomposed such that the subtyping constraint
 \lstinline{nat $\subseteq$ str} is decided. 
 
 In order to have fine-grained control over where types are utilized or avoided, 
-types may be composed of \textbf{dynamic types}, represented by "?" to indicate 
+types may be composed of \textbf{dynamic types}, represented by \lstinline{(?)} to indicate 
 that any subterm corresponding to that portion of the type 
 will not be subject to static constraints.
 
@@ -176,8 +176,8 @@ Once \lstinline{i2n} is applied to \lstinline{x},
 the type for \lstinline{x} is specialized to \lstinline{(int & ?)}, 
 in which intersection with the dynamic type behaves like the bottom type $\bot$,
 availing itself to be used in subsequent applications. 
-Thus, the dynamic type is inferred to be \lstinline{int & str & ?}.
-The external parameter type for ends up as \lstinline{int & str}. 
+Thus, the dynamic type is inferred to be \lstinline{(int & str & ?)}.
+The external parameter type for ends up as \lstinline{(int & str)}. 
 The semantics of intersection with the dynamic type result in the dynamic type
 falling away for expected types.
 
@@ -296,7 +296,7 @@ There exists work on type inference for gradually typed programs.
 To the best of my knowledge, they are all sound and complete.
 Other gradual type inference systems separate 
 generating constraints from solving constraints.
-Gradual typing systems use the dynamic type "?" to indicate 
+Gradual typing systems use the dynamic type \lstinline{(?)} to indicate 
 that dynamic checks should be used.
 Gradual type inference relies on ML types with union extension.
 They do not contain the idea of using intersection and union to keep types open.
