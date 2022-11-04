@@ -342,6 +342,39 @@ co-recursive stream
 unroll
 #succ (ν stream . #succ stream)
 
+---
+co-recursive stream
+ν stream . #zero | #succ stream 
+
+canNOT unroll co-recursive type under union
+
+#succ (ν stream . #zero | #succ stream)
+(ν stream . #succ (#zero | #succ stream))
+
+tags do NOT distribute over union in co-recursive type
+
+---
+co-recursive from_nat 
+ν nat -> unit . 
+  #zero unit -> unit &   
+  #succ nat -> unit  
+
+desugar
+ν nat_to_unit . 
+  #zero unit -> unit &   
+  #succ nat -> unit  
+    &> nat -> unit ≤ nat_to_unit
+
+unroll
+#zero unit -> unit &   
+#succ nat -> unit  
+  &> nat -> unit ≤ (
+    ν nat_to_unit . 
+      #zero unit -> unit &   
+      #succ nat -> unit  
+        &> nat -> unit ≤ nat_to_unit
+  )
+
 -/
 
 partial def unroll (τ : Ty) : Ty := 
