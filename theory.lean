@@ -288,11 +288,10 @@ unroll
 
 #zero | #succ (μ nat . #zero | #succ nat)
 
-distribute
+unroll
 
-#zero | (μ nat . #succ #zero | #succ #succ nat)
+#zero | #succ #zero | #succ (μ nat . #zero | #succ nat)
 
-tag distributes over union in recursive type 
 
 ---
 co-recursive types
@@ -308,73 +307,7 @@ desugar
   #succ nat -> #cons (? × list)
     &> (nat -> list) ≤ nat_to_list .
 
-unroll
-
-#zero -> #nil & 
-#succ nat -> #cons (? × list)
-  &> (nat -> list) ≤ (ν nat_to_list . 
-    #zero -> #nil & 
-    #succ nat -> #cons (? × list)
-      &> (nat -> list) ≤ nat_to_list .
-  ).
-
-distribute
-
-#zero -> #nil & 
-ν nat_to_list . 
-  #succ #zero -> #cons (? × #nil) & 
-  #succ #succ nat -> #cons (? × #cons (? × list))
-    &> (nat -> list) ≤ nat_to_list .
-
-tags distribute over intersection type (&) in universal type (&>) in co-recursive (ν) type 
-
----
-recursive stream
-μ stream . unit -> #succ stream 
-
-unroll
-unit -> #succ (μ stream . unit -> #succ stream) 
-
----
-co-recursive stream
-ν stream . #succ stream 
-
-unroll
-#succ (ν stream . #succ stream)
-
----
-co-recursive stream
-ν stream . #zero | #succ stream 
-
-canNOT unroll co-recursive type under union
-
-#succ (ν stream . #zero | #succ stream)
-(ν stream . #succ (#zero | #succ stream))
-
-tags do NOT distribute over union in co-recursive type
-
----
-co-recursive from_nat 
-ν nat -> unit . 
-  #zero unit -> unit &   
-  #succ nat -> unit  
-
-desugar
-ν nat_to_unit . 
-  #zero unit -> unit &   
-  #succ nat -> unit  
-    &> nat -> unit ≤ nat_to_unit
-
-unroll
-#zero unit -> unit &   
-#succ nat -> unit  
-  &> nat -> unit ≤ (
-    ν nat_to_unit . 
-      #zero unit -> unit &   
-      #succ nat -> unit  
-        &> nat -> unit ≤ nat_to_unit
-  )
-
+cannot unroll
 -/
 
 partial def unroll (τ : Ty) : Ty := 
