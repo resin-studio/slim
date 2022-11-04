@@ -148,11 +148,11 @@ This system tackles the tension in these goals by combining the union combinator
 with the dynamic type. 
 
 Once \lstinline{pair} is applied to an integer its generic type is specialized to 
-\lstinline{int | ?}, 
+\lstinline{(int | ?)}, 
 in which union with the dynamic type behaves like the top type $\top$, 
 accommodating receiving a string as a the subsequent input.
-Thus, the generic type is specialized to \lstinline{int | str | ?}.
-The result type for \lstinline{pair n s} ends up as 
+Thus, the generic type is specialized to \lstinline{(int | str | ?)}.
+The result type for \lstinline{(pair n s)} ends up as 
 \lstinline{(int | string) $\times$ (int | string)}. 
 The semantics of union with the dynamic type result in the dynamic type 
 falling away for actual types.
@@ -173,7 +173,7 @@ The argument type must avail itself to internal parameter types of unforeseen co
 while the external parameter type should be \textbf{narrowed} and restricted 
 to the internal parameter types of previously seen compositions.
 Once \lstinline{i2n} is applied to \lstinline{x}, 
-the type for \lstinline{x} is specialized to \lstinline{int & ?}, 
+the type for \lstinline{x} is specialized to \lstinline{(int & ?)}, 
 in which intersection with the dynamic type behaves like the bottom type $\bot$,
 availing itself to be used in subsequent applications. 
 Thus, the dynamic type is inferred to be \lstinline{int & str & ?}.

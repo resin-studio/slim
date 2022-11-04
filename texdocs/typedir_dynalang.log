@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  4 NOV 2022 11:52
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  4 NOV 2022 13:10
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -906,6 +906,11 @@ Overfull \hbox (9.48842pt too wide) in paragraph at lines 99--102
 [1.1{/usr/local/texlive/2022/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
 
 ]
+Overfull \hbox (9.26254pt too wide) in paragraph at lines 150--159
+[][][][][][][][][][][][][][][] \T1/LinuxLibertineT-TLF/m/n/10 (-20) ends up as [][][][][][][][][][][][][][][][][][][][][][][][][][][].
+ []
+
+
 Underfull \hbox (badness 10000) in paragraph at lines 186--192
 
  []
@@ -943,14 +948,14 @@ Package rerunfilecheck Info: File `typedir_dynalang.out' has not changed.
  ) 
 Here is how much of TeX's memory you used:
  23242 strings out of 478268
- 374112 string characters out of 5846346
- 911952 words of memory out of 5000000
+ 374115 string characters out of 5846346
+ 911951 words of memory out of 5000000
  40479 multiletter control sequences out of 15000+600000
  597094 words of font info for 281 fonts, out of 8000000 for 9000
  1302 hyphenation exceptions out of 8191
  84i,11n,131p,1053b,1306s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/inconsolata/i4-t1-4.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_25tcsq.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_76gpa5.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_nh77jq.enc}</usr/local/texlive/2022/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
-Output written on typedir_dynalang.pdf (3 pages, 347363 bytes).
+Output written on typedir_dynalang.pdf (3 pages, 347341 bytes).
 PDF statistics:
  231 PDF objects out of 1000 (max. 8388607)
  205 compressed objects within 3 object streams
