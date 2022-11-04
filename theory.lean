@@ -313,7 +313,13 @@ cannot unroll
 
 /-
 
---TODO: what's the intuition behind instantiation of universal?
+-- specialization of existential vs universal
+  -- existential on read is opaque.
+  -- existential on write is specialized 
+    -- (specialize if on rhs of subsumption)
+  -- universial on read is specialized 
+    -- (specialize if on lhs on subsumption)
+  -- universal on write is opaque 
 
 -/
 
