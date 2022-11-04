@@ -13,10 +13,11 @@
     basicstyle=\ttfamily,
     mathescape=true,
     showspaces=false,
-    keywords={let}
+    morekeywords={let}
 }
 \usepackage[utf8]{inputenc}
 % \usepackage[T1]{fontenc}
+
 
 \title{Type-guided synthesis for dynamically typed languages}
 \author{Thomas Logan}
@@ -191,7 +192,7 @@ expressivity comparable to typical decidable predicate logics. \\
 For example, types can also specify a pair of a list and its length.
 
 \begin{lstlisting}[]
-let measurment : $\mu$ (nat $\times$ list) .
+let measurement : $\mu$ (nat $\times$ list) .
   #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
   #succ nat $\times$ #cons (? $\times$ list)
 \end{lstlisting} 
@@ -201,7 +202,7 @@ let measurment : $\mu$ (nat $\times$ list) .
 \noindent This is syntactic sugar for:
 
 \begin{lstlisting}[]
-let measurment : 
+let measurement : 
 $\exists$ $\alpha$ . $\mu$ nat_and_list .
   #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
   $\exists$ nat list :: 
@@ -209,6 +210,21 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
     #succ nat $\times$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
 
+\hfill
+
+\noindent Semantically, the type of measurement is similar to the definition of 
+list and length in Synquid \cite{}    
+
+\begin{lstlisting}[keywords={termination, measure, data, where}]
+termination measure len :: List $\beta$ $\rightarrow$ Nat 
+data List $\beta$ where
+  Nil :: {v: List $\beta$ | len v = 0}
+  Cons :: $\beta$ $\rightarrow$ xs: List $\beta$ $\rightarrow$ 
+    {v: List $\beta$ | len v = len xs + 1}
+
+\end{lstlisting}
+
+\hfill
 
 \noindent Correspondingly, the types are expressive enough to precisely specify
 a function that takes a natural number \lstinline{n} 
@@ -234,6 +250,7 @@ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
     #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
 
+\hfill
 
 \noindent The type of \lstinline{replicate} is co-recursive rather than recursive. 
 When expanded to the type with a universal type and constraint, 
@@ -241,6 +258,17 @@ the universally typed variables appear on the right hand side
 of the subtyping constraint, while the co-recursive variable
 appears on the left hand side. This is consistent with the notion
 that a intersection of types is a subtype of any one of its parts.
+
+\hfill
+
+\noindent Semantically, the type of \lstinline{replicate} is similar to the definition of 
+\lstinline{replicate} in Synquid \cite{}    
+
+\begin{lstlisting}[keywords={termination, measure, data, where}]
+replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$ 
+  {v: List $\alpha$ | len v = n}
+
+\end{lstlisting}
 
 
 \section{Overview}
