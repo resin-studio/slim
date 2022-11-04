@@ -649,7 +649,7 @@ def infer
   | .bvar _ => none
   | .fvar x =>
     bind (lookup x Γ) (fun ty' =>
-      let (i, inst_ty) := instantiate i ty
+      let (i, inst_ty') := instantiate i ty'
     )  
   | _ => none
 
