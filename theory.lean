@@ -703,19 +703,6 @@ partial def infer
 /-
 ```
 
-infer env_tm env_ty ⊢ (.l t₁) : τ =
-  let α = fresh in
-  bind (solve env_ty ⊢ (∀ {α} . (.l α)) ⊆ τ) (env_ty' =>
-  bind (infer env_tm (env_ty ++ env_ty') ⊢ t₁ : α) (env_ty1 , τ1 =>  
-    some(env_ty' ++ env_ty1 , .l τ1)
-  ))
-
-infer env_tm env_ty ⊢ (.l t₁) fs : τ =
-  bind (infer env_tm env_ty ⊢ (.l t₁) : τ) (env_ty' , τ' =>
-  bind (infer env_tm (env_ty ++ env_ty') ⊢ fs : τ) (env_ty'' , τ'' =>
-    some(env_ty' ++ env_ty'' , τ' & τ'')
-  ))
-
 infer env_tm env_ty ⊢ (for t₁ : τ1 => t₂) : τ =
   let env_ty1, τ1 = τ1[?/fresh] in
   let env_tm₁ = patvars t₁ τ1 in
