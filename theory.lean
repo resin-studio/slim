@@ -628,6 +628,66 @@ inductive Tm : Type
   | letb : Tm -> Ty -> Tm -> Tm
   | fix : Tm -> Tm
 
+
+-- NOTE: there is no need to instantiate in infer. All that jazz happens in subtype/unify
+-- the assymetry of subtyping makes it clear when to instantiate/raise/free a variable
+-- and when to unroll a looping type
+
+-- notation convetion:
+  -- prime tick marks for updated versions
+  -- numbers for new parts
+  -- no subscripts
+  -- no greek
+  -- general to specific, 
+    -- e.g. env_ty, (not ty_env)
+    -- e.g. ty_recur, (not mu_ty)
+
+def fresh (i : Nat) : Nat × Ty :=
+  (i + 1, .fvar i)
+
+
+def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty × (List (Nat × Ty))
+  | .dynamic => 
+    let (i, ty) := fresh i 
+    (i, ty, [(i, Ty.dynamic)]) 
+  | .bvar id => (i, .bvar id, [])
+  | .fvar id => (i, .fvar id, [])
+  | .unit => (i, .unit, [])
+  | .variant l ty => 
+    let (i, ty, env_ty) := (Ty.dynamic_subst i ty)
+    (i, .variant l ty, env_ty) 
+  | .field l ty => 
+    let (i, ty, env_ty) := Ty.dynamic_subst i ty
+    (i, .field l ty, env_ty) 
+  | .union ty1 ty2 => 
+      let (i, ty1, env_ty1) := (Ty.dynamic_subst i ty1)
+      let (i, ty2, env_ty2) := (Ty.dynamic_subst i ty2)
+      (i, .union ty1 ty2, env_ty1 ++ env_ty2)
+  | .inter ty1 ty2 => 
+      let (i, ty1, env_ty1) := (Ty.dynamic_subst i ty1)
+      let (i, ty2, env_ty2) := (Ty.dynamic_subst i ty2)
+      (i, .inter ty1 ty2, env_ty1 ++ env_ty2)
+  | .func ty1 ty2 => 
+      let (i, ty1, env_ty1) := (Ty.dynamic_subst i ty1)
+      let (i, ty2, env_ty2) := (Ty.dynamic_subst i ty2)
+      (i, .func ty1 ty2, env_ty1 ++ env_ty2)
+  | .univ n (ty_c1, ty_c2) ty => 
+    let (i, ty_c1, env_ty_c1) := Ty.dynamic_subst i ty_c1
+    let (i, ty_c2, env_ty_c2) := Ty.dynamic_subst i ty_c2
+    let (i, ty, env_ty) := (Ty.dynamic_subst i ty)
+    (i, .univ n (ty_c1, ty_c2) ty, env_ty_c1 ++ env_ty_c2 ++ env_ty)
+  | .exis n (ty_c1, ty_c2) ty => 
+    let (i, ty_c1, env_ty_c1) := Ty.dynamic_subst i ty_c1
+    let (i, ty_c2, env_ty_c2) := Ty.dynamic_subst i ty_c2
+    let (i, ty, env_ty) := (Ty.dynamic_subst i ty)
+    (i, .exis n (ty_c1, ty_c2) ty, env_ty_c1 ++ env_ty_c2 ++ env_ty)
+  | .recur ty => 
+    let (i, ty, env_ty) := Ty.dynamic_subst i ty
+    (i, .recur ty, env_ty)
+  | .corec ty => 
+    let (i, ty, env_ty) := Ty.dynamic_subst i ty
+    (i, .corec ty, env_ty)
+
 /-
 
 `patvars t = o[env_tm]`
@@ -647,62 +707,12 @@ patvars (.l t fs) τ =
 ```
 -/
 
--- NOTE: there is no need to instantiate in infer. All that jazz happens in subtype/unify
--- the assymetry of subtyping makes it clear when to instantiate/raise/free a variable
--- and when to unroll a looping type
-
--- notation convetion:
-  -- prime tick marks for updated versions
-  -- numbers for new parts
-  -- no subscripts
-  -- no greek
-  -- general to specific, 
-    -- e.g. env_ty, (not ty_env)
-    -- e.g. ty_recur, (not mu_ty)
-
-def fresh (i : Nat) : Nat × Ty :=
-  (i + 1, .fvar i)
-
-
-def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty
-  | .dynamic => fresh i 
-  | .bvar id => (i, .bvar id)
-  | .fvar id => (i, .fvar id)
-  | .unit => (i, .unit)
-  | .variant l ty => 
-    let (i, ty) := (Ty.dynamic_subst i ty)
-    (i, .variant l ty) 
-  | .field l ty => 
-    let (i, ty) := Ty.dynamic_subst i ty
-    (i, .field l ty) 
-  | .union ty1 ty2 => 
-      let (i, ty1) := (Ty.dynamic_subst i ty1)
-      let (i, ty2) := (Ty.dynamic_subst i ty2)
-      (i, .union ty1 ty2)
-  | .inter ty1 ty2 => 
-      let (i, ty1) := (Ty.dynamic_subst i ty1)
-      let (i, ty2) := (Ty.dynamic_subst i ty2)
-      (i, .inter ty1 ty2)
-  | .func ty1 ty2 => 
-      let (i, ty1) := (Ty.dynamic_subst i ty1)
-      let (i, ty2) := (Ty.dynamic_subst i ty2)
-      (i, .func ty1 ty2)
-  | .univ n (ty_c1, ty_c2) ty => 
-    let (i, ty_c1) := Ty.dynamic_subst i ty_c1
-    let (i, ty_c2) := Ty.dynamic_subst i ty_c2
-    let (i, ty) := (Ty.dynamic_subst i ty)
-    (i, .univ n (ty_c1, ty_c2) ty)
-  | .exis n (ty_c1, ty_c2) ty => 
-    let (i, ty_c1) := Ty.dynamic_subst i ty_c1
-    let (i, ty_c2) := Ty.dynamic_subst i ty_c2
-    let (i, ty) := (Ty.dynamic_subst i ty)
-    (i, .exis n (ty_c1, ty_c2) ty)
-  | .recur ty => 
-    let (i, ty) := Ty.dynamic_subst i ty
-    (i, .recur ty)
-  | .corec ty => 
-    let (i, ty) := Ty.dynamic_subst i ty
-    (i, .corec ty)
+def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat × Ty))
+  | Tm.fvar id, ty =>  
+    match lookup id env_tm with
+      | some _ => none 
+      | none => [(id, ty)] 
+  | _, _ => none 
 
 partial def infer 
   (i : Nat)
@@ -742,6 +752,16 @@ partial def infer
   
   | .func [] => none
   | .func ((n, p, ty_p, b) :: .nil) => 
+    let (i, ty_p, env_ty_p) := Ty.dynamic_subst i ty_p 
+    let (i, ty_b) := fresh i
+    let env_ty_b := [(i, Ty.dynamic)]
+    bind (patvars env_tm p ty_p) (fun env_tm1 =>
+    bind (unify i (env_ty_b ++ env_ty_p ++ env_ty) (.func ty_p ty_b) ty) (fun (i, env_ty1) =>
+    bind (infer i (env_ty1 ++ env_ty) (env_tm1 ++ env_tm) b ty_b) (fun (i, env_ty2, ty_b') =>
+      some (i, env_ty2 ++ env_ty1, Ty.func ty_p ty_b')
+    )))
+
+
   | .func (f :: fs) => none
 
   | _ => none
