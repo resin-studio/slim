@@ -477,12 +477,12 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       ) (some (i, env_ty)) cs
 
 
-  -- | .corec τ', .corec τ =>
-  --   unify i env_ty τ' τ 
+  -- | .corec ty', .corec ty =>
+  -- TODO: check equality
 
   -- TODO: check function against corecursive type 
-  -- | .corec τ', τ =>
-  --   let cs := (make_record_constraint_super Ty.unknown τ' τ) 
+  -- | .corec ty', ty =>
+  --   let cs := (make_record_constraint_super Ty.unknown ty' ty) 
   --   if cs.length = 0 then
   --     none
   --   else
@@ -491,76 +491,86 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   --       | none, _ => none
   --     ) (some (i, env_ty)) cs
 
-  | .union τ1 τ2, τ => 
-    bind (unify i env_ty τ1 τ) (fun (i, env_ty') => 
-    bind (unify i env_ty' τ2 τ) (fun (i, env_ty'') =>
-      some (i, merge Ty.inter Ty.unknown env_ty' env_ty'')
+  | .union ty1 ty2, ty => 
+    bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
+    bind (unify i env_ty ty2 ty) (fun (i, env_ty2) =>
+      some (i, merge Ty.inter Ty.unknown env_ty1 env_ty2)
     ))
+    -- list[{x;y}] | list[{x;z}] <: ∃ X . list[X]
+    -- list[{x;y}] <: ∃ X . list[X]
+    -- list[{x;z}] <: ∃ X . list[X]
+    -- X <: {x;y} & {x;z} 
 
-  | τ, .union τ1 τ2 => 
-    bind (unify i env_ty τ τ1) (fun (i, env_ty1) => 
-    bind (unify i env_ty τ τ2) (fun (i, env_ty2) =>
+  | ty, .union ty1 ty2 => 
+    bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
+    bind (unify i env_ty ty ty2) (fun (i, env_ty2) =>
       some (i, merge Ty.union Ty.unknown env_ty1 env_ty2)
     ))
 
-  | τ, .inter τ1 τ2 => 
-    bind (unify i env_ty τ τ1) (fun (i, env_ty') => 
-    bind (unify i env_ty' τ τ2) (fun (i, env_ty'') =>
-      some (i, merge Ty.inter Ty.unknown env_ty' env_ty'')
+  | ty, .inter ty1 ty2 => 
+    bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
+    bind (unify i env_ty ty ty2) (fun (i, env_ty2) =>
+      some (i, merge Ty.inter Ty.unknown env_ty1 env_ty2)
     ))
 
-  | .inter τ1 τ2, τ => 
-    bind (unify i env_ty τ1 τ) (fun (i, env_ty1) => 
-    bind (unify i env_ty τ2 τ) (fun (i, env_ty2) =>
+  | .inter ty1 ty2, ty => 
+    bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
+    bind (unify i env_ty ty2 ty) (fun (i, env_ty2) =>
       some (i, merge Ty.union Ty.unknown env_ty1 env_ty2)
     ))
 
-  | .func τ1 τ2', .func τ1' τ2 =>
-    bind (unify i env_ty τ1' τ1) (fun (i, env_ty') => 
-    bind (unify i env_ty' τ2' τ2) (fun (i, env_ty'') =>
-      some (i, merge Ty.inter Ty.unknown env_ty' env_ty'')
+  | .func ty1 ty2', .func ty1' ty2 =>
+    bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
+    bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
+      some (i, merge Ty.inter Ty.unknown env_ty1 env_ty2)
     ))
 
-  | .variant l' τ', .variant l τ =>
+  | .variant l' ty', .variant l ty =>
     if l' = l then
-      unify i env_ty τ' τ
+      unify i env_ty ty' ty
     else
       none
 
-  | .field l' τ', .field l τ =>
+  | .field l' ty', .field l ty =>
     if l' = l then
-      unify i env_ty τ' τ
+      unify i env_ty ty' ty
     else
       none
 
   -- | .exis n' (ty_c1', ty_c2') τ', .exis n (ty_c1, ty_c2) τ =>
   -- TODO: check equality
 
-  | ty, .exis n (ty_c1, ty_c2) τ =>
+  | ty', .exis n (ty_c1, ty_c2) ty =>
     let (i, env_ty, args) := refresh i n 
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
-    let τ := Ty.raise_binding 0 args τ
-    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty') => 
-    bind (unify i env_ty' ty τ) (fun (i, env_ty'') =>
-      some (i, merge Ty.inter Ty.unknown env_ty' env_ty'')
+    let ty := Ty.raise_binding 0 args ty
+    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) => 
+    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) =>
+      some (i, env_ty2 ++ env_ty1)
     ))
+    -- list[{x;z}] <: ∃ X :: (X <: {x}) . list[X]
+    -- X := {x} & Y |- list[{x;z}] <: list[X]
+    -- X := {x} & Y |- list[{x;z}] <: list[{x} & Y]
+    -- |- {x;z} <: {x} & Y
+    -- Y := {z} | ⊥
+
 
   -- | .univ n' (ty_c1', ty_c2') τ', .univ n (ty_c1, ty_c2) τ =>
   -- TODO: check equality
 
-  | .univ n (ty_c1, ty_c2) τ, ty =>
+  | .univ n (ty_c1, ty_c2) ty', ty =>
     let (i, env_ty, args) := refresh i n 
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
-    let τ := Ty.raise_binding 0 args τ
-    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty') => 
-    bind (unify i env_ty' ty τ) (fun (i, env_ty'') =>
-      some (i, merge Ty.inter Ty.unknown env_ty' env_ty'')
+    let ty' := Ty.raise_binding 0 args ty'
+    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) => 
+    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) =>
+      some (i, env_ty2 ++ env_ty1)
     ))
 
-  | .bvar id₁, .bvar id₂  =>
-    if id₁ = id₂ then 
+  | .bvar id1, .bvar id2  =>
+    if id1 = id2 then 
       some (i, [])
     else
       none
