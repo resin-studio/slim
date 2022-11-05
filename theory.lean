@@ -581,10 +581,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | _, _ => none
 
 
--- inductive PatRec : (T : Type) -> Nat -> Type where
---   | single {n : Nat} : String -> Pat T n -> PatRec T n 
---   | exten {n₁ n₂ : Nat} : String -> Pat T n₁ -> PatRec T n₂-> PatRec T (n₁ + n₂)
-
 /-
 t ::=                             term
   _                               hole 
@@ -606,7 +602,6 @@ fs ::=                            fields
   .l t                            singleton 
   fs ; .l t                       extension
 -/
-
 
 /-
 
