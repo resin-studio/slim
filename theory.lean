@@ -1,5 +1,5 @@
 inductive Ty : Type
-  | unknown : Ty
+  | dynamic : Ty
   | bvar : Nat -> Ty  
   | fvar : Nat -> Ty
   | unit : Ty
@@ -58,7 +58,7 @@ macro_rules
   | `([: ♢ :]) => `(Ty.unit)
   | `([: #$a $b:slm :]) => `(Ty.variant [: $a :] [: $b :])
   | `([: .$a $b:slm :]) => `(Ty.field [: $a :] [: $b :])
-  | `([: ? :]) => `(Ty.unknown)
+  | `([: ? :]) => `(Ty.dynamic)
   | `([: $a -> $b :]) => `(Ty.func [: $a :] [: $b :])
   | `([: $a | $b :]) => `(Ty.union [: $a :] [: $b :])
   | `([: $a + $b :]) => `(Ty.union [: #inl $a :] [: #inr $b :])
@@ -188,7 +188,7 @@ def Ty.occurs (key : Nat)  : Ty -> Bool
   | .corec ty => (Ty.occurs key ty)
 
 def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
-  | .unknown => .unknown 
+  | .dynamic => .dynamic 
   | .bvar id => .bvar id 
   | .fvar id => (match lookup id m with
     | some ty => ty 
@@ -238,7 +238,7 @@ macro_rules
 #check Fin
 
 def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
-  | .unknown => .unknown 
+  | .dynamic => .dynamic 
   | .bvar id => 
       if h : start ≤ id ∧ (id - start) < args.length then
         let i : Fin args.length := {
@@ -336,7 +336,7 @@ partial def unroll (τ : Ty) : Ty :=
   [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
 
 def Ty.lower_binding (depth : Nat) : Ty -> Ty
-  | .unknown => .unknown 
+  | .dynamic => .dynamic 
   | .bvar id => .bvar (id + depth)
   | .fvar id => .fvar id 
   | .unit => .unit
@@ -448,12 +448,12 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
 
   | .fvar id, ty  => match lookup id env_ty with 
     | none => some (i + 2, [(i, .inter (roll id ty) (Ty.fvar (i + 1)))]) 
-    | some Ty.unknown => some (i + 2, [(i, .inter (roll id ty) (Ty.fvar (i + 1)))]) 
+    | some Ty.dynamic => some (i + 2, [(i, .inter (roll id ty) (Ty.fvar (i + 1)))]) 
     | some ty' => unify i env_ty ty' ty 
 
   | ty', .fvar id  => match lookup id env_ty with 
     | none => some (i + 2, [(i, .union (roll id ty') (Ty.fvar (i + 1)))]) 
-    | some Ty.unknown => some (i + 2, [(i, .union (roll id ty') (Ty.fvar (i + 1)))]) 
+    | some Ty.dynamic => some (i + 2, [(i, .union (roll id ty') (Ty.fvar (i + 1)))]) 
     | some ty => unify i env_ty ty' ty 
 
   -- | .recur ty', .recur ty =>
@@ -467,7 +467,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     unify i env_ty (.variant l ty') (unroll ty)
 
   | ty', .recur ty =>
-    let cs := (make_record_constraint_recur Ty.unknown ty' ty)
+    let cs := (make_record_constraint_recur Ty.dynamic ty' ty)
     if cs.length = 0 then
       none
     else
@@ -482,7 +482,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
 
   -- TODO: check function against corecursive type 
   -- | .corec ty', ty =>
-  --   let cs := (make_record_constraint_super Ty.unknown ty' ty) 
+  --   let cs := (make_record_constraint_super Ty.dynamic ty' ty) 
   --   if cs.length = 0 then
   --     none
   --   else
@@ -494,7 +494,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | .union ty1 ty2, ty => 
     bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
     bind (unify i env_ty ty2 ty) (fun (i, env_ty2) =>
-      some (i, merge Ty.inter Ty.unknown env_ty1 env_ty2)
+      some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
     ))
     -- list[{x;y}] | list[{x;z}] <: ∃ X . list[X]
     -- list[{x;y}] <: ∃ X . list[X]
@@ -504,25 +504,25 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | ty, .union ty1 ty2 => 
     bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
     bind (unify i env_ty ty ty2) (fun (i, env_ty2) =>
-      some (i, merge Ty.union Ty.unknown env_ty1 env_ty2)
+      some (i, merge Ty.union Ty.dynamic env_ty1 env_ty2)
     ))
 
   | ty, .inter ty1 ty2 => 
     bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
     bind (unify i env_ty ty ty2) (fun (i, env_ty2) =>
-      some (i, merge Ty.inter Ty.unknown env_ty1 env_ty2)
+      some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
     ))
 
   | .inter ty1 ty2, ty => 
     bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
     bind (unify i env_ty ty2 ty) (fun (i, env_ty2) =>
-      some (i, merge Ty.union Ty.unknown env_ty1 env_ty2)
+      some (i, merge Ty.union Ty.dynamic env_ty1 env_ty2)
     ))
 
   | .func ty1 ty2', .func ty1' ty2 =>
     bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
     bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
-      some (i, merge Ty.inter Ty.unknown env_ty1 env_ty2)
+      some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
     ))
 
   | .variant l' ty', .variant l ty =>
@@ -576,8 +576,8 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       none
 
   | .unit, .unit => some (i, []) 
-  | .unknown, _ => some (i, []) 
-  | _, .unknown => some (i, []) 
+  | .dynamic, _ => some (i, []) 
+  | _, .dynamic => some (i, []) 
   | _, _ => none
 
 
@@ -622,7 +622,7 @@ inductive Tm : Type
   | unit : Tm
   | variant : String -> Tm -> Tm
   | record : List (String × Tm) -> Tm
-  | func : List (Tm × Tm) -> Tm
+  | func : List (Nat × Tm × Ty × Tm) -> Tm
   | proj : Tm -> String -> Tm
   | app : Tm -> Tm -> Tm
   | letb : Tm -> Ty -> Tm -> Tm
@@ -663,6 +663,47 @@ patvars (.l t fs) τ =
 def fresh (i : Nat) : Nat × Ty :=
   (i + 1, .fvar i)
 
+
+def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty
+  | .dynamic => fresh i 
+  | .bvar id => (i, .bvar id)
+  | .fvar id => (i, .fvar id)
+  | .unit => (i, .unit)
+  | .variant l ty => 
+    let (i, ty) := (Ty.dynamic_subst i ty)
+    (i, .variant l ty) 
+  | .field l ty => 
+    let (i, ty) := Ty.dynamic_subst i ty
+    (i, .field l ty) 
+  | .union ty1 ty2 => 
+      let (i, ty1) := (Ty.dynamic_subst i ty1)
+      let (i, ty2) := (Ty.dynamic_subst i ty2)
+      (i, .union ty1 ty2)
+  | .inter ty1 ty2 => 
+      let (i, ty1) := (Ty.dynamic_subst i ty1)
+      let (i, ty2) := (Ty.dynamic_subst i ty2)
+      (i, .inter ty1 ty2)
+  | .func ty1 ty2 => 
+      let (i, ty1) := (Ty.dynamic_subst i ty1)
+      let (i, ty2) := (Ty.dynamic_subst i ty2)
+      (i, .func ty1 ty2)
+  | .univ n (ty_c1, ty_c2) ty => 
+    let (i, ty_c1) := Ty.dynamic_subst i ty_c1
+    let (i, ty_c2) := Ty.dynamic_subst i ty_c2
+    let (i, ty) := (Ty.dynamic_subst i ty)
+    (i, .univ n (ty_c1, ty_c2) ty)
+  | .exis n (ty_c1, ty_c2) ty => 
+    let (i, ty_c1) := Ty.dynamic_subst i ty_c1
+    let (i, ty_c2) := Ty.dynamic_subst i ty_c2
+    let (i, ty) := (Ty.dynamic_subst i ty)
+    (i, .exis n (ty_c1, ty_c2) ty)
+  | .recur ty => 
+    let (i, ty) := Ty.dynamic_subst i ty
+    (i, .recur ty)
+  | .corec ty => 
+    let (i, ty) := Ty.dynamic_subst i ty
+    (i, .corec ty)
+
 partial def infer 
   (i : Nat)
   (env_ty : List (Nat × Ty)) (env_tm : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
@@ -684,20 +725,25 @@ partial def infer
       some (i, env_ty2 ++ env_ty1, .variant l ty1')
     ))
 
-  | Tm.record [] => none
+  | .record [] => none
 
-  | Tm.record ((l, t1) :: .nil) =>
+  | .record ((l, t1) :: .nil) =>
     let (i, ty1) := (fresh i) 
     bind (unify i env_ty (.field l ty1) ty) (fun (i, env_ty1) =>
     bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
       some (i, env_ty2 ++ env_ty1, .field l ty1')
     ))
 
-  | Tm.record (fd :: fds) =>
+  | .record (fd :: fds) =>
     bind (infer i env_ty env_tm (.record fds) ty) (fun (i, env_ty_fds, ty_fds) =>
     bind (infer i env_ty env_tm (.record [fd]) ty) (fun (i, env_ty_fd, ty_fd) =>
       some (i, env_ty_fd ++ env_ty_fds, .inter ty_fd ty_fds)
     ))
+  
+  | .func [] => none
+  | .func ((n, p, ty_p, b) :: .nil) => 
+  | .func (f :: fs) => none
+
   | _ => none
 
 /-
@@ -801,12 +847,12 @@ infer env_tm env_ty ⊢ (let x : τ1 = t₁ in t₂) : τ2 =
 ))
 ```
 - maintain leniency while increasing strictness
-  - combine intersection (i.e. &) with unknown type (i.e. ?)
+  - combine intersection (i.e. &) with dynamic type (i.e. ?)
 - lenient
   - maintain bottom actual type
   - τ & ? = τ & ⊥ = ⊥
 - strict
-  - narrow unknown expected type from known expected type
+  - narrow dynamic expected type from known expected type
   - τ & ? = τ & ⊤ = τ 
 
 
@@ -826,12 +872,12 @@ infer env_tm env_ty ⊢ (let x : τ1 = t₁ in t₂) : τ2 =
 )))
 ```
 - maintain leniency while increasing strictness
-  - combine union (i.e. |) with unknown type (i.e. ?)
+  - combine union (i.e. |) with dynamic type (i.e. ?)
 - lenient
   - maintain top expected type 
   - τ | ? = τ | ⊤ = ⊤ 
 - strict
-  - widen unknown actual type from known actual type
+  - widen dynamic actual type from known actual type
   - τ | ? = τ | ⊥ = τ  
 
 ## type expression 
@@ -980,7 +1026,7 @@ let hello' = f hello in
   - narrowing an expected type increases strictness
   - narrowing an actual type increases leniency 
 
-- the unknown type (i.e. ?) has special consistent subtyping semantics
+- the dynamic type (i.e. ?) has special consistent subtyping semantics
   - behaves like a bottom type for actual types
   - behaves like a top type for expected types
 
