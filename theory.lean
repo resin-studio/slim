@@ -11,6 +11,7 @@ inductive Ty : Type
   | univ : Nat -> Ty × Ty -> Ty -> Ty
   | exis : Nat -> Ty × Ty -> Ty -> Ty
   | recur : Ty -> Ty
+  | corec : Ty -> Ty
 
 
 declare_syntax_cat slm
@@ -24,15 +25,16 @@ syntax "#"slm:90 slm : slm
 syntax "."slm:90 slm : slm
 syntax "?" : slm
 syntax:50 slm:50 "->" slm:51 : slm
-syntax:60 slm:60 "∪" slm:61 : slm
+syntax:60 slm:60 "|" slm:61 : slm
 syntax:60 slm:60 "+" slm:61 : slm
-syntax:70 slm:70 "∩" slm:71 : slm
+syntax:70 slm:70 "&" slm:71 : slm
 syntax:70 slm:70 "×" slm:71 : slm
-syntax "∀" slm "|" slm "<:" slm "." slm : slm 
+syntax "∀" slm "::" slm "≤" slm "." slm : slm 
 syntax "∀" slm "." slm : slm 
-syntax "∃" slm "|" slm "<:" slm  "." slm : slm 
+syntax "∃" slm "::" slm "≤" slm  "." slm : slm 
 syntax "∃" slm "." slm : slm 
 syntax "μ 0 ." slm : slm 
+syntax "ν 0 ." slm : slm 
 
 syntax:50 slm:50 "⊆" slm:51 : slm
 
@@ -58,15 +60,16 @@ macro_rules
   | `([: .$a $b:slm :]) => `(Ty.field [: $a :] [: $b :])
   | `([: ? :]) => `(Ty.unknown)
   | `([: $a -> $b :]) => `(Ty.func [: $a :] [: $b :])
-  | `([: $a ∪ $b :]) => `(Ty.union [: $a :] [: $b :])
+  | `([: $a | $b :]) => `(Ty.union [: $a :] [: $b :])
   | `([: $a + $b :]) => `(Ty.union [: #inl $a :] [: #inr $b :])
-  | `([: $a ∩ $b :]) => `(Ty.inter [: $a :] [: $b :])
+  | `([: $a & $b :]) => `(Ty.inter [: $a :] [: $b :])
   | `([: $a × $b :]) => `(Ty.inter [: .left $a :] [: .right $b :])
-  | `([: ∀ $a | $b <: $c . $d :]) => `(Ty.univ [: $a :] ([: $b :], [: $c :]) [: $d :])
+  | `([: ∀ $a :: $b ≤ $c . $d :]) => `(Ty.univ [: $a :] ([: $b :], [: $c :]) [: $d :])
   | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] ([: £$a :], [: ? :]) [: $b :] )
-  | `([: ∃ $a | $b <: $c . $d  :]) => `(Ty.exis [: $a :] ([: $b :], [: $c :]) [: $d :])
+  | `([: ∃ $a :: $b ≤ $c . $d  :]) => `(Ty.exis [: $a :] ([: $b :], [: $c :]) [: $d :])
   | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] ([: £$a :], [: ? :]) [: $b :] )
   | `([: μ 0 . $a :]) => `(Ty.recur [: $a :])
+  | `([: ν 0 . $a :]) => `(Ty.corec [: $a :])
 
 -- generic
   | `([: ($a) :]) => `([: $a :])
@@ -74,23 +77,23 @@ macro_rules
 --escape 
   | `([: ⟨ $e ⟩ :]) => pure e
 
-#check [: £0 ∪ ? :]
-#check [: £0 ∩ ? :]
+#check [: £0 | ? :]
+#check [: £0 & ? :]
 #check [: £0 × ? :]
 #check [: £0 + ? :]
 def x := 0
-#check [: ∀ 1 | £0 <: ? . £⟨x⟩ :]
-#check [: ∀ 1 | £0 <: ? . £0 :]
-#check [: ∀ 2 | ? <: ? . £0 :]
+#check [: ∀ 1 :: £0 ≤ ? . £⟨x⟩ :]
+#check [: ∀ 1 :: £0 ≤ ? . £0 :]
+#check [: ∀ 2 :: ? ≤ ? . £0 :]
 #check [: ∀ 2 . £0 :]
 #check [: ♢ :]
 #check [: @24 :]
-#check [: #foo ♢ ∪ #boo ♢ :]
+#check [: #foo ♢ | #boo ♢ :]
 #check [: μ 0 . #foo £0 :]
-#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ?:]
-#check [: £3 ∩ ? -> @1 ∪ @2 :]
-#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? -> @1 ∪ @2 :]
-#check [: μ 0 . #foo £0  ∩ ? ∪ @2 ∩ ? :]
+#check [: μ 0 . #foo £0  & ? | @2 & ?:]
+#check [: £3 & ? -> @1 | @2 :]
+#check [: μ 0 . #foo £0 & ? | @2 & ? -> @1 | @2 :]
+#check [: μ 0 . #foo £0 & ? | @2 & ? :]
 #check [: ? :]
 
 def lookup (key : Nat) : List (Nat × T) -> Option T
@@ -175,13 +178,14 @@ def Ty.occurs (key : Nat)  : Ty -> Bool
   | .unit => false 
   | .variant l ty => (Ty.occurs key ty) 
   | .field l ty => (Ty.occurs key ty)
-  | [: ⟨ty₁⟩ ∪ ⟨ty₂⟩ :] => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
+  | [: ⟨ty₁⟩ | ⟨ty₂⟩ :] => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
   -- | .union ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
   | .inter ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
   | .func ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
   | .univ n (cty1, cty2) ty => (Ty.occurs key cty1) ∨ (Ty.occurs key cty2) ∨ (Ty.occurs key ty)
   | .exis n (cty1, cty2) ty => (Ty.occurs key cty1) ∨ (Ty.occurs key cty2) ∨ (Ty.occurs key ty)
   | .recur ty => (Ty.occurs key ty)
+  | .corec ty => (Ty.occurs key ty)
 
 def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
   | .unknown => .unknown 
@@ -207,6 +211,7 @@ def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
     (Ty.free_subst m ty)
   )
   | .recur ty => .recur (Ty.free_subst m ty)
+  | .corec ty => .corec (Ty.free_subst m ty)
 
 
 declare_syntax_cat sub
@@ -261,6 +266,7 @@ def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
     (Ty.raise_binding (start + n) args ty)
   )
   | .recur ty => .recur (Ty.raise_binding (start + 1) args ty)
+  | .corec ty => .corec (Ty.raise_binding (start + 1) args ty)
 
 syntax slm "↑" slm "/" slm : slm 
 
@@ -350,6 +356,7 @@ def Ty.lower_binding (depth : Nat) : Ty -> Ty
     (Ty.lower_binding (depth + n) ty)
   )
   | .recur ty => .recur (Ty.lower_binding (depth + 1) ty)
+  | .corec ty => .corec (Ty.lower_binding (depth + 1) ty)
 
 syntax slm "↓" num : slm 
 
@@ -374,7 +381,7 @@ def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
       [(ty', ty)]
   | .inter (.field l ty') rem_ty, mu_ty => 
       let ty := 
-      [: ∃ 1 | (⟨prev_ty⟩↓1 ∩ (#⟨l⟩ £0) ∩ ⟨rem_ty⟩↓1) <: ⟨unroll mu_ty⟩↓1 . £0 :]
+      [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
 
       let rem := make_record_constraint_sub (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
       if rem.length = 0 then
@@ -455,12 +462,6 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
   | .variant l' τ', .recur τ =>
     Ty.unify i Δ (.variant l' τ') (unroll τ)
 
-  | .recur τ', (.variant l τ) =>
-    Ty.unify i Δ (unroll τ') (.variant l τ) 
-
-
-  -- TODO: check function against induction type 
-
   | τ', .recur τ =>
     let cs := (make_record_constraint_sub Ty.unknown τ' τ)
     if cs.length = 0 then
@@ -471,15 +472,20 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
         | none, _ => none
       ) (some (i, Δ)) cs
 
-  | .recur τ', τ =>
-    let cs := (make_record_constraint_super Ty.unknown τ' τ) 
-    if cs.length = 0 then
-      none
-    else
-      List.foldl (fun 
-        | some (i, Δ), (ct1, ct2) => Ty.unify i Δ ct1 ct2
-        | none, _ => none
-      ) (some (i, Δ)) cs
+
+  -- | .corec τ', .corec τ =>
+  --   Ty.unify i Δ τ' τ 
+
+  -- TODO: check function against corecursive type 
+  -- | .corec τ', τ =>
+  --   let cs := (make_record_constraint_super Ty.unknown τ' τ) 
+  --   if cs.length = 0 then
+  --     none
+  --   else
+  --     List.foldl (fun 
+  --       | some (i, Δ), (ct1, ct2) => Ty.unify i Δ ct1 ct2
+  --       | none, _ => none
+  --     ) (some (i, Δ)) cs
 
   | .union τ₁ τ₂, τ => 
     bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ') => 
@@ -525,6 +531,9 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
 
   -- TODO: check subtyping for universals without unification 
 
+  -- | .exis n' (ct1', ct2') τ', .exis n (ct1, ct2) τ =>
+  -- TODO: check equality
+
   | ty, .exis n (ct1, ct2) τ =>
     let (i, Δ, args) := refresh i n 
     let ct1 := Ty.raise_binding 0 args ct1
@@ -535,7 +544,10 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
-  | .exis n (ct1, ct2) τ, ty =>
+  -- | .univ n' (ct1', ct2') τ', .univ n (ct1, ct2) τ =>
+  -- TODO: check equality
+
+  | .univ n (ct1, ct2) τ, ty =>
     let (i, Δ, args) := refresh i n 
     let ct1 := Ty.raise_binding 0 args ct1
     let ct2 := Ty.raise_binding 0 args ct2
@@ -628,24 +640,6 @@ patvars (.l t fs) τ =
 ```
 -/
 
-/-
-
-`infer Γ Δ ⊢ t : τ = o[Δ;τ]`
-```
-
-infer Γ Δ ⊢ () : τ =
-  map (solve Δ ⊢ C ∧ [] ⊆ τ in) (Δ' =>
-    some (Δ' , [])
-  )
-```
--/
-
-def instantiate (i : Nat) : Ty -> (Nat × Ty)
-  | .univ n (ct1, ct2) ty => 
-    -- TODO: instantiate/raise universal with free var
-    let (i, Δ₁, args) := refresh i n
-    ty
-  | ty => ty
 
 def infer 
   (i : Nat)
@@ -656,20 +650,16 @@ def infer
     )
   | .bvar _ => none
   | .fvar x =>
+    -- NOTE: there is no need to instantiate. All that jazz happens in subtype/unify
+    -- universal/corecur
     bind (lookup x Γ) (fun ty' =>
-      let (i, inst_ty') := instantiate i ty'
-    )  
+    bind (Ty.unify i Δ ty' ty) (fun (i, Δ₁) =>
+      some (i, Δ₁ ++ Δ, ty')
+    )) 
   | _ => none
 
 /-
 ```
-
-infer Γ Δ ⊢ x : τ = 
-  let τ' = Γ x in
-  let Δ', C, τ' = refresh τ' in
-  map (solve Δ, Δ' ⊢ C ∧ τ' ⊆ τ) (Δ' =>
-    some (Δ' , τ')
-  )
 
 infer Γ Δ ⊢ (#l t₁) : τ =
   let α = fresh in
