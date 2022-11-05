@@ -646,6 +646,14 @@ def fresh (i : Nat) : Nat × Ty :=
   (i + 1, .fvar i)
 
 
+-- TODO: normalize notation
+-- prime tick marks for updated versions
+-- numbers for new parts
+-- no subscripts
+-- no greek
+-- general to specific, 
+  -- e.g. env_ty, (not ty_env)
+  -- e.g. ty_mu, (not mu_ty)
 def infer 
   (i : Nat)
   (Δ : List (Nat × Ty)) (Γ : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
