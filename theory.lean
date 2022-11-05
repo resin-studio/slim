@@ -444,23 +444,23 @@ def make_record_constraint_nu (prev : Ty) : Ty -> Ty -> List (Ty × Ty)
   | _, _ => [] 
 
 
-partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
+partial def unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
   | .fvar id, τ₂  => match lookup id Δ with 
     | none => some (i + 2, [(i, .inter (roll id τ₂) (Ty.fvar (i + 1)))]) 
     | some Ty.unknown => some (i + 2, [(i, .inter (roll id τ₂) (Ty.fvar (i + 1)))]) 
-    | some τ₁ => Ty.unify i Δ τ₁ τ₂ 
+    | some τ₁ => unify i Δ τ₁ τ₂ 
 
   | τ₁, .fvar id  => match lookup id Δ with 
     | none => some (i + 2, [(i, .union (roll id τ₁) (Ty.fvar (i + 1)))]) 
     | some Ty.unknown => some (i + 2, [(i, .union (roll id τ₁) (Ty.fvar (i + 1)))]) 
-    | some τ₂ => Ty.unify i Δ τ₁ τ₂ 
+    | some τ₂ => unify i Δ τ₁ τ₂ 
 
   | .recur τ', .recur τ =>
-    Ty.unify i Δ τ' τ 
+    unify i Δ τ' τ 
 
   | .variant l' τ', .recur τ =>
-    Ty.unify i Δ (.variant l' τ') (unroll τ)
+    unify i Δ (.variant l' τ') (unroll τ)
 
   | τ', .recur τ =>
     let cs := (make_record_constraint_mu Ty.unknown τ' τ)
@@ -468,13 +468,13 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
       none
     else
       List.foldl (fun 
-        | some (i, Δ), (ct1, ct2) => Ty.unify i Δ ct1 ct2
+        | some (i, Δ), (ct1, ct2) => unify i Δ ct1 ct2
         | none, _ => none
       ) (some (i, Δ)) cs
 
 
   -- | .corec τ', .corec τ =>
-  --   Ty.unify i Δ τ' τ 
+  --   unify i Δ τ' τ 
 
   -- TODO: check function against corecursive type 
   -- | .corec τ', τ =>
@@ -483,49 +483,49 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
   --     none
   --   else
   --     List.foldl (fun 
-  --       | some (i, Δ), (ct1, ct2) => Ty.unify i Δ ct1 ct2
+  --       | some (i, Δ), (ct1, ct2) => unify i Δ ct1 ct2
   --       | none, _ => none
   --     ) (some (i, Δ)) cs
 
   | .union τ₁ τ₂, τ => 
-    bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ') => 
-    bind (Ty.unify i Δ' τ₂ τ) (fun (i, Δ'') =>
+    bind (unify i Δ τ₁ τ) (fun (i, Δ') => 
+    bind (unify i Δ' τ₂ τ) (fun (i, Δ'') =>
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
   | τ, .union τ₁ τ₂ => 
-    bind (Ty.unify i Δ τ τ₁) (fun (i, Δ₁) => 
-    bind (Ty.unify i Δ τ τ₂) (fun (i, Δ₂) =>
+    bind (unify i Δ τ τ₁) (fun (i, Δ₁) => 
+    bind (unify i Δ τ τ₂) (fun (i, Δ₂) =>
       some (i, merge Ty.union Ty.unknown Δ₁ Δ₂)
     ))
 
   | τ, .inter τ₁ τ₂ => 
-    bind (Ty.unify i Δ τ τ₁) (fun (i, Δ') => 
-    bind (Ty.unify i Δ' τ τ₂) (fun (i, Δ'') =>
+    bind (unify i Δ τ τ₁) (fun (i, Δ') => 
+    bind (unify i Δ' τ τ₂) (fun (i, Δ'') =>
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
   | .inter τ₁ τ₂, τ => 
-    bind (Ty.unify i Δ τ₁ τ) (fun (i, Δ₁) => 
-    bind (Ty.unify i Δ τ₂ τ) (fun (i, Δ₂) =>
+    bind (unify i Δ τ₁ τ) (fun (i, Δ₁) => 
+    bind (unify i Δ τ₂ τ) (fun (i, Δ₂) =>
       some (i, merge Ty.union Ty.unknown Δ₁ Δ₂)
     ))
 
   | .func τ₁ τ₂', .func τ₁' τ₂ =>
-    bind (Ty.unify i Δ τ₁' τ₁) (fun (i, Δ') => 
-    bind (Ty.unify i Δ' τ₂' τ₂) (fun (i, Δ'') =>
+    bind (unify i Δ τ₁' τ₁) (fun (i, Δ') => 
+    bind (unify i Δ' τ₂' τ₂) (fun (i, Δ'') =>
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
   | .variant l' τ', .variant l τ =>
     if l' = l then
-      Ty.unify i Δ τ' τ
+      unify i Δ τ' τ
     else
       none
 
   | .field l' τ', .field l τ =>
     if l' = l then
-      Ty.unify i Δ τ' τ
+      unify i Δ τ' τ
     else
       none
 
@@ -537,8 +537,8 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
     let ct1 := Ty.raise_binding 0 args ct1
     let ct2 := Ty.raise_binding 0 args ct2
     let τ := Ty.raise_binding 0 args τ
-    bind (Ty.unify i Δ ct1 ct2) (fun (i, Δ') => 
-    bind (Ty.unify i Δ' ty τ) (fun (i, Δ'') =>
+    bind (unify i Δ ct1 ct2) (fun (i, Δ') => 
+    bind (unify i Δ' ty τ) (fun (i, Δ'') =>
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
@@ -550,8 +550,8 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
     let ct1 := Ty.raise_binding 0 args ct1
     let ct2 := Ty.raise_binding 0 args ct2
     let τ := Ty.raise_binding 0 args τ
-    bind (Ty.unify i Δ ct1 ct2) (fun (i, Δ') => 
-    bind (Ty.unify i Δ' ty τ) (fun (i, Δ'') =>
+    bind (unify i Δ ct1 ct2) (fun (i, Δ') => 
+    bind (unify i Δ' ty τ) (fun (i, Δ'') =>
       some (i, merge Ty.inter Ty.unknown Δ' Δ'')
     ))
 
@@ -642,19 +642,29 @@ patvars (.l t fs) τ =
 -- the assymetry of subtyping makes it clear when to instantiate/raise/free a variable
 -- and when to unroll a looping type
 
+def fresh (i : Nat) : Nat × Ty :=
+  (i + 1, .fvar i)
+
+
 def infer 
   (i : Nat)
   (Δ : List (Nat × Ty)) (Γ : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
   Option (Nat × List (Nat × Ty) × Ty) := match t with
-  | .unit => bind (Ty.unify i Δ Ty.unit ty) (fun (i, Δ) =>
+  | .unit => bind (unify i Δ Ty.unit ty) (fun (i, Δ) =>
       (i, Δ, Ty.unit)
     )
   | .bvar _ => none
   | .fvar x =>
     bind (lookup x Γ) (fun ty' =>
-    bind (Ty.unify i Δ ty' ty) (fun (i, Δ₁) =>
+    bind (unify i Δ ty' ty) (fun (i, Δ₁) =>
       some (i, Δ₁ ++ Δ, ty')
     )) 
+  | .variant l t1 =>   
+    let (i, ty1) := (fresh i) 
+    bind (unify i Δ (.variant l ty1) ty) (fun (i, Δ₁) =>
+    bind (infer i (Δ₁ ++ Δ) Γ t1 ty1) (fun (i, Δ₂, ty1') =>
+      some (i, Δ₂ ++ Δ₁ ++ Δ, .variant l ty1')
+    ))
   | _ => none
 
 /-
@@ -662,8 +672,8 @@ def infer
 
 infer Γ Δ ⊢ (#l t₁) : τ =
   let α = fresh in
-  map (solve Δ ⊢ (∀ {α} . (#l α)) ⊆ τ) (Δ' => 
-  map (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁,τ₁ => 
+  bind (solve Δ ⊢ ((#l α)) ⊆ τ) (Δ' => 
+  bind (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁,τ₁ => 
     some (Δ' ++ Δ₁ , #l τ₁)
   ))
 
@@ -671,58 +681,58 @@ infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
   let Δ₁, τ₁ = τ₁[?/fresh] in
   let Γ₁ = patvars t₁ τ₁ in
   let β = fresh in
-  map (solve Δ ⊢ (∀ Δ₁ ++ {β} . τ₁ -> β) ⊆ τ) (Δ' => 
-  map (infer (Γ ++ Γ₁) (Δ ++ Δ') ⊢ t₂ : β) (Δ₂', τ₂' =>
+  bind (solve Δ ⊢ (∀ Δ₁ ++ {β} . τ₁ -> β) ⊆ τ) (Δ' => 
+  bind (infer (Γ ++ Γ₁) (Δ ++ Δ') ⊢ t₂ : β) (Δ₂', τ₂' =>
     -- patvars (Γ₁) are NOT generalized in τ₂'
     some (Δ' ++ Δ₂' , τ₁ -> τ₂')
   ))
 
 
 infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) cs : τ =
-  map (infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ) (Δ', τ' =>
-  map (infer Γ Δ ++ Δ' ⊢ cs : τ₂) (Δ'', τ'' => 
+  bind (infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ) (Δ', τ' =>
+  bind (infer Γ Δ ++ Δ' ⊢ cs : τ₂) (Δ'', τ'' => 
     some (Δ' ++ Δ'' , τ' & τ'')
   ))
 
 infer Γ Δ ⊢ t t₁ : τ₂ =
-  map (infer Γ Δ ⊢ t : ? -> τ₂ in) (Δ',τ' => 
-  map (functify τ') (τ₁,τ₂' => 
+  bind (infer Γ Δ ⊢ t : ? -> τ₂ in) (Δ',τ' => 
+  bind (functify τ') (τ₁,τ₂' => 
   -- break type (possibly intersection) into premise and conclusion 
-  map (infer Γ (Δ ++ Δ') ⊢ t₁ : τ₁) (Δ₁',τ₁' =>
-  map (solve Δ ++ Δ' ++ Δ₁' ⊢ τ' ⊆ (τ₁' -> τ₂)) (Δ' =>
+  bind (infer Γ (Δ ++ Δ') ⊢ t₁ : τ₁) (Δ₁',τ₁' =>
+  bind (solve Δ ++ Δ' ++ Δ₁' ⊢ τ' ⊆ (τ₁' -> τ₂)) (Δ' =>
     some(Δ' , τ₂' & τ₂)
   ))))
 
 infer Γ Δ ⊢ (.l t₁) : τ =
   let α = fresh in
-  map (solve Δ ⊢ (∀ {α} . (.l α)) ⊆ τ) (Δ' =>
-  map (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁ , τ₁ =>  
+  bind (solve Δ ⊢ (∀ {α} . (.l α)) ⊆ τ) (Δ' =>
+  bind (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁ , τ₁ =>  
     some(Δ' ++ Δ₁ , .l τ₁)
   ))
 
 infer Γ Δ ⊢ (.l t₁) fs : τ =
-  map (infer Γ Δ ⊢ (.l t₁) : τ) (Δ' , τ' =>
-  map (infer Γ (Δ ++ Δ') ⊢ fs : τ) (Δ'' , τ'' =>
+  bind (infer Γ Δ ⊢ (.l t₁) : τ) (Δ' , τ' =>
+  bind (infer Γ (Δ ++ Δ') ⊢ fs : τ) (Δ'' , τ'' =>
     some(Δ' ++ Δ'' , τ' & τ'')
   ))
 
 infer Γ Δ ⊢ t.l : τ₂ =
-  map (infer Γ Δ ⊢ t : (.l τ₂)) (Δ' , τ' =>
-  map (project τ' l) (τ₂' => 
+  bind (infer Γ Δ ⊢ t : (.l τ₂)) (Δ' , τ' =>
+  bind (project τ' l) (τ₂' => 
     some(Δ' , τ₂')
   ))
 
 infer Γ Δ ⊢ fix t : τ =
-  map (infer Γ Δ ⊢ t : (τ -> τ)) (Δ',τ' =>
-  map (functify τ') (τ₁', τ₂' =>
+  bind (infer Γ Δ ⊢ t : (τ -> τ)) (Δ',τ' =>
+  bind (functify τ') (τ₁', τ₂' =>
     -- extract premise and conclusion 
     some(Δ' , τ₂')
   ))
 
 infer Γ Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
   let Δ₁,τ₁ = τ₁[?/fresh] in
-  map (infer Γ Δ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁' , τ₁' => 
-  map (infer (Γ ++ {x : (∀ Δ₁' . τ₁')}) Δ ⊢ t₂ : τ₂) (Δ₂' , τ₂' =>
+  bind (infer Γ Δ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁' , τ₁' => 
+  bind (infer (Γ ++ {x : (∀ Δ₁' . τ₁')}) Δ ⊢ t₂ : τ₂) (Δ₂' , τ₂' =>
     -- τ₁' is generalized in τ₂'
     some(Δ₂' , τ₂')
   ))
