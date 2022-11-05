@@ -372,7 +372,7 @@ partial def roll (key : Nat) (τ : Ty) : Ty :=
 
 
 
-def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
+def make_record_constraint_mu (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
   | (.field l ty'), mu_ty => 
       let ty := .exis 1 ( 
         (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
@@ -383,7 +383,7 @@ def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
       let ty := 
       [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
 
-      let rem := make_record_constraint_sub (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
+      let rem := make_record_constraint_mu (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
       if rem.length = 0 then
         []
       else 
@@ -398,45 +398,45 @@ def make_record_constraint_sub (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
          (Ty.lower_binding 1 (unroll mu_ty))
       ) (.bvar 0)
 
-      let rem := make_record_constraint_sub (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
+      let rem := make_record_constraint_mu (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
       if rem.length = 0 then
         []
       else 
         (ty', ty) :: rem
   | _, _ => [] 
 
-def make_record_constraint_super (prev : Ty) : Ty -> Ty -> List (Ty × Ty) 
-  | mu_ty, (.field l ty') => 
-      let ty := .exis 1 ( 
-        (Ty.lower_binding 1 (unroll mu_ty)),
+def make_record_constraint_nu (prev : Ty) : Ty -> Ty -> List (Ty × Ty) 
+  | nu_ty, (.field l ty') => 
+      let ty := .univ 1 ( 
+        (Ty.lower_binding 1 (unroll nu_ty)),
         (Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
       ) (.bvar 0)
       [(ty', ty)]
-  | mu_ty, .inter (.field l ty') rem_ty => 
-      let ty := .exis 1 (
-        (Ty.lower_binding 1 (unroll mu_ty)),
+  | nu_ty, .inter (.field l ty') rem_ty => 
+      let ty := .univ 1 (
+        (Ty.lower_binding 1 (unroll nu_ty)),
         (Ty.inter (
           Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
           (Ty.lower_binding 1 rem_ty)
         ) 
       ) (.bvar 0)
 
-      let rem := make_record_constraint_super (Ty.inter prev (.field l ty')) mu_ty rem_ty
+      let rem := make_record_constraint_nu (Ty.inter prev (.field l ty')) nu_ty rem_ty
       if rem.length = 0 then
         []
       else
         (ty', ty) :: rem
-  | mu_ty, .inter rem_ty (.field l ty') => 
+  | nu_ty, .inter rem_ty (.field l ty') => 
       -- copy and paste above case (for terminateion proved by structure)
-      let ty := .exis 1 ( 
-        (Ty.lower_binding 1 (unroll mu_ty)),
+      let ty := .univ 1 ( 
+        (Ty.lower_binding 1 (unroll nu_ty)),
         (Ty.inter (
           Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
           (Ty.lower_binding 1 rem_ty)
         ) 
       ) (.bvar 0)
 
-      let rem := make_record_constraint_super (Ty.inter prev (.field l ty')) mu_ty rem_ty
+      let rem := make_record_constraint_nu (Ty.inter prev (.field l ty')) nu_ty rem_ty
       if rem.length = 0 then
         []
       else
@@ -463,7 +463,7 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
     Ty.unify i Δ (.variant l' τ') (unroll τ)
 
   | τ', .recur τ =>
-    let cs := (make_record_constraint_sub Ty.unknown τ' τ)
+    let cs := (make_record_constraint_mu Ty.unknown τ' τ)
     if cs.length = 0 then
       none
     else
@@ -528,8 +528,6 @@ partial def Ty.unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat
       Ty.unify i Δ τ' τ
     else
       none
-
-  -- TODO: check subtyping for universals without unification 
 
   -- | .exis n' (ct1', ct2') τ', .exis n (ct1, ct2) τ =>
   -- TODO: check equality
