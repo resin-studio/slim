@@ -651,19 +651,19 @@ patvars (.l t fs) τ =
 -- the assymetry of subtyping makes it clear when to instantiate/raise/free a variable
 -- and when to unroll a looping type
 
+-- notation convetion:
+  -- prime tick marks for updated versions
+  -- numbers for new parts
+  -- no subscripts
+  -- no greek
+  -- general to specific, 
+    -- e.g. env_ty, (not ty_env)
+    -- e.g. ty_recur, (not mu_ty)
+
 def fresh (i : Nat) : Nat × Ty :=
   (i + 1, .fvar i)
 
-
--- TODO: normalize notation
--- prime tick marks for updated versions
--- numbers for new parts
--- no subscripts
--- no greek
--- general to specific, 
-  -- e.g. env_ty, (not ty_env)
-  -- e.g. ty_recur, (not mu_ty)
-def infer 
+partial def infer 
   (i : Nat)
   (env_ty : List (Nat × Ty)) (env_tm : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
   Option (Nat × List (Nat × Ty) × Ty) := match t with
@@ -676,22 +676,44 @@ def infer
     bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
       some (i, env_ty1 ++ env_ty, ty')
     )) 
+
   | .variant l t1 =>   
     let (i, ty1) := (fresh i) 
     bind (unify i env_ty (.variant l ty1) ty) (fun (i, env_ty1) =>
     bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
-      some (i, env_ty2 ++ env_ty1 ++ env_ty, .variant l ty1')
+      some (i, env_ty2 ++ env_ty1, .variant l ty1')
+    ))
+
+  | Tm.record [] => none
+
+  | Tm.record ((l, t1) :: .nil) =>
+    let (i, ty1) := (fresh i) 
+    bind (unify i env_ty (.field l ty1) ty) (fun (i, env_ty1) =>
+    bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
+      some (i, env_ty2 ++ env_ty1, .field l ty1')
+    ))
+
+  | Tm.record (fd :: fds) =>
+    bind (infer i env_ty env_tm (.record fds) ty) (fun (i, env_ty_fds, ty_fds) =>
+    bind (infer i env_ty env_tm (.record [fd]) ty) (fun (i, env_ty_fd, ty_fd) =>
+      some (i, env_ty_fd ++ env_ty_fds, .inter ty_fd ty_fds)
     ))
   | _ => none
 
 /-
 ```
 
-infer env_tm env_ty ⊢ (#l t₁) : τ =
+infer env_tm env_ty ⊢ (.l t₁) : τ =
   let α = fresh in
-  bind (solve env_ty ⊢ ((#l α)) ⊆ τ) (env_ty' => 
-  bind (infer env_tm (env_ty ++ env_ty') ⊢ t₁ : α) (env_ty1,τ1 => 
-    some (env_ty' ++ env_ty1 , #l τ1)
+  bind (solve env_ty ⊢ (∀ {α} . (.l α)) ⊆ τ) (env_ty' =>
+  bind (infer env_tm (env_ty ++ env_ty') ⊢ t₁ : α) (env_ty1 , τ1 =>  
+    some(env_ty' ++ env_ty1 , .l τ1)
+  ))
+
+infer env_tm env_ty ⊢ (.l t₁) fs : τ =
+  bind (infer env_tm env_ty ⊢ (.l t₁) : τ) (env_ty' , τ' =>
+  bind (infer env_tm (env_ty ++ env_ty') ⊢ fs : τ) (env_ty'' , τ'' =>
+    some(env_ty' ++ env_ty'' , τ' & τ'')
   ))
 
 infer env_tm env_ty ⊢ (for t₁ : τ1 => t₂) : τ =
@@ -720,18 +742,6 @@ infer env_tm env_ty ⊢ t t₁ : τ2 =
     some(env_ty' , τ2' & τ2)
   ))))
 
-infer env_tm env_ty ⊢ (.l t₁) : τ =
-  let α = fresh in
-  bind (solve env_ty ⊢ (∀ {α} . (.l α)) ⊆ τ) (env_ty' =>
-  bind (infer env_tm (env_ty ++ env_ty') ⊢ t₁ : α) (env_ty1 , τ1 =>  
-    some(env_ty' ++ env_ty1 , .l τ1)
-  ))
-
-infer env_tm env_ty ⊢ (.l t₁) fs : τ =
-  bind (infer env_tm env_ty ⊢ (.l t₁) : τ) (env_ty' , τ' =>
-  bind (infer env_tm (env_ty ++ env_ty') ⊢ fs : τ) (env_ty'' , τ'' =>
-    some(env_ty' ++ env_ty'' , τ' & τ'')
-  ))
 
 infer env_tm env_ty ⊢ t.l : τ2 =
   bind (infer env_tm env_ty ⊢ t : (.l τ2)) (env_ty' , τ' =>
