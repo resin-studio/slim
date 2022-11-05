@@ -106,19 +106,19 @@ def liberate (i : Nat) : Nat -> List (Nat × Ty)
 
 def refresh (i : Nat) (n : Nat) : (Nat × List (Nat × Ty) × List Ty) := 
   let args := (List.range n).map (fun j => .fvar (i + j))
-  let Δ' :=  liberate i n 
+  let env_ty' :=  liberate i n 
   let i' := i + n 
-  (i', Δ', args)
+  (i', env_ty', args)
 
 
-partial def merge (op : T -> T -> T) (df : T) (Δ₁ : List (Nat × T))  (Δ₂ : List (Nat × T)) : List (Nat × T) :=
-  List.bind Δ₁ (fun (key₁, v₁) =>
-  List.bind Δ₂ (fun (key₂, v₂) =>
-    let uno := match lookup key₁ Δ₂ with
+partial def merge (op : T -> T -> T) (df : T) (env_ty1 : List (Nat × T))  (env_ty2 : List (Nat × T)) : List (Nat × T) :=
+  List.bind env_ty1 (fun (key₁, v₁) =>
+  List.bind env_ty2 (fun (key₂, v₂) =>
+    let uno := match lookup key₁ env_ty2 with
       | some v₂ => [(key₁, op v₁ v₂)]
       | none => [(key₁, op v₁ df)] 
 
-    let dos := match lookup key₂ Δ₁ with
+    let dos := match lookup key₂ env_ty1 with
       | some _ => [] 
       | none => [(key₂, op v₂ df)]
     uno ++ dos
@@ -135,38 +135,38 @@ match _ none = false
 
 `cases_normal τ τ = b`
 ```
-cases_normal (#l₁ τ₁) (#l₂ τ₂) = true
-cases_normal τ₁ τ₂ = 
-  fmap (keys τ₁) (ks₁ =>
-  fmap (keys τ₂) (ks₂ =>
+cases_normal (#l₁ τ1) (#l₂ τ2) = true
+cases_normal τ1 τ2 = 
+  fmap (keys τ1) (ks₁ =>
+  fmap (keys τ2) (ks₂ =>
     some (ks₁ = ks₂)
   )) = Some true
-  (keys τ₁) = (keys τ₂) 
+  (keys τ1) = (keys τ2) 
 ```
 
 
 `decreasing τ τ = b`
 ```
 decreasing (#l τ) τ = true 
-decreasing τ₁ τ₂ =  
-  any τ₁ (.l τ => decreasing τ (project τ₂ l)) andalso
-  all τ₁ (.l τ => ¬ increasing τ (project τ₂ l))
+decreasing τ1 τ2 =  
+  any τ1 (.l τ => decreasing τ (project τ2 l)) andalso
+  all τ1 (.l τ => ¬ increasing τ (project τ2 l))
 ```
 
 `increasing τ τ = b`
 ```
-increasing τ₁ τ₂ = decreasing τ₂ τ₁
+increasing τ1 τ2 = decreasing τ2 τ1
 ```
 
 `well_founded α τ = b`
 ```
-well_founded α τ₁ | τ₂ = 
-  cases_normal τ₁ τ₂ andalso
-  well_founded α τ₁ andalso
-  well_founded α τ₂
+well_founded α τ1 | τ2 = 
+  cases_normal τ1 τ2 andalso
+  well_founded α τ1 andalso
+  well_founded α τ2
 
-well_founded α ∀ Δ ⟨τ' ⊆ α⟩ . τ = 
-  α ∈ Δ orelse
+well_founded α ∀ env_ty ⟨τ' ⊆ α⟩ . τ = 
+  α ∈ env_ty orelse
   decreasing τ τ' 
 ```
 -/
@@ -178,12 +178,12 @@ def Ty.occurs (key : Nat)  : Ty -> Bool
   | .unit => false 
   | .variant l ty => (Ty.occurs key ty) 
   | .field l ty => (Ty.occurs key ty)
-  | [: ⟨ty₁⟩ | ⟨ty₂⟩ :] => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
-  -- | .union ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
-  | .inter ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
-  | .func ty₁ ty₂ => (Ty.occurs key ty₁) ∨ (Ty.occurs key ty₂)
-  | .univ n (cty1, cty2) ty => (Ty.occurs key cty1) ∨ (Ty.occurs key cty2) ∨ (Ty.occurs key ty)
-  | .exis n (cty1, cty2) ty => (Ty.occurs key cty1) ∨ (Ty.occurs key cty2) ∨ (Ty.occurs key ty)
+  | [: ⟨ty1⟩ | ⟨ty2⟩ :] => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
+  -- | .union ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
+  | .inter ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
+  | .func ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
+  | .univ n (ty_c1, ty_c2) ty => (Ty.occurs key ty_c1) ∨ (Ty.occurs key ty_c2) ∨ (Ty.occurs key ty)
+  | .exis n (ty_c1, ty_c2) ty => (Ty.occurs key ty_c1) ∨ (Ty.occurs key ty_c2) ∨ (Ty.occurs key ty)
   | .recur ty => (Ty.occurs key ty)
   | .corec ty => (Ty.occurs key ty)
 
@@ -197,17 +197,17 @@ def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
   | .unit => .unit
   | .variant l ty => .variant l (Ty.free_subst m ty) 
   | .field l ty => .field l (Ty.free_subst m ty)
-  | .union ty₁ ty₂ => .union (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
-  | .inter ty₁ ty₂ => .inter (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
-  | .func ty₁ ty₂ => .func (Ty.free_subst m ty₁) (Ty.free_subst m ty₂)
-  | .univ n (ct1, ct2) ty => (.univ
+  | .union ty1 ty2 => .union (Ty.free_subst m ty1) (Ty.free_subst m ty2)
+  | .inter ty1 ty2 => .inter (Ty.free_subst m ty1) (Ty.free_subst m ty2)
+  | .func ty1 ty2 => .func (Ty.free_subst m ty1) (Ty.free_subst m ty2)
+  | .univ n (ty_c1, ty_c2) ty => (.univ
     n
-    (Ty.free_subst m ct1, Ty.free_subst m ct2) 
+    (Ty.free_subst m ty_c1, Ty.free_subst m ty_c2) 
     (Ty.free_subst m ty)
   )
-  | .exis n (ct1, ct2) ty => (.exis
+  | .exis n (ty_c1, ty_c2) ty => (.exis
     n
-    (Ty.free_subst m ct1, Ty.free_subst m ct2) 
+    (Ty.free_subst m ty_c1, Ty.free_subst m ty_c2) 
     (Ty.free_subst m ty)
   )
   | .recur ty => .recur (Ty.free_subst m ty)
@@ -252,17 +252,17 @@ def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
   | .unit => .unit
   | .variant l ty => .variant l (Ty.raise_binding start args ty) 
   | .field l ty => .field l (Ty.raise_binding start args ty)
-  | .union ty₁ ty₂ => .union (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
-  | .inter ty₁ ty₂ => .inter (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
-  | .func ty₁ ty₂ => .func (Ty.raise_binding start args ty₁) (Ty.raise_binding start args ty₂)
-  | .univ n (ct1, ct2) ty => (.univ
+  | .union ty1 ty2 => .union (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
+  | .inter ty1 ty2 => .inter (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
+  | .func ty1 ty2 => .func (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
+  | .univ n (ty_c1, ty_c2) ty => (.univ
     n
-    (Ty.raise_binding (start + n) args ct1, Ty.raise_binding (start + n) args ct2)
+    (Ty.raise_binding (start + n) args ty_c1, Ty.raise_binding (start + n) args ty_c2)
     (Ty.raise_binding (start + n) args ty)
   )
-  | .exis n (ct1, ct2) ty => (.exis
+  | .exis n (ty_c1, ty_c2) ty => (.exis
     n
-    (Ty.raise_binding (start + n) args ct1, Ty.raise_binding (start + n) args ct2)
+    (Ty.raise_binding (start + n) args ty_c1, Ty.raise_binding (start + n) args ty_c2)
     (Ty.raise_binding (start + n) args ty)
   )
   | .recur ty => .recur (Ty.raise_binding (start + 1) args ty)
@@ -342,17 +342,17 @@ def Ty.lower_binding (depth : Nat) : Ty -> Ty
   | .unit => .unit
   | .variant l ty => .variant l (Ty.lower_binding depth ty) 
   | .field l ty => .field l (Ty.lower_binding depth ty)
-  | .union ty₁ ty₂ => .union (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
-  | .inter ty₁ ty₂ => .inter (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
-  | .func ty₁ ty₂ => .func (Ty.lower_binding depth ty₁) (Ty.lower_binding depth ty₂)
-  | .univ n (ct1, ct2) ty => (.univ
+  | .union ty1 ty2 => .union (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
+  | .inter ty1 ty2 => .inter (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
+  | .func ty1 ty2 => .func (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
+  | .univ n (ty_c1, ty_c2) ty => (.univ
     n
-    (Ty.lower_binding (depth + n) ct1, Ty.lower_binding (depth + n) ct2)
+    (Ty.lower_binding (depth + n) ty_c1, Ty.lower_binding (depth + n) ty_c2)
     (Ty.lower_binding (depth + n) ty)
   )
-  | .exis n (ct1, ct2) ty => (.exis
+  | .exis n (ty_c1, ty_c2) ty => (.exis
     n
-    (Ty.lower_binding (depth + n) ct1, Ty.lower_binding (depth + n) ct2)
+    (Ty.lower_binding (depth + n) ty_c1, Ty.lower_binding (depth + n) ty_c2)
     (Ty.lower_binding (depth + n) ty)
   )
   | .recur ty => .recur (Ty.lower_binding (depth + 1) ty)
@@ -372,7 +372,7 @@ partial def roll (key : Nat) (τ : Ty) : Ty :=
 
 
 
-def make_record_constraint_mu (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
+def make_record_constraint_recur (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
   | (.field l ty'), mu_ty => 
       let ty := .exis 1 ( 
         (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
@@ -383,7 +383,7 @@ def make_record_constraint_mu (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
       let ty := 
       [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
 
-      let rem := make_record_constraint_mu (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
+      let rem := make_record_constraint_recur (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
       if rem.length = 0 then
         []
       else 
@@ -398,14 +398,14 @@ def make_record_constraint_mu (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
          (Ty.lower_binding 1 (unroll mu_ty))
       ) (.bvar 0)
 
-      let rem := make_record_constraint_mu (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
+      let rem := make_record_constraint_recur (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
       if rem.length = 0 then
         []
       else 
         (ty', ty) :: rem
   | _, _ => [] 
 
-def make_record_constraint_nu (prev : Ty) : Ty -> Ty -> List (Ty × Ty) 
+def make_record_constraint_corec (prev : Ty) : Ty -> Ty -> List (Ty × Ty) 
   | nu_ty, (.field l ty') => 
       let ty := .univ 1 ( 
         (Ty.lower_binding 1 (unroll nu_ty)),
@@ -421,7 +421,7 @@ def make_record_constraint_nu (prev : Ty) : Ty -> Ty -> List (Ty × Ty)
         ) 
       ) (.bvar 0)
 
-      let rem := make_record_constraint_nu (Ty.inter prev (.field l ty')) nu_ty rem_ty
+      let rem := make_record_constraint_corec (Ty.inter prev (.field l ty')) nu_ty rem_ty
       if rem.length = 0 then
         []
       else
@@ -436,7 +436,7 @@ def make_record_constraint_nu (prev : Ty) : Ty -> Ty -> List (Ty × Ty)
         ) 
       ) (.bvar 0)
 
-      let rem := make_record_constraint_nu (Ty.inter prev (.field l ty')) nu_ty rem_ty
+      let rem := make_record_constraint_corec (Ty.inter prev (.field l ty')) nu_ty rem_ty
       if rem.length = 0 then
         []
       else
@@ -444,37 +444,41 @@ def make_record_constraint_nu (prev : Ty) : Ty -> Ty -> List (Ty × Ty)
   | _, _ => [] 
 
 
-partial def unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
+partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
-  | .fvar id, τ₂  => match lookup id Δ with 
-    | none => some (i + 2, [(i, .inter (roll id τ₂) (Ty.fvar (i + 1)))]) 
-    | some Ty.unknown => some (i + 2, [(i, .inter (roll id τ₂) (Ty.fvar (i + 1)))]) 
-    | some τ₁ => unify i Δ τ₁ τ₂ 
+  | .fvar id, ty  => match lookup id env_ty with 
+    | none => some (i + 2, [(i, .inter (roll id ty) (Ty.fvar (i + 1)))]) 
+    | some Ty.unknown => some (i + 2, [(i, .inter (roll id ty) (Ty.fvar (i + 1)))]) 
+    | some ty' => unify i env_ty ty' ty 
 
-  | τ₁, .fvar id  => match lookup id Δ with 
-    | none => some (i + 2, [(i, .union (roll id τ₁) (Ty.fvar (i + 1)))]) 
-    | some Ty.unknown => some (i + 2, [(i, .union (roll id τ₁) (Ty.fvar (i + 1)))]) 
-    | some τ₂ => unify i Δ τ₁ τ₂ 
+  | ty', .fvar id  => match lookup id env_ty with 
+    | none => some (i + 2, [(i, .union (roll id ty') (Ty.fvar (i + 1)))]) 
+    | some Ty.unknown => some (i + 2, [(i, .union (roll id ty') (Ty.fvar (i + 1)))]) 
+    | some ty => unify i env_ty ty' ty 
 
-  | .recur τ', .recur τ =>
-    unify i Δ τ' τ 
+  -- | .recur ty', .recur ty =>
+    -- TODO: should these be equal or unified?
+    -- probably just equal;
+    -- the assymetrical case will unroll
+    -- this is the base case 
+    -- unify i env_ty ty' ty 
 
-  | .variant l' τ', .recur τ =>
-    unify i Δ (.variant l' τ') (unroll τ)
+  | .variant l ty', .recur ty =>
+    unify i env_ty (.variant l ty') (unroll ty)
 
-  | τ', .recur τ =>
-    let cs := (make_record_constraint_mu Ty.unknown τ' τ)
+  | ty', .recur ty =>
+    let cs := (make_record_constraint_recur Ty.unknown ty' ty)
     if cs.length = 0 then
       none
     else
       List.foldl (fun 
-        | some (i, Δ), (ct1, ct2) => unify i Δ ct1 ct2
+        | some (i, env_ty), (ty_c1, ty_c2) => unify i env_ty ty_c1 ty_c2
         | none, _ => none
-      ) (some (i, Δ)) cs
+      ) (some (i, env_ty)) cs
 
 
   -- | .corec τ', .corec τ =>
-  --   unify i Δ τ' τ 
+  --   unify i env_ty τ' τ 
 
   -- TODO: check function against corecursive type 
   -- | .corec τ', τ =>
@@ -483,76 +487,76 @@ partial def unify (i : Nat) (Δ : List (Nat × Ty)) : Ty -> Ty -> Option (Nat ×
   --     none
   --   else
   --     List.foldl (fun 
-  --       | some (i, Δ), (ct1, ct2) => unify i Δ ct1 ct2
+  --       | some (i, env_ty), (ty_c1, ty_c2) => unify i env_ty ty_c1 ty_c2
   --       | none, _ => none
-  --     ) (some (i, Δ)) cs
+  --     ) (some (i, env_ty)) cs
 
-  | .union τ₁ τ₂, τ => 
-    bind (unify i Δ τ₁ τ) (fun (i, Δ') => 
-    bind (unify i Δ' τ₂ τ) (fun (i, Δ'') =>
-      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
+  | .union τ1 τ2, τ => 
+    bind (unify i env_ty τ1 τ) (fun (i, env_ty') => 
+    bind (unify i env_ty' τ2 τ) (fun (i, env_ty'') =>
+      some (i, merge Ty.inter Ty.unknown env_ty' env_ty'')
     ))
 
-  | τ, .union τ₁ τ₂ => 
-    bind (unify i Δ τ τ₁) (fun (i, Δ₁) => 
-    bind (unify i Δ τ τ₂) (fun (i, Δ₂) =>
-      some (i, merge Ty.union Ty.unknown Δ₁ Δ₂)
+  | τ, .union τ1 τ2 => 
+    bind (unify i env_ty τ τ1) (fun (i, env_ty1) => 
+    bind (unify i env_ty τ τ2) (fun (i, env_ty2) =>
+      some (i, merge Ty.union Ty.unknown env_ty1 env_ty2)
     ))
 
-  | τ, .inter τ₁ τ₂ => 
-    bind (unify i Δ τ τ₁) (fun (i, Δ') => 
-    bind (unify i Δ' τ τ₂) (fun (i, Δ'') =>
-      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
+  | τ, .inter τ1 τ2 => 
+    bind (unify i env_ty τ τ1) (fun (i, env_ty') => 
+    bind (unify i env_ty' τ τ2) (fun (i, env_ty'') =>
+      some (i, merge Ty.inter Ty.unknown env_ty' env_ty'')
     ))
 
-  | .inter τ₁ τ₂, τ => 
-    bind (unify i Δ τ₁ τ) (fun (i, Δ₁) => 
-    bind (unify i Δ τ₂ τ) (fun (i, Δ₂) =>
-      some (i, merge Ty.union Ty.unknown Δ₁ Δ₂)
+  | .inter τ1 τ2, τ => 
+    bind (unify i env_ty τ1 τ) (fun (i, env_ty1) => 
+    bind (unify i env_ty τ2 τ) (fun (i, env_ty2) =>
+      some (i, merge Ty.union Ty.unknown env_ty1 env_ty2)
     ))
 
-  | .func τ₁ τ₂', .func τ₁' τ₂ =>
-    bind (unify i Δ τ₁' τ₁) (fun (i, Δ') => 
-    bind (unify i Δ' τ₂' τ₂) (fun (i, Δ'') =>
-      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
+  | .func τ1 τ2', .func τ1' τ2 =>
+    bind (unify i env_ty τ1' τ1) (fun (i, env_ty') => 
+    bind (unify i env_ty' τ2' τ2) (fun (i, env_ty'') =>
+      some (i, merge Ty.inter Ty.unknown env_ty' env_ty'')
     ))
 
   | .variant l' τ', .variant l τ =>
     if l' = l then
-      unify i Δ τ' τ
+      unify i env_ty τ' τ
     else
       none
 
   | .field l' τ', .field l τ =>
     if l' = l then
-      unify i Δ τ' τ
+      unify i env_ty τ' τ
     else
       none
 
-  -- | .exis n' (ct1', ct2') τ', .exis n (ct1, ct2) τ =>
+  -- | .exis n' (ty_c1', ty_c2') τ', .exis n (ty_c1, ty_c2) τ =>
   -- TODO: check equality
 
-  | ty, .exis n (ct1, ct2) τ =>
-    let (i, Δ, args) := refresh i n 
-    let ct1 := Ty.raise_binding 0 args ct1
-    let ct2 := Ty.raise_binding 0 args ct2
+  | ty, .exis n (ty_c1, ty_c2) τ =>
+    let (i, env_ty, args) := refresh i n 
+    let ty_c1 := Ty.raise_binding 0 args ty_c1
+    let ty_c2 := Ty.raise_binding 0 args ty_c2
     let τ := Ty.raise_binding 0 args τ
-    bind (unify i Δ ct1 ct2) (fun (i, Δ') => 
-    bind (unify i Δ' ty τ) (fun (i, Δ'') =>
-      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
+    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty') => 
+    bind (unify i env_ty' ty τ) (fun (i, env_ty'') =>
+      some (i, merge Ty.inter Ty.unknown env_ty' env_ty'')
     ))
 
-  -- | .univ n' (ct1', ct2') τ', .univ n (ct1, ct2) τ =>
+  -- | .univ n' (ty_c1', ty_c2') τ', .univ n (ty_c1, ty_c2) τ =>
   -- TODO: check equality
 
-  | .univ n (ct1, ct2) τ, ty =>
-    let (i, Δ, args) := refresh i n 
-    let ct1 := Ty.raise_binding 0 args ct1
-    let ct2 := Ty.raise_binding 0 args ct2
+  | .univ n (ty_c1, ty_c2) τ, ty =>
+    let (i, env_ty, args) := refresh i n 
+    let ty_c1 := Ty.raise_binding 0 args ty_c1
+    let ty_c2 := Ty.raise_binding 0 args ty_c2
     let τ := Ty.raise_binding 0 args τ
-    bind (unify i Δ ct1 ct2) (fun (i, Δ') => 
-    bind (unify i Δ' ty τ) (fun (i, Δ'') =>
-      some (i, merge Ty.inter Ty.unknown Δ' Δ'')
+    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty') => 
+    bind (unify i env_ty' ty τ) (fun (i, env_ty'') =>
+      some (i, merge Ty.inter Ty.unknown env_ty' env_ty'')
     ))
 
   | .bvar id₁, .bvar id₂  =>
@@ -600,9 +604,9 @@ m ::=                             substitution map
   ⬝                                empty
   α / τ :: m                      extension
 
-Γ ::=                             typing environment 
+env_tm ::=                             typing environment 
   ⬝                                empty
-  x : τ :: Γ                      extension
+  x : τ :: env_tm                      extension
 
 -/
 
@@ -621,18 +625,18 @@ inductive Tm : Type
 
 /-
 
-`patvars t = o[Γ]`
+`patvars t = o[env_tm]`
 ```
 patvars x τ = 
   some {x : τ}
 patvars (.l t₁) τ = 
-  map (project τ l) (τ₁ =>
-    patvars t₁ τ₁
+  map (project τ l) (τ1 =>
+    patvars t₁ τ1
   )
 patvars (.l t fs) τ =
-  map (patvars (.l t) τ) (Γ₁ =>
-  map (patvars fs τ) (Γ₂ =>
-    some (Γ₁ ++ Γ₂)
+  map (patvars (.l t) τ) (env_tm₁ =>
+  map (patvars fs τ) (env_tm₂ =>
+    some (env_tm₁ ++ env_tm₂)
   ))
 ...
 ```
@@ -653,96 +657,96 @@ def fresh (i : Nat) : Nat × Ty :=
 -- no greek
 -- general to specific, 
   -- e.g. env_ty, (not ty_env)
-  -- e.g. ty_mu, (not mu_ty)
+  -- e.g. ty_recur, (not mu_ty)
 def infer 
   (i : Nat)
-  (Δ : List (Nat × Ty)) (Γ : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
+  (env_ty : List (Nat × Ty)) (env_tm : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
   Option (Nat × List (Nat × Ty) × Ty) := match t with
-  | .unit => bind (unify i Δ Ty.unit ty) (fun (i, Δ) =>
-      (i, Δ, Ty.unit)
+  | .unit => bind (unify i env_ty Ty.unit ty) (fun (i, env_ty) =>
+      (i, env_ty, Ty.unit)
     )
   | .bvar _ => none
   | .fvar x =>
-    bind (lookup x Γ) (fun ty' =>
-    bind (unify i Δ ty' ty) (fun (i, Δ₁) =>
-      some (i, Δ₁ ++ Δ, ty')
+    bind (lookup x env_tm) (fun ty' =>
+    bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
+      some (i, env_ty1 ++ env_ty, ty')
     )) 
   | .variant l t1 =>   
     let (i, ty1) := (fresh i) 
-    bind (unify i Δ (.variant l ty1) ty) (fun (i, Δ₁) =>
-    bind (infer i (Δ₁ ++ Δ) Γ t1 ty1) (fun (i, Δ₂, ty1') =>
-      some (i, Δ₂ ++ Δ₁ ++ Δ, .variant l ty1')
+    bind (unify i env_ty (.variant l ty1) ty) (fun (i, env_ty1) =>
+    bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
+      some (i, env_ty2 ++ env_ty1 ++ env_ty, .variant l ty1')
     ))
   | _ => none
 
 /-
 ```
 
-infer Γ Δ ⊢ (#l t₁) : τ =
+infer env_tm env_ty ⊢ (#l t₁) : τ =
   let α = fresh in
-  bind (solve Δ ⊢ ((#l α)) ⊆ τ) (Δ' => 
-  bind (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁,τ₁ => 
-    some (Δ' ++ Δ₁ , #l τ₁)
+  bind (solve env_ty ⊢ ((#l α)) ⊆ τ) (env_ty' => 
+  bind (infer env_tm (env_ty ++ env_ty') ⊢ t₁ : α) (env_ty1,τ1 => 
+    some (env_ty' ++ env_ty1 , #l τ1)
   ))
 
-infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ =
-  let Δ₁, τ₁ = τ₁[?/fresh] in
-  let Γ₁ = patvars t₁ τ₁ in
+infer env_tm env_ty ⊢ (for t₁ : τ1 => t₂) : τ =
+  let env_ty1, τ1 = τ1[?/fresh] in
+  let env_tm₁ = patvars t₁ τ1 in
   let β = fresh in
-  bind (solve Δ ⊢ (∀ Δ₁ ++ {β} . τ₁ -> β) ⊆ τ) (Δ' => 
-  bind (infer (Γ ++ Γ₁) (Δ ++ Δ') ⊢ t₂ : β) (Δ₂', τ₂' =>
-    -- patvars (Γ₁) are NOT generalized in τ₂'
-    some (Δ' ++ Δ₂' , τ₁ -> τ₂')
+  bind (solve env_ty ⊢ (∀ env_ty1 ++ {β} . τ1 -> β) ⊆ τ) (env_ty' => 
+  bind (infer (env_tm ++ env_tm₁) (env_ty ++ env_ty') ⊢ t₂ : β) (env_ty2', τ2' =>
+    -- patvars (env_tm₁) are NOT generalized in τ2'
+    some (env_ty' ++ env_ty2' , τ1 -> τ2')
   ))
 
 
-infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) cs : τ =
-  bind (infer Γ Δ ⊢ (for t₁ : τ₁ => t₂) : τ) (Δ', τ' =>
-  bind (infer Γ Δ ++ Δ' ⊢ cs : τ₂) (Δ'', τ'' => 
-    some (Δ' ++ Δ'' , τ' & τ'')
+infer env_tm env_ty ⊢ (for t₁ : τ1 => t₂) cs : τ =
+  bind (infer env_tm env_ty ⊢ (for t₁ : τ1 => t₂) : τ) (env_ty', τ' =>
+  bind (infer env_tm env_ty ++ env_ty' ⊢ cs : τ2) (env_ty'', τ'' => 
+    some (env_ty' ++ env_ty'' , τ' & τ'')
   ))
 
-infer Γ Δ ⊢ t t₁ : τ₂ =
-  bind (infer Γ Δ ⊢ t : ? -> τ₂ in) (Δ',τ' => 
-  bind (functify τ') (τ₁,τ₂' => 
+infer env_tm env_ty ⊢ t t₁ : τ2 =
+  bind (infer env_tm env_ty ⊢ t : ? -> τ2 in) (env_ty',τ' => 
+  bind (functify τ') (τ1,τ2' => 
   -- break type (possibly intersection) into premise and conclusion 
-  bind (infer Γ (Δ ++ Δ') ⊢ t₁ : τ₁) (Δ₁',τ₁' =>
-  bind (solve Δ ++ Δ' ++ Δ₁' ⊢ τ' ⊆ (τ₁' -> τ₂)) (Δ' =>
-    some(Δ' , τ₂' & τ₂)
+  bind (infer env_tm (env_ty ++ env_ty') ⊢ t₁ : τ1) (env_ty1',τ1' =>
+  bind (solve env_ty ++ env_ty' ++ env_ty1' ⊢ τ' ⊆ (τ1' -> τ2)) (env_ty' =>
+    some(env_ty' , τ2' & τ2)
   ))))
 
-infer Γ Δ ⊢ (.l t₁) : τ =
+infer env_tm env_ty ⊢ (.l t₁) : τ =
   let α = fresh in
-  bind (solve Δ ⊢ (∀ {α} . (.l α)) ⊆ τ) (Δ' =>
-  bind (infer Γ (Δ ++ Δ') ⊢ t₁ : α) (Δ₁ , τ₁ =>  
-    some(Δ' ++ Δ₁ , .l τ₁)
+  bind (solve env_ty ⊢ (∀ {α} . (.l α)) ⊆ τ) (env_ty' =>
+  bind (infer env_tm (env_ty ++ env_ty') ⊢ t₁ : α) (env_ty1 , τ1 =>  
+    some(env_ty' ++ env_ty1 , .l τ1)
   ))
 
-infer Γ Δ ⊢ (.l t₁) fs : τ =
-  bind (infer Γ Δ ⊢ (.l t₁) : τ) (Δ' , τ' =>
-  bind (infer Γ (Δ ++ Δ') ⊢ fs : τ) (Δ'' , τ'' =>
-    some(Δ' ++ Δ'' , τ' & τ'')
+infer env_tm env_ty ⊢ (.l t₁) fs : τ =
+  bind (infer env_tm env_ty ⊢ (.l t₁) : τ) (env_ty' , τ' =>
+  bind (infer env_tm (env_ty ++ env_ty') ⊢ fs : τ) (env_ty'' , τ'' =>
+    some(env_ty' ++ env_ty'' , τ' & τ'')
   ))
 
-infer Γ Δ ⊢ t.l : τ₂ =
-  bind (infer Γ Δ ⊢ t : (.l τ₂)) (Δ' , τ' =>
-  bind (project τ' l) (τ₂' => 
-    some(Δ' , τ₂')
+infer env_tm env_ty ⊢ t.l : τ2 =
+  bind (infer env_tm env_ty ⊢ t : (.l τ2)) (env_ty' , τ' =>
+  bind (project τ' l) (τ2' => 
+    some(env_ty' , τ2')
   ))
 
-infer Γ Δ ⊢ fix t : τ =
-  bind (infer Γ Δ ⊢ t : (τ -> τ)) (Δ',τ' =>
-  bind (functify τ') (τ₁', τ₂' =>
+infer env_tm env_ty ⊢ fix t : τ =
+  bind (infer env_tm env_ty ⊢ t : (τ -> τ)) (env_ty',τ' =>
+  bind (functify τ') (τ1', τ2' =>
     -- extract premise and conclusion 
-    some(Δ' , τ₂')
+    some(env_ty' , τ2')
   ))
 
-infer Γ Δ ⊢ (let x : τ₁ = t₁ in t₂) : τ₂ =
-  let Δ₁,τ₁ = τ₁[?/fresh] in
-  bind (infer Γ Δ ⊢ t₁ : (∀ Δ₁ . τ₁)) (Δ₁' , τ₁' => 
-  bind (infer (Γ ++ {x : (∀ Δ₁' . τ₁')}) Δ ⊢ t₂ : τ₂) (Δ₂' , τ₂' =>
-    -- τ₁' is generalized in τ₂'
-    some(Δ₂' , τ₂')
+infer env_tm env_ty ⊢ (let x : τ1 = t₁ in t₂) : τ2 =
+  let env_ty1,τ1 = τ1[?/fresh] in
+  bind (infer env_tm env_ty ⊢ t₁ : (∀ env_ty1 . τ1)) (env_ty1' , τ1' => 
+  bind (infer (env_tm ++ {x : (∀ env_ty1' . τ1')}) env_ty ⊢ t₂ : τ2) (env_ty2' , τ2' =>
+    -- τ1' is generalized in τ2'
+    some(env_ty2' , τ2')
   ))
 ```
 
@@ -984,5 +988,5 @@ let hello' = f hello in
 /-
 - consider adding relative complement type 
   - i.e. binary negation type operator
-  - i.e. (τ₁ \ τ₂) ⊆ (τ₁ & ¬ τ₂), where ⊤ / τ₂ = ¬ τ₂)
+  - i.e. (τ1 \ τ2) ⊆ (τ1 & ¬ τ2), where ⊤ / τ2 = ¬ τ2)
 -/
