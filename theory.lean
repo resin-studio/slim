@@ -638,6 +638,9 @@ patvars (.l t fs) τ =
 ```
 -/
 
+-- NOTE: there is no need to instantiate in infer. All that jazz happens in subtype/unify
+-- the assymetry of subtyping makes it clear when to instantiate/raise/free a variable
+-- and when to unroll a looping type
 
 def infer 
   (i : Nat)
@@ -648,8 +651,6 @@ def infer
     )
   | .bvar _ => none
   | .fvar x =>
-    -- NOTE: there is no need to instantiate. All that jazz happens in subtype/unify
-    -- universal/corecur
     bind (lookup x Γ) (fun ty' =>
     bind (Ty.unify i Δ ty' ty) (fun (i, Δ₁) =>
       some (i, Δ₁ ++ Δ, ty')
