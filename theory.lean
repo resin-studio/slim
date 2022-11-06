@@ -100,6 +100,10 @@ def lookup (key : Nat) : List (Nat × T) -> Option T
   | (k,v) :: bs => if key = k then some v else lookup key bs 
   | [] => none
 
+def lookup_record (key : String) : List (String × T) -> Option T
+  | (k,v) :: bs => if key = k then some v else lookup_record key bs 
+  | [] => none
+
 def liberate (i : Nat) : Nat -> List (Nat × Ty) 
   | 0 => []
   | n + 1 => (i, [: ? :]) :: (liberate (i + 1) n)
@@ -707,12 +711,42 @@ patvars (.l t fs) τ =
 ```
 -/
 
-def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat × Ty))
+def linearize_record : Ty -> Option (List (String × Ty))
+| .field l ty => some [(l, ty)]
+| .inter (.field l ty1) ty2 => 
+  bind (linearize_record ty2) (fun linear_ty2 =>
+    (l, ty1) :: linear_ty2
+  )
+| .inter ty1 (.field l ty2) => 
+  bind (linearize_record ty1) (fun linear_ty1 =>
+    (l, ty2) :: linear_ty1
+  )
+| _ => none
+
+partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat × Ty))
   | Tm.fvar id, ty =>  
     match lookup id env_tm with
       | some _ => none 
       | none => [(id, ty)] 
-  | _, _ => none 
+  | .variant l_tm tm, .variant l_ty ty => 
+    if l_tm = l_ty then
+      patvars env_tm tm ty 
+    else none
+  | .record fds, ty  => 
+    bind (linearize_record ty) (fun linear_ty =>
+      if linear_ty.length = fds.length then
+        List.foldl (fun acc => fun (l, tm)  =>
+          bind acc (fun env_tm_1 =>
+          bind (lookup_record l linear_ty) (fun ty =>
+          bind (patvars (env_tm_1 ++ env_tm) tm ty) (fun env_tm_2 =>
+            some (env_tm_2 ++ env_tm_1)
+          )))
+        ) (some []) fds
+      else
+        none
+    )
+  -- TODO: finish
+  | _, _ => none
 
 partial def infer 
   (i : Nat)
@@ -756,35 +790,26 @@ partial def infer
     let (i, ty_b) := fresh i
     let env_ty_b := [(i, Ty.dynamic)]
     bind (patvars env_tm p ty_p) (fun env_tm1 =>
-    bind (unify i (env_ty_b ++ env_ty_p ++ env_ty) (.func ty_p ty_b) ty) (fun (i, env_ty1) =>
-    bind (infer i (env_ty1 ++ env_ty) (env_tm1 ++ env_tm) b ty_b) (fun (i, env_ty2, ty_b') =>
-      some (i, env_ty2 ++ env_ty1, Ty.func ty_p ty_b')
-    )))
+      if env_tm1.length = n then
+        bind (unify i (env_ty_b ++ env_ty_p ++ env_ty) (.func ty_p ty_b) ty) (fun (i, env_ty1) =>
+        bind (infer i (env_ty1 ++ env_ty) (env_tm1 ++ env_tm) b ty_b) (fun (i, env_ty2, ty_b') =>
+          some (i, env_ty2 ++ env_ty1, Ty.func ty_p ty_b')
+        ))
+      else none
+    )
 
 
-  | .func (f :: fs) => none
+  | .func (f :: fs) =>
+    bind (infer i env_ty env_tm (.func fs) ty) (fun (i, env_ty_fs, ty_fs) =>
+    bind (infer i env_ty env_tm (.func [f]) ty) (fun (i, env_ty_f, ty_f) =>
+      some (i, env_ty_f ++ env_ty_fs, .inter ty_f ty_fs)
+    ))
 
+  -- TODO: finish
   | _ => none
 
 /-
 ```
-
-infer env_tm env_ty ⊢ (for t₁ : τ1 => t₂) : τ =
-  let env_ty1, τ1 = τ1[?/fresh] in
-  let env_tm₁ = patvars t₁ τ1 in
-  let β = fresh in
-  bind (solve env_ty ⊢ (∀ env_ty1 ++ {β} . τ1 -> β) ⊆ τ) (env_ty' => 
-  bind (infer (env_tm ++ env_tm₁) (env_ty ++ env_ty') ⊢ t₂ : β) (env_ty2', τ2' =>
-    -- patvars (env_tm₁) are NOT generalized in τ2'
-    some (env_ty' ++ env_ty2' , τ1 -> τ2')
-  ))
-
-
-infer env_tm env_ty ⊢ (for t₁ : τ1 => t₂) cs : τ =
-  bind (infer env_tm env_ty ⊢ (for t₁ : τ1 => t₂) : τ) (env_ty', τ' =>
-  bind (infer env_tm env_ty ++ env_ty' ⊢ cs : τ2) (env_ty'', τ'' => 
-    some (env_ty' ++ env_ty'' , τ' & τ'')
-  ))
 
 infer env_tm env_ty ⊢ t t₁ : τ2 =
   bind (infer env_tm env_ty ⊢ t : ? -> τ2 in) (env_ty',τ' => 
