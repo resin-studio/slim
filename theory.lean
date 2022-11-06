@@ -761,19 +761,19 @@ partial def infer
     ) 
 
   | .variant l t1 =>   
-    let (i, ty1) := (i + 1, .fvar i) 
-    bind (unify i env_ty (.variant l ty1) ty) (fun (i, env_ty1) =>
-    bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
-      some (i, env_ty2 ++ env_ty1, .variant l ty1')
+    let (i, ty1, env_ty1) := (i + 1, .fvar i, [(i, Ty.dynamic)]) 
+    bind (unify i (env_ty1 ++ env_ty) (.variant l ty1) ty) (fun (i, env_ty2) =>
+    bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
+      some (i, env_ty3 ++ env_ty2 ++ env_ty1, .variant l ty1')
     ))
 
   | .record [] => none
 
   | .record ((l, t1) :: .nil) =>
-    let (i, ty1) := (i + 1, .fvar i) 
-    bind (unify i env_ty (.field l ty1) ty) (fun (i, env_ty1) =>
-    bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
-      some (i, env_ty2 ++ env_ty1, .field l ty1')
+    let (i, ty1, env_ty1) := (i + 1, .fvar i, [(i, Ty.dynamic)]) 
+    bind (unify i (env_ty1 ++ env_ty) (.variant l ty1) ty) (fun (i, env_ty2) =>
+    bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
+      some (i, env_ty3 ++ env_ty2 ++ env_ty1, .variant l ty1')
     ))
 
   | .record (fd :: fds) =>
