@@ -415,6 +415,59 @@ def make_record_constraint_recur (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
   | _, _ => [] 
 
 
+partial def Ty.equal (env_ty : List (Nat × Ty)) : Ty -> Ty -> Bool
+  | .dynamic, .dynamic => true
+  | .bvar id1, .bvar id2 => if id1 = id2 then true else false 
+  | .fvar id1, .fvar id2 => 
+    if (id1 = id2) then 
+      (match (lookup id1 env_ty, lookup id2 env_ty) with
+        | (.none, .none) => true
+        | (.some ty1, .some ty2) => Ty.equal env_ty ty1 ty2 
+        | (_, _) => false
+      ) 
+    else false
+  | .unit, .unit => true
+  | .variant l1 ty1, .variant l2 ty2 =>
+    l1 = l2 ∧ (
+      Ty.equal env_ty ty1 ty2 
+    )
+  | .field l1 ty1, .field l2 ty2 =>
+    l1 = l2 ∧ (
+      Ty.equal env_ty ty1 ty2 
+    )
+
+  | .union ty1 ty2, .union ty3 ty4 =>
+    Ty.equal env_ty ty1 ty3 ∧
+    Ty.equal env_ty ty2 ty4
+
+  | .inter ty1 ty2, .inter ty3 ty4 =>
+    Ty.equal env_ty ty1 ty3 ∧
+    Ty.equal env_ty ty2 ty4
+
+  | .func ty1 ty2, .func ty3 ty4 =>
+    Ty.equal env_ty ty1 ty3 ∧
+    Ty.equal env_ty ty2 ty4
+
+  | .univ n1 (tyc1, tyc2) ty1, .univ n2 (tyc3, tyc4) ty2 =>
+    n1 = n2 ∧
+    Ty.equal env_ty tyc1 tyc3 ∧
+    Ty.equal env_ty tyc2 tyc4 ∧
+    Ty.equal env_ty ty1 ty2
+
+  | .exis n1 (tyc1, tyc2) ty1, .exis n2 (tyc3, tyc4) ty2 =>
+    n1 = n2 ∧
+    Ty.equal env_ty tyc1 tyc3 ∧
+    Ty.equal env_ty tyc2 tyc4 ∧
+    Ty.equal env_ty ty1 ty2
+
+  | .recur ty1, .recur ty2 =>
+    Ty.equal env_ty ty1 ty2
+
+  | .corec ty1, .corec ty2 =>
+    Ty.equal env_ty ty1 ty2
+  | _, _ => false
+
+
 partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
   | .fvar id, ty  => match lookup id env_ty with 
@@ -513,8 +566,11 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     else
       none
 
-  -- | .exis n' (ty_c1', ty_c2') τ', .exis n (ty_c1, ty_c2) τ =>
-  -- TODO: check equality
+  | .exis n1 c1 ty1, .exis n2 c2 ty2 =>
+    if Ty.equal env_ty (.exis n1 c1 ty1) (.exis n2 c2 ty2) then
+      some (i, []) 
+    else
+      none 
 
   | ty', .exis n (ty_c1, ty_c2) ty =>
     let (i, env_ty, args) := refresh i n 
@@ -532,8 +588,11 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     -- Y := {z} | ⊥
 
 
-  -- | .univ n' (ty_c1', ty_c2') τ', .univ n (ty_c1, ty_c2) τ =>
-  -- TODO: check equality
+  | .univ n1 c1 ty1, .univ n2 c2 ty2 =>
+    if Ty.equal env_ty (.univ n1 c1 ty1) (.univ n2 c2 ty2) then
+      some (i, []) 
+    else
+      none 
 
   | .univ n (ty_c1, ty_c2) ty', ty =>
     let (i, env_ty, args) := refresh i n 
