@@ -646,14 +646,10 @@ inductive Tm : Type
     -- e.g. env_ty, (not ty_env)
     -- e.g. ty_recur, (not mu_ty)
 
-def fresh (i : Nat) : Nat × Ty :=
-  (i + 1, .fvar i)
-
 
 def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty × (List (Nat × Ty))
   | .dynamic => 
-    let (i, ty) := fresh i 
-    (i, ty, [(i, Ty.dynamic)]) 
+    (i + 1, .fvar i, [(i, Ty.dynamic)]) 
   | .bvar id => (i, .bvar id, [])
   | .fvar id => (i, .fvar id, [])
   | .unit => (i, .unit, [])
@@ -756,14 +752,16 @@ partial def infer
       (i, env_ty, Ty.unit)
     )
   | .bvar _ => none
-  | .fvar x =>
-    bind (lookup x env_tm) (fun ty' =>
-    bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-      some (i, env_ty1 ++ env_ty, ty')
-    )) 
+  | .fvar id =>
+    bind (lookup id env_tm) (fun ty' =>
+      let (i, ty_x, env_ty_x) := (i + 1, .fvar i, [(i, ty')])
+      bind (unify i (env_ty_x ++ env_ty) ty_x ty) (fun (i, env_ty1) =>
+        some (i, env_ty1 ++ env_ty_x, ty_x)
+      )
+    ) 
 
   | .variant l t1 =>   
-    let (i, ty1) := (fresh i) 
+    let (i, ty1) := (i + 1, .fvar i) 
     bind (unify i env_ty (.variant l ty1) ty) (fun (i, env_ty1) =>
     bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
       some (i, env_ty2 ++ env_ty1, .variant l ty1')
@@ -772,7 +770,7 @@ partial def infer
   | .record [] => none
 
   | .record ((l, t1) :: .nil) =>
-    let (i, ty1) := (fresh i) 
+    let (i, ty1) := (i + 1, .fvar i) 
     bind (unify i env_ty (.field l ty1) ty) (fun (i, env_ty1) =>
     bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
       some (i, env_ty2 ++ env_ty1, .field l ty1')
@@ -787,8 +785,7 @@ partial def infer
   | .func [] => none
   | .func ((n, p, ty_p, b) :: .nil) => 
     let (i, ty_p, env_ty_p) := Ty.dynamic_subst i ty_p 
-    let (i, ty_b) := fresh i
-    let env_ty_b := [(i, Ty.dynamic)]
+    let (i, ty_b, env_ty_b) := (i + 1, .fvar i, [(i, Ty.dynamic)])
     bind (patvars env_tm p ty_p) (fun env_tm1 =>
       if env_tm1.length = n then
         bind (unify i (env_ty_b ++ env_ty_p ++ env_ty) (.func ty_p ty_b) ty) (fun (i, env_ty1) =>
@@ -797,7 +794,6 @@ partial def infer
         ))
       else none
     )
-
 
   | .func (f :: fs) =>
     bind (infer i env_ty env_tm (.func fs) ty) (fun (i, env_ty_fs, ty_fs) =>
