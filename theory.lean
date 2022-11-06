@@ -629,7 +629,7 @@ inductive Tm : Type
   | func : List (Nat × Tm × Ty × Tm) -> Tm
   | proj : Tm -> String -> Tm
   | app : Tm -> Tm -> Tm
-  | letb : Tm -> Ty -> Tm -> Tm
+  | letb : Ty -> Tm -> Tm -> Tm
   | fix : Tm -> Tm
 
 
@@ -801,11 +801,36 @@ partial def infer
       some (i, env_ty_f ++ env_ty_fs, .inter ty_f ty_fs)
     ))
 
+  | .proj t1 l =>
+    bind (infer i env_ty env_tm t1 (Ty.field l ty)) (fun (i, env_ty1, ty1) =>
+    bind (linearize_record ty1) (fun list_field =>
+    bind (lookup_record l list_field) (fun ty' =>
+      some (i, env_ty1, ty')
+    )))
+
+  | .letb ty1 t1 t => 
+    let (i, ty1, env_ty1) := Ty.dynamic_subst i ty1
+    let (i, env_tmx) := (i + 1, [(i, Ty.univ 1 (Ty.bvar 0, ty1) (Ty.bvar 0))]) 
+    bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
+    bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) (env_tmx ++ env_tm) t ty) (fun (i, env_ty3, ty') =>
+      some (i, env_ty3 ++ env_ty2 ++ env_ty1, ty')
+    ))
+
+
   -- TODO: finish
   | _ => none
 
 /-
 ```
+
+infer env_tm env_ty ⊢ (let x : τ1 = t₁ in t₂) : τ2 =
+  let env_ty1,τ1 = τ1[?/fresh] in
+  bind (infer env_tm env_ty ⊢ t₁ : (∀ env_ty1 . τ1)) (env_ty1' , τ1' => 
+  bind (infer (env_tm ++ {x : (∀ env_ty1' . τ1')}) env_ty ⊢ t₂ : τ2) (env_ty2' , τ2' =>
+    -- τ1' is generalized in τ2'
+    some(env_ty2' , τ2')
+  ))
+
 
 infer env_tm env_ty ⊢ t t₁ : τ2 =
   bind (infer env_tm env_ty ⊢ t : ? -> τ2 in) (env_ty',τ' => 
@@ -817,12 +842,6 @@ infer env_tm env_ty ⊢ t t₁ : τ2 =
   ))))
 
 
-infer env_tm env_ty ⊢ t.l : τ2 =
-  bind (infer env_tm env_ty ⊢ t : (.l τ2)) (env_ty' , τ' =>
-  bind (project τ' l) (τ2' => 
-    some(env_ty' , τ2')
-  ))
-
 infer env_tm env_ty ⊢ fix t : τ =
   bind (infer env_tm env_ty ⊢ t : (τ -> τ)) (env_ty',τ' =>
   bind (functify τ') (τ1', τ2' =>
@@ -830,13 +849,6 @@ infer env_tm env_ty ⊢ fix t : τ =
     some(env_ty' , τ2')
   ))
 
-infer env_tm env_ty ⊢ (let x : τ1 = t₁ in t₂) : τ2 =
-  let env_ty1,τ1 = τ1[?/fresh] in
-  bind (infer env_tm env_ty ⊢ t₁ : (∀ env_ty1 . τ1)) (env_ty1' , τ1' => 
-  bind (infer (env_tm ++ {x : (∀ env_ty1' . τ1')}) env_ty ⊢ t₂ : τ2) (env_ty2' , τ2' =>
-    -- τ1' is generalized in τ2'
-    some(env_ty2' , τ2')
-  ))
 ```
 
 -/
