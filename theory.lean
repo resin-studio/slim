@@ -335,9 +335,13 @@ can't unroll on rhs
 
 -/
 
-partial def unroll (τ : Ty) : Ty := 
+partial def unroll_recur (τ : Ty) : Ty := 
   -- Ty.raise_binding 0 [Ty.recur τ] τ 
   [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
+
+partial def unroll_corec (τ : Ty) : Ty := 
+  -- Ty.raise_binding 0 [Ty.recur τ] τ 
+  [: ⟨τ⟩ ↑ 0 / [ν 0 . ⟨τ⟩]:]
 
 def Ty.lower_binding (depth : Nat) : Ty -> Ty
   | .dynamic => .dynamic 
@@ -385,12 +389,12 @@ def make_record_constraint_recur (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
   | (.field l ty'), mu_ty => 
       let ty := .exis 1 ( 
         (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
-        (Ty.lower_binding 1 (unroll mu_ty))
+        (Ty.lower_binding 1 (unroll_recur mu_ty))
       ) (.bvar 0)
       [(ty', ty)]
   | .inter (.field l ty') rem_ty, mu_ty => 
       let ty := 
-      [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
+      [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll_recur mu_ty⟩↓1 . £0 :]
 
       let rem := make_record_constraint_recur (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
       if rem.length = 0 then
@@ -404,7 +408,7 @@ def make_record_constraint_recur (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
           Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))) 
           (Ty.lower_binding 1 rem_ty)
         ),
-         (Ty.lower_binding 1 (unroll mu_ty))
+         (Ty.lower_binding 1 (unroll_recur mu_ty))
       ) (.bvar 0)
 
       let rem := make_record_constraint_recur (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
@@ -480,15 +484,14 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     | some Ty.dynamic => some (i + 2, [(i, .union (roll id ty') (Ty.fvar (i + 1)))]) 
     | some ty => unify i env_ty ty' ty 
 
-  -- | .recur ty', .recur ty =>
-    -- TODO: should these be equal or unified?
-    -- probably just equal;
-    -- the assymetrical case will unroll
-    -- this is the base case 
-    -- unify i env_ty ty' ty 
+  | .recur ty1, .recur ty2 =>
+    if Ty.equal env_ty ty1 ty2 then
+      some (i, [])
+    else
+      none
 
   | .variant l ty', .recur ty =>
-    unify i env_ty (.variant l ty') (unroll ty)
+    unify i env_ty (.variant l ty') (unroll_recur ty)
 
   | ty', .recur ty =>
     let cs := (make_record_constraint_recur Ty.dynamic ty' ty)
@@ -504,8 +507,11 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       ) (some (i, [])) cs
 
 
-  -- | .corec ty', .corec ty =>
-  -- TODO: check equality
+  | .corec ty1, .corec ty2 =>
+    if Ty.equal env_ty ty1 ty2 then
+      some (i, [])
+    else
+      none
 
   | .corec ty_corec, Ty.func ty1 ty2 =>
     /-
@@ -513,8 +519,9 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     ∀ α :: (ν _ <: α -> Y) . α <: X
     ∀ β :: (ν _ <: X -> β) . β <: Y 
     -/
-    let ty1' := .univ 1 (ty_corec, .func (Ty.bvar 0) ty2) (Ty.bvar 0) 
-    let ty2' := .univ 1 (ty_corec, .func ty1 (Ty.bvar 0)) (Ty.bvar 0) 
+
+    let ty1' := .univ 1 (Ty.lower_binding 1 (unroll_corec ty_corec), .func (Ty.bvar 0) ty2) (Ty.bvar 0) 
+    let ty2' := .univ 1 (Ty.lower_binding 1 (unroll_corec ty_corec), .func ty1 (Ty.bvar 0)) (Ty.bvar 0) 
     bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) =>
     bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1)
