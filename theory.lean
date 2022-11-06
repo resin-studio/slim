@@ -811,10 +811,20 @@ partial def infer
   | .letb ty1 t1 t => 
     let (i, ty1, env_ty1) := Ty.dynamic_subst i ty1
     let (i, env_tmx) := (i + 1, [(i, Ty.univ 1 (Ty.bvar 0, ty1) (Ty.bvar 0))]) 
-    bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
+    bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, _) =>
     bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) (env_tmx ++ env_tm) t ty) (fun (i, env_ty3, ty') =>
       some (i, env_ty3 ++ env_ty2 ++ env_ty1, ty')
     ))
+
+  | .app t2 t1 =>
+    let (i, ty1, env_ty1) := (i + 1, Ty.fvar i, [(i, Ty.dynamic)])
+    bind (infer i (env_ty1 ++ env_ty) env_tm t2 (Ty.func ty1 ty)) (fun (i, env_ty2, ty2) =>
+    bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
+    bind (unify i (env_ty3 ++ env_ty2 ++ env_ty1 ++ env_ty) ty2 (Ty.func ty1' ty)) (fun (i, env_ty4) =>
+      some (i, env_ty4 ++ env_ty3 ++ env_ty2 ++ env_ty1, ty)
+    )))
+
+    
 
 
   -- TODO: finish
@@ -823,24 +833,8 @@ partial def infer
 /-
 ```
 
-infer env_tm env_ty ⊢ (let x : τ1 = t₁ in t₂) : τ2 =
-  let env_ty1,τ1 = τ1[?/fresh] in
-  bind (infer env_tm env_ty ⊢ t₁ : (∀ env_ty1 . τ1)) (env_ty1' , τ1' => 
-  bind (infer (env_tm ++ {x : (∀ env_ty1' . τ1')}) env_ty ⊢ t₂ : τ2) (env_ty2' , τ2' =>
-    -- τ1' is generalized in τ2'
-    some(env_ty2' , τ2')
-  ))
-
-
-infer env_tm env_ty ⊢ t t₁ : τ2 =
-  bind (infer env_tm env_ty ⊢ t : ? -> τ2 in) (env_ty',τ' => 
-  bind (functify τ') (τ1,τ2' => 
-  -- break type (possibly intersection) into premise and conclusion 
-  bind (infer env_tm (env_ty ++ env_ty') ⊢ t₁ : τ1) (env_ty1',τ1' =>
-  bind (solve env_ty ++ env_ty' ++ env_ty1' ⊢ τ' ⊆ (τ1' -> τ2)) (env_ty' =>
-    some(env_ty' , τ2' & τ2)
-  ))))
-
+-- rather than custom symbolic maninpulation (e.g. functify):
+-- reduce everything into a unification problem
 
 infer env_tm env_ty ⊢ fix t : τ =
   bind (infer env_tm env_ty ⊢ t : (τ -> τ)) (env_ty',τ' =>
