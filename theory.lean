@@ -824,29 +824,12 @@ partial def infer
       some (i, env_ty4 ++ env_ty3 ++ env_ty2 ++ env_ty1, ty)
     )))
 
-    
+  | .fix t1 =>
+    bind (infer i env_ty env_tm t1 (Ty.func ty ty)) (fun (i, env_ty1, _) =>
+      some (i, env_ty1 ++ env_ty, ty)
+    )
 
-
-  -- TODO: finish
   | _ => none
-
-/-
-```
-
--- rather than custom symbolic maninpulation (e.g. functify):
--- reduce everything into a unification problem
-
-infer env_tm env_ty ⊢ fix t : τ =
-  bind (infer env_tm env_ty ⊢ t : (τ -> τ)) (env_ty',τ' =>
-  bind (functify τ') (τ1', τ2' =>
-    -- extract premise and conclusion 
-    some(env_ty' , τ2')
-  ))
-
-```
-
--/
-
 
 -- examples 
 /-
