@@ -375,7 +375,12 @@ partial def roll (key : Nat) (τ : Ty) : Ty :=
     τ
 
 
+/-
+(X ; Y) <: μ _
 
+X <: ∃ α :: ((α ; Y) <: μ _). α 
+Y <: ∃ β :: ((X ; β) <: μ _). β
+-/
 def make_record_constraint_recur (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
   | (.field l ty'), mu_ty => 
       let ty := .exis 1 ( 
@@ -409,44 +414,6 @@ def make_record_constraint_recur (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
         (ty', ty) :: rem
   | _, _ => [] 
 
-def make_record_constraint_corec (prev : Ty) : Ty -> Ty -> List (Ty × Ty) 
-  | nu_ty, (.field l ty') => 
-      let ty := .univ 1 ( 
-        (Ty.lower_binding 1 (unroll nu_ty)),
-        (Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
-      ) (.bvar 0)
-      [(ty', ty)]
-  | nu_ty, .inter (.field l ty') rem_ty => 
-      let ty := .univ 1 (
-        (Ty.lower_binding 1 (unroll nu_ty)),
-        (Ty.inter (
-          Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
-          (Ty.lower_binding 1 rem_ty)
-        ) 
-      ) (.bvar 0)
-
-      let rem := make_record_constraint_corec (Ty.inter prev (.field l ty')) nu_ty rem_ty
-      if rem.length = 0 then
-        []
-      else
-        (ty', ty) :: rem
-  | nu_ty, .inter rem_ty (.field l ty') => 
-      -- copy and paste above case (for terminateion proved by structure)
-      let ty := .univ 1 ( 
-        (Ty.lower_binding 1 (unroll nu_ty)),
-        (Ty.inter (
-          Ty.inter (Ty.lower_binding 1 prev) (.field l (.bvar 0))) 
-          (Ty.lower_binding 1 rem_ty)
-        ) 
-      ) (.bvar 0)
-
-      let rem := make_record_constraint_corec (Ty.inter prev (.field l ty')) nu_ty rem_ty
-      if rem.length = 0 then
-        []
-      else
-        (ty', ty) :: rem
-  | _, _ => [] 
-
 
 partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
@@ -476,24 +443,29 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       none
     else
       List.foldl (fun 
-        | some (i, env_ty), (ty_c1, ty_c2) => unify i env_ty ty_c1 ty_c2
+        | some (i, env_ty1), (ty_c1, ty_c2) => 
+          bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty2) =>
+            some (i, env_ty2 ++ env_ty1)
+          )
         | none, _ => none
-      ) (some (i, env_ty)) cs
+      ) (some (i, [])) cs
 
 
   -- | .corec ty', .corec ty =>
   -- TODO: check equality
 
-  -- TODO: check function against corecursive type 
-  -- | .corec ty', ty =>
-  --   let cs := (make_record_constraint_super Ty.dynamic ty' ty) 
-  --   if cs.length = 0 then
-  --     none
-  --   else
-  --     List.foldl (fun 
-  --       | some (i, env_ty), (ty_c1, ty_c2) => unify i env_ty ty_c1 ty_c2
-  --       | none, _ => none
-  --     ) (some (i, env_ty)) cs
+  | .corec ty_corec, Ty.func ty1 ty2 =>
+    /-
+    ν _ <: X -> Y 
+    ∀ α :: (ν _ <: α -> Y) . α <: X
+    ∀ β :: (ν _ <: X -> β) . β <: Y 
+    -/
+    let ty1' := .univ 1 (ty_corec, .func (Ty.bvar 0) ty2) (Ty.bvar 0) 
+    let ty2' := .univ 1 (ty_corec, .func ty1 (Ty.bvar 0)) (Ty.bvar 0) 
+    bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) =>
+    bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
+      some (i, env_ty2 ++ env_ty1)
+    ))
 
   | .union ty1 ty2, ty => 
     bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
