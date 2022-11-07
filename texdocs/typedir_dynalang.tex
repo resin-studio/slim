@@ -278,12 +278,13 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \begin{figure}[h]
 \begin{mathpar}
 \inferrule[var-left]
-  { 99999999a\\b }
-  {\Delta \vdash \alpha \leq \tau	\rightsquigarrow  \{\alpha := \tau \ \& \}} 
+  {\Delta (\alpha) =\ ? \\ fresh\ \beta  }
+  {\Delta \vdash \alpha \leq \tau	\rightsquigarrow  \{\alpha \mapsto \tau \ \&\ \beta \} } 
 
-\inferrule[yop]{a\\b}{c}
+\inferrule[var-rght]
+  {\Delta (\alpha) =\ ? \\ fresh\ \beta  }
+  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau \ |\ \beta \} } 
 
-\inferrule[yop]{a\\b}{c}
 \end{mathpar}
 \end{figure}
 
