@@ -315,11 +315,11 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \inferrule[corec-case]
   { 
     \Delta \vdash
-    \forall \beta :: \tau[\alpha/\nu\alpha.\tau]\leq (\beta \rightarrow \tau_2) . \beta \leq \tau_1
+    \forall \beta :: \tau[\alpha/\nu\alpha.\tau]\leq (\beta \rightarrow \tau_2)\ .\ \beta \leq \tau_1
     \rightsquigarrow \Delta_1
     \\
     \Delta \vdash
-    \forall \beta :: \tau[\alpha/\nu\alpha.\tau]\leq (\tau_1 \rightarrow \beta) . \beta \leq \tau_2
+    \forall \beta :: \tau[\alpha/\nu\alpha.\tau]\leq (\tau_1 \rightarrow \beta)\ .\ \beta \leq \tau_2
     \rightsquigarrow \Delta_2
   }
   { \Delta \vdash 
