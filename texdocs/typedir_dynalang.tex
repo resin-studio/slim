@@ -329,6 +329,62 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
     \rightsquigarrow  \Delta_1\Delta_2
   }
 
+\inferrule[exis]
+  { }
+  { 
+    \Delta \vdash 
+      (\exists \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
+      \leq 
+      (\exists \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
+      \rightsquigarrow
+      \{\}
+  }
+
+\inferrule[exis-free]
+  { 
+    \Delta \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_1
+    \\
+    \Delta\Delta_1 \vdash \tau' \leq \tau \rightsquigarrow \Delta_2
+    \\
+    \text{fresh}\ \alpha_i
+  }
+  { 
+    \Delta \vdash 
+      \tau'
+      \leq 
+      (\exists \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
+      \rightsquigarrow
+      \Delta_1\Delta_2
+  }
+
+\inferrule[univ]
+  { }
+  { 
+    \Delta \vdash 
+      (\forall \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
+      \leq 
+      (\forall \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
+      \rightsquigarrow
+      \{\}
+  }
+
+\inferrule[univ-free]
+  { 
+    \Delta \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_1
+    \\
+    \Delta\Delta_1 \vdash \tau' \leq \tau \rightsquigarrow \Delta_2
+    \\
+    \text{fresh}\ \alpha_i
+  }
+  { 
+    \Delta \vdash 
+      (\forall \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau')
+      \leq 
+      \tau
+      \rightsquigarrow
+      \Delta_1\Delta_2
+  }
+
 \inferrule[union-left]
   {
     \Delta \vdash \tau_1 \leq \tau \rightsquigarrow \Delta_1  
