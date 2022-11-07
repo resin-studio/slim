@@ -506,6 +506,11 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     unify i env_ty (.variant l ty') (unroll_recur ty)
 
   | ty', .recur ty =>
+    /-
+    μ _ <: X × Y
+    X <: (∃ α :: (α × Y <: μ _) . α)
+    Y <: (∃ β :: (X × β <: μ _) . β)
+    -/
     let cs := (make_record_constraint_recur Ty.dynamic ty' ty)
     if cs.length = 0 then
       none
