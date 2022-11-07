@@ -329,6 +329,62 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
     \rightsquigarrow  \Delta_1\Delta_2
   }
 
+\inferrule[union-left]
+  {
+    \Delta \vdash \tau_1 \leq \tau \rightsquigarrow \Delta_1  
+    \\
+    \Delta\Delta_1 \vdash \tau_2 \leq \tau \rightsquigarrow \Delta_2  
+  }
+  {
+    \Delta \vdash \tau_1\ |\ \tau_2 \leq \tau
+    \rightsquigarrow \Delta_1\Delta_2
+  }
+
+\inferrule[union-right]
+  {
+    \Delta \vdash \tau \leq \tau_1 \rightsquigarrow \Delta_1 \wedge
+    \Delta\Delta_1 \vdash \tau \leq \tau_2 \rightsquigarrow \Delta_2  \wedge 
+    \Delta_1\Delta_2 = \Delta_3\vee
+    \\
+    \Delta \vdash \tau \leq \tau_1 \rightsquigarrow \Delta_1  \wedge
+    \Delta_1 = \Delta_3 \vee
+    \\
+    \Delta \vdash \tau \leq \tau_2 \rightsquigarrow \Delta_2 \wedge 
+    \Delta_2 = \Delta_3
+  }
+  {
+    \Delta \vdash \tau \leq \tau_1\ |\ \tau_2
+    \rightsquigarrow \Delta_3
+  }
+
+\inferrule[inter-right]
+  {
+    \Delta \vdash \tau \leq \tau_1 \rightsquigarrow \Delta_1  
+    \\
+    \Delta\Delta_1 \vdash \tau \leq \tau_2 \rightsquigarrow \Delta_2  
+  }
+  {
+    \Delta \vdash \tau \leq \tau_1\ \&\ \tau_2
+    \rightsquigarrow \Delta_1\Delta_2
+  }
+
+\inferrule[inter-left]
+  {
+    \Delta \vdash \tau_1 \leq \tau \rightsquigarrow \Delta_1 \wedge 
+    \Delta\Delta_1 \vdash \tau_2 \leq \tau \rightsquigarrow \Delta_2 \wedge 
+    \Delta_1\Delta_2 = \Delta_3 \vee
+    \\
+    \Delta \vdash \tau_1 \leq \tau \rightsquigarrow \Delta_1 \wedge 
+    \Delta_1 = \Delta_3 \vee
+    \\
+    \Delta \vdash \tau_2 \leq \tau \rightsquigarrow \Delta_2 \wedge
+    \Delta_2 = \Delta_3
+  }
+  {
+    \Delta \vdash \tau_1\ \&\ \tau_2 \leq \tau
+    \rightsquigarrow \Delta_3
+  }
+
 
 \end{mathpar}
 
@@ -375,6 +431,13 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \section{Related work}
 
 \section*{Notes}
+
+\subsection*{dualities}
+\begin{enumerate}
+  \item \(\tau_1\ \&\ \tau_2  \leq \tau_1\ |\ \tau_2 \)
+  \item \(\forall \alpha . \tau \leq \exists \alpha . \tau \)
+  \item \(\nu \alpha . \tau \leq \mu \alpha . \tau \)
+\end{enumerate}
 
 \subsection*{contributions}
 \begin{enumerate}

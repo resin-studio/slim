@@ -544,52 +544,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       some (i, env_ty2 ++ env_ty1)
     ))
 
-  | .union ty1 ty2, ty => 
-    bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
-    bind (unify i env_ty ty2 ty) (fun (i, env_ty2) =>
-      some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
-    ))
-    -- list[{x;y}] | list[{x;z}] <: ∃ X . list[X]
-    -- list[{x;y}] <: ∃ X . list[X]
-    -- list[{x;z}] <: ∃ X . list[X]
-    -- X <: {x;y} & {x;z} 
-
-  | ty, .union ty1 ty2 => 
-    bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
-    bind (unify i env_ty ty ty2) (fun (i, env_ty2) =>
-      some (i, merge Ty.union Ty.dynamic env_ty1 env_ty2)
-    ))
-
-  | ty, .inter ty1 ty2 => 
-    bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
-    bind (unify i env_ty ty ty2) (fun (i, env_ty2) =>
-      some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
-    ))
-
-  | .inter ty1 ty2, ty => 
-    bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
-    bind (unify i env_ty ty2 ty) (fun (i, env_ty2) =>
-      some (i, merge Ty.union Ty.dynamic env_ty1 env_ty2)
-    ))
-
-  | .case ty1 ty2', .case ty1' ty2 =>
-    bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
-    bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
-      some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
-    ))
-
-  | .variant l' ty', .variant l ty =>
-    if l' = l then
-      unify i env_ty ty' ty
-    else
-      none
-
-  | .field l' ty', .field l ty =>
-    if l' = l then
-      unify i env_ty ty' ty
-    else
-      none
-
   | .exis n1 c1 ty1, .exis n2 c2 ty2 =>
     if Ty.equal env_ty (.exis n1 c1 ty1) (.exis n2 c2 ty2) then
       some (i, []) 
@@ -627,6 +581,56 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1)
     ))
+
+
+  | .union ty1 ty2, ty => 
+    bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
+    bind (unify i (env_ty1 ++ env_ty) ty2 ty) (fun (i, env_ty2) =>
+      some (i, env_ty2 ++ env_ty1)
+    ))
+    -- list[{x;y}] | list[{x;z}] <: list[X]
+    -- list[{x;y}] <: list[X]
+    -- X := {x;y} | Y |- list[{x;z}] <: list[X]
+    -- list[{x;z}] <: list[{x;y} | Y]
+
+  | ty, .union ty1 ty2 => 
+    match unify i env_ty ty ty1 with
+      | .none => unify i env_ty ty ty2
+      | .some (i, env_ty1) =>
+        match (unify i (env_ty1 ++ env_ty) ty ty2) with
+          | .some (i, env_ty2) => some (i, env_ty2 ++ env_ty1)
+          | .none => some (i, env_ty1)
+
+
+  | ty, .inter ty1 ty2 => 
+    bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
+    bind (unify i env_ty ty ty2) (fun (i, env_ty2) =>
+      some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
+    ))
+
+  | .inter ty1 ty2, ty => 
+    bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
+    bind (unify i env_ty ty2 ty) (fun (i, env_ty2) =>
+      some (i, merge Ty.union Ty.dynamic env_ty1 env_ty2)
+    ))
+
+  | .case ty1 ty2', .case ty1' ty2 =>
+    bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
+    bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
+      some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
+    ))
+
+  | .variant l' ty', .variant l ty =>
+    if l' = l then
+      unify i env_ty ty' ty
+    else
+      none
+
+  | .field l' ty', .field l ty =>
+    if l' = l then
+      unify i env_ty ty' ty
+    else
+      none
 
   | .bvar id1, .bvar id2  =>
     if id1 = id2 then 
