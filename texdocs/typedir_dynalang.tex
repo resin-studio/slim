@@ -341,6 +341,38 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   \item interleaving type constraint generation and solving with dynamic type 
 \end{enumerate}
 
+\subsection*{differences}
+from gradual typing:  
+\begin{enumerate}
+  \item infers more static type info 
+  \item dynamic semantics are irrelevant 
+  \item deterministic subsumption 
+  \item dynamic type built into subtyping 
+\end{enumerate}
+
+from HM type inference:  
+\begin{enumerate}
+  \item synthesizes type in addition to constraint solution 
+    due to subtyping
+  \item propagates types
+  \item global top type, leaves types open during unification
+  \item expands and narrows types  
+\end{enumerate}
+
+from Roundtrip typing:  
+\begin{enumerate}
+  \item type combinators without dependent types
+  \item prolog-like type language  
+  \item synthesizes types for all rules
+  \item global top type, leaves types open during unification
+  \item expands and narrows types  
+  \item delegates to unification to decompose types 
+  \item delegates to unification to free bound variables 
+\end{enumerate}
+
+
+
+
 \subsection*{gradual typing}
 How gradually typed inference typically works:
 \begin{enumerate}
