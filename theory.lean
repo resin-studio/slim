@@ -797,6 +797,7 @@ partial def patvars (env_tm : List (Nat Ã— Ty)): Tm -> Ty -> Option (List (Nat Ã
 /-
 NOTE: infer returns a refined type in addition the type variable assignments
 assignments alone do not refine enough due to subtyping
+NOTE: deconstructing types is reduced to unification 
 -/
 partial def infer 
   (i : Nat)
