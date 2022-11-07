@@ -115,18 +115,18 @@ def refresh (i : Nat) (n : Nat) : (Nat × List (Nat × Ty) × List Ty) :=
   (i', env_ty', args)
 
 
-partial def merge (op : T -> T -> T) (df : T) (env_ty1 : List (Nat × T))  (env_ty2 : List (Nat × T)) : List (Nat × T) :=
-  List.bind env_ty1 (fun (key₁, v₁) =>
-  List.bind env_ty2 (fun (key₂, v₂) =>
-    let uno := match lookup key₁ env_ty2 with
-      | some v₂ => [(key₁, op v₁ v₂)]
-      | none => [(key₁, op v₁ df)] 
+-- partial def merge (op : T -> T -> T) (df : T) (env_ty1 : List (Nat × T))  (env_ty2 : List (Nat × T)) : List (Nat × T) :=
+--   List.bind env_ty1 (fun (key₁, v₁) =>
+--   List.bind env_ty2 (fun (key₂, v₂) =>
+--     let uno := match lookup key₁ env_ty2 with
+--       | some v₂ => [(key₁, op v₁ v₂)]
+--       | none => [(key₁, op v₁ df)] 
 
-    let dos := match lookup key₂ env_ty1 with
-      | some _ => [] 
-      | none => [(key₂, op v₂ df)]
-    uno ++ dos
-  ))
+--     let dos := match lookup key₂ env_ty1 with
+--       | some _ => [] 
+--       | none => [(key₂, op v₂ df)]
+--     uno ++ dos
+--   ))
 
 /-
 `match o o = b`
@@ -598,26 +598,28 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       | .none => unify i env_ty ty ty2
       | .some (i, env_ty1) =>
         match (unify i (env_ty1 ++ env_ty) ty ty2) with
-          | .some (i, env_ty2) => some (i, env_ty2 ++ env_ty1)
           | .none => some (i, env_ty1)
+          | .some (i, env_ty2) => some (i, env_ty2 ++ env_ty1)
 
 
   | ty, .inter ty1 ty2 => 
     bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
-    bind (unify i env_ty ty ty2) (fun (i, env_ty2) =>
-      some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
+    bind (unify i (env_ty1 ++ env_ty) ty ty2) (fun (i, env_ty2) =>
+      some (i, env_ty2 ++ env_ty1)
     ))
 
   | .inter ty1 ty2, ty => 
-    bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
-    bind (unify i env_ty ty2 ty) (fun (i, env_ty2) =>
-      some (i, merge Ty.union Ty.dynamic env_ty1 env_ty2)
-    ))
+    match (unify i env_ty ty1 ty) with
+      | .none => (unify i env_ty ty2 ty)
+      | .some (i, env_ty1) => 
+        match (unify i (env_ty1 ++ env_ty) ty2 ty) with
+          | .none => (i, env_ty1)
+          | .some (i, env_ty2) => some (i, env_ty2 ++ env_ty1)
 
   | .case ty1 ty2', .case ty1' ty2 =>
     bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
-    bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
-      some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
+    bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
+      some (i, env_ty2 ++ env_ty1)
     ))
 
   | .variant l' ty', .variant l ty =>
