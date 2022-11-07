@@ -378,6 +378,12 @@ partial def roll (key : Nat) (τ : Ty) : Ty :=
   else
     τ
 
+partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
+  if Ty.occurs key τ then
+    [: (ν 0 . ⟨τ⟩↓1) % [⟨key⟩ / £0] :]
+  else
+    τ
+
 
 /-
 (X ; Y) <: μ _
@@ -475,13 +481,19 @@ partial def Ty.equal (env_ty : List (Nat × Ty)) : Ty -> Ty -> Bool
 partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
   | .fvar id, ty  => match lookup id env_ty with 
-    | none => some (i + 2, [(i, .inter (roll id ty) (Ty.fvar (i + 1)))]) 
-    | some Ty.dynamic => some (i + 2, [(i, .inter (roll id ty) (Ty.fvar (i + 1)))]) 
+    | none => none 
+    | some Ty.dynamic => some (i + 2, [
+        (i, .inter (roll id ty) (Ty.fvar (i + 1))),
+        (i + 1, Ty.dynamic)
+      ]) 
     | some ty' => unify i env_ty ty' ty 
 
   | ty', .fvar id  => match lookup id env_ty with 
-    | none => some (i + 2, [(i, .union (roll id ty') (Ty.fvar (i + 1)))]) 
-    | some Ty.dynamic => some (i + 2, [(i, .union (roll id ty') (Ty.fvar (i + 1)))]) 
+    | none => none 
+    | some Ty.dynamic => some (i + 2, [
+        (i, .union (roll_corec id ty') (Ty.fvar (i + 1))),
+        (i + 1, Ty.dynamic)
+      ]) 
     | some ty => unify i env_ty ty' ty 
 
   | .recur ty1, .recur ty2 =>

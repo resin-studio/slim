@@ -2,6 +2,7 @@
 % \documentclass[]{acmart}
 \documentclass[sigplan,screen]{acmart}
 
+\usepackage{mathpartir}
 \usepackage{hyperref}
 \usepackage{mathtools}
 \usepackage{listings}
@@ -274,6 +275,17 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \section{Overview}
 
 \section{Technical Details}
+\begin{figure}[h]
+\begin{mathpar}
+\inferrule[var-left]
+  { 99999999a\\b }
+  {\Delta \vdash \alpha \leq \tau	\rightsquigarrow  \{\alpha := \tau \ \& \}} 
+
+\inferrule[yop]{a\\b}{c}
+
+\inferrule[yop]{a\\b}{c}
+\end{mathpar}
+\end{figure}
 
 \section{Evaluation}
 
