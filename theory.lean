@@ -528,8 +528,8 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | .corec ty_corec, Ty.func ty1 ty2 =>
     /-
     ν _ <: X -> Y 
-    ∀ α :: (ν _ <: α -> Y) . α <: X
-    ∀ β :: (ν _ <: X -> β) . β <: Y 
+    (∀ α :: (ν _ <: α -> Y) . α) <: X
+    (∀ β :: (ν _ <: X -> β) . β) <: Y 
     -/
 
     let ty1' := .univ 1 (Ty.lower_binding 1 (unroll_corec ty_corec), .func (Ty.bvar 0) ty2) (Ty.bvar 0) 
@@ -794,6 +794,10 @@ partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat �
   -- TODO: finish
   | _, _ => none
 
+/-
+NOTE: infer returns a refined type in addition the type variable assignments
+assignments alone do not refine enough due to subtyping
+-/
 partial def infer 
   (i : Nat)
   (env_ty : List (Nat × Ty)) (env_tm : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
@@ -867,18 +871,26 @@ partial def infer
     ))
 
   | .app t2 t1 =>
+    let (i, ty', env_ty') := (i + 1, Ty.fvar i, [(i, Ty.dynamic)])
     let (i, ty1, env_ty1) := (i + 1, Ty.fvar i, [(i, Ty.dynamic)])
-    bind (infer i (env_ty1 ++ env_ty) env_tm t2 (Ty.func ty1 ty)) (fun (i, env_ty2, ty2) =>
-    bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
-    bind (unify i (env_ty3 ++ env_ty2 ++ env_ty1 ++ env_ty) ty2 (Ty.func ty1' ty)) (fun (i, env_ty4) =>
-    -- TODO: shoud t2 be decomposed into .func _ -> ty'
-      some (i, env_ty4 ++ env_ty3 ++ env_ty2 ++ env_ty1, ty)
-    )))
+    let env_ty := env_ty1 ++ env_ty' ++ env_ty
+
+    bind (infer i (env_ty) env_tm t2 (Ty.func .dynamic ty)) (fun (i, env_ty2, ty2) =>
+    -- ty2 = ty1 -> ty'
+    bind (unify i (env_ty) ty2 (.func ty1 ty')) (fun (i, env_ty3) =>
+    bind (infer i (env_ty3 ++ env_ty2 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty4, ty1') =>
+    bind (unify i (env_ty4 ++ env_ty3 ++ env_ty2 ++ env_ty) ty2 (Ty.func ty1' ty)) (fun (i, env_ty5) =>
+      some (i, env_ty5 ++ env_ty4 ++ env_ty3 ++ env_ty2, ty')
+    ))))
 
   | .fix t1 =>
-    bind (infer i env_ty env_tm t1 (Ty.func ty ty)) (fun (i, env_ty1, _) =>
-      some (i, env_ty1 ++ env_ty, ty)
-    )
+    let (i, ty', env_ty') := (i + 1, Ty.fvar i, [(i, Ty.dynamic)])
+    let env_ty := env_ty' ++ env_ty
+    bind (infer i env_ty env_tm t1 (Ty.func ty ty)) (fun (i, env_ty1, ty1') =>
+    -- ty1' = ty' -> ty'
+    bind (unify i (env_ty) ty1' (.func ty' ty')) (fun (i, env_ty2) =>
+      some (i, env_ty2 ++ env_ty1 ++ env_ty, ty)
+    ))
 
   | _ => none
 
