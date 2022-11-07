@@ -7,7 +7,7 @@ inductive Ty : Type
   | field : String -> Ty -> Ty
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
-  | func : Ty -> Ty -> Ty
+  | case : Ty -> Ty -> Ty
   | univ : Nat -> Ty × Ty -> Ty -> Ty
   | exis : Nat -> Ty × Ty -> Ty -> Ty
   | recur : Ty -> Ty
@@ -59,7 +59,7 @@ macro_rules
   | `([: #$a $b:slm :]) => `(Ty.variant [: $a :] [: $b :])
   | `([: .$a $b:slm :]) => `(Ty.field [: $a :] [: $b :])
   | `([: ? :]) => `(Ty.dynamic)
-  | `([: $a -> $b :]) => `(Ty.func [: $a :] [: $b :])
+  | `([: $a -> $b :]) => `(Ty.case [: $a :] [: $b :])
   | `([: $a | $b :]) => `(Ty.union [: $a :] [: $b :])
   | `([: $a + $b :]) => `(Ty.union [: #inl $a :] [: #inr $b :])
   | `([: $a & $b :]) => `(Ty.inter [: $a :] [: $b :])
@@ -185,7 +185,7 @@ def Ty.occurs (key : Nat)  : Ty -> Bool
   | [: ⟨ty1⟩ | ⟨ty2⟩ :] => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
   -- | .union ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
   | .inter ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
-  | .func ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
+  | .case ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
   | .univ n (ty_c1, ty_c2) ty => (Ty.occurs key ty_c1) ∨ (Ty.occurs key ty_c2) ∨ (Ty.occurs key ty)
   | .exis n (ty_c1, ty_c2) ty => (Ty.occurs key ty_c1) ∨ (Ty.occurs key ty_c2) ∨ (Ty.occurs key ty)
   | .recur ty => (Ty.occurs key ty)
@@ -203,7 +203,7 @@ def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
   | .field l ty => .field l (Ty.free_subst m ty)
   | .union ty1 ty2 => .union (Ty.free_subst m ty1) (Ty.free_subst m ty2)
   | .inter ty1 ty2 => .inter (Ty.free_subst m ty1) (Ty.free_subst m ty2)
-  | .func ty1 ty2 => .func (Ty.free_subst m ty1) (Ty.free_subst m ty2)
+  | .case ty1 ty2 => .case (Ty.free_subst m ty1) (Ty.free_subst m ty2)
   | .univ n (ty_c1, ty_c2) ty => (.univ
     n
     (Ty.free_subst m ty_c1, Ty.free_subst m ty_c2) 
@@ -258,7 +258,7 @@ def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
   | .field l ty => .field l (Ty.raise_binding start args ty)
   | .union ty1 ty2 => .union (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
   | .inter ty1 ty2 => .inter (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
-  | .func ty1 ty2 => .func (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
+  | .case ty1 ty2 => .case (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
   | .univ n (ty_c1, ty_c2) ty => (.univ
     n
     (Ty.raise_binding (start + n) args ty_c1, Ty.raise_binding (start + n) args ty_c2)
@@ -352,7 +352,7 @@ def Ty.lower_binding (depth : Nat) : Ty -> Ty
   | .field l ty => .field l (Ty.lower_binding depth ty)
   | .union ty1 ty2 => .union (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
   | .inter ty1 ty2 => .inter (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
-  | .func ty1 ty2 => .func (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
+  | .case ty1 ty2 => .case (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
   | .univ n (ty_c1, ty_c2) ty => (.univ
     n
     (Ty.lower_binding (depth + n) ty_c1, Ty.lower_binding (depth + n) ty_c2)
@@ -454,7 +454,7 @@ partial def Ty.equal (env_ty : List (Nat × Ty)) : Ty -> Ty -> Bool
     Ty.equal env_ty ty1 ty3 ∧
     Ty.equal env_ty ty2 ty4
 
-  | .func ty1 ty2, .func ty3 ty4 =>
+  | .case ty1 ty2, .case ty3 ty4 =>
     Ty.equal env_ty ty1 ty3 ∧
     Ty.equal env_ty ty2 ty4
 
@@ -530,15 +530,15 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     else
       none
 
-  | .corec ty_corec, Ty.func ty1 ty2 =>
+  | .corec ty_corec, Ty.case ty1 ty2 =>
     /-
     ν _ <: X -> Y 
     (∀ α :: (unroll(ν _) <: α -> Y) . α) <: X
     (∀ β :: (unroll(ν _) <: X -> β) . β) <: Y 
     -/
 
-    let ty1' := .univ 1 (Ty.lower_binding 1 (unroll_corec ty_corec), .func (Ty.bvar 0) ty2) (Ty.bvar 0) 
-    let ty2' := .univ 1 (Ty.lower_binding 1 (unroll_corec ty_corec), .func ty1 (Ty.bvar 0)) (Ty.bvar 0) 
+    let ty1' := .univ 1 (Ty.lower_binding 1 (unroll_corec ty_corec), .case (Ty.bvar 0) ty2) (Ty.bvar 0) 
+    let ty2' := .univ 1 (Ty.lower_binding 1 (unroll_corec ty_corec), .case ty1 (Ty.bvar 0)) (Ty.bvar 0) 
     bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) =>
     bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1)
@@ -572,7 +572,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       some (i, merge Ty.union Ty.dynamic env_ty1 env_ty2)
     ))
 
-  | .func ty1 ty2', .func ty1' ty2 =>
+  | .case ty1 ty2', .case ty1' ty2 =>
     bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
     bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
       some (i, merge Ty.inter Ty.dynamic env_ty1 env_ty2)
@@ -722,10 +722,10 @@ def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty × (List (Nat × Ty))
       let (i, ty1, env_ty1) := (Ty.dynamic_subst i ty1)
       let (i, ty2, env_ty2) := (Ty.dynamic_subst i ty2)
       (i, .inter ty1 ty2, env_ty1 ++ env_ty2)
-  | .func ty1 ty2 => 
+  | .case ty1 ty2 => 
       let (i, ty1, env_ty1) := (Ty.dynamic_subst i ty1)
       let (i, ty2, env_ty2) := (Ty.dynamic_subst i ty2)
-      (i, .func ty1 ty2, env_ty1 ++ env_ty2)
+      (i, .case ty1 ty2, env_ty1 ++ env_ty2)
   | .univ n (ty_c1, ty_c2) ty => 
     let (i, ty_c1, env_ty_c1) := Ty.dynamic_subst i ty_c1
     let (i, ty_c2, env_ty_c2) := Ty.dynamic_subst i ty_c2
@@ -848,9 +848,9 @@ partial def infer
     let (i, ty_b, env_ty_b) := (i + 1, .fvar i, [(i, Ty.dynamic)])
     bind (patvars env_tm p ty_p) (fun env_tm1 =>
       if env_tm1.length = n then
-        bind (unify i (env_ty_b ++ env_ty_p ++ env_ty) (.func ty_p ty_b) ty) (fun (i, env_ty1) =>
+        bind (unify i (env_ty_b ++ env_ty_p ++ env_ty) (.case ty_p ty_b) ty) (fun (i, env_ty1) =>
         bind (infer i (env_ty1 ++ env_ty) (env_tm1 ++ env_tm) b ty_b) (fun (i, env_ty2, ty_b') =>
-          some (i, env_ty2 ++ env_ty1, Ty.func ty_p ty_b')
+          some (i, env_ty2 ++ env_ty1, Ty.case ty_p ty_b')
         ))
       else none
     )
@@ -881,20 +881,20 @@ partial def infer
     let (i, ty1, env_ty1) := (i + 1, Ty.fvar i, [(i, Ty.dynamic)])
     let env_ty := env_ty1 ++ env_ty' ++ env_ty
 
-    bind (infer i (env_ty) env_tm t2 (Ty.func .dynamic ty)) (fun (i, env_ty2, ty2) =>
+    bind (infer i (env_ty) env_tm t2 (Ty.case .dynamic ty)) (fun (i, env_ty2, ty2) =>
     -- ty2 = ty1 -> ty'
-    bind (unify i (env_ty) ty2 (.func ty1 ty')) (fun (i, env_ty3) =>
+    bind (unify i (env_ty) ty2 (.case ty1 ty')) (fun (i, env_ty3) =>
     bind (infer i (env_ty3 ++ env_ty2 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty4, ty1') =>
-    bind (unify i (env_ty4 ++ env_ty3 ++ env_ty2 ++ env_ty) ty2 (Ty.func ty1' ty)) (fun (i, env_ty5) =>
+    bind (unify i (env_ty4 ++ env_ty3 ++ env_ty2 ++ env_ty) ty2 (Ty.case ty1' ty)) (fun (i, env_ty5) =>
       some (i, env_ty5 ++ env_ty4 ++ env_ty3 ++ env_ty2, ty')
     ))))
 
   | .fix t1 =>
     let (i, ty', env_ty') := (i + 1, Ty.fvar i, [(i, Ty.dynamic)])
     let env_ty := env_ty' ++ env_ty
-    bind (infer i env_ty env_tm t1 (Ty.func ty ty)) (fun (i, env_ty1, ty1') =>
+    bind (infer i env_ty env_tm t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
     -- ty1' = ty' -> ty'
-    bind (unify i (env_ty) ty1' (.func ty' ty')) (fun (i, env_ty2) =>
+    bind (unify i (env_ty) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1 ++ env_ty, ty)
     ))
 
