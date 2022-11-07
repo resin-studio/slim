@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  6 NOV 2022 20:46
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  6 NOV 2022 21:16
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -930,18 +930,15 @@ LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/sc' will be
 (Font)              scaled to size 9.0pt on input line 282.
 
 
-Class acmart Warning: A possible image without description on input line 289.
+Class acmart Warning: A possible image without description on input line 299.
 
 
-Overfull \hbox (11.14514pt too wide) in paragraph at lines 353--354
+Overfull \hbox (11.14514pt too wide) in paragraph at lines 363--364
 []\T1/LinuxLibertineT-TLF/m/n/10 (-20) Liquid types - [][]$\T1/LinuxBiolinumT-TLF/m/n/10 (-20) h^^]p : / / goto . ucsd . edu / ~rjhala / papers / liquid _
  []
 
-
-Underfull \vbox (badness 1406) has occurred while \output is active []
-
- [3.3]
-Overfull \hbox (2.02754pt too wide) in paragraph at lines 365--366
+[3.3]
+Overfull \hbox (2.02754pt too wide) in paragraph at lines 375--376
 [][]$\T1/LinuxBiolinumT-TLF/m/n/10 (-20) h^^]ps : / / pleiad . cl / papers / 2017 / lehmannTanter -[] popl2017 .
  []
 
@@ -960,22 +957,22 @@ Class acmart Warning: ACM keywords are mandatory for papers over two pages.
 Class acmart Warning: CCS concepts are mandatory for papers over two pages.
 
 
-Overfull \vbox (2.32pt too high) has occurred while \output is active []
+Overfull \vbox (2.27pt too high) has occurred while \output is active []
 
  [4.4] (./typedir_dynalang.aux)
 Package rerunfilecheck Info: File `typedir_dynalang.out' has not changed.
 (rerunfilecheck)             Checksum: C8258B66B97E6384724B8725E2ED5D6D;581.
  ) 
 Here is how much of TeX's memory you used:
- 23498 strings out of 478268
- 378388 string characters out of 5846346
+ 23500 strings out of 478268
+ 378401 string characters out of 5846346
  920390 words of memory out of 5000000
  40696 multiletter control sequences out of 15000+600000
- 603875 words of font info for 297 fonts, out of 8000000 for 9000
+ 604444 words of font info for 299 fonts, out of 8000000 for 9000
  1302 hyphenation exceptions out of 8191
- 84i,12n,131p,1053b,1306s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,13n,131p,1053b,1306s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_oexx6f.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_ncsllp.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/inconsolata/i4-t1-4.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_25tcsq.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_76gpa5.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_nh77jq.enc}</usr/local/texlive/2022/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathRM.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/txfonts/txsya.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
-Output written on typedir_dynalang.pdf (4 pages, 387415 bytes).
+Output written on typedir_dynalang.pdf (4 pages, 389644 bytes).
 PDF statistics:
  271 PDF objects out of 1000 (max. 8388607)
  236 compressed objects within 3 object streams

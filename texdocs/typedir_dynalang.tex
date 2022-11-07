@@ -285,6 +285,16 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   {\Delta (\alpha) =\ ? \\ fresh\ \beta  }
   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau \ |\ \beta \} } 
 
+\inferrule[recur-base]
+  { }
+  {\Delta \vdash \mu \alpha . \tau \leq \mu \alpha . \tau	\rightsquigarrow  \{ \} }
+
+\inferrule[recur-tag]
+  {\Delta \vdash  \#l\ \tau' \leq \tau[\alpha/\mu \alpha . \tau] \rightsquigarrow \Psi}
+  {\Delta \vdash \#l\ \tau' \leq \mu \alpha . \tau	\rightsquigarrow  \Psi }
+
+
+
 \end{mathpar}
 \end{figure}
 
