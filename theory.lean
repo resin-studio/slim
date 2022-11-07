@@ -871,6 +871,7 @@ partial def infer
     bind (infer i (env_ty1 ++ env_ty) env_tm t2 (Ty.func ty1 ty)) (fun (i, env_ty2, ty2) =>
     bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
     bind (unify i (env_ty3 ++ env_ty2 ++ env_ty1 ++ env_ty) ty2 (Ty.func ty1' ty)) (fun (i, env_ty4) =>
+    -- TODO: shoud t2 be decomposed into .func _ -> ty'
       some (i, env_ty4 ++ env_ty3 ++ env_ty2 ++ env_ty1, ty)
     )))
 
