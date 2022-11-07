@@ -293,6 +293,10 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   {\Delta \vdash  \#l\ \tau' \leq \tau[\alpha/\mu \alpha . \tau] \rightsquigarrow \Psi}
   {\Delta \vdash \#l\ \tau' \leq \mu \alpha . \tau	\rightsquigarrow  \Psi }
 
+\inferrule[recur-record]
+  { ... }
+  {\Delta \vdash .l_i\ \tau' \leq \mu \alpha . \tau	\rightsquigarrow  \Psi }
+
 
 
 \end{mathpar}
