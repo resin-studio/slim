@@ -278,11 +278,11 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \begin{figure}[h]
 \begin{mathpar}
 \inferrule[var-left]
-  {\Delta (\alpha) =\ ? \\ fresh\ \beta  }
+  {\Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  }
   {\Delta \vdash \alpha \leq \tau	\rightsquigarrow  \{\alpha \mapsto \tau \ \&\ \beta \} } 
 
 \inferrule[var-rght]
-  {\Delta (\alpha) =\ ? \\ fresh\ \beta  }
+  {\Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  }
   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau \ |\ \beta \} } 
 
 \inferrule[recur-base]
@@ -290,12 +290,22 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   {\Delta \vdash \mu \alpha . \tau \leq \mu \alpha . \tau	\rightsquigarrow  \{ \} }
 
 \inferrule[recur-tag]
-  {\Delta \vdash  \#l\ \tau' \leq \tau[\alpha/\mu \alpha . \tau] \rightsquigarrow \Psi}
-  {\Delta \vdash \#l\ \tau' \leq \mu \alpha . \tau	\rightsquigarrow  \Psi }
+  {\Delta \vdash  \#l\ \tau' \leq \tau[\alpha/\mu \alpha . \tau] \rightsquigarrow \Delta_1}
+  {\Delta \vdash \#l\ \tau' \leq \mu \alpha . \tau	\rightsquigarrow  \Delta_1 }
 
-\inferrule[recur-record]
-  { ... }
-  {\Delta \vdash .l_i\ \tau' \leq \mu \alpha . \tau	\rightsquigarrow  \Psi }
+\inferrule[recur-record-left]
+  {  
+    \Delta \vdash \tau_1 \leq (\exists \beta ::
+    .l_i\ \beta\ \&\ \tau_2 \leq \tau[\alpha/\mu\alpha.\tau]\ .\ \beta)
+    \rightsquigarrow \Delta_1
+    \\
+    \text{recordform}\ \tau_2
+    \\
+    \Delta \vdash \tau_2  
+    \leq \mu \alpha . \tau	\rightsquigarrow  \Delta_2
+  }
+  {\Delta \vdash .l\ \tau_1\ \&\ \tau_2  
+    \leq \mu \alpha . \tau	\rightsquigarrow  \Delta_1\Delta_2 }
 
 
 

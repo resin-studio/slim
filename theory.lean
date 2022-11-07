@@ -508,8 +508,8 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | ty', .recur ty =>
     /-
     μ _ <: X × Y
-    X <: (∃ α :: (α × Y <: μ _) . α)
-    Y <: (∃ β :: (X × β <: μ _) . β)
+    X <: (∃ α :: (α × Y <: unroll(μ _)) . α)
+    Y <: (∃ β :: (X × β <: unroll(μ _)) . β)
     -/
     let cs := (make_record_constraint_recur Ty.dynamic ty' ty)
     if cs.length = 0 then
@@ -533,8 +533,8 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | .corec ty_corec, Ty.func ty1 ty2 =>
     /-
     ν _ <: X -> Y 
-    (∀ α :: (ν _ <: α -> Y) . α) <: X
-    (∀ β :: (ν _ <: X -> β) . β) <: Y 
+    (∀ α :: (unroll(ν _) <: α -> Y) . α) <: X
+    (∀ β :: (unroll(ν _) <: X -> β) . β) <: Y 
     -/
 
     let ty1' := .univ 1 (Ty.lower_binding 1 (unroll_corec ty_corec), .func (Ty.bvar 0) ty2) (Ty.bvar 0) 
