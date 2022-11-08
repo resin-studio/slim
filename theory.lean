@@ -425,49 +425,49 @@ def make_record_constraint_recur (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
   | _, _ => [] 
 
 
-partial def Ty.equal : Ty -> Ty -> Bool
+partial def Ty.equal (env_ty : List (Nat × Ty)) : Ty -> Ty -> Bool
   | .dynamic, .dynamic => true
   | .bvar id1, .bvar id2 => if id1 = id2 then true else false 
   | .fvar id1, .fvar id2 => if id1 = id2 then true else false
   | .unit, .unit => true
   | .variant l1 ty1, .variant l2 ty2 =>
     l1 = l2 ∧ (
-      Ty.equal ty1 ty2 
+      Ty.equal env_ty ty1 ty2 
     )
   | .field l1 ty1, .field l2 ty2 =>
     l1 = l2 ∧ (
-      Ty.equal ty1 ty2 
+      Ty.equal env_ty ty1 ty2 
     )
 
   | .union ty1 ty2, .union ty3 ty4 =>
-    Ty.equal ty1 ty3 ∧
-    Ty.equal ty2 ty4
+    Ty.equal env_ty ty1 ty3 ∧
+    Ty.equal env_ty ty2 ty4
 
   | .inter ty1 ty2, .inter ty3 ty4 =>
-    Ty.equal ty1 ty3 ∧
-    Ty.equal ty2 ty4
+    Ty.equal env_ty ty1 ty3 ∧
+    Ty.equal env_ty ty2 ty4
 
   | .case ty1 ty2, .case ty3 ty4 =>
-    Ty.equal ty1 ty3 ∧
-    Ty.equal ty2 ty4
+    Ty.equal env_ty ty1 ty3 ∧
+    Ty.equal env_ty ty2 ty4
 
   | .univ n1 (tyc1, tyc2) ty1, .univ n2 (tyc3, tyc4) ty2 =>
     n1 = n2 ∧
-    Ty.equal tyc1 tyc3 ∧
-    Ty.equal tyc2 tyc4 ∧
-    Ty.equal ty1 ty2
+    Ty.equal env_ty tyc1 tyc3 ∧
+    Ty.equal env_ty tyc2 tyc4 ∧
+    Ty.equal env_ty ty1 ty2
 
   | .exis n1 (tyc1, tyc2) ty1, .exis n2 (tyc3, tyc4) ty2 =>
     n1 = n2 ∧
-    Ty.equal tyc1 tyc3 ∧
-    Ty.equal tyc2 tyc4 ∧
-    Ty.equal ty1 ty2
+    Ty.equal env_ty tyc1 tyc3 ∧
+    Ty.equal env_ty tyc2 tyc4 ∧
+    Ty.equal env_ty ty1 ty2
 
   | .recur ty1, .recur ty2 =>
-    Ty.equal ty1 ty2
+    Ty.equal env_ty ty1 ty2
 
   | .corec ty1, .corec ty2 =>
-    Ty.equal ty1 ty2
+    Ty.equal env_ty ty1 ty2
   | _, _ => false
 
 
@@ -518,7 +518,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     ))
 
   | .recur ty', .recur ty =>
-    if Ty.equal ty' ty then
+    if Ty.equal env_ty ty' ty then
       some (i, [])
     else
       let ty' := [: ⟨ty'⟩ ↑ 0 / [μ 0 . ⟨ty⟩]:]
@@ -549,7 +549,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
 
 
   | .corec ty', .corec ty =>
-    if Ty.equal ty' ty then
+    if Ty.equal env_ty ty' ty then
       some (i, [])
     else
       let ty' := [: ⟨ty'⟩ ↑ 0 / [ν 0 . ⟨ty'⟩] :]
@@ -570,42 +570,37 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       some (i, env_ty2 ++ env_ty1)
     ))
 
-  | .exis n' c' ty', .exis n c ty =>
-    if Ty.equal (.exis n' c' ty') (.exis n c ty) then
+  | ty', .exis n (ty_c1, ty_c2) ty =>
+    if Ty.equal env_ty ty' (.exis n (ty_c1, ty_c2) ty) then
       some (i, []) 
     else
-      none 
-
-  | ty', .exis n (ty_c1, ty_c2) ty =>
-    let (i, env_ty, args) := refresh i n 
-    let ty_c1 := Ty.raise_binding 0 args ty_c1
-    let ty_c2 := Ty.raise_binding 0 args ty_c2
-    let ty := Ty.raise_binding 0 args ty
-    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) => 
-    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1)
-    ))
+      let (i, env_ty, args) := refresh i n 
+      let ty_c1 := Ty.raise_binding 0 args ty_c1
+      let ty_c2 := Ty.raise_binding 0 args ty_c2
+      let ty := Ty.raise_binding 0 args ty
+      bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) => 
+      bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) =>
+        some (i, env_ty2 ++ env_ty1)
+      ))
     -- list[{x;z}] <: ∃ X :: (X <: {x}) . list[X]
     -- X := {x} & Y |- list[{x;z}] <: list[X]
     -- X := {x} & Y |- list[{x;z}] <: list[{x} & Y]
     -- |- {x;z} <: {x} & Y
     -- Y := {z} | ⊥
 
-  | .univ n' c' ty', .univ n c ty =>
-    if Ty.equal (.univ n' c' ty') (.univ n c ty) then
-      some (i, []) 
-    else
-      none 
 
   | .univ n (ty_c1, ty_c2) ty', ty =>
-    let (i, env_ty, args) := refresh i n 
-    let ty_c1 := Ty.raise_binding 0 args ty_c1
-    let ty_c2 := Ty.raise_binding 0 args ty_c2
-    let ty' := Ty.raise_binding 0 args ty'
-    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) => 
-    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1)
-    ))
+    if Ty.equal env_ty (.univ n (ty_c1, ty_c2) ty') ty then
+      some (i, [])
+    else
+      let (i, env_ty, args) := refresh i n 
+      let ty_c1 := Ty.raise_binding 0 args ty_c1
+      let ty_c2 := Ty.raise_binding 0 args ty_c2
+      let ty' := Ty.raise_binding 0 args ty'
+      bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) => 
+      bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) =>
+        some (i, env_ty2 ++ env_ty1)
+      ))
 
 
   | .union ty1 ty2, ty => 
