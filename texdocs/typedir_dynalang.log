@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  7 NOV 2022 18:57
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  7 NOV 2022 19:18
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -874,7 +874,7 @@ File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )
 Overfull \hbox (12.82556pt too wide) in paragraph at lines 29--29
-\T1/LinuxLibertineT-TLF/m/n/9 (-20) New York, NY, USA, [][]4[][] pages. [][]$\T1/LinuxBiolinumT-TLF/m/n/9 (-20) h^^]ps : / / doi . org / 10 . 1145 / nnnnnnn . nnnnnnn$[][] 
+\T1/LinuxLibertineT-TLF/m/n/9 (-20) New York, NY, USA, [][]5[][] pages. [][]$\T1/LinuxBiolinumT-TLF/m/n/9 (-20) h^^]ps : / / doi . org / 10 . 1145 / nnnnnnn . nnnnnnn$[][] 
  []
 
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/b/n' will be
@@ -934,27 +934,30 @@ LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/n' will be
 (Font)              scaled to size 5.5pt on input line 300.
 
 
-Class acmart Warning: A possible image without description on input line 473.
+Class acmart Warning: A possible image without description on input line 328.
 
 
-LaTeX Warning: Float too large for page by 142.14513pt on input line 473.
+Class acmart Warning: A possible image without description on input line 402.
 
 
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-Class acmart Warning: A possible image without description on input line 508.
+Class acmart Warning: A possible image without description on input line 465.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
-Overfull \hbox (11.14514pt too wide) in paragraph at lines 612--613
+Class acmart Warning: A possible image without description on input line 528.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[3.3]
+Overfull \hbox (11.14514pt too wide) in paragraph at lines 633--634
 []\T1/LinuxLibertineT-TLF/m/n/10 (-20) Liquid types - [][]$\T1/LinuxBiolinumT-TLF/m/n/10 (-20) h^^]p : / / goto . ucsd . edu / ~rjhala / papers / liquid _
  []
 
-[3.3]
-Overfull \hbox (2.02754pt too wide) in paragraph at lines 624--625
+[4.4]
+Overfull \hbox (2.02754pt too wide) in paragraph at lines 645--646
 [][]$\T1/LinuxBiolinumT-TLF/m/n/10 (-20) h^^]ps : / / pleiad . cl / papers / 2017 / lehmannTanter -[] popl2017 .
  []
 
@@ -972,29 +975,23 @@ Class acmart Warning: ACM keywords are mandatory for papers over two pages.
 
 Class acmart Warning: CCS concepts are mandatory for papers over two pages.
 
-
-Overfull \vbox (25.48044pt too high) has occurred while \output is active []
-
-
-Overfull \vbox (25.48044pt too high) has occurred while \output is active []
-
- [4.4] (./typedir_dynalang.aux)
+[5.5] (./typedir_dynalang.aux)
 Package rerunfilecheck Info: File `typedir_dynalang.out' has not changed.
 (rerunfilecheck)             Checksum: C8258B66B97E6384724B8725E2ED5D6D;581.
  ) 
 Here is how much of TeX's memory you used:
- 23550 strings out of 478268
- 379177 string characters out of 5846346
+ 23553 strings out of 478268
+ 379216 string characters out of 5846346
  920390 words of memory out of 5000000
  40706 multiletter control sequences out of 15000+600000
  616509 words of font info for 311 fonts, out of 8000000 for 9000
  1302 hyphenation exceptions out of 8191
  84i,15n,131p,1053b,1306s stack positions out of 10000i,1000n,20000p,200000b,200000s
-{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_ncsllp.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_oexx6f.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/inconsolata/i4-t1-4.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_25tcsq.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_76gpa5.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_nh77jq.enc}</usr/local/texlive/2022/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathMI7.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathRM.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/txfonts/txsya.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
-Output written on typedir_dynalang.pdf (4 pages, 398363 bytes).
+{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_oexx6f.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_ncsllp.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/inconsolata/i4-t1-4.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_25tcsq.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_76gpa5.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_nh77jq.enc}</usr/local/texlive/2022/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathMI7.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathRM.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/txfonts/txsya.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
+Output written on typedir_dynalang.pdf (5 pages, 399390 bytes).
 PDF statistics:
- 302 PDF objects out of 1000 (max. 8388607)
- 265 compressed objects within 3 object streams
- 140 named destinations out of 1000 (max. 500000)
+ 308 PDF objects out of 1000 (max. 8388607)
+ 270 compressed objects within 3 object streams
+ 143 named destinations out of 1000 (max. 500000)
  80441 words of extra memory for PDF output out of 89155 (max. 10000000)
 
