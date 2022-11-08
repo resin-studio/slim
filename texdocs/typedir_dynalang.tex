@@ -291,39 +291,39 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   {\Delta \vdash \tau' \equiv \tau}
   {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \{\} } 
 
-% \inferrule[var-left]
-%   {
-%     \Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  
-%     \\\\
-%     (\text{occurs}\ \alpha\ \tau\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
-%     \tau = \tau_1
-%   }
-%   {\Delta \vdash \alpha \leq \tau	
-%     \rightsquigarrow  
-%     \{\alpha \mapsto \tau_1 \ \&\ \beta \} 
-%   } 
 \inferrule[var-left]
   {
     \Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  
+    \\\\
+    (\text{occurs}\ \alpha\ \tau\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
+    \tau = \tau_1
   }
   {\Delta \vdash \alpha \leq \tau	
     \rightsquigarrow  
-    \{\alpha \mapsto \tau \ \&\ \beta \} 
+    \{\alpha \mapsto \tau_1 \ \&\ \beta \} 
   } 
-
-% \inferrule[var-rght]
-%   {  
+% \inferrule[var-left]
+%   {
 %     \Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  
-%     \\\\
-%     (\text{occurs}\ \alpha\ \tau\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
-%     \tau = \tau_1
 %   }
-%   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau_1 \ |\ \beta \} } 
+%   {\Delta \vdash \alpha \leq \tau	
+%     \rightsquigarrow  
+%     \{\alpha \mapsto \tau \ \&\ \beta \} 
+%   } 
+
 \inferrule[var-rght]
   {  
     \Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  
+    \\\\
+    (\text{occurs}\ \alpha\ \tau\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
+    \tau = \tau_1
   }
-  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau \ |\ \beta \} } 
+  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau_1 \ |\ \beta \} } 
+% \inferrule[var-rght]
+%   {  
+%     \Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  
+%   }
+%   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau \ |\ \beta \} } 
 
 \inferrule[variant]
   {\Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1 } 

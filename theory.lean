@@ -372,7 +372,7 @@ macro_rules
   | `([: $b:slm ↓ $a:num :]) => `(Ty.lower_binding $a [: $b :])
 
 
-partial def roll (key : Nat) (τ : Ty) : Ty :=
+partial def roll_recur (key : Nat) (τ : Ty) : Ty :=
   if Ty.occurs key τ then
     [: (μ 0 . ⟨τ⟩↓1) % [⟨key⟩ / £0] :]
   else
@@ -486,8 +486,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | .fvar id, ty  => match lookup id env_ty with 
     | none => none 
     | some Ty.dynamic => some (i + 2, [
-        -- TODO: determine if roll/occurs is necessary
-        (i, .inter (roll id ty) (Ty.fvar (i + 1))),
+        (i, .inter (roll_recur id ty) (Ty.fvar (i + 1))),
         (i + 1, Ty.dynamic)
       ]) 
     | some ty' => unify i env_ty ty' ty 
@@ -495,7 +494,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | ty', .fvar id  => match lookup id env_ty with 
     | none => none 
     | some Ty.dynamic => some (i + 2, [
-        -- TODO: determine if roll/occurs is necessary
         (i, .union (roll_corec id ty') (Ty.fvar (i + 1))),
         (i + 1, Ty.dynamic)
       ]) 
@@ -898,30 +896,20 @@ partial def infer
     let (i, ty', env_ty') := (i + 1, Ty.fvar i, [(i, Ty.dynamic)])
     let env_ty := env_ty' ++ env_ty
     bind (infer i env_ty env_tm t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
-    -- ty1' = ty' -> ty'
-    -- TODO: generalize ty' as (X -> Y): and unify ty' <: X -> Y  
     bind (unify i (env_ty) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1 ++ env_ty, ty)
+      some (i, env_ty2 ++ env_ty1 ++ env_ty, ty')
     ))
     /-
       (λ x => fix (λ self =>  
         λ #zero () => #nil () ;  
         λ #succ n => #cons (x, self n)
       ))
-
       
-      _ : (α -> ( 
+      (α -> ( 
         #zero ♢ -> #nil ♢ &
         ∀ N L :: α <: (N -> L) .
           #succ N -> #cons (X × L)) 
       )) <: τ -> τ
-
-      τ <: α 
-
-      ( 
-        #zero ♢ -> #nil ♢ &
-        #succ N -> #cons (X × L)) 
-      ) <: τ
 
       ( 
         #zero ♢ -> #nil ♢ &
