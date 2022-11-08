@@ -292,12 +292,25 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \{\} } 
 
 \inferrule[var-left]
-  {\Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  }
-  {\Delta \vdash \alpha \leq \tau	\rightsquigarrow  \{\alpha \mapsto \tau \ \&\ \beta \} } 
+  {
+    \Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  
+    \\\\
+    (\text{occurs}\ \alpha\ \tau\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
+    \tau = \tau_1
+  }
+  {\Delta \vdash \alpha \leq \tau	
+    \rightsquigarrow  
+    \{\alpha \mapsto \tau_1 \ \&\ \beta \} 
+  } 
 
 \inferrule[var-rght]
-  {\Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  }
-  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau \ |\ \beta \} } 
+  {  
+    \Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  
+    \\\\
+    (\text{occurs}\ \alpha\ \tau\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
+    \tau = \tau_1
+  }
+  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau_1 \ |\ \beta \} } 
 
 \inferrule[variant]
   {\Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1 } 
@@ -363,7 +376,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
     \Delta \vdash
     \forall \beta :: \tau[\alpha/\nu\alpha.\tau]\leq (\beta \rightarrow \tau_2)\ .\ \beta \leq \tau_1
     \rightsquigarrow \Delta_1
-    \\
+    \\\\
     \Delta \vdash
     \forall \beta :: \tau[\alpha/\nu\alpha.\tau]\leq (\tau_1 \rightarrow \beta)\ .\ \beta \leq \tau_2
     \rightsquigarrow \Delta_2
@@ -381,7 +394,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
     \Delta \vdash \tau_1 \leq \exists \beta ::
     (.l\ \tau_0\ \&\ \beta\ \&\ \tau_2) \leq \tau[\alpha/\mu\alpha.\tau]\ .\ \beta
     \rightsquigarrow \Delta_1
-    \\
+    \\\\
     \Delta\ (\tau_0\ \&\ .l\ \tau_1)\vdash_{R} \tau_2  
     \leq \mu \alpha . \tau	\rightsquigarrow  \Delta_2
   }
@@ -462,10 +475,10 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   {
     \Delta \vdash \tau \leq \tau_1 \rightsquigarrow \Delta_1\ \wedge\
     \Delta\Delta_1 \vdash \tau \leq \tau_2 \rightsquigarrow \Delta_2\ \vee\ 
-    \\
+    \\\\
     \Delta \vdash \tau \leq \tau_1 \rightsquigarrow \Delta_1  \wedge\ 
     \{\} = \Delta_2\ \vee\ 
-    \\
+    \\\\
     \Delta \vdash \tau \leq \tau_2 \rightsquigarrow \Delta_2 \wedge\ 
     \{\} = \Delta_1
   }
@@ -489,10 +502,10 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   {
     \Delta \vdash \tau_1 \leq \tau \rightsquigarrow \Delta_1\ \wedge\ 
     \Delta\Delta_1 \vdash \tau_2 \leq \tau \rightsquigarrow \Delta_2\ \vee\  
-    \\
+    \\\\
     \Delta \vdash \tau_1 \leq \tau \rightsquigarrow \Delta_1\ \wedge\ 
     \{\} = \Delta_2\ \vee\ 
-    \\
+    \\\\
     \Delta \vdash \tau_2 \leq \tau \rightsquigarrow \Delta_2\ \wedge\ 
     \{\} = \Delta_1
   }
