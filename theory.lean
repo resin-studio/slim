@@ -571,7 +571,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     ))
 
   | .exis n (ty_c1, ty_c2) ty', ty =>
-    if Ty.equal env_ty ty' (.exis n (ty_c1, ty_c2) ty') ty) then
+    if Ty.equal env_ty (.exis n (ty_c1, ty_c2) ty') ty then
       some (i, []) 
     else
       none
