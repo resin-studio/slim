@@ -287,13 +287,9 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   { }
   {\Delta \vdash\ \tau \leq\ ?	\rightsquigarrow  \{\} } 
 
-\inferrule[unit]
-  { }
-  {\Delta \vdash \diamondsuit \leq \diamondsuit	\rightsquigarrow  \{\} } 
-
-\inferrule[var]
-  { }
-  {\Delta \vdash \alpha \leq \alpha	\rightsquigarrow  \{\} } 
+\inferrule[equiv]
+  {\Delta \vdash \tau' \equiv \tau}
+  {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \{\} } 
 
 \inferrule[var-left]
   {\Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  }
@@ -332,7 +328,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \inferrule[recur-base]
   { 
-     \tau' = \tau\ \wedge \{\} = \Delta_1\ \vee\ 
+     \Delta \vdash \tau' \equiv \tau\ \wedge \{\} = \Delta_1\ \vee\ 
      \Delta \vdash \tau'[\alpha/\mu \alpha . \tau] \leq \tau[\alpha/\mu \alpha . \tau] \rightsquigarrow \Delta_1
   }
   {\Delta \vdash \mu \alpha . \tau' \leq \mu \alpha . \tau	\rightsquigarrow  \Delta_1 }
@@ -352,7 +348,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \inferrule[corec-base]
   { 
-     \tau' = \tau\ \wedge \{\} = \Delta_1\ \vee\ 
+     \Delta \vdash \tau' \equiv \tau\ \wedge \{\} = \Delta_1\ \vee\ 
      \Delta \vdash \tau'[\alpha/\nu \alpha . \tau'] \leq \tau[\alpha/\nu \alpha . \tau'] \rightsquigarrow \Delta_1
   }
   { \Delta \vdash 
@@ -404,7 +400,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   }
 
 \end{mathpar}
-\caption{Unification subtyping: reflexive rules}
+\caption{Unification subtyping: recursive rules}
 \end{figure}
 
 \begin{figure}[h]
@@ -579,7 +575,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \end{enumerate}
 
 \subsection*{differences}
-from gradual typing:  
+in contrast with gradual typing:  
 \begin{enumerate}
   \item infers more static type info 
   \item stronger soundness claim (i.e. weaker soundness precondition)
@@ -588,7 +584,7 @@ from gradual typing:
   \item dynamic type built into subtyping 
 \end{enumerate}
 
-from HM type inference:  
+in contrast with HM type inference:  
 \begin{enumerate}
   \item synthesizes type in addition to constraint solution 
     due to subtyping
@@ -597,7 +593,7 @@ from HM type inference:
   \item expands and narrows types  
 \end{enumerate}
 
-from Roundtrip typing:  
+in contrast with Roundtrip typing:  
 \begin{enumerate}
   \item type combinators without dependent types
   \item prolog-like type language  
