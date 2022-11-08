@@ -278,6 +278,23 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \begin{figure}[h]
 \begin{mathpar}
+
+\inferrule[unit]
+  { }
+  {\Delta \vdash \diamondsuit \leq \diamondsuit	\rightsquigarrow  \{\} } 
+
+\inferrule[var]
+  { }
+  {\Delta \vdash \alpha \leq \alpha	\rightsquigarrow  \{\} } 
+
+\inferrule[dyamic-left]
+  { }
+  {\Delta \vdash\ ? \leq \tau	\rightsquigarrow  \{\} } 
+
+\inferrule[dyamic-right]
+  { }
+  {\Delta \vdash\ \tau \leq\ ?	\rightsquigarrow  \{\} } 
+
 \inferrule[var-left]
   {\Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  }
   {\Delta \vdash \alpha \leq \tau	\rightsquigarrow  \{\alpha \mapsto \tau \ \&\ \beta \} } 
@@ -285,6 +302,14 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \inferrule[var-rght]
   {\Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  }
   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau \ |\ \beta \} } 
+
+\inferrule[variant]
+  {\Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1 } 
+  {\Delta \vdash \#l\ \tau' \leq \#l\ \tau \rightsquigarrow \Delta_1 } 
+
+\inferrule[field]
+  {\Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1 } 
+  {\Delta \vdash .l\ \tau' \leq .l\ \tau \rightsquigarrow \Delta_1 } 
 
 \inferrule[recur-base]
   { }

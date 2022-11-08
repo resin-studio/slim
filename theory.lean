@@ -480,6 +480,16 @@ partial def Ty.equal (env_ty : List (Nat × Ty)) : Ty -> Ty -> Bool
 
 partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
+  | .bvar id1, .bvar id2  =>
+    if id1 = id2 then 
+      some (i, [])
+    else
+      none
+
+  | .unit, .unit => some (i, []) 
+  | .dynamic, _ => some (i, []) 
+  | _, .dynamic => some (i, []) 
+
   | .fvar id, ty  => match lookup id env_ty with 
     | none => none 
     | some Ty.dynamic => some (i + 2, [
@@ -495,6 +505,24 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
         (i + 1, Ty.dynamic)
       ]) 
     | some ty => unify i env_ty ty' ty 
+
+  | .variant l' ty', .variant l ty =>
+    if l' = l then
+      unify i env_ty ty' ty
+    else
+      none
+
+  | .field l' ty', .field l ty =>
+    if l' = l then
+      unify i env_ty ty' ty
+    else
+      none
+
+  | .case ty1 ty2', .case ty1' ty2 =>
+    bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
+    bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
+      some (i, env_ty2 ++ env_ty1)
+    ))
 
   | .recur ty1, .recur ty2 =>
     if Ty.equal env_ty ty1 ty2 then
@@ -565,7 +593,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     -- |- {x;z} <: {x} & Y
     -- Y := {z} | ⊥
 
-
   | .univ n1 c1 ty1, .univ n2 c2 ty2 =>
     if Ty.equal env_ty (.univ n1 c1 ty1) (.univ n2 c2 ty2) then
       some (i, []) 
@@ -616,33 +643,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
           | .none => (i, env_ty1)
           | .some (i, env_ty2) => some (i, env_ty2 ++ env_ty1)
 
-  | .case ty1 ty2', .case ty1' ty2 =>
-    bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
-    bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1)
-    ))
-
-  | .variant l' ty', .variant l ty =>
-    if l' = l then
-      unify i env_ty ty' ty
-    else
-      none
-
-  | .field l' ty', .field l ty =>
-    if l' = l then
-      unify i env_ty ty' ty
-    else
-      none
-
-  | .bvar id1, .bvar id2  =>
-    if id1 = id2 then 
-      some (i, [])
-    else
-      none
-
-  | .unit, .unit => some (i, []) 
-  | .dynamic, _ => some (i, []) 
-  | _, .dynamic => some (i, []) 
   | _, _ => none
 
 
