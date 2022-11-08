@@ -897,6 +897,7 @@ partial def infer
     let env_ty := env_ty' ++ env_ty
     bind (infer i env_ty env_tm t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
     -- ty1' = ty' -> ty'
+    -- TODO: generalize ty' as (X -> Y): and unfify ty' <: X -> Y  
     bind (unify i (env_ty) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1 ++ env_ty, ty)
     ))
