@@ -909,12 +909,25 @@ partial def infer
         λ #succ n => #cons (x, self n)
       ))
 
-      α <: N -> L
-      X -> (ν α . 
-        #zero ♢ -> #nil  ♢ &
+      
+      _ : ((N -> L) -> ( 
+        #zero ♢ -> #nil ♢ &
         #succ N -> #cons (X × L)) 
-      ))
+      )) <: τ -> τ
 
+      τ <: (N -> L)
+
+      ( 
+        #zero ♢ -> #nil ♢ &
+        #succ N -> #cons (X × L)) 
+      ) <: τ
+
+      ( 
+        #zero ♢ -> #nil ♢ &
+        #succ N -> #cons (X × L)) 
+      ) <: (N -> L)
+
+      -- via roll_rec
       X -> ((ν (N -> L) . 
         #zero ♢ -> #nil  ♢ &
         #succ N -> #cons (X × L)) 
