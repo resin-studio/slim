@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  8 NOV 2022 08:10
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  8 NOV 2022 14:15
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -929,45 +929,45 @@ LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/m/n' will be
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/sc' will be
 (Font)              scaled to size 9.0pt on input line 284.
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/n' will be
-(Font)              scaled to size 7.3pt on input line 304.
+(Font)              scaled to size 7.3pt on input line 312.
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/n' will be
-(Font)              scaled to size 5.5pt on input line 304.
+(Font)              scaled to size 5.5pt on input line 312.
 
 
-Class acmart Warning: A possible image without description on input line 337.
+Class acmart Warning: A possible image without description on input line 350.
 
 
-Overfull \hbox (4.64699pt too wide) in paragraph at lines 341--415
+Overfull \hbox (4.64699pt too wide) in paragraph at lines 354--428
  [] 
  []
 
 
-Overfull \hbox (9.97917pt too wide) in paragraph at lines 341--415
+Overfull \hbox (9.97917pt too wide) in paragraph at lines 354--428
  [] 
  []
 
 
-Class acmart Warning: A possible image without description on input line 417.
+Class acmart Warning: A possible image without description on input line 430.
 
 
-Class acmart Warning: A possible image without description on input line 458.
+Class acmart Warning: A possible image without description on input line 471.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
-Class acmart Warning: A possible image without description on input line 519.
+Class acmart Warning: A possible image without description on input line 532.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 [3.3]
-Overfull \hbox (11.14514pt too wide) in paragraph at lines 624--625
+Overfull \hbox (11.14514pt too wide) in paragraph at lines 637--638
 []\T1/LinuxLibertineT-TLF/m/n/10 (-20) Liquid types - [][]$\T1/LinuxBiolinumT-TLF/m/n/10 (-20) h^^]p : / / goto . ucsd . edu / ~rjhala / papers / liquid _
  []
 
 [4.4]
-Overfull \hbox (2.02754pt too wide) in paragraph at lines 636--637
+Overfull \hbox (2.02754pt too wide) in paragraph at lines 649--650
 [][]$\T1/LinuxBiolinumT-TLF/m/n/10 (-20) h^^]ps : / / pleiad . cl / papers / 2017 / lehmannTanter -[] popl2017 .
  []
 
@@ -985,20 +985,23 @@ Class acmart Warning: ACM keywords are mandatory for papers over two pages.
 
 Class acmart Warning: CCS concepts are mandatory for papers over two pages.
 
-[5.5] (./typedir_dynalang.aux)
+
+Overfull \vbox (2.27pt too high) has occurred while \output is active []
+
+ [5.5] (./typedir_dynalang.aux)
 Package rerunfilecheck Info: File `typedir_dynalang.out' has not changed.
 (rerunfilecheck)             Checksum: C8258B66B97E6384724B8725E2ED5D6D;581.
  ) 
 Here is how much of TeX's memory you used:
  23553 strings out of 478268
  379216 string characters out of 5846346
- 920389 words of memory out of 5000000
+ 920390 words of memory out of 5000000
  40706 multiletter control sequences out of 15000+600000
  616509 words of font info for 311 fonts, out of 8000000 for 9000
  1302 hyphenation exceptions out of 8191
  84i,15n,131p,1053b,1306s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_oexx6f.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_ncsllp.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/inconsolata/i4-t1-4.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_25tcsq.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_76gpa5.enc}{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/libertine/lbtn_nh77jq.enc}</usr/local/texlive/2022/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathMI7.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/LibertineMathRM.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/txfonts/txsya.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
-Output written on typedir_dynalang.pdf (5 pages, 399873 bytes).
+Output written on typedir_dynalang.pdf (5 pages, 399786 bytes).
 PDF statistics:
  308 PDF objects out of 1000 (max. 8388607)
  270 compressed objects within 3 object streams

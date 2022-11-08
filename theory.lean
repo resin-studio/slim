@@ -486,6 +486,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | .fvar id, ty  => match lookup id env_ty with 
     | none => none 
     | some Ty.dynamic => some (i + 2, [
+        -- TODO: determine if roll/occurs is necessary
         (i, .inter (roll id ty) (Ty.fvar (i + 1))),
         (i + 1, Ty.dynamic)
       ]) 
@@ -494,6 +495,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | ty', .fvar id  => match lookup id env_ty with 
     | none => none 
     | some Ty.dynamic => some (i + 2, [
+        -- TODO: determine if roll/occurs is necessary
         (i, .union (roll_corec id ty') (Ty.fvar (i + 1))),
         (i + 1, Ty.dynamic)
       ]) 
@@ -902,16 +904,21 @@ partial def infer
       some (i, env_ty2 ++ env_ty1 ++ env_ty, ty)
     ))
     /-
-      fix (λ self => (λ x => 
+      (λ x => fix (λ self =>  
         λ #zero () => #nil () ;  
-        λ #succ n => #cons (x, self x n)
+        λ #succ n => #cons (x, self n)
       ))
 
-      α <: X -> N -> L
-      α -> (X -> (
-        #zero ♢ -> #nil  ♢
-        #succ N -> #cons (N × L)) 
+      α <: N -> L
+      X -> (ν α . 
+        #zero ♢ -> #nil  ♢ &
+        #succ N -> #cons (X × L)) 
       ))
+
+      X -> ((ν (N -> L) . 
+        #zero ♢ -> #nil  ♢ &
+        #succ N -> #cons (X × L)) 
+      )
 
     -/
 
