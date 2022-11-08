@@ -406,17 +406,6 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \begin{figure}[h]
 \begin{mathpar}
 
-\inferrule[exis]
-  { }
-  { 
-    \Delta \vdash 
-      (\exists \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
-      \leq 
-      (\exists \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
-      \rightsquigarrow
-      \{\}
-  }
-
 \inferrule[exis-free]
   { 
     \Delta \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_1
@@ -432,17 +421,6 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
       (\exists \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
       \rightsquigarrow
       \Delta_1\Delta_2
-  }
-
-\inferrule[univ]
-  { }
-  { 
-    \Delta \vdash 
-      (\forall \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
-      \leq 
-      (\forall \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
-      \rightsquigarrow
-      \{\}
   }
 
 \inferrule[univ-free]
