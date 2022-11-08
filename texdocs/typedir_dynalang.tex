@@ -279,14 +279,6 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \begin{figure}[h]
 \begin{mathpar}
 
-\inferrule[unit]
-  { }
-  {\Delta \vdash \diamondsuit \leq \diamondsuit	\rightsquigarrow  \{\} } 
-
-\inferrule[var]
-  { }
-  {\Delta \vdash \alpha \leq \alpha	\rightsquigarrow  \{\} } 
-
 \inferrule[dyamic-left]
   { }
   {\Delta \vdash\ ? \leq \tau	\rightsquigarrow  \{\} } 
@@ -294,6 +286,14 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \inferrule[dyamic-right]
   { }
   {\Delta \vdash\ \tau \leq\ ?	\rightsquigarrow  \{\} } 
+
+\inferrule[unit]
+  { }
+  {\Delta \vdash \diamondsuit \leq \diamondsuit	\rightsquigarrow  \{\} } 
+
+\inferrule[var]
+  { }
+  {\Delta \vdash \alpha \leq \alpha	\rightsquigarrow  \{\} } 
 
 \inferrule[var-left]
   {\Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  }
