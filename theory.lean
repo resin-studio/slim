@@ -910,12 +910,13 @@ partial def infer
       ))
 
       
-      _ : ((N -> L) -> ( 
+      _ : (α -> ( 
         #zero ♢ -> #nil ♢ &
-        #succ N -> #cons (X × L)) 
+        ∀ N L :: α <: (N -> L) .
+          #succ N -> #cons (X × L)) 
       )) <: τ -> τ
 
-      τ <: (N -> L)
+      τ <: α 
 
       ( 
         #zero ♢ -> #nil ♢ &
@@ -924,10 +925,18 @@ partial def infer
 
       ( 
         #zero ♢ -> #nil ♢ &
-        #succ N -> #cons (X × L)) 
-      ) <: (N -> L)
+        ∀ N L :: α <: (N -> L) .
+          #succ N -> #cons (X × L)) 
+      ) <: α 
 
       -- via roll_rec
+      (ν α .  
+        #zero ♢ -> #nil ♢ &
+        ∀ N L :: α <: (N -> L) .
+          #succ N -> #cons (X × L)) 
+      )
+
+      -- via sugar
       X -> ((ν (N -> L) . 
         #zero ♢ -> #nil  ♢ &
         #succ N -> #cons (X × L)) 
