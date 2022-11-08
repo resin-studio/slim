@@ -539,6 +539,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     X <: (∃ α :: (α × Y <: unroll(μ _)) . α)
     Y <: (∃ β :: (X × β <: unroll(μ _)) . β)
     -/
+    -- TODO: linearize first, then generate constraints
     let cs := (make_record_constraint_recur Ty.dynamic ty' ty)
     if cs.length = 0 then
       none
