@@ -80,10 +80,10 @@ while differing on other inputs. \textbf{subtyping} is used to decide if a term'
 composition is statically invalid, maintaining semblance to dynamically typed programming,
 while also adding safety with static behavior.
 
-By \textbf{propagating} and decomposing types, 
+By \textbf{downward propagating} and decomposing types, 
 it is possible to guide the synthesis of programs.
 To maintain the spirit of dynamic types, type annotations must remain optional.
-Previous work has demonstrated the utility of propagating types 
+Previous work has demonstrated the utility of downward propagating types 
 in theorem proving systems, local type checking, 
 and synthesis of ML-family programs.
 
@@ -107,8 +107,8 @@ types may be composed of \textbf{dynamic types}, represented by \lstinline{(?)} 
 that any subterm corresponding to that portion of the type 
 will not be subject to static constraints.
 
-If type annotations are not available, then \textbf{types are inferred} from context. 
-The actual type of a term can be inferred in an obvious way.  
+If type annotations are not available, then types \textbf{propagated upward} from context. 
+The actual type of a term can be inferred in an obvious way.
 
 \begin{lstlisting}
 
