@@ -531,9 +531,19 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \begin{figure}[h]
 \begin{mathpar}
 
-\inferrule[xyz]
-  { }
-  {\Delta\ \Gamma \vdash\ t : \tau  \rightsquigarrow \Delta_1 . \tau' } 
+\inferrule[Unit]
+  { 
+    \Delta \vdash \diamondsuit \leq \tau \rightsquigarrow \Delta_1 
+  }
+  {\Delta\ \Gamma \vdash () : \tau  \rightsquigarrow \Delta_1 . \diamondsuit } 
+
+\inferrule[Var]
+  { 
+    \Gamma(x) = \tau'
+    \\
+    \Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1
+  }
+  {\Delta\ \Gamma \vdash x : \tau  \rightsquigarrow \Delta_1 . \tau' } 
 
 \end{mathpar}
 \caption{Inference typing}
