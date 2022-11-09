@@ -279,13 +279,21 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \begin{figure}[h]
 \begin{mathpar}
 
-\inferrule[dyamic-left]
+\inferrule[bottom]
+  { }
+  {\Delta \vdash \bot \leq \tau	\rightsquigarrow  \cdot } 
+
+\inferrule[top]
+  { }
+  {\Delta \vdash \tau \leq \top	\rightsquigarrow  \cdot } 
+
+\inferrule[dynamic-left]
   { }
   {\Delta \vdash\ ? \leq \tau	\rightsquigarrow  \cdot } 
 
-\inferrule[dyamic-right]
+\inferrule[dynamic-right]
   { }
-  {\Delta \vdash\ \tau \leq\ ?	\rightsquigarrow  \cdot } 
+  {\Delta \vdash \tau \leq\ ?	\rightsquigarrow  \cdot } 
 
 \inferrule[equiv]
   {\Delta \vdash \tau' \equiv \tau}
@@ -354,8 +362,8 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \inferrule[recur-base]
   { 
-     \Delta \vdash \tau' \equiv \tau\ \wedge \{\} = \Delta_1\ \vee\ 
-     \Delta \vdash \tau'[\alpha/?] \leq \tau[\alpha/?] \rightsquigarrow \Delta_1
+     \Delta \vdash \tau' \equiv \tau\ \wedge \cdot = \Delta_1\ \vee\ 
+     \Delta \vdash \tau'[\alpha/\top] \leq \tau[\alpha/\top] \rightsquigarrow \Delta_1
   }
   {\Delta \vdash \mu \alpha . \tau' \leq \mu \alpha . \tau	\rightsquigarrow  \Delta_1 }
 
@@ -374,8 +382,8 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \inferrule[corec-base]
   { 
-     \Delta \vdash \tau' \equiv \tau\ \wedge \{\} = \Delta_1\ \vee\ 
-     \Delta \vdash \tau'[\alpha/?] \leq \tau[\alpha/?] \rightsquigarrow \Delta_1
+     \Delta \vdash \tau' \equiv \tau\ \wedge \cdot = \Delta_1\ \vee\ 
+     \Delta \vdash \tau'[\alpha/\bot] \leq \tau[\alpha/\bot] \rightsquigarrow \Delta_1
   }
   { \Delta \vdash 
     \nu \alpha . \tau' 
