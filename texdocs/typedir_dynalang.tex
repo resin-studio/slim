@@ -545,6 +545,16 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   }
   {\Delta\ \Gamma \vdash x : \tau  \rightsquigarrow \Delta_1 . \tau' } 
 
+\inferrule[Tag]
+  { 
+    \text{fresh}\ \alpha
+    \\
+    \Delta,\alpha \mapsto\ ? \vdash \#l\ \alpha \leq \tau \rightsquigarrow \Delta_1
+    \\\\
+    \Delta,\alpha \mapsto\ ?;\Delta_1\ \Gamma \vdash \tau_1 : \alpha \rightsquigarrow \Delta_2 . \tau'
+  }
+  {\Delta\ \Gamma \vdash \#l\ \tau_1 : \tau  \rightsquigarrow \cdot,\alpha \mapsto\ ?;\Delta_1;\Delta_2 . \tau' } 
+
 \end{mathpar}
 \caption{Inference typing}
 \end{figure}
