@@ -840,10 +840,14 @@ partial def infer
     ))
 
   | .record (fd :: fds) =>
-    bind (infer i env_ty env_tm (.record fds) ty) (fun (i, env_ty_fds, ty_fds) =>
-    bind (infer i env_ty env_tm (.record [fd]) ty) (fun (i, env_ty_fd, ty_fd) =>
-      some (i, env_ty_fd ++ env_ty_fds, .inter ty_fd ty_fds)
-    ))
+    let (i, ty_fd, env_ty_fd) := (i + 1, Ty.fvar i, [(i, Ty.dynamic)]) 
+    let (i, ty_fds, env_ty_fds) := (i + 1, Ty.fvar i, [(i, Ty.dynamic)]) 
+    let env_ty := env_ty_fds ++ env_ty_fd
+    bind (unify i env_ty (Ty.inter ty_fd ty_fds) ty) (fun (i, env_ty1) => 
+    bind (infer i (env_ty1 ++ env_ty) env_tm (.record fds) ty_fds) (fun (i, env_ty_fds, ty_fds') =>
+    bind (infer i (env_ty1 ++ env_ty) env_tm (.record [fd]) ty_fd) (fun (i, env_ty_fd, ty_fd') =>
+      some (i, env_ty_fd ++ env_ty_fds ++ env_ty1, .inter ty_fd' ty_fds')
+    )))
   
   | .func [] => none
   | .func ((n, p, ty_p, b) :: .nil) => 
@@ -859,9 +863,13 @@ partial def infer
     )
 
   | .func (f :: fs) =>
-    bind (infer i env_ty env_tm (.func fs) ty) (fun (i, env_ty_fs, ty_fs) =>
-    bind (infer i env_ty env_tm (.func [f]) ty) (fun (i, env_ty_f, ty_f) =>
-      some (i, env_ty_f ++ env_ty_fs, .inter ty_f ty_fs)
+    let (i, ty_f, env_ty_f) := (i + 1, Ty.fvar i, [(i, Ty.dynamic)]) 
+    let (i, ty_fs, env_ty_fs) := (i + 1, Ty.fvar i, [(i, Ty.dynamic)]) 
+    let env_ty := env_ty_fs ++ env_ty_f
+    bind (unify i env_ty (Ty.inter ty_f ty_fs) ty) (fun (i, env_ty1) => 
+    bind (infer i env_ty env_tm (.func fs) ty_fs) (fun (i, env_ty_fs, ty_fs') =>
+    bind (infer i env_ty env_tm (.func [f]) ty_f) (fun (i, env_ty_f, ty_f') =>
+      some (i, env_ty_f ++ env_ty_fs, .inter ty_f' ty_fs')
     ))
 
   | .proj t1 l =>
