@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  9 NOV 2022 10:42
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.10.24)  9 NOV 2022 10:46
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -934,16 +934,22 @@ LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/n' will be
 (Font)              scaled to size 5.5pt on input line 312.
 
 
-Class acmart Warning: A possible image without description on input line 358.
+Class acmart Warning: A possible image without description on input line 345.
 
 
-Class acmart Warning: A possible image without description on input line 438.
+Class acmart Warning: A possible image without description on input line 425.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
-Class acmart Warning: A possible image without description on input line 479.
+Class acmart Warning: A possible image without description on input line 466.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+Class acmart Warning: A possible image without description on input line 527.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
@@ -954,19 +960,13 @@ Class acmart Warning: A possible image without description on input line 540.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-
-Class acmart Warning: A possible image without description on input line 553.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
 [3.3]
-Overfull \hbox (11.14514pt too wide) in paragraph at lines 659--660
+Overfull \hbox (11.14514pt too wide) in paragraph at lines 646--647
 []\T1/LinuxLibertineT-TLF/m/n/10 (-20) Liquid types - [][]$\T1/LinuxBiolinumT-TLF/m/n/10 (-20) h^^]p : / / goto . ucsd . edu / ~rjhala / papers / liquid _
  []
 
 [4.4]
-Overfull \hbox (2.02754pt too wide) in paragraph at lines 671--672
+Overfull \hbox (2.02754pt too wide) in paragraph at lines 658--659
 [][]$\T1/LinuxBiolinumT-TLF/m/n/10 (-20) h^^]ps : / / pleiad . cl / papers / 2017 / lehmannTanter -[] popl2017 .
  []
 
