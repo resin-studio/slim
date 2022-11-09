@@ -521,8 +521,8 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     if Ty.equal env_ty ty' ty then
       some (i, [])
     else
-      let ty' := [: ⟨ty'⟩ ↑ 0 / [μ 0 . ⟨ty⟩]:]
-      let ty := [: ⟨ty⟩ ↑ 0 / [μ 0 . ⟨ty⟩]:]
+      let ty' := [: ⟨ty'⟩ ↑ 0 / [?]:]
+      let ty := [: ⟨ty⟩ ↑ 0 / [?]:]
       unify i env_ty ty' ty
 
   | .variant l ty', .recur ty =>
@@ -552,8 +552,8 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     if Ty.equal env_ty ty' ty then
       some (i, [])
     else
-      let ty' := [: ⟨ty'⟩ ↑ 0 / [ν 0 . ⟨ty'⟩] :]
-      let ty := [: ⟨ty⟩ ↑ 0 / [ν 0 . ⟨ty'⟩] :]
+      let ty' := [: ⟨ty'⟩ ↑ 0 / [?] :]
+      let ty := [: ⟨ty⟩ ↑ 0 / [?] :]
       unify i env_ty ty' ty
 
   | .corec ty_corec, Ty.case ty1 ty2 =>

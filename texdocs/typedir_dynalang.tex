@@ -355,7 +355,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \inferrule[recur-base]
   { 
      \Delta \vdash \tau' \equiv \tau\ \wedge \{\} = \Delta_1\ \vee\ 
-     \Delta \vdash \tau'[\alpha/\mu \alpha . \tau] \leq \tau[\alpha/\mu \alpha . \tau] \rightsquigarrow \Delta_1
+     \Delta \vdash \tau'[\alpha/?] \leq \tau[\alpha/?] \rightsquigarrow \Delta_1
   }
   {\Delta \vdash \mu \alpha . \tau' \leq \mu \alpha . \tau	\rightsquigarrow  \Delta_1 }
 
@@ -375,7 +375,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \inferrule[corec-base]
   { 
      \Delta \vdash \tau' \equiv \tau\ \wedge \{\} = \Delta_1\ \vee\ 
-     \Delta \vdash \tau'[\alpha/\nu \alpha . \tau'] \leq \tau[\alpha/\nu \alpha . \tau'] \rightsquigarrow \Delta_1
+     \Delta \vdash \tau'[\alpha/?] \leq \tau[\alpha/?] \rightsquigarrow \Delta_1
   }
   { \Delta \vdash 
     \nu \alpha . \tau' 
