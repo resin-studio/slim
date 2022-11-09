@@ -281,15 +281,15 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \inferrule[dyamic-left]
   { }
-  {\Delta \vdash\ ? \leq \tau	\rightsquigarrow  \{\} } 
+  {\Delta \vdash\ ? \leq \tau	\rightsquigarrow  \cdot } 
 
 \inferrule[dyamic-right]
   { }
-  {\Delta \vdash\ \tau \leq\ ?	\rightsquigarrow  \{\} } 
+  {\Delta \vdash\ \tau \leq\ ?	\rightsquigarrow  \cdot } 
 
 \inferrule[equiv]
   {\Delta \vdash \tau' \equiv \tau}
-  {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \{\} } 
+  {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \cdot } 
 
 \inferrule[var-left]
   {
@@ -300,7 +300,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   }
   {\Delta \vdash \alpha \leq \tau	
     \rightsquigarrow  
-    \{\alpha \mapsto \tau_1 \ \&\ \beta \} 
+    \cdot,\alpha \mapsto \tau_1 \ \&\ \beta
   } 
 % \inferrule[var-left]
 %   {
@@ -308,7 +308,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 %   }
 %   {\Delta \vdash \alpha \leq \tau	
 %     \rightsquigarrow  
-%     \{\alpha \mapsto \tau \ \&\ \beta \} 
+%     \cdot,\alpha \mapsto \tau \ \&\ \beta
 %   } 
 
 \inferrule[var-rght]
@@ -318,12 +318,12 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
     (\text{occurs}\ \alpha\ \tau\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
   }
-  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau_1 \ |\ \beta \} } 
+  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \cdot,\alpha \mapsto \tau_1 \ |\ \beta } 
 % \inferrule[var-rght]
 %   {  
 %     \Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  
 %   }
-%   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \{\alpha \mapsto \tau \ |\ \beta \} } 
+%   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \cdot,\alpha \mapsto \tau \ |\ \beta } 
 
 \inferrule[variant]
   {\Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1 } 
@@ -342,14 +342,14 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   } 
   {\Delta \vdash 
     \tau_1 \rightarrow \tau_2' \leq \tau_1' \rightarrow \tau_2 
-    \rightsquigarrow \Delta_1\Delta_2 
+    \rightsquigarrow \Delta_1;\Delta_2 
   } 
 
 \end{mathpar}
 \caption{Unification subtyping: basic rules}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[h]
 \begin{mathpar}
 
 \inferrule[recur-base]
@@ -398,7 +398,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
     \nu \alpha . \tau 
     \leq 
     \tau_1 \rightarrow \tau_2	
-    \rightsquigarrow  \Delta_1\Delta_2
+    \rightsquigarrow  \Delta_1;\Delta_2
   }
 
 
@@ -412,7 +412,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
     \leq \mu \alpha . \tau	\rightsquigarrow  \Delta_2
   }
   {\Delta\ \tau_0 \vdash_{R} .l\ \tau_1\ \&\ \tau_2  
-    \leq \mu \alpha . \tau	\rightsquigarrow  \Delta_1\Delta_2 
+    \leq \mu \alpha . \tau	\rightsquigarrow  \Delta_1;\Delta_2 
   }
 
 \inferrule[record-base]
@@ -436,7 +436,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   { 
     \Delta \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_1
     \\
-    \Delta\Delta_1 \vdash \tau' \leq \tau \rightsquigarrow \Delta_2
+    \Delta;\Delta_1 \vdash \tau' \leq \tau \rightsquigarrow \Delta_2
     \\
     \text{fresh}\ \alpha_i
   }
@@ -446,14 +446,14 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
       \leq 
       (\exists \alpha_i :: \tau_1 \leq \tau_2\ .\ \tau)
       \rightsquigarrow
-      \Delta_1\Delta_2
+      \Delta_1;\Delta_2
   }
 
 \inferrule[univ-free]
   { 
     \Delta \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_1
     \\
-    \Delta\Delta_1 \vdash \tau' \leq \tau \rightsquigarrow \Delta_2
+    \Delta;\Delta_1 \vdash \tau' \leq \tau \rightsquigarrow \Delta_2
     \\
     \text{fresh}\ \alpha_i
   }
@@ -463,7 +463,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
       \leq 
       \tau
       \rightsquigarrow
-      \Delta_1\Delta_2
+      \Delta_1;\Delta_2
   }
 
 \end{mathpar}
@@ -477,59 +477,73 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   {
     \Delta \vdash \tau_1 \leq \tau \rightsquigarrow \Delta_1  
     \\
-    \Delta\Delta_1 \vdash \tau_2 \leq \tau \rightsquigarrow \Delta_2  
+    \Delta;\Delta_1 \vdash \tau_2 \leq \tau \rightsquigarrow \Delta_2  
   }
   {
     \Delta \vdash \tau_1\ |\ \tau_2 \leq \tau
-    \rightsquigarrow \Delta_1\Delta_2
+    \rightsquigarrow \Delta_1;\Delta_2
   }
 
 \inferrule[union-right]
   {
     \Delta \vdash \tau \leq \tau_1 \rightsquigarrow \Delta_1\ \wedge\
-    \Delta\Delta_1 \vdash \tau \leq \tau_2 \rightsquigarrow \Delta_2\ \vee\ 
+    \Delta;\Delta_1 \vdash \tau \leq \tau_2 \rightsquigarrow \Delta_2\ \vee\ 
     \\\\
     \Delta \vdash \tau \leq \tau_1 \rightsquigarrow \Delta_1  \wedge\ 
-    \{\} = \Delta_2\ \vee\ 
+    \cdot = \Delta_2\ \vee\ 
     \\\\
     \Delta \vdash \tau \leq \tau_2 \rightsquigarrow \Delta_2 \wedge\ 
-    \{\} = \Delta_1
+    \cdot = \Delta_1
   }
   {
     \Delta \vdash \tau \leq \tau_1\ |\ \tau_2
-    \rightsquigarrow \Delta_1\Delta_2
+    \rightsquigarrow \Delta_1;\Delta_2
   }
 
 \inferrule[inter-right]
   {
     \Delta \vdash \tau \leq \tau_1 \rightsquigarrow \Delta_1  
     \\
-    \Delta\Delta_1 \vdash \tau \leq \tau_2 \rightsquigarrow \Delta_2  
+    \Delta;\Delta_1 \vdash \tau \leq \tau_2 \rightsquigarrow \Delta_2  
   }
   {
     \Delta \vdash \tau \leq \tau_1\ \&\ \tau_2
-    \rightsquigarrow \Delta_1\Delta_2
+    \rightsquigarrow \Delta_1;\Delta_2
   }
 
 \inferrule[inter-left]
   {
     \Delta \vdash \tau_1 \leq \tau \rightsquigarrow \Delta_1\ \wedge\ 
-    \Delta\Delta_1 \vdash \tau_2 \leq \tau \rightsquigarrow \Delta_2\ \vee\  
+    \Delta;\Delta_1 \vdash \tau_2 \leq \tau \rightsquigarrow \Delta_2\ \vee\  
     \\\\
     \Delta \vdash \tau_1 \leq \tau \rightsquigarrow \Delta_1\ \wedge\ 
-    \{\} = \Delta_2\ \vee\ 
+    \cdot = \Delta_2\ \vee\ 
     \\\\
     \Delta \vdash \tau_2 \leq \tau \rightsquigarrow \Delta_2\ \wedge\ 
-    \{\} = \Delta_1
+    \cdot = \Delta_1
   }
   {
     \Delta \vdash \tau_1\ \&\ \tau_2 \leq \tau
-    \rightsquigarrow \Delta_1\Delta_2
+    \rightsquigarrow \Delta_1;\Delta_2
   }
 
 \end{mathpar}
 \caption{Unification subtyping: connective rules}
 \end{figure}
+
+
+
+\begin{figure}[h]
+\begin{mathpar}
+
+\inferrule[xyz]
+  { }
+  {\Delta\ \Gamma \vdash\ t : \tau  \rightsquigarrow \Delta_1 . \tau' } 
+
+\end{mathpar}
+\caption{Inference typing}
+\end{figure}
+
 
 
 \section{Evaluation}
