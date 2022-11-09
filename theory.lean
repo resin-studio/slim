@@ -3,7 +3,7 @@ inductive Ty : Type
   | bvar : Nat -> Ty  
   | fvar : Nat -> Ty
   | unit : Ty
-  | variant : String -> Ty -> Ty
+  | tag : String -> Ty -> Ty
   | field : String -> Ty -> Ty
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
@@ -56,7 +56,7 @@ macro_rules
   | `([: £$n :]) => `(Ty.bvar [: $n :])
   | `([: @$n:slm :]) => `(Ty.fvar [: $n :])
   | `([: ♢ :]) => `(Ty.unit)
-  | `([: #$a $b:slm :]) => `(Ty.variant [: $a :] [: $b :])
+  | `([: #$a $b:slm :]) => `(Ty.tag [: $a :] [: $b :])
   | `([: .$a $b:slm :]) => `(Ty.field [: $a :] [: $b :])
   | `([: ? :]) => `(Ty.dynamic)
   | `([: $a -> $b :]) => `(Ty.case [: $a :] [: $b :])
@@ -180,7 +180,7 @@ def Ty.occurs (key : Nat)  : Ty -> Bool
   | .bvar id => false 
   | .fvar id => key = id 
   | .unit => false 
-  | .variant l ty => (Ty.occurs key ty) 
+  | .tag l ty => (Ty.occurs key ty) 
   | .field l ty => (Ty.occurs key ty)
   | [: ⟨ty1⟩ | ⟨ty2⟩ :] => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
   -- | .union ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
@@ -199,7 +199,7 @@ def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
     | none => .fvar id
   )
   | .unit => .unit
-  | .variant l ty => .variant l (Ty.free_subst m ty) 
+  | .tag l ty => .tag l (Ty.free_subst m ty) 
   | .field l ty => .field l (Ty.free_subst m ty)
   | .union ty1 ty2 => .union (Ty.free_subst m ty1) (Ty.free_subst m ty2)
   | .inter ty1 ty2 => .inter (Ty.free_subst m ty1) (Ty.free_subst m ty2)
@@ -254,7 +254,7 @@ def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
         .bvar id
   | .fvar id => .fvar id 
   | .unit => .unit
-  | .variant l ty => .variant l (Ty.raise_binding start args ty) 
+  | .tag l ty => .tag l (Ty.raise_binding start args ty) 
   | .field l ty => .field l (Ty.raise_binding start args ty)
   | .union ty1 ty2 => .union (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
   | .inter ty1 ty2 => .inter (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
@@ -348,7 +348,7 @@ def Ty.lower_binding (depth : Nat) : Ty -> Ty
   | .bvar id => .bvar (id + depth)
   | .fvar id => .fvar id 
   | .unit => .unit
-  | .variant l ty => .variant l (Ty.lower_binding depth ty) 
+  | .tag l ty => .tag l (Ty.lower_binding depth ty) 
   | .field l ty => .field l (Ty.lower_binding depth ty)
   | .union ty1 ty2 => .union (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
   | .inter ty1 ty2 => .inter (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
@@ -430,7 +430,7 @@ partial def Ty.equal (env_ty : List (Nat × Ty)) : Ty -> Ty -> Bool
   | .bvar id1, .bvar id2 => if id1 = id2 then true else false 
   | .fvar id1, .fvar id2 => if id1 = id2 then true else false
   | .unit, .unit => true
-  | .variant l1 ty1, .variant l2 ty2 =>
+  | .tag l1 ty1, .tag l2 ty2 =>
     l1 = l2 ∧ (
       Ty.equal env_ty ty1 ty2 
     )
@@ -499,7 +499,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       ]) 
     | some ty => unify i env_ty ty' ty 
 
-  | .variant l' ty', .variant l ty =>
+  | .tag l' ty', .tag l ty =>
     if l' = l then
       unify i env_ty ty' ty
     else
@@ -525,8 +525,8 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       let ty := [: ⟨ty⟩ ↑ 0 / [?]:]
       unify i env_ty ty' ty
 
-  | .variant l ty', .recur ty =>
-    unify i env_ty (.variant l ty') (unroll_recur ty)
+  | .tag l ty', .recur ty =>
+    unify i env_ty (.tag l ty') (unroll_recur ty)
 
   | ty', .recur ty =>
     /-
@@ -648,7 +648,7 @@ t ::=                             term
   _                               hole 
   x                               variable
   ()                              unit
-  #l t                            variant
+  #l t                            tag
   fs                              record
   cs                              function
   t.l                             projection
@@ -682,7 +682,7 @@ inductive Tm : Type
   | bvar : Nat -> Tm 
   | fvar : Nat -> Tm 
   | unit : Tm
-  | variant : String -> Tm -> Tm
+  | tag : String -> Tm -> Tm
   | record : List (String × Tm) -> Tm
   | func : List (Nat × Tm × Ty × Tm) -> Tm
   | proj : Tm -> String -> Tm
@@ -711,9 +711,9 @@ def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty × (List (Nat × Ty))
   | .bvar id => (i, .bvar id, [])
   | .fvar id => (i, .fvar id, [])
   | .unit => (i, .unit, [])
-  | .variant l ty => 
+  | .tag l ty => 
     let (i, ty, env_ty) := (Ty.dynamic_subst i ty)
-    (i, .variant l ty, env_ty) 
+    (i, .tag l ty, env_ty) 
   | .field l ty => 
     let (i, ty, env_ty) := Ty.dynamic_subst i ty
     (i, .field l ty, env_ty) 
@@ -782,7 +782,7 @@ partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat �
     match lookup id env_tm with
       | some _ => none 
       | none => [(id, ty)] 
-  | .variant l_tm tm, .variant l_ty ty => 
+  | .tag l_tm tm, .tag l_ty ty => 
     if l_tm = l_ty then
       patvars env_tm tm ty 
     else none
@@ -823,20 +823,20 @@ partial def infer
       )
     ) 
 
-  | .variant l t1 =>   
+  | .tag l t1 =>   
     let (i, ty1, env_ty1) := (i + 1, .fvar i, [(i, Ty.dynamic)]) 
-    bind (unify i (env_ty1 ++ env_ty) (.variant l ty1) ty) (fun (i, env_ty2) =>
+    bind (unify i (env_ty1 ++ env_ty) (.tag l ty1) ty) (fun (i, env_ty2) =>
     bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
-      some (i, env_ty3 ++ env_ty2 ++ env_ty1, .variant l ty1')
+      some (i, env_ty3 ++ env_ty2 ++ env_ty1, .tag l ty1')
     ))
 
   | .record [] => none
 
   | .record ((l, t1) :: .nil) =>
     let (i, ty1, env_ty1) := (i + 1, .fvar i, [(i, Ty.dynamic)]) 
-    bind (unify i (env_ty1 ++ env_ty) (.variant l ty1) ty) (fun (i, env_ty2) =>
+    bind (unify i (env_ty1 ++ env_ty) (.tag l ty1) ty) (fun (i, env_ty2) =>
     bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
-      some (i, env_ty3 ++ env_ty2 ++ env_ty1, .variant l ty1')
+      some (i, env_ty3 ++ env_ty2 ++ env_ty1, .tag l ty1')
     ))
 
   | .record (fd :: fds) =>
@@ -1036,7 +1036,7 @@ fix (size =>
 ```
 
 
-### variants induction type
+### tags induction type
 ```
 μ list .  
   #nil[] | 
