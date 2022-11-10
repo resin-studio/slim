@@ -301,7 +301,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \inferrule[var-left]
   {
-    \Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  
+    \alpha \notin \text{dom}(\Delta) \\ \text{fresh}\ \beta  
     \\\\
     (\text{occurs}\ \alpha\ \tau\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
@@ -313,7 +313,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \inferrule[var-rght]
   {  
-    \Delta (\alpha) =\ ? \\ \text{fresh}\ \beta  
+    \alpha \notin \text{dom}(\Delta) \\ \text{fresh}\ \beta  
     \\\\
     (\text{occurs}\ \alpha\ \tau\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
@@ -549,7 +549,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   { 
     \text{fresh}\ \alpha
     \\
-    \Delta,\alpha \mapsto\ ? \vdash \#l\ \alpha \leq \tau \rightsquigarrow \Delta_1
+    \Delta \vdash \#l\ \alpha \leq \tau \rightsquigarrow \Delta_1
     \\\\
     \Delta;\Delta_1\ \Gamma \vdash t : \alpha \rightsquigarrow \Delta_2 . \tau'
   }
@@ -559,7 +559,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   { 
     \text{fresh}\ \alpha
     \\
-    \Delta,\alpha \mapsto\ ? \vdash .l\ \alpha \leq \tau \rightsquigarrow \Delta_1
+    \Delta \vdash .l\ \alpha \leq \tau \rightsquigarrow \Delta_1
     \\\\
     \Delta;\Delta_1\ \Gamma \vdash t : \alpha \rightsquigarrow \Delta_2 . \tau'
   }
@@ -567,7 +567,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \inferrule[RecordStep]
   {
-    \Delta,\alpha\mapsto\ ?, \beta\mapsto\ ? \vdash .l\ \alpha\ \&\ \beta \leq \tau  \rightsquigarrow \Delta_{\alpha\beta}
+    \Delta \vdash .l\ \alpha\ \&\ \beta \leq \tau  \rightsquigarrow \Delta_{\alpha\beta}
     \\
     \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash .l\ t_1 : .l\ \alpha  \rightsquigarrow \Delta_1 . \tau_1'
     \\
