@@ -567,6 +567,8 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \inferrule[RecordStep]
   {
+    \text{fresh}\ \alpha \\ \text{fresh}\ \beta
+    \\
     \Delta \vdash .l\ \alpha\ \&\ \beta \leq \tau  \rightsquigarrow \Delta_{\alpha\beta}
     \\
     \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash .l\ t_1 : .l\ \alpha  \rightsquigarrow \Delta_1 . \tau_1'
@@ -593,6 +595,18 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
     (\lambda\ t_1 : \tau_1 \Rightarrow t_2) : \tau  
     \rightsquigarrow \Delta_1;\Delta_2\ .\ \tau_1[?/\alpha_i] \rightarrow \tau_2'
   } 
+
+\inferrule[FunctionStep]
+  {
+    \text{fresh}\ \alpha \\ \text{fresh}\ \beta
+    \\
+    \Delta \vdash (\tau_p \rightarrow \alpha)\ \&\ \beta \leq \tau  \rightsquigarrow \Delta_{\alpha\beta}
+    \\
+    \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash \lambda\ t_p : \tau_p \Rightarrow t_1 : (\tau_p \rightarrow \alpha)  \rightsquigarrow \Delta_1 . \tau_1'
+    \\
+    \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash t_2 : \beta  \rightsquigarrow \Delta_1 . \tau_2'
+  }
+  {\Delta\ \Gamma \vdash (\lambda\ t_p : \tau_p \Rightarrow t_1;\ t_2) : \tau  \rightsquigarrow \Delta_{\alpha\beta};\Delta_1;\Delta_2 . \tau_1'\ \&\ \tau_2' } 
 
 \end{mathpar}
 \caption{Inference typing}
