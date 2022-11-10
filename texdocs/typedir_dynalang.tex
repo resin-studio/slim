@@ -577,13 +577,21 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \inferrule[FunctionBase]
   { 
-    \text{patvars}\ \tau_1 = \alpha_i
+    \text{fresh}\ \alpha_i \\ \text{fresh}\ \beta
     \\
-    \text{fresh}\ \alpha_i
+    \Delta\ \Gamma \vdash
+    \tau_1[?/\alpha_i] \rightarrow \beta \leq \tau
+    \rightsquigarrow \Delta_1
+    \\\\
+    \text{patvars}\ t_1 = x_i \\ \text{fresh}\ x_i
+    \\
+    \Delta;\Delta_1\ \Gamma \vdash 
+      t_2 : \beta  
+      \rightsquigarrow \Delta_2.\tau_2'
   }
   {\Delta\ \Gamma \vdash 
-    (\lambda\ t_1 : \tau_1 \Rightarrow \ t_2) : \tau  
-    \rightsquigarrow 
+    (\lambda\ t_1 : \tau_1 \Rightarrow t_2) : \tau  
+    \rightsquigarrow \Delta_1;\Delta_2\ .\ \tau_1[?/\alpha_i] \rightarrow \tau_2'
   } 
 
 \end{mathpar}
