@@ -238,6 +238,8 @@ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
   #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
 \end{lstlisting}
 
+
+
 \hfill
 
 \noindent This is syntactic sugar for:
@@ -270,6 +272,19 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   {v: List $\alpha$ | len v = n}
 
 \end{lstlisting}
+
+\hfill
+
+\noindent The term for \lstinline{replicate} could be represented by a recursive function built using \lstinline{fix} 
+
+\begin{lstlisting}[]
+let replicate = 
+$\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
+  $\lambda$ #zero () => #nil () ;
+  $\lambda$ #succ n => #cons (x, self n)
+) 
+\end{lstlisting}
+
 
 
 \section{Overview}
