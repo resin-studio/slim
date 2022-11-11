@@ -280,8 +280,8 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 \begin{lstlisting}[]
 let replicate = 
 $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
-  $\lambda$ #zero () => #nil () ;
-  $\lambda$ #succ n => #cons (x, self n)
+  $\lambda$ #zero () $\Rightarrow$ #nil () ;
+  $\lambda$ #succ n $\Rightarrow$ #cons (x, self n)
 ) 
 \end{lstlisting}
 
