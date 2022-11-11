@@ -608,20 +608,29 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   }
   {\Delta\ \Gamma \vdash (\lambda\ t_p : \tau_p \Rightarrow t_1;\ t_2) : \tau  \rightsquigarrow \Delta_{\alpha\beta};\Delta_1;\Delta_2 . \tau_1'\ \&\ \tau_2' } 
 
+\end{mathpar}
+\caption{Inference typing: part 1}
+\end{figure}
+
+\begin{figure}[h]
+\begin{mathpar}
+
 \inferrule[Proj]
   {
     \Delta\ \Gamma \vdash t_1 : .l\ \tau \rightsquigarrow \Delta_1.\tau_1
     \\
-    \text{project}\ \tau_1\ l = \tau'
+    \text{fresh}\ \alpha
+    \\
+    \Delta\;\Delta_1 \vdash \tau_1 \leq .l\ \alpha \rightsquigarrow \Delta_2 
   }
-  {\Delta\ \Gamma \vdash t_1.l : \tau \rightsquigarrow \Delta_1.\tau'} 
+  {\Delta\ \Gamma \vdash t_1.l : \tau \rightsquigarrow \Delta_1;\Delta_2.\alpha} 
 
 \inferrule[App]
   { 
-    \text{fresh}\ \alpha \\ \text{fresh}\ \beta
-    \\\\
     \Delta\ \Gamma \vdash t_2 : (? \rightarrow \tau) \rightsquigarrow \Delta_1.\tau_2 
     \\\\
+    \text{fresh}\ \alpha \\ \text{fresh}\ \beta
+    \\
     \Delta;\Delta_1 \vdash \tau_2 \leq \alpha \rightarrow \beta \rightsquigarrow \Delta_2
     \\\\
     \Delta;\Delta_1;\Delta_2\ \Gamma \vdash t_1 : \alpha \rightsquigarrow \Delta_3.\tau_1' 
@@ -640,7 +649,7 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 
 \end{mathpar}
-\caption{Inference typing}
+\caption{Inference typing: part 2}
 \end{figure}
 
 
