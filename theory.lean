@@ -877,6 +877,17 @@ partial def infer
       some (i, env_ty1, ty')
     )))
 
+  | .app t2 t1 =>
+    let (i, ty') := (i + 1, Ty.fvar i)
+    let (i, ty1) := (i + 1, Ty.fvar i)
+    bind (infer i (env_ty) env_tm t2 (Ty.case .dynamic ty)) (fun (i, env_ty1, ty2) =>
+    -- ty2 = ty1 -> ty'
+    bind (unify i (env_ty1 ++ env_ty) ty2 (.case ty1 ty')) (fun (i, env_ty2) =>
+    bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
+    bind (unify i (env_ty3 ++ env_ty2 ++ env_ty1 ++ env_ty) ty2 (Ty.case ty1' ty)) (fun (i, env_ty4) =>
+      some (i, env_ty4 ++ env_ty3 ++ env_ty2  ++ env_ty1 , ty')
+    ))))
+
   | .letb ty1 t1 t => 
     let (i, ty1) := Ty.dynamic_subst i ty1
     let (i, env_tmx) := (i + 1, [(i, Ty.univ 1 (Ty.bvar 0, ty1) (Ty.bvar 0))]) 
@@ -885,16 +896,6 @@ partial def infer
       some (i, env_ty2 ++ env_ty1, ty')
     ))
 
-  | .app t2 t1 =>
-    let (i, ty') := (i + 1, Ty.fvar i)
-    let (i, ty1) := (i + 1, Ty.fvar i)
-    bind (infer i (env_ty) env_tm t2 (Ty.case .dynamic ty)) (fun (i, env_ty2, ty2) =>
-    -- ty2 = ty1 -> ty'
-    bind (unify i (env_ty) ty2 (.case ty1 ty')) (fun (i, env_ty3) =>
-    bind (infer i (env_ty3 ++ env_ty2 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty4, ty1') =>
-    bind (unify i (env_ty4 ++ env_ty3 ++ env_ty2 ++ env_ty) ty2 (Ty.case ty1' ty)) (fun (i, env_ty5) =>
-      some (i, env_ty5 ++ env_ty4 ++ env_ty3 ++ env_ty2, ty')
-    ))))
 
   | .fix t1 =>
     let (i, ty') := (i + 1, Ty.fvar i)

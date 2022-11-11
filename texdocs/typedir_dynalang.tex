@@ -608,6 +608,37 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
   }
   {\Delta\ \Gamma \vdash (\lambda\ t_p : \tau_p \Rightarrow t_1;\ t_2) : \tau  \rightsquigarrow \Delta_{\alpha\beta};\Delta_1;\Delta_2 . \tau_1'\ \&\ \tau_2' } 
 
+\inferrule[Proj]
+  {
+    \Delta\ \Gamma \vdash t_1 : .l\ \tau \rightsquigarrow \Delta_1.\tau_1
+    \\
+    \text{project}\ \tau_1\ l = \tau'
+  }
+  {\Delta\ \Gamma \vdash t_1.l : \tau \rightsquigarrow \Delta_1.\tau'} 
+
+\inferrule[App]
+  { 
+    \text{fresh}\ \alpha \\ \text{fresh}\ \beta
+    \\\\
+    \Delta\ \Gamma \vdash t_2 : (? \rightarrow \tau) \rightsquigarrow \Delta_1.\tau_2 
+    \\\\
+    \Delta;\Delta_1 \vdash \tau_2 \leq \alpha \rightarrow \beta \rightsquigarrow \Delta_2
+    \\\\
+    \Delta;\Delta_1;\Delta_2\ \Gamma \vdash t_1 : \alpha \rightsquigarrow \Delta_3.\tau_1' 
+    \\\\
+    \Delta;\Delta_1;\Delta_2;\Delta_3 \vdash \tau_2 \leq \tau_1' \rightarrow \tau  \rightsquigarrow \Delta_4 
+  }
+  {\Delta\ \Gamma \vdash t_2\ t_1 : \tau \rightsquigarrow \Delta_1;\Delta_2;\Delta_3;\Delta_4 . \beta} 
+
+\inferrule[Let]
+  { }
+  {} 
+
+\inferrule[Fix]
+  { }
+  {} 
+
+
 \end{mathpar}
 \caption{Inference typing}
 \end{figure}
