@@ -320,6 +320,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \\\\
     (\text{occurs}\ \alpha\ \tau\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
+    % TODO: free existential bound variables on rhs before saving. 
   }
   {\Delta \vdash \alpha \leq \tau	
     \rightsquigarrow  
@@ -332,6 +333,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \\\\
     (\text{occurs}\ \alpha\ \tau\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
+    % TODO: free universal bound variables on lhs before saving. 
   }
   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \cdot,\alpha \mapsto \tau_1 \ |\ \beta } 
 

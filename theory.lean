@@ -484,6 +484,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | _, .dynamic => some (i, []) 
 
   | .fvar id, ty  => match lookup id env_ty with 
+    -- TODO: free existential bound variables on rhs before saving. 
     | none => some (i + 2, [
         (i, .inter (roll_recur id ty) (Ty.fvar (i + 1))),
         (i + 1, Ty.dynamic)
@@ -491,6 +492,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     | some ty' => unify i env_ty ty' ty 
 
   | ty', .fvar id  => match lookup id env_ty with 
+    -- TODO: free universal bound variables on lhs before saving. 
     | none => some (i + 2, [
         (i, .union (roll_corec id ty') (Ty.fvar (i + 1))),
         (i + 1, Ty.dynamic)
