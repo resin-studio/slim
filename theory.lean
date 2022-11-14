@@ -907,8 +907,8 @@ partial def infer
   | .fix t1 =>
     let (i, ty') := (i + 1, Ty.fvar i)
     bind (infer i env_ty env_tm t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
-    bind (unify i (env_ty) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1 ++ env_ty, ty')
+    bind (unify i (env_ty1 ++ env_ty) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
+      some (i, env_ty2 ++ env_ty1, ty')
     ))
     /-
       (λ x => fix (λ self =>  
