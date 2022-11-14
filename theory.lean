@@ -811,8 +811,6 @@ NOTE: infer returns a refined type in addition the type variable assignments
 assignments alone do not refine enough due to subtyping
 NOTE: deconstructing types is reduced to unification 
 -/
--- TODO: don't require variable to be in environment.
--- remove initializing variable with dynamic type ?
 partial def infer 
   (i : Nat)
   (env_ty : List (Nat × Ty)) (env_tm : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
