@@ -552,7 +552,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   { 
     \Delta \vdash \diamondsuit \leq \tau \rightsquigarrow \Delta_1 
   }
-  {\Delta\ \Gamma \vdash () : \tau  \rightsquigarrow \Delta_1 . \diamondsuit } 
+  {\Delta\ \Gamma \vdash () : \tau  \rightsquigarrow \Delta_1\ .\ \diamondsuit } 
 
 \inferrule[Var]
   { 
@@ -560,7 +560,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \\
     \Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1
   }
-  {\Delta\ \Gamma \vdash x : \tau  \rightsquigarrow \Delta_1 . \tau' } 
+  {\Delta\ \Gamma \vdash x : \tau  
+    \rightsquigarrow \Delta_1\ .\ \tau' } 
 
 \inferrule[Tag]
   { 
@@ -568,33 +569,41 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \\
     \Delta \vdash \#l\ \alpha \leq \tau \rightsquigarrow \Delta_1
     \\\\
-    \Delta;\Delta_1\ \Gamma \vdash t : \alpha \rightsquigarrow \Delta_2 . \tau'
+    \Delta;\Delta_1\ \Gamma \vdash t : \alpha 
+      \rightsquigarrow \Delta_2\ .\ \tau'
   }
-  {\Delta\ \Gamma \vdash \#l\ t : \tau  \rightsquigarrow \Delta_1;\Delta_2 . \tau' } 
+  {\Delta\ \Gamma \vdash \#l\ t : \tau  
+    \rightsquigarrow \Delta_1;\Delta_2\ .\ \tau' } 
 
-\inferrule[RecordBase]
+\inferrule[Field]
   { 
     \text{fresh}\ \alpha
     \\
     \Delta \vdash .l\ \alpha \leq \tau \rightsquigarrow \Delta_1
     \\\\
-    \Delta;\Delta_1\ \Gamma \vdash t : \alpha \rightsquigarrow \Delta_2 . \tau'
+    \Delta;\Delta_1\ \Gamma \vdash t : \alpha 
+      \rightsquigarrow \Delta_2\ .\ \tau'
   }
-  {\Delta\ \Gamma \vdash .l\ t : \tau  \rightsquigarrow \Delta_1;\Delta_2 . \tau' } 
+  {\Delta\ \Gamma \vdash .l\ t : \tau  
+    \rightsquigarrow \Delta_1;\Delta_2\ .\ \tau' } 
 
-\inferrule[RecordStep]
+\inferrule[Record]
   {
     \text{fresh}\ \alpha \\ \text{fresh}\ \beta
     \\
-    \Delta \vdash .l\ \alpha\ \&\ \beta \leq \tau  \rightsquigarrow \Delta_{\alpha\beta}
+    \Delta \vdash .l\ \alpha\ \&\ \beta \leq \tau 
+      \rightsquigarrow \Delta_{\alpha\beta}
     \\
-    \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash .l\ t_1 : .l\ \alpha  \rightsquigarrow \Delta_1 . \tau_1'
+    \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash .l\ t_1 : .l\ \alpha  
+      \rightsquigarrow \Delta_1\ .\ \tau_1'
     \\
-    \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash t_2 : \beta  \rightsquigarrow \Delta_1 . \tau_2'
+    \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash t_2 : \beta  
+      \rightsquigarrow \Delta_1\ .\ \tau_2'
   }
-  {\Delta\ \Gamma \vdash (.l\ t_1;\ t_2) : \tau  \rightsquigarrow \Delta_{\alpha\beta};\Delta_1;\Delta_2 . \tau_1'\ \&\ \tau_2' } 
+  {\Delta\ \Gamma \vdash (.l\ t_1;\ t_2) : \tau  
+    \rightsquigarrow \Delta_{\alpha\beta};\Delta_1;\Delta_2\ .\ \tau_1'\ \&\ \tau_2' } 
 
-\inferrule[FunctionBase]
+\inferrule[Case]
   { 
     \text{fresh}\ \widebar{\alpha} \\ \text{fresh}\ \beta
     \\
@@ -613,7 +622,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \rightsquigarrow \Delta_1;\Delta_2\ .\ \tau_1[?/\widebar{\alpha}] \rightarrow \tau_2'
   } 
 
-\inferrule[FunctionStep]
+\inferrule[Function]
   {
     \text{fresh}\ \alpha \\ \text{fresh}\ \beta
     \\
