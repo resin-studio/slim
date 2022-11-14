@@ -391,6 +391,7 @@ partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
 X <: ∃ α :: ((α ; Y) <: μ _). α 
 Y <: ∃ β :: ((X ; β) <: μ _). β
 -/
+
 def make_record_constraint_recur (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
   | (.field l ty'), mu_ty => 
       let ty := .exis 1 ( 
@@ -401,21 +402,6 @@ def make_record_constraint_recur (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
   | .inter (.field l ty') rem_ty, mu_ty => 
       let ty := 
       [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll_recur mu_ty⟩↓1 . £0 :]
-
-      let rem := make_record_constraint_recur (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
-      if rem.length = 0 then
-        []
-      else 
-        (ty', ty) :: rem
-  | .inter rem_ty (.field l ty'), mu_ty => 
-      -- copy and paste above case (for terminateion proved by structure)
-      let ty := .exis 1 ( 
-        (Ty.inter (
-          Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))) 
-          (Ty.lower_binding 1 rem_ty)
-        ),
-         (Ty.lower_binding 1 (unroll_recur mu_ty))
-      ) (.bvar 0)
 
       let rem := make_record_constraint_recur (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
       if rem.length = 0 then
@@ -469,6 +455,31 @@ partial def Ty.equal (env_ty : List (Nat × Ty)) : Ty -> Ty -> Bool
   | .corec ty1, .corec ty2 =>
     Ty.equal env_ty ty1 ty2
   | _, _ => false
+
+def linearize_record : Ty -> Option Ty
+  | .field l ty => some (.field l ty)
+  | .inter (.field l ty1) ty2 => 
+    bind (linearize_record ty2) (fun linear_ty2 =>
+      some (.inter (.field l ty1) linear_ty2)
+    )
+  | .inter ty1 (.field l ty2) => 
+    bind (linearize_record ty1) (fun linear_ty1 =>
+      some (.inter (.field l ty2) linear_ty1)
+    )
+  | _ => none
+
+def linearize_fields : Ty -> Option (List (String × Ty))
+  | .field l ty => some [(l, ty)]
+  | .inter (.field l ty1) ty2 => 
+    bind (linearize_fields ty2) (fun linear_ty2 =>
+      (l, ty1) :: linear_ty2
+    )
+  | .inter ty1 (.field l ty2) => 
+    bind (linearize_fields ty1) (fun linear_ty1 =>
+      (l, ty2) :: linear_ty1
+    )
+  | _ => none
+
 
 
 partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
@@ -564,11 +575,12 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
 
   | ty', .recur ty =>
     /-
-    μ _ <: X × Y
+    X × Y <: μ _
     X <: (∃ α :: (α × Y <: unroll(μ _)) . α)
     Y <: (∃ β :: (X × β <: unroll(μ _)) . β)
     -/
     -- TODO: linearize first, then generate constraints
+    bind (linearize_record ty') (fun lin_ty' =>
     let cs := (make_record_constraint_recur Ty.dynamic ty' ty)
     if cs.length = 0 then
       none
@@ -580,6 +592,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
           )
         | none, _ => none
       ) (some (i, [])) cs
+    )
 
 
   | .corec ty', .corec ty =>
@@ -709,6 +722,32 @@ inductive Tm : Type
     -- e.g. ty_recur, (not mu_ty)
 
 
+partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat × Ty))
+  | Tm.fvar id, ty =>
+    match lookup id env_tm with
+      | some _ => none 
+      | none => [(id, ty)] 
+  | .tag l_tm tm, .tag l_ty ty => 
+    if l_tm = l_ty then
+      patvars env_tm tm ty 
+    else none
+  | .record fds, ty  => 
+    bind (linearize_fields ty) (fun linear_ty =>
+      if linear_ty.length = fds.length then
+        List.foldl (fun acc => fun (l, tm)  =>
+          bind acc (fun env_tm_1 =>
+          bind (lookup_record l linear_ty) (fun ty =>
+          bind (patvars (env_tm_1 ++ env_tm) tm ty) (fun env_tm_2 =>
+            some (env_tm_2 ++ env_tm_1)
+          )))
+        ) (some []) fds
+      else
+        none
+    )
+  -- TODO: finish
+  | _, _ => none
+
+
 def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty
   | .dynamic => 
     (i + 1, .fvar i) 
@@ -749,62 +788,6 @@ def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty
   | .corec ty => 
     let (i, ty) := Ty.dynamic_subst i ty
     (i, .corec ty)
-
-/-
-
-`patvars t = o[env_tm]`
-```
-patvars x τ = 
-  some {x : τ}
-patvars (.l t₁) τ = 
-  map (project τ l) (τ1 =>
-    patvars t₁ τ1
-  )
-patvars (.l t fs) τ =
-  map (patvars (.l t) τ) (env_tm₁ =>
-  map (patvars fs τ) (env_tm₂ =>
-    some (env_tm₁ ++ env_tm₂)
-  ))
-...
-```
--/
-
-def linearize_record : Ty -> Option (List (String × Ty))
-| .field l ty => some [(l, ty)]
-| .inter (.field l ty1) ty2 => 
-  bind (linearize_record ty2) (fun linear_ty2 =>
-    (l, ty1) :: linear_ty2
-  )
-| .inter ty1 (.field l ty2) => 
-  bind (linearize_record ty1) (fun linear_ty1 =>
-    (l, ty2) :: linear_ty1
-  )
-| _ => none
-
-partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat × Ty))
-  | Tm.fvar id, ty =>  
-    match lookup id env_tm with
-      | some _ => none 
-      | none => [(id, ty)] 
-  | .tag l_tm tm, .tag l_ty ty => 
-    if l_tm = l_ty then
-      patvars env_tm tm ty 
-    else none
-  | .record fds, ty  => 
-    bind (linearize_record ty) (fun linear_ty =>
-      if linear_ty.length = fds.length then
-        List.foldl (fun acc => fun (l, tm)  =>
-          bind acc (fun env_tm_1 =>
-          bind (lookup_record l linear_ty) (fun ty =>
-          bind (patvars (env_tm_1 ++ env_tm) tm ty) (fun env_tm_2 =>
-            some (env_tm_2 ++ env_tm_1)
-          )))
-        ) (some []) fds
-      else
-        none
-    )
-  -- TODO: finish
-  | _, _ => none
 
 /-
 NOTE: infer returns a refined type in addition the type variable assignments
@@ -881,7 +864,7 @@ partial def infer
       some (i, env_ty2 ++ env_ty1, ty')
     ))
 
-    -- bind (linearize_record ty1) (fun list_field =>
+    -- bind (linearize_fields ty1) (fun list_field =>
     -- bind (lookup_record l list_field) (fun ty' =>
 
   | .app t2 t1 =>
