@@ -12,6 +12,30 @@ inductive Ty : Type
   | exis : Nat -> Ty × Ty -> Ty -> Ty
   | recur : Ty -> Ty
   | corec : Ty -> Ty
+  deriving Repr
+
+open Std
+
+def Ty.repr [Repr α] (ty : Ty) (n : Nat) : Format :=
+  -- let _ : ToFormat α := ⟨repr⟩
+  match ty, n with
+    | _ , _ => ""
+    -- | .dynamic, _ => Format.text "?" 
+    -- | .bvar : Nat -> Ty  
+    -- | .fvar : Nat -> Ty
+    -- | .unit : Ty
+    -- | .tag : String -> Ty -> Ty
+    -- | .field : String -> Ty -> Ty
+    -- | .union : Ty -> Ty -> Ty
+    -- | .inter : Ty -> Ty -> Ty
+    -- | .case : Ty -> Ty -> Ty
+    -- | .univ : Nat -> Ty × Ty -> Ty -> Ty
+    -- | .exis : Nat -> Ty × Ty -> Ty -> Ty
+    -- | .recur : Ty -> Ty
+    -- | .corec : Ty -> Ty
+
+-- instance : Repr Ty where 
+--   def reprPrec ty n := Ty.to_string ty n
 
 
 declare_syntax_cat slm
@@ -95,6 +119,31 @@ def x := 0
 #check [: μ 0 . #foo £0 & ? | @2 & ? -> @1 | @2 :]
 #check [: μ 0 . #foo £0 & ? | @2 & ? :]
 #check [: ? :]
+
+
+/-
+  μ plus .
+    #zero ♢ × #zero ♢ × #zero ♢ | 
+
+    ∀ N :: #zero , N, N ≤ plus .  
+      #zero ♢ × #succ N × #succ N | 
+
+    ∀ X Y Z :: X, Y, Z ≤ plus .  
+      #succ X × Y × #succ Z
+-/
+def plus := [: 
+  μ 0 . 
+    (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) |
+
+    (∀ 1 :: (.x #zero ♢ & .y £0 & .z £0) ≤ £1 .   
+      (.x #zero ♢ & .y #succ £0 & .z #succ £0)) |
+
+    (∀ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
+      (.x #succ £0 & .y £1 & .z #succ £2))
+:]
+#eval plus 
+#eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
+
 
 def lookup (key : Nat) : List (Nat × T) -> Option T
   | (k,v) :: bs => if key = k then some v else lookup key bs 
