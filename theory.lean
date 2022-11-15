@@ -689,27 +689,45 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | _, _ => none
 
 
+def zero_ := [: 
+    #zero ♢
+:]
+
+#eval unify 3 [] [:
+    (#dumb ♢)
+:] zero_
+
+#eval unify 3 [] [:
+    (#zero ♢)
+:] zero_
+
 /-
   μ nat .
     #zero ♢ | 
     #succ nat 
 -/
-
 def nat_ := [: 
   μ 0 . 
     #zero ♢ |
     #succ £0
 :]
 
-def uni_00 := unify 3 [] [:
+#eval unify 3 [] [:
     (#zero ♢)
 :] nat_ 
-#eval uni_00
 
-def uni_0 := unify 3 [] [:
+#eval unify 3 [] [:
     (#succ (#zero ♢))
 :] nat_ 
-#eval uni_0
+
+def exi_ := [: 
+  ∃ 1 . 
+    #succ £0
+:]
+
+#eval unify 3 [] [:
+    (#succ (#zero ♢))
+:] exi_ 
 
 
 /-
