@@ -725,6 +725,25 @@ def nat_ := [:
     (#succ (@0))
 :] nat_ 
 
+def nat_list := [: 
+  μ 1 . 
+    .l #zero ♢ & .r #nil ♢ |
+    ∃ 2 :: .l £0 & .r £1 ≤ £3 .
+      .l #succ £0 & .r #cons £1 
+:]
+
+#eval unify 3 [] [:
+    (.l #succ #zero ♢ & .r #cons #nil ♢)
+:] nat_list 
+
+#eval unify 3 [] [:
+    (.l #succ #zero ♢ & .r #cons @0)
+:] nat_list 
+
+#eval unify 3 [] [:
+    (.l (#succ @0) & .r #cons #nil ♢)
+:] nat_list 
+
 def exi_ := [: 
   ∃ 1 .  #succ £0
 :]
@@ -754,20 +773,20 @@ def dynamic_ := [:
   μ plus .
     #zero ♢ × #zero ♢ × #zero ♢ | 
 
-    ∀ N :: #zero , N, N ≤ plus .  
+    ∃ N :: #zero , N, N ≤ plus .  
       #zero ♢ × #succ N × #succ N | 
 
-    ∀ X Y Z :: X, Y, Z ≤ plus .  
+    ∃ X Y Z :: X, Y, Z ≤ plus .  
       #succ X × Y × #succ Z
 -/
 def plus := [: 
   μ 1 . 
     (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) |
 
-    (∀ 1 :: (.x #zero ♢ & .y £0 & .z £0) ≤ £1 .   
+    (∃ 1 :: (.x #zero ♢ & .y £0 & .z £0) ≤ £1 .   
       (.x #zero ♢ & .y #succ £0 & .z #succ £0)) |
 
-    (∀ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
+    (∃ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
       (.x #succ £0 & .y £1 & .z #succ £2))
 :]
 
@@ -780,11 +799,9 @@ def plus := [:
 
 
 #eval unify 3 [] [:
-  (
     .x #zero ♢ &
     .y @0 &
     .z #zero ♢
-  )
 :] plus
 
 #eval unify 3 [] [:
