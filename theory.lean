@@ -57,8 +57,8 @@ syntax "∀" slm "::" slm "≤" slm "." slm : slm
 syntax "∀" slm "." slm : slm 
 syntax "∃" slm "::" slm "≤" slm  "." slm : slm 
 syntax "∃" slm "." slm : slm 
-syntax "μ 0 ." slm : slm 
-syntax "ν 0 ." slm : slm 
+syntax "μ 1 ." slm : slm 
+syntax "ν 1 ." slm : slm 
 
 syntax:50 slm:50 "⊆" slm:51 : slm
 
@@ -92,8 +92,8 @@ macro_rules
   | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] ([: £$a :], [: ? :]) [: $b :] )
   | `([: ∃ $a :: $b ≤ $c . $d  :]) => `(Ty.exis [: $a :] ([: $b :], [: $c :]) [: $d :])
   | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] ([: £$a :], [: ? :]) [: $b :] )
-  | `([: μ 0 . $a :]) => `(Ty.recur [: $a :])
-  | `([: ν 0 . $a :]) => `(Ty.corec [: $a :])
+  | `([: μ 1 . $a :]) => `(Ty.recur [: $a :])
+  | `([: ν 1 . $a :]) => `(Ty.corec [: $a :])
 
 -- generic
   | `([: ($a) :]) => `([: $a :])
@@ -113,11 +113,11 @@ def x := 0
 #check [: ♢ :]
 #check [: @24 :]
 #check [: #foo ♢ | #boo ♢ :]
-#check [: μ 0 . #foo £0 :]
-#check [: μ 0 . #foo £0  & ? | @2 & ?:]
+#check [: μ 1 . #foo £0 :]
+#check [: μ 1 . #foo £0  & ? | @2 & ?:]
 #check [: £3 & ? -> @1 | @2 :]
-#check [: μ 0 . #foo £0 & ? | @2 & ? -> @1 | @2 :]
-#check [: μ 0 . #foo £0 & ? | @2 & ? :]
+#check [: μ 1 . #foo £0 & ? | @2 & ? -> @1 | @2 :]
+#check [: μ 1 . #foo £0 & ? | @2 & ? :]
 #check [: ? :]
 
 
@@ -305,7 +305,7 @@ macro_rules
 
 
 def τ := [: ? :]
-#check [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
+#check [: ⟨τ⟩ ↑ 0 / [μ 1 . ⟨τ⟩]:]
 
 
 
@@ -363,11 +363,11 @@ can't unroll on rhs
 
 partial def unroll_recur (τ : Ty) : Ty := 
   -- Ty.raise_binding 0 [Ty.recur τ] τ 
-  [: ⟨τ⟩ ↑ 0 / [μ 0 . ⟨τ⟩]:]
+  [: ⟨τ⟩ ↑ 0 / [μ 1 . ⟨τ⟩]:]
 
 partial def unroll_corec (τ : Ty) : Ty := 
   -- Ty.raise_binding 0 [Ty.recur τ] τ 
-  [: ⟨τ⟩ ↑ 0 / [ν 0 . ⟨τ⟩]:]
+  [: ⟨τ⟩ ↑ 0 / [ν 1 . ⟨τ⟩]:]
 
 def Ty.lower_binding (depth : Nat) : Ty -> Ty
   | .dynamic => .dynamic 
@@ -400,13 +400,13 @@ macro_rules
 
 partial def roll_recur (key : Nat) (τ : Ty) : Ty :=
   if Ty.occurs key τ then
-    [: (μ 0 . ⟨τ⟩↓1) % [⟨key⟩ / £0] :]
+    [: (μ 1 . ⟨τ⟩↓1) % [⟨key⟩ / £0] :]
   else
     τ
 
 partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
   if Ty.occurs key τ then
-    [: (ν 0 . ⟨τ⟩↓1) % [⟨key⟩ / £0] :]
+    [: (ν 1 . ⟨τ⟩↓1) % [⟨key⟩ / £0] :]
   else
     τ
 
@@ -707,7 +707,7 @@ def zero_ := [:
     #succ nat 
 -/
 def nat_ := [: 
-  μ 0 . 
+  μ 1 . 
     #zero ♢ |
     #succ £0
 :]
@@ -719,6 +719,10 @@ def nat_ := [:
 
 #eval unify 3 [] [:
     (#succ (#zero ♢))
+:] nat_ 
+
+#eval unify 3 [] [:
+    (#succ (@0))
 :] nat_ 
 
 def exi_ := [: 
@@ -757,7 +761,7 @@ def dynamic_ := [:
       #succ X × Y × #succ Z
 -/
 def plus := [: 
-  μ 0 . 
+  μ 1 . 
     (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) |
 
     (∀ 1 :: (.x #zero ♢ & .y £0 & .z £0) ≤ £1 .   
