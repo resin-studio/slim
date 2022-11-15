@@ -51,12 +51,12 @@ syntax "?" : slm
 syntax:50 slm:50 "->" slm:51 : slm
 syntax:60 slm:60 "|" slm:61 : slm
 syntax:60 slm:60 "+" slm:61 : slm
+syntax:64 "∃" slm "::" slm "≤" slm  "." slm:65 : slm 
+syntax:64 "∃" slm "." slm:65 : slm 
 syntax:70 slm:70 "&" slm:71 : slm
 syntax:70 slm:70 "×" slm:71 : slm
-syntax "∀" slm "::" slm "≤" slm "." slm : slm 
-syntax "∀" slm "." slm : slm 
-syntax "∃" slm "::" slm "≤" slm  "." slm : slm 
-syntax "∃" slm "." slm : slm 
+syntax:74 "∀" slm "::" slm "≤" slm "." slm:75 : slm 
+syntax:74 "∀" slm "." slm:75 : slm 
 syntax "μ 1 ." slm : slm 
 syntax "ν 1 ." slm : slm 
 
@@ -100,6 +100,13 @@ macro_rules
 
 --escape 
   | `([: ⟨ $e ⟩ :]) => pure e
+
+#eval [: 
+    ∃ 2 :: .l £0 & .r £1 ≤ £3 .
+      .l #succ £0 & .r #cons £1  |
+    (∃ 2 :: .l £0 & .r £1 ≤ £3 .
+      .l #succ £0 & .r #cons £1)
+:]
 
 #check [: £0 | ? :]
 #check [: £0 & ? :]
@@ -729,8 +736,9 @@ def nat_list := [:
   μ 1 . 
     .l #zero ♢ & .r #nil ♢ |
     ∃ 2 :: .l £0 & .r £1 ≤ £3 .
-      .l #succ £0 & .r #cons £1 
+      .l #succ £0 & .r #cons £1
 :]
+#eval nat_list
 
 #eval unify 3 [] [:
     (.l #succ #zero ♢ & .r #cons #nil ♢)
