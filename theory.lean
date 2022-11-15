@@ -121,29 +121,6 @@ def x := 0
 #check [: ? :]
 
 
-/-
-  μ plus .
-    #zero ♢ × #zero ♢ × #zero ♢ | 
-
-    ∀ N :: #zero , N, N ≤ plus .  
-      #zero ♢ × #succ N × #succ N | 
-
-    ∀ X Y Z :: X, Y, Z ≤ plus .  
-      #succ X × Y × #succ Z
--/
-def plus := [: 
-  μ 0 . 
-    (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) |
-
-    (∀ 1 :: (.x #zero ♢ & .y £0 & .z £0) ≤ £1 .   
-      (.x #zero ♢ & .y #succ £0 & .z #succ £0)) |
-
-    (∀ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
-      (.x #succ £0 & .y £1 & .z #succ £2))
-:]
-#eval plus 
-#eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
-
 
 def lookup (key : Nat) : List (Nat × T) -> Option T
   | (k,v) :: bs => if key = k then some v else lookup key bs 
@@ -540,8 +517,24 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       none
 
   | .unit, .unit => some (i, []) 
-  | .dynamic, _ => some (i, []) 
-  | _, .dynamic => some (i, []) 
+
+  | .tag l' ty', .tag l ty =>
+    if l' = l then
+      unify i env_ty ty' ty
+    else
+      none
+
+  | .field l' ty', .field l ty =>
+    if l' = l then
+      unify i env_ty ty' ty
+    else
+      none
+
+  | .case ty1 ty2', .case ty1' ty2 =>
+    bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
+    bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
+      some (i, env_ty2 ++ env_ty1)
+    ))
 
     -- Note: existential/universal rules should execute before 
     -- variable rules to free the bound variables before writing. 
@@ -561,11 +554,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     -- |- {x;z} <: {x} & Y
     -- Y := {z} | ⊥
 
-  | ty', .univ n (ty_c1, ty_c2) ty =>
-    if Ty.equal env_ty ty' (.univ n (ty_c1, ty_c2) ty) then
-      some (i, [])
-    else
-      none
 
   | .univ n (ty_c1, ty_c2) ty', ty =>
     let (i, env_ty, args) := refresh i n 
@@ -593,23 +581,21 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       ]) 
     | some ty => unify i env_ty ty' ty 
 
-  | .tag l' ty', .tag l ty =>
-    if l' = l then
-      unify i env_ty ty' ty
+  | .exis n (ty_c1, ty_c2) ty', ty =>
+    if Ty.equal env_ty (.exis n (ty_c1, ty_c2) ty') ty then
+      some (i, []) 
     else
       none
 
-  | .field l' ty', .field l ty =>
-    if l' = l then
-      unify i env_ty ty' ty
+  | ty', .univ n (ty_c1, ty_c2) ty =>
+    if Ty.equal env_ty ty' (.univ n (ty_c1, ty_c2) ty) then
+      some (i, [])
     else
       none
 
-  | .case ty1 ty2', .case ty1' ty2 =>
-    bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
-    bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1)
-    ))
+  | .dynamic, _ => some (i, []) 
+  | _, .dynamic => some (i, []) 
+
 
   | .recur ty', .recur ty =>
     if Ty.equal env_ty ty' ty then
@@ -630,7 +616,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     -/
     -- TODO: linearize first, then generate constraints
     bind (linearize_record ty') (fun lin_ty' =>
-    let cs := (make_record_constraint_recur Ty.dynamic ty' ty)
+    let cs := (make_record_constraint_recur Ty.dynamic lin_ty' ty)
     if cs.length = 0 then
       none
     else
@@ -665,12 +651,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1)
     ))
-
-  | .exis n (ty_c1, ty_c2) ty', ty =>
-    if Ty.equal env_ty (.exis n (ty_c1, ty_c2) ty') ty then
-      some (i, []) 
-    else
-      none
 
 
   | .union ty1 ty2, ty => 
@@ -707,6 +687,50 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
           | .some (i, env_ty2) => some (i, env_ty2 ++ env_ty1)
 
   | _, _ => none
+
+
+
+/-
+  μ plus .
+    #zero ♢ × #zero ♢ × #zero ♢ | 
+
+    ∀ N :: #zero , N, N ≤ plus .  
+      #zero ♢ × #succ N × #succ N | 
+
+    ∀ X Y Z :: X, Y, Z ≤ plus .  
+      #succ X × Y × #succ Z
+-/
+def plus := [: 
+  μ 0 . 
+    (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) |
+
+    (∀ 1 :: (.x #zero ♢ & .y £0 & .z £0) ≤ £1 .   
+      (.x #zero ♢ & .y #succ £0 & .z #succ £0)) |
+
+    (∀ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
+      (.x #succ £0 & .y £1 & .z #succ £2))
+:]
+
+#eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
+def uni_1 := unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (@0) &
+    .z (#succ (#succ #succ (#zero ♢)))
+  )
+:] plus
+
+#eval uni_1 
+
+def uni_2 := unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (#succ #zero ♢) &
+    .z (@0)
+  )
+:] plus
+
+#eval uni_2 
 
 
 /-
