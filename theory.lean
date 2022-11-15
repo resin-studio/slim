@@ -45,8 +45,8 @@ syntax "[" slm,+ "]" : slm
 syntax "£"slm:90 : slm
 syntax "@"slm:90 : slm
 syntax "♢" : slm
-syntax "#"slm:90 slm : slm
-syntax "."slm:90 slm : slm
+syntax "#"slm:90 slm:90 : slm
+syntax "."slm:90 slm:90 : slm
 syntax "?" : slm
 syntax:50 slm:50 "->" slm:51 : slm
 syntax:60 slm:60 "|" slm:61 : slm
@@ -567,17 +567,17 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
 
   | .fvar id, ty  => match lookup id env_ty with 
     -- TODO: free existential bound variables on rhs before saving. 
-    | none => some (i + 2, [
-        (i, .inter (roll_recur id ty) (Ty.fvar (i + 1))),
-        (i + 1, Ty.dynamic)
+    | none => some (i + 1, [
+        (id, .inter (roll_recur id ty) (Ty.fvar i)),
+        (i, Ty.dynamic)
       ]) 
     | some ty' => unify i env_ty ty' ty 
 
   | ty', .fvar id  => match lookup id env_ty with 
     -- TODO: free universal bound variables on lhs before saving. 
-    | none => some (i + 2, [
-        (i, .union (roll_corec id ty') (Ty.fvar (i + 1))),
-        (i + 1, Ty.dynamic)
+    | none => some (i + 1, [
+        (id, .union (roll_corec id ty') (Ty.fvar i)),
+        (id + 1, Ty.dynamic)
       ]) 
     | some ty => unify i env_ty ty' ty 
 
@@ -711,6 +711,7 @@ def nat_ := [:
     #zero ♢ |
     #succ £0
 :]
+#eval nat_
 
 #eval unify 3 [] [:
     (#zero ♢)
@@ -721,13 +722,28 @@ def nat_ := [:
 :] nat_ 
 
 def exi_ := [: 
-  ∃ 1 . 
-    #succ £0
+  ∃ 1 .  #succ £0
 :]
 
 #eval unify 3 [] [:
     (#succ (#zero ♢))
 :] exi_ 
+
+def free_ := [: 
+  #succ @0
+:]
+
+#eval unify 3 [] [:
+    (#succ (#zero ♢))
+:] free_ 
+
+def dynamic_ := [: 
+  #succ ? 
+:]
+
+#eval unify 3 [] [:
+    (#succ (#zero ♢))
+:] dynamic_ 
 
 
 /-
@@ -751,10 +767,31 @@ def plus := [:
       (.x #succ £0 & .y £1 & .z #succ £2))
 :]
 
+
+
 #print plus
 
 #eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
-def uni_1 := unify 3 [] [:
+#eval [: #succ #succ #zero ♢ :]  
+
+
+#eval unify 3 [] [:
+  (
+    .x #zero ♢ &
+    .y @0 &
+    .z #zero ♢
+  )
+:] plus
+
+#eval unify 3 [] [:
+  (
+    .x #zero ♢ &
+    .y @0 &
+    .z #succ #succ #zero ♢
+  )
+:] plus
+
+#eval unify 3 [] [:
   (
     .x (#succ #zero ♢) &
     .y (@0) &
@@ -762,17 +799,13 @@ def uni_1 := unify 3 [] [:
   )
 :] plus
 
-#eval uni_1 
-
-def uni_2 := unify 3 [] [:
+#eval unify 3 [] [:
   (
     .x (#succ #zero ♢) &
     .y (#succ #zero ♢) &
     .z (@0)
   )
 :] plus
-
-#eval uni_2 
 
 
 /-
