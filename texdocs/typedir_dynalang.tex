@@ -326,6 +326,29 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \begin{figure}[h]
 \begin{mathpar}
 
+\inferrule[var-left]
+  {
+    \alpha \notin \text{dom}(\Delta) \\ \text{fresh}\ \beta  
+    \\\\
+    (\text{occurs}\ \alpha\ \tau\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
+    \tau = \tau_1
+    % Note: existential rule should execute before this rule to free the bound variables before writing. 
+  }
+  {\Delta \vdash \alpha \leq \tau	
+    \rightsquigarrow  
+    \cdot,\alpha \mapsto \tau_1 \ \&\ \beta
+  } 
+
+\inferrule[var-rght]
+  {  
+    \alpha \notin \text{dom}(\Delta) \\ \text{fresh}\ \beta  
+    \\\\
+    (\text{occurs}\ \alpha\ \tau\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
+    \tau = \tau_1
+    % Note: universal rule should execute before this rule to free the bound variables before writing. 
+  }
+  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \cdot,\alpha \mapsto \tau_1 \ |\ \beta } 
+
 \inferrule[exis-free]
   { 
     \Delta \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_1
@@ -360,28 +383,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \Delta_1;\Delta_2
   }
 
-\inferrule[var-left]
-  {
-    \alpha \notin \text{dom}(\Delta) \\ \text{fresh}\ \beta  
-    \\\\
-    (\text{occurs}\ \alpha\ \tau\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
-    \tau = \tau_1
-    % Note: existential rule should execute before this rule to free the bound variables before writing. 
-  }
-  {\Delta \vdash \alpha \leq \tau	
-    \rightsquigarrow  
-    \cdot,\alpha \mapsto \tau_1 \ \&\ \beta
-  } 
-
-\inferrule[var-rght]
-  {  
-    \alpha \notin \text{dom}(\Delta) \\ \text{fresh}\ \beta  
-    \\\\
-    (\text{occurs}\ \alpha\ \tau\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
-    \tau = \tau_1
-    % Note: universal rule should execute before this rule to free the bound variables before writing. 
-  }
-  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \cdot,\alpha \mapsto \tau_1 \ |\ \beta } 
 
 
 \end{mathpar}
