@@ -375,44 +375,44 @@ partial def unroll : Ty -> Ty
     [: ⟨ty⟩ ↑ 0 / [ν 1 . ⟨ty⟩]:]
   | ty => ty
 
-def Ty.lower_binding (depth : Nat) : Ty -> Ty
-  | .dynamic => .dynamic 
-  | .bvar id => .bvar (id + depth)
-  | .fvar id => .fvar id 
-  | .unit => .unit
-  | .tag l ty => .tag l (Ty.lower_binding depth ty) 
-  | .field l ty => .field l (Ty.lower_binding depth ty)
-  | .union ty1 ty2 => .union (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
-  | .inter ty1 ty2 => .inter (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
-  | .case ty1 ty2 => .case (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
-  | .univ n (ty_c1, ty_c2) ty => (.univ
-    n
-    (Ty.lower_binding (depth + n) ty_c1, Ty.lower_binding (depth + n) ty_c2)
-    (Ty.lower_binding (depth + n) ty)
-  )
-  | .exis n (ty_c1, ty_c2) ty => (.exis
-    n
-    (Ty.lower_binding (depth + n) ty_c1, Ty.lower_binding (depth + n) ty_c2)
-    (Ty.lower_binding (depth + n) ty)
-  )
-  | .recur ty => .recur (Ty.lower_binding (depth + 1) ty)
-  | .corec ty => .corec (Ty.lower_binding (depth + 1) ty)
+-- def Ty.lower_binding (depth : Nat) : Ty -> Ty
+--   | .dynamic => .dynamic 
+--   | .bvar id => .bvar (id + depth)
+--   | .fvar id => .fvar id 
+--   | .unit => .unit
+--   | .tag l ty => .tag l (Ty.lower_binding depth ty) 
+--   | .field l ty => .field l (Ty.lower_binding depth ty)
+--   | .union ty1 ty2 => .union (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
+--   | .inter ty1 ty2 => .inter (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
+--   | .case ty1 ty2 => .case (Ty.lower_binding depth ty1) (Ty.lower_binding depth ty2)
+--   | .univ n (ty_c1, ty_c2) ty => (.univ
+--     n
+--     (Ty.lower_binding (depth + n) ty_c1, Ty.lower_binding (depth + n) ty_c2)
+--     (Ty.lower_binding (depth + n) ty)
+--   )
+--   | .exis n (ty_c1, ty_c2) ty => (.exis
+--     n
+--     (Ty.lower_binding (depth + n) ty_c1, Ty.lower_binding (depth + n) ty_c2)
+--     (Ty.lower_binding (depth + n) ty)
+--   )
+--   | .recur ty => .recur (Ty.lower_binding (depth + 1) ty)
+--   | .corec ty => .corec (Ty.lower_binding (depth + 1) ty)
 
-syntax slm "↓" num : slm 
+-- syntax slm "↓" num : slm 
 
-macro_rules
-  | `([: $b:slm ↓ $a:num :]) => `(Ty.lower_binding $a [: $b :])
+-- macro_rules
+--   | `([: $b:slm ↓ $a:num :]) => `(Ty.lower_binding $a [: $b :])
 
 
 partial def roll_recur (key : Nat) (τ : Ty) : Ty :=
   if Ty.occurs key τ then
-    [: (μ 1 . ⟨τ⟩↓1) % [⟨key⟩ / £0] :]
+    [: (μ 1 . ⟨τ⟩) % [⟨key⟩ / £0] :]
   else
     τ
 
 partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
   if Ty.occurs key τ then
-    [: (ν 1 . ⟨τ⟩↓1) % [⟨key⟩ / £0] :]
+    [: (ν 1 . ⟨τ⟩) % [⟨key⟩ / £0] :]
   else
     τ
 
@@ -518,13 +518,13 @@ Y <: (∃ β :: ((X ; β) <: unroll (μ _)). β)
 def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
   | (.field l ty1), mu_ty => 
       let ty2 := .exis 1 ( 
-        (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
-        (Ty.lower_binding 1 (unroll mu_ty))
+        (Ty.inter (prev_ty) (.field l (.bvar 0))),
+        ((unroll mu_ty))
       ) (.bvar 0)
       [(ty1, ty2)]
   | .inter (.field l ty1) rem_ty, mu_ty => 
       let ty2 := 
-      [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
+      [: ∃ 1 :: (⟨prev_ty⟩ & (#⟨l⟩ £0) & ⟨rem_ty⟩) ≤ ⟨unroll mu_ty⟩ . £0 :]
 
       let rem := make_field_constraints (Ty.inter prev_ty (.field l ty1)) rem_ty mu_ty
       if rem.length = 0 then
@@ -563,6 +563,19 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
       some (i, env_ty2 ++ env_ty1)
     ))
 
+  | ty', .fvar id  => match lookup id env_ty with 
+    | none => some (i + 1, [
+        (id, .union (roll_corec id ty') (Ty.fvar i))
+      ]) 
+    | some ty => unify i env_ty ty' ty 
+
+  | .fvar id, ty  => match lookup id env_ty with 
+    | none => some (i + 1, [
+        (id, .inter (roll_recur id ty) (Ty.fvar i))
+      ]) 
+    | some ty' => unify i env_ty ty' ty 
+
+
   | ty', .exis n (ty_c1, ty_c2) ty =>
     let (i, args) := refresh i n 
     let ty_c1 := Ty.raise_binding 0 args ty_c1
@@ -589,19 +602,6 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
     bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) => 
       some (i, env_ty2 ++ env_ty1)
     ))
-
-  | ty', .fvar id  => match lookup id env_ty with 
-    | none => some (i + 1, [
-        (id, .union (roll_corec id ty') (Ty.fvar i))
-      ]) 
-    | some ty => unify i env_ty ty' ty 
-
-  | .fvar id, ty  => match lookup id env_ty with 
-    | none => some (i + 1, [
-        (id, .inter (roll_recur id ty) (Ty.fvar i))
-      ]) 
-    | some ty' => unify i env_ty ty' ty 
-
 
   | .exis n (ty_c1, ty_c2) ty', ty =>
     if Ty.equal env_ty (.exis n (ty_c1, ty_c2) ty') ty then
@@ -662,8 +662,8 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
     (∀ α :: (unroll(ν _) <: α -> Y) . α) <: X 
     (∀ β :: (unroll(ν _) <: X -> β) . β) <: Y
     -/
-    let ty1' := .univ 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2) (Ty.bvar 0) 
-    let ty2' := .univ 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case ty1 (Ty.bvar 0)) (Ty.bvar 0) 
+    let ty1' := .univ 1 ((unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2) (Ty.bvar 0) 
+    let ty2' := .univ 1 ((unroll (.corec ty_corec)), .case ty1 (Ty.bvar 0)) (Ty.bvar 0) 
     bind (unify i env_ty ty1' ty1 ) (fun (i, env_ty1) =>
     bind (unify i env_ty ty2' ty2 ) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1)
@@ -728,19 +728,19 @@ def nat_ := [:
     #zero ♢ |
     #succ £0
 :]
-#eval nat_
+-- #eval nat_
 
-#eval unify 3 [] [:
-    (#zero ♢)
-:] nat_ 
+-- #eval unify 3 [] [:
+--     (#zero ♢)
+-- :] nat_ 
 
-#eval unify 3 [] [:
-    (#succ (#zero ♢))
-:] nat_ 
+-- #eval unify 3 [] [:
+--     (#succ (#zero ♢))
+-- :] nat_ 
 
-#eval unify 3 [] [:
-    (#succ (@0))
-:] nat_ 
+-- #eval unify 3 [] [:
+--     (#succ (@0))
+-- :] nat_ 
 
 def nat_list := [: 
   μ 1 .
@@ -768,69 +768,68 @@ def nat_list := [:
 
 #eval unify 3 [] 
   [: #zero ♢ :] 
-  [: ∃ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+  [: ∃ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨(unroll nat_list)⟩ . £0 :]
 
 #eval unify 3 [] 
   [: #zero ♢ :] 
-  [: ∃ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+  [: ∃ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨(unroll nat_list)⟩ . £0 :]
 
 #eval unify 3 [] 
   [: @0 :] 
-  [: ∃ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+  [: ∃ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨(unroll nat_list)⟩ . £0 :]
 
 #eval unify 3 [] 
-  [: ∀ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+  [: ∀ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨(unroll nat_list)⟩ . £0 :]
   [: #zero ♢ :] 
 
 #eval unify 3 [] 
-  [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+  [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨(unroll nat_list)⟩ . £0 :]
   [: #zero ♢ :] 
 
 #eval unify 3 [] 
-  [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+  [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨(unroll nat_list)⟩ . £0 :]
   [: @0 :] 
 
 #eval unify 3 [] 
   [: (.l #zero ♢ & .r @0) :] 
   nat_list
 
--- TODO: why does this terminate?
 #eval unify 3 [] 
   [: (.l @0 & .r @1) :] 
   nat_list
 
-#eval unify 3 [] 
-  [: @0 :] 
-  [: ∃ 1 :: (.l £0 & .r @1) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+-- #eval unify 3 [] 
+--   [: @0 :] 
+--   [: ∃ 1 :: (.l £0 & .r @1) ≤ ⟨(unroll nat_list)⟩ . £0 :]
 
-#eval unroll nat_list 
-#eval unify 3 [] 
-  [: (.l @2 & .r @1) :] 
-  (unroll nat_list)
+-- #eval unroll nat_list 
+-- #eval unify 3 [] 
+--   [: (.l @2 & .r @1) :] 
+--   (unroll nat_list)
 
-#eval unify 3 [] 
-  [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
-  [: @0 :] 
+-- #eval unify 3 [] 
+--   [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨(unroll nat_list)⟩ . £0 :]
+--   [: @0 :] 
 
-#eval unify 3 [] [:
-    (.l (#zero ♢ & £1) & .r #nil ♢)
-:] (Ty.lower_binding 1 (unroll nat_list))
+-- #eval unify 3 [] [:
+--     (.l (#zero ♢ & £1) & .r #nil ♢)
+-- :] ((unroll nat_list))
 
-#eval unify 3 [] [:
-    (.l (#zero ♢ | £1) & .r #nil ♢)
-:] (Ty.lower_binding 1 (unroll nat_list))
+-- #eval unify 3 [] [:
+--     (.l (#zero ♢ | £1) & .r #nil ♢)
+-- :] ((unroll nat_list))
 
-#eval unify 3 [] [:
-    (#zero ♢ | £1)
-:] [: #zero ♢ :] 
+-- #eval unify 3 [] [:
+--     (#zero ♢ | £1)
+-- :] [: #zero ♢ :] 
 
-#eval unify 3 [] [:
-    (#zero ♢ & £1)
-:] [: #zero ♢ :] 
+-- #eval unify 3 [] [:
+--     (#zero ♢ & £1)
+-- :] [: #zero ♢ :] 
 
--- TODO
--- expected: some
--- actual: none 
+-- -- TODO
+-- -- expected: some
+-- -- actual: none 
 
 
 #eval unify 3 [] [:
@@ -841,164 +840,142 @@ def nat_list := [:
   [: #cons #nil ♢ :] 
   [: ∃ 1 :: 
     (.l #succ #zero ♢ & .r £0 ) ≤ 
-    ⟨Ty.lower_binding 1 (unroll nat_list)⟩. 
+    ⟨(unroll nat_list)⟩. 
     £0
   :]
 
+-- #eval unify 3 [] 
+--   [: (.l #succ #zero ♢ & .r @2) :]
+--   [: ⟨(unroll nat_list)⟩ :]
 
-def foo (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty)) 
-  | ty', .exis n (ty_c1, ty_c2) ty =>
-    let (i, args) := refresh i n 
-    let ty_c1 := Ty.raise_binding 0 args ty_c1
-    let ty_c2 := Ty.raise_binding 0 args ty_c2
-    let ty := Ty.raise_binding 0 args ty
-    -- Option.bind (unify i env_ty ty_c1 ty_c2) (fun (i1, env_ty1) =>
-    Option.bind (unify i (env_ty) ty' ty) (fun (i, env_ty2) => 
-      Option.some (i, env_ty2)
-    )
-    -- )
-  | _, _ => none
+-- #eval unify 3 [] 
+--   [: #cons #nil ♢ :] 
+--   [:  
+--     @0
+--   :]
 
-#eval foo 3 [] 
-  [: #cons #nil ♢ :] 
-  [: ∃ 1 :: 
-    (.l #succ #zero ♢ & .r £0 ) ≤ 
-    ⟨Ty.lower_binding 1 (unroll nat_list)⟩. 
-    £0
-  :]
-
-#eval unify 3 [] 
-  [: (.l #succ #zero ♢ & .r @2) :]
-  [: ⟨(unroll nat_list)⟩ :]
-
-#eval unify 3 [] 
-  [: #cons #nil ♢ :] 
-  [:  
-    @0
-  :]
-
-#eval unify 3 [] 
-  [: #cons #nil ♢ :]
-  [: (#cons ((#nil ♢ & ?) & @11)) & @12 :] 
+-- #eval unify 3 [] 
+--   [: #cons #nil ♢ :]
+--   [: (#cons ((#nil ♢ & ?) & @11)) & @12 :] 
 
 
-#eval unify 3 [] [:
-    (.l #succ #zero ♢ & .r #cons @0)
-:] nat_list 
+-- #eval unify 3 [] [:
+--     (.l #succ #zero ♢ & .r #cons @0)
+-- :] nat_list 
 
 
-#eval unify 3 [] [:
-    (.l #zero ♢ & .r #dumb ♢)
-:] nat_list 
+-- #eval unify 3 [] [:
+--     (.l #zero ♢ & .r #dumb ♢)
+-- :] nat_list 
 
-#eval unify 3 [] 
-  [: #dumb ♢ :] 
-  [: ∃ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
+-- #eval unify 3 [] 
+--   [: #dumb ♢ :] 
+--   [: ∃ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
 
-#eval unify 3 [] 
-  [: #nil ♢ :] 
-  [: ∃ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
+-- #eval unify 3 [] 
+--   [: #nil ♢ :] 
+--   [: ∃ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
 
-#eval unify 3 [] 
-  [: ∀ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
-  [: #dumb ♢ :] 
+-- #eval unify 3 [] 
+--   [: ∀ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
+--   [: #dumb ♢ :] 
 
--- expeeted: some (@0 ↦ #nil ♢) 
-#eval unify 3 [] 
-  [: (.l #zero ♢ & .r @0) :] 
-  nat_list
+-- -- expeeted: some (@0 ↦ #nil ♢) 
+-- #eval unify 3 [] 
+--   [: (.l #zero ♢ & .r @0) :] 
+--   nat_list
 
-#eval bind (unify 3 [] 
-  [: (.l #zero ♢ & .r @0) :] 
-  nat_list) (fun (i, env_ty) =>
-    some (Ty.resolve env_ty [: @0 :])
-  )
+-- #eval bind (unify 3 [] 
+--   [: (.l #zero ♢ & .r @0) :] 
+--   nat_list) (fun (i, env_ty) =>
+--     some (Ty.resolve env_ty [: @0 :])
+--   )
 
-#eval [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ @55 . £0 :]
-#eval Ty.raise_binding 0 [ [:@0:] ] [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ @55 . £0 :]
-#eval Ty.raise_binding 0 [ [:@0:] ] [: (.l  #zero ♢ & .r £0) :]
-#eval Ty.raise_binding 0 [ [:@0:] ] [: £0 :]
+-- #eval [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ @55 . £0 :]
+-- #eval Ty.raise_binding 0 [ [:@0:] ] [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ @55 . £0 :]
+-- #eval Ty.raise_binding 0 [ [:@0:] ] [: (.l  #zero ♢ & .r £0) :]
+-- #eval Ty.raise_binding 0 [ [:@0:] ] [: £0 :]
 
-#eval Ty.raise_binding 0 [ [:@0:] ] [: ⟨Ty.lower_binding 1 (unroll nat_list)⟩ :]
-#eval (unroll nat_list)
+-- #eval Ty.raise_binding 0 [ [:@0:] ] [: ⟨Ty.lower_binding 1 (unroll nat_list)⟩ :]
+-- #eval (unroll nat_list)
 
-#eval [: ⟨Ty.lower_binding 1 (unroll nat_list)⟩ :]
-#eval [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
-#eval unify 3 [] 
-  [: @0 :] 
-  [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+-- #eval [: ⟨Ty.lower_binding 1 (unroll nat_list)⟩ :]
+-- #eval [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+-- #eval unify 3 [] 
+--   [: @0 :] 
+--   [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
 
-#eval unify 3 [] 
-  [: (.l  #zero ♢ & .r @0) :] 
-  [:  ⟨Ty.lower_binding 1 (unroll nat_list)⟩ :]
-
-
-#eval unify 3 [] 
-  [: ∀ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
-  [: @0 :] 
-
-#eval unify 3 [] [:
-    (.l #zero ♢ & .r @0)
-:] (unroll nat_list) 
-
-#eval unify 3 [] [:
-    (.l #succ #zero ♢ & .r #cons @0)
-:] nat_list 
-
-#eval unify 3 [] 
-  [: #cons @0 :] 
-  [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
-
-#eval unify 3 [] 
-  [: #cons ♢ :] 
-  [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
-
-#eval unify 3 [] 
-  [: #cons #nil ♢ :] 
-  [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
-
-#eval unify 3 [] 
-  [: ∀ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
-  [: #cons @0 :] 
-
-#eval unify 3 [] 
-  [: (.l #succ #zero ♢ & .r #cons @0) :] 
-  [: ⟨unroll nat_list⟩ :]
-
-#eval unify 3 [] [:
-    (.l (#succ @0) & .r #cons #nil ♢)
-:] nat_list 
-
-#eval unify 3 [] [:
-    (.l @0 & .r @1)
-:] nat_list 
-
-#eval make_field_constraints Ty.dynamic [: (.l @0 & .r @1) :] nat_list
+-- #eval unify 3 [] 
+--   [: (.l  #zero ♢ & .r @0) :] 
+--   [:  ⟨Ty.lower_binding 1 (unroll nat_list)⟩ :]
 
 
-def exi_ := [: 
-  ∃ 1 .  #succ £0
-:]
+-- #eval unify 3 [] 
+--   [: ∀ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+--   [: @0 :] 
 
-#eval unify 3 [] [:
-    (#succ (#zero ♢))
-:] exi_ 
+-- #eval unify 3 [] [:
+--     (.l #zero ♢ & .r @0)
+-- :] (unroll nat_list) 
 
-def free_ := [: 
-  #succ @0
-:]
+-- #eval unify 3 [] [:
+--     (.l #succ #zero ♢ & .r #cons @0)
+-- :] nat_list 
 
-#eval unify 3 [] [:
-    (#succ (#zero ♢))
-:] free_ 
+-- #eval unify 3 [] 
+--   [: #cons @0 :] 
+--   [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
 
-def dynamic_ := [: 
-  #succ ? 
-:]
+-- #eval unify 3 [] 
+--   [: #cons ♢ :] 
+--   [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
 
-#eval unify 3 [] [:
-    (#succ (#zero ♢))
-:] dynamic_ 
+-- #eval unify 3 [] 
+--   [: #cons #nil ♢ :] 
+--   [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+
+-- #eval unify 3 [] 
+--   [: ∀ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+--   [: #cons @0 :] 
+
+-- #eval unify 3 [] 
+--   [: (.l #succ #zero ♢ & .r #cons @0) :] 
+--   [: ⟨unroll nat_list⟩ :]
+
+-- #eval unify 3 [] [:
+--     (.l (#succ @0) & .r #cons #nil ♢)
+-- :] nat_list 
+
+-- #eval unify 3 [] [:
+--     (.l @0 & .r @1)
+-- :] nat_list 
+
+-- #eval make_field_constraints Ty.dynamic [: (.l @0 & .r @1) :] nat_list
+
+
+-- def exi_ := [: 
+--   ∃ 1 .  #succ £0
+-- :]
+
+-- #eval unify 3 [] [:
+--     (#succ (#zero ♢))
+-- :] exi_ 
+
+-- def free_ := [: 
+--   #succ @0
+-- :]
+
+-- #eval unify 3 [] [:
+--     (#succ (#zero ♢))
+-- :] free_ 
+
+-- def dynamic_ := [: 
+--   #succ ? 
+-- :]
+
+-- #eval unify 3 [] [:
+--     (#succ (#zero ♢))
+-- :] dynamic_ 
 
 
 /-
@@ -1024,39 +1001,39 @@ def plus := [:
 
 #print plus
 
-#eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
-#eval [: #succ #succ #zero ♢ :]  
+-- #eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
+-- #eval [: #succ #succ #zero ♢ :]  
 
 
-#eval unify 3 [] [:
-    .x #zero ♢ &
-    .y @0 &
-    .z #zero ♢
-:] plus
+-- #eval unify 3 [] [:
+--     .x #zero ♢ &
+--     .y @0 &
+--     .z #zero ♢
+-- :] plus
 
-#eval unify 3 [] [:
-  (
-    .x #zero ♢ &
-    .y @0 &
-    .z #succ #succ #zero ♢
-  )
-:] plus
+-- #eval unify 3 [] [:
+--   (
+--     .x #zero ♢ &
+--     .y @0 &
+--     .z #succ #succ #zero ♢
+--   )
+-- :] plus
 
-#eval unify 3 [] [:
-  (
-    .x (#succ #zero ♢) &
-    .y (@0) &
-    .z (#succ (#succ #succ (#zero ♢)))
-  )
-:] plus
+-- #eval unify 3 [] [:
+--   (
+--     .x (#succ #zero ♢) &
+--     .y (@0) &
+--     .z (#succ (#succ #succ (#zero ♢)))
+--   )
+-- :] plus
 
-#eval unify 3 [] [:
-  (
-    .x (#succ #zero ♢) &
-    .y (#succ #zero ♢) &
-    .z (@0)
-  )
-:] plus
+-- #eval unify 3 [] [:
+--   (
+--     .x (#succ #zero ♢) &
+--     .y (#succ #zero ♢) &
+--     .z (@0)
+--   )
+-- :] plus
 
 
 /-
