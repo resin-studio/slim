@@ -572,8 +572,20 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       some (i, env_ty2 ++ env_ty1)
     ))
 
-    -- Note: existential/universal rules should execute before 
-    -- variable rules to free the bound variables before writing. 
+
+  | .fvar id, ty  => match lookup id env_ty with 
+    | none => some (i + 1, [
+        (id, .inter (roll_recur id ty) (Ty.fvar i)),
+        (i, Ty.dynamic)
+      ]) 
+    | some ty' => unify i env_ty ty' ty 
+
+  | ty', .fvar id  => match lookup id env_ty with 
+    | none => some (i + 1, [
+        (id, .union (roll_corec id ty') (Ty.fvar i)),
+        (id + 1, Ty.dynamic)
+      ]) 
+    | some ty => unify i env_ty ty' ty 
 
   | ty', .exis n (ty_c1, ty_c2) ty =>
     let (i, env_ty, args) := refresh i n 
@@ -600,22 +612,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1)
     ))
-
-  | .fvar id, ty  => match lookup id env_ty with 
-    -- TODO: free existential bound variables on rhs before saving. 
-    | none => some (i + 1, [
-        (id, .inter (roll_recur id ty) (Ty.fvar i)),
-        (i, Ty.dynamic)
-      ]) 
-    | some ty' => unify i env_ty ty' ty 
-
-  | ty', .fvar id  => match lookup id env_ty with 
-    -- TODO: free universal bound variables on lhs before saving. 
-    | none => some (i + 1, [
-        (id, .union (roll_corec id ty') (Ty.fvar i)),
-        (id + 1, Ty.dynamic)
-      ]) 
-    | some ty => unify i env_ty ty' ty 
 
   | .exis n (ty_c1, ty_c2) ty', ty =>
     if Ty.equal env_ty (.exis n (ty_c1, ty_c2) ty') ty then
@@ -650,7 +646,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     X <: (∃ α :: (α × Y <: unroll(μ _)) . α)
     Y <: (∃ β :: (X × β <: unroll(μ _)) . β)
     -/
-    -- TODO: linearize first, then generate constraints
     bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
     let cs := (make_field_constraints Ty.dynamic ty'' (Ty.recur ty))
     if cs.length = 0 then
@@ -764,13 +759,43 @@ def nat_ := [:
 
 def nat_list := [: 
   μ 1 .
-    .l #zero ♢ & .r #nil ♢ |
-    ∃ 2 :: .l £0 & .r £1 ≤ £2 .
-      .l #succ £0 & .r #cons £1
+    .l #zero ♢ & .r #nil ♢ 
+    -- |
+    -- ∃ 2 :: .l £0 & .r £1 ≤ £2 .
+    --   .l #succ £0 & .r #cons £1
 :]
 #eval nat_list
 
 #eval (unroll nat_list)
+
+#eval [:
+    (.l #succ #zero ♢ & .r #cons #nil ♢)
+:]
+
+#eval unify 3 [] [:
+    (.l #zero ♢ & .r #nil ♢)
+:] nat_list
+/-
+
+#zero ≤ ∃ α ::
+  (.l α .r #nil () ≤ unroll μ _) . α
+
+(.l α .r #nil () ≤ unroll μ _)
+#zero ≤ α
+
+
+(.l (#zero | β) .r #nil () ≤ unroll μ _)
+
+-/
+
+#eval unify 3 [] [:
+    (.l (#zero ♢ | £1) & .r #nil ♢)
+:] (unroll nat_list)
+
+#eval unify 3 [] [:
+    (#zero ♢ | £1)
+:] [: #zero ♢ :] 
+
 
 #eval unify 3 [] [:
     (.l #succ #zero ♢ & .r #cons #nil ♢)
