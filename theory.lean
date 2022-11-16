@@ -146,7 +146,6 @@ def refresh (i : Nat) (n : Nat) : (Nat × List Ty) :=
   let i' := i + n 
   (i', args)
 
-
 -- partial def merge (op : T -> T -> T) (df : T) (env_ty1 : List (Nat × T))  (env_ty2 : List (Nat × T)) : List (Nat × T) :=
 --   List.bind env_ty1 (fun (key₁, v₁) =>
 --   List.bind env_ty2 (fun (key₂, v₂) =>
@@ -570,9 +569,10 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty := Ty.raise_binding 0 args ty
     bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) =>
-    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) => 
+    bind (unify i (env_ty) ty' ty) (fun (i, env_ty2) => 
       some (i, env_ty2 ++ env_ty1)
     ))
+    -- )
     -- list[{x;z}] <: ∃ X :: (X <: {x}) . list[X]
     -- X := {x} & Y |- list[{x;z}] <: list[X]
     -- X := {x} & Y |- list[{x;z}] <: list[{x} & Y]
@@ -662,10 +662,10 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
     (∀ α :: (unroll(ν _) <: α -> Y) . α) <: X 
     (∀ β :: (unroll(ν _) <: X -> β) . β) <: Y
     -/
-    let ty1'' := .univ 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2) (Ty.bvar 0) 
-    let ty2'' := .univ 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case ty1 (Ty.bvar 0)) (Ty.bvar 0) 
-    bind (unify i env_ty ty1'' ty1 ) (fun (i, env_ty1) =>
-    bind (unify i env_ty ty2'' ty2 ) (fun (i, env_ty2) =>
+    let ty1' := .univ 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2) (Ty.bvar 0) 
+    let ty2' := .univ 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case ty1 (Ty.bvar 0)) (Ty.bvar 0) 
+    bind (unify i env_ty ty1' ty1 ) (fun (i, env_ty1) =>
+    bind (unify i env_ty ty2' ty2 ) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1)
     ))
 
@@ -831,6 +831,8 @@ def nat_list := [:
 -- TODO
 -- expected: some
 -- actual: none 
+
+
 #eval unify 3 [] [:
     (.l #succ #zero ♢ & .r #cons #nil ♢)
 :] nat_list 
@@ -843,9 +845,37 @@ def nat_list := [:
     £0
   :]
 
+
+def foo (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty)) 
+  | ty', .exis n (ty_c1, ty_c2) ty =>
+    let (i, args) := refresh i n 
+    let ty_c1 := Ty.raise_binding 0 args ty_c1
+    let ty_c2 := Ty.raise_binding 0 args ty_c2
+    let ty := Ty.raise_binding 0 args ty
+    -- Option.bind (unify i env_ty ty_c1 ty_c2) (fun (i1, env_ty1) =>
+    Option.bind (unify i (env_ty) ty' ty) (fun (i, env_ty2) => 
+      Option.some (i, env_ty2)
+    )
+    -- )
+  | _, _ => none
+
+#eval foo 3 [] 
+  [: #cons #nil ♢ :] 
+  [: ∃ 1 :: 
+    (.l #succ #zero ♢ & .r £0 ) ≤ 
+    ⟨Ty.lower_binding 1 (unroll nat_list)⟩. 
+    £0
+  :]
+
 #eval unify 3 [] 
   [: (.l #succ #zero ♢ & .r @2) :]
   [: ⟨(unroll nat_list)⟩ :]
+
+#eval unify 3 [] 
+  [: #cons #nil ♢ :] 
+  [:  
+    @0
+  :]
 
 #eval unify 3 [] 
   [: #cons #nil ♢ :]
