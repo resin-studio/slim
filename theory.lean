@@ -137,9 +137,9 @@ def lookup_record (key : String) : List (String × T) -> Option T
   | (k,v) :: bs => if key = k then some v else lookup_record key bs 
   | [] => none
 
-def liberate (i : Nat) : Nat -> List (Nat × Ty) 
-  | 0 => []
-  | n + 1 => (i, [: ? :]) :: (liberate (i + 1) n)
+-- def liberate (i : Nat) : Nat -> List (Nat × Ty) 
+--   | 0 => []
+--   | n + 1 => (i, [: ? :]) :: (liberate (i + 1) n)
 
 def refresh (i : Nat) (n : Nat) : (Nat × List Ty) := 
   let args := (List.range n).map (fun j => .fvar (i + j))
@@ -592,15 +592,13 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
   | ty', .fvar id  => match lookup id env_ty with 
     | none => some (i + 1, [
-        (id, .union (roll_corec id ty') (Ty.fvar i)),
-        (id + 1, Ty.dynamic)
+        (id, .union (roll_corec id ty') (Ty.fvar i))
       ]) 
     | some ty => unify i env_ty ty' ty 
 
   | .fvar id, ty  => match lookup id env_ty with 
     | none => some (i + 1, [
-        (id, .inter (roll_recur id ty) (Ty.fvar i)),
-        (i, Ty.dynamic)
+        (id, .inter (roll_recur id ty) (Ty.fvar i))
       ]) 
     | some ty' => unify i env_ty ty' ty 
 
@@ -830,10 +828,34 @@ def nat_list := [:
     (#zero ♢ & £1)
 :] [: #zero ♢ :] 
 
+-- TODO
 -- expected: some
+-- actual: none 
 #eval unify 3 [] [:
     (.l #succ #zero ♢ & .r #cons #nil ♢)
 :] nat_list 
+
+#eval unify 3 [] 
+  [: #cons #nil ♢ :] 
+  [: ∃ 1 :: 
+    (.l #succ #zero ♢ & .r £0 ) ≤ 
+    ⟨Ty.lower_binding 1 (unroll nat_list)⟩. 
+    £0
+  :]
+
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r @2) :]
+  [: ⟨(unroll nat_list)⟩ :]
+
+#eval unify 3 [] 
+  [: #cons #nil ♢ :]
+  [: (#cons ((#nil ♢ & ?) & @11)) & @12 :] 
+
+
+#eval unify 3 [] [:
+    (.l #succ #zero ♢ & .r #cons @0)
+:] nat_list 
+
 
 #eval unify 3 [] [:
     (.l #zero ♢ & .r #dumb ♢)
