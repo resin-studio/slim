@@ -468,7 +468,7 @@ partial def Ty.resolve (env_ty : List (Nat × Ty)) : Ty -> Ty
   | .bvar id => Ty.bvar id  
   | .fvar id => match lookup id env_ty with
     | some ty => Ty.resolve env_ty ty 
-    | none => Ty.dynamic
+    | none => .fvar id
   | .unit => .unit 
   | .tag l ty => Ty.tag l (Ty.resolve env_ty ty) 
   | .field l ty => Ty.field l (Ty.resolve env_ty ty) 
@@ -822,10 +822,18 @@ def nat_list := [:
   [: ∀ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
   [: #dumb ♢ :] 
 
--- TODO: why can't it solve for @0?
+-- TODO: does the solution for @0 look so wrong?
 #eval unify 3 [] [:
     (.l #zero ♢ & .r @0)
 :] nat_list 
+
+#eval unify 3 [] 
+  [: @0 :] 
+  [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+
+#eval unify 3 [] 
+  [: ∀ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+  [: @0 :] 
 
 #eval unify 3 [] [:
     (.l #zero ♢ & .r @0)
