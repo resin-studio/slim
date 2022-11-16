@@ -522,20 +522,20 @@ Y <: (∃ β :: ((X ; β) <: unroll (μ _)). β)
 -/
 def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
   | (.field l ty1), mu_ty => 
-      let ty2 := .exis 1 ( 
+      let ty2 := .univ 1 ( 
         (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
         (Ty.lower_binding 1 (unroll mu_ty))
       ) (.bvar 0)
-      [(ty1, ty2)]
+      [(ty2, ty1)]
   | .inter (.field l ty1) rem_ty, mu_ty => 
       let ty2 := 
-      [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
+      [: ∀ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
 
       let rem := make_field_constraints (Ty.inter prev_ty (.field l ty1)) rem_ty mu_ty
       if rem.length = 0 then
         []
       else 
-        (ty1, ty2) :: rem
+        (ty2, ty1) :: rem
   | _, _ => [] 
 
 
@@ -600,6 +600,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
         (i, Ty.dynamic)
       ]) 
     | some ty' => unify i env_ty ty' ty 
+
 
   | ty', .fvar id  => match lookup id env_ty with 
     | none => some (i + 1, [
@@ -771,27 +772,27 @@ def nat_list := [:
 
 #eval unify 3 [] 
   [: #zero ♢ :] 
-  [: ∃ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨unroll nat_list⟩ . £0 :]
+  [: ∃ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
 
 #eval unify 3 [] 
   [: #zero ♢ :] 
-  [: ∃ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨unroll nat_list⟩ . £0 :]
+  [: ∃ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
 
 #eval unify 3 [] 
-  [: ∀ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨unroll nat_list⟩ . £0 :]
+  [: ∀ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
   [: #zero ♢ :] 
 
 #eval unify 3 [] 
-  [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨unroll nat_list⟩ . £0 :]
+  [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
   [: #zero ♢ :] 
 
 #eval unify 3 [] [:
     (.l (#zero ♢ & £1) & .r #nil ♢)
-:] (unroll nat_list)
+:] (Ty.lower_binding 1 (unroll nat_list))
 
 #eval unify 3 [] [:
     (.l (#zero ♢ | £1) & .r #nil ♢)
-:] (unroll nat_list)
+:] (Ty.lower_binding 1 (unroll nat_list))
 
 #eval unify 3 [] [:
     (#zero ♢ | £1)
@@ -801,7 +802,7 @@ def nat_list := [:
     (#zero ♢ & £1)
 :] [: #zero ♢ :] 
 
-
+-- expected: some
 #eval unify 3 [] [:
     (.l #succ #zero ♢ & .r #cons #nil ♢)
 :] nat_list 
