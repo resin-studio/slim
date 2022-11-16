@@ -540,8 +540,8 @@ def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
 
 
 
-partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Nat × List (Nat × Ty))
-
+partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : 
+Ty -> Ty -> Option (Nat × List (Nat × Ty))
   | .bvar id1, .bvar id2  =>
     if id1 = id2 then 
       some (i, [])
@@ -573,8 +573,8 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty := Ty.raise_binding 0 args ty
-    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) =>
-    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) => 
+    bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
+    bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
       some (i, env_ty2 ++ env_ty1)
     ))
     -- list[{x;z}] <: ∃ X :: (X <: {x}) . list[X]
@@ -589,10 +589,11 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty' := Ty.raise_binding 0 args ty'
-    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) =>
-    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) => 
+    bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
+    bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
       some (i, env_ty2 ++ env_ty1)
     ))
+
 
   | .fvar id, ty  => match lookup id env_ty with 
     | none => some (i + 1, [
@@ -600,7 +601,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
         (i, Ty.dynamic)
       ]) 
     | some ty' => unify i env_ty ty' ty 
-
 
   | ty', .fvar id  => match lookup id env_ty with 
     | none => some (i + 1, [
@@ -755,6 +755,9 @@ def nat_list := [:
     ∃ 2 :: .l £0 & .r £1 ≤ £2 .
       .l #succ £0 & .r #cons £1
 :]
+
+#eval Ty.raise_binding 0 [[:@33:], [:@44:]] [: .l #succ £0 & .r #cons £1 :]
+
 #eval nat_list
 
 #eval (unroll nat_list)
@@ -779,12 +782,22 @@ def nat_list := [:
   [: ∃ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
 
 #eval unify 3 [] 
+  [: @0 :] 
+  [: ∃ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+
+#eval unify 3 [] 
   [: ∀ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
   [: #zero ♢ :] 
 
 #eval unify 3 [] 
   [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
   [: #zero ♢ :] 
+
+-- TODO: order of rules affects whether variable @0 is intersection or union 
+-- modify rules so they are independent of unification order
+#eval unify 3 [] 
+  [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+  [: @0 :] 
 
 #eval unify 3 [] [:
     (.l (#zero ♢ & £1) & .r #nil ♢)
@@ -823,7 +836,7 @@ def nat_list := [:
   [: ∀ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
   [: #dumb ♢ :] 
 
--- expeected: some (@0 ↦ #nil ♢) 
+-- expeeted: some (@0 ↦ #nil ♢) 
 #eval unify 3 [] 
   [: (.l #zero ♢ & .r @0) :] 
   nat_list
@@ -850,7 +863,7 @@ def nat_list := [:
 
 #eval unify 3 [] 
   [: (.l  #zero ♢ & .r @0) :] 
-  [:  ⟨(unroll nat_list)⟩ :]
+  [:  ⟨Ty.lower_binding 1 (unroll nat_list)⟩ :]
 
 
 #eval unify 3 [] 
