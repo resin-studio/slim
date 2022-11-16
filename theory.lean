@@ -823,7 +823,7 @@ def nat_list := [:
   [: ∀ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
   [: #dumb ♢ :] 
 
--- TODO: does the solution for @0 look so wrong?
+-- expeected: some (@0 ↦ #nil ♢) 
 #eval unify 3 [] 
   [: (.l #zero ♢ & .r @0) :] 
   nat_list

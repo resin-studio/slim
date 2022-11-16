@@ -457,11 +457,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \inferrule[corec-case]
   { 
     \Delta \vdash
-    \forall \beta :: \tau[\alpha/\nu\alpha.\tau]\leq (\beta \rightarrow \tau_2)\ .\ \beta \leq \tau_1
+      \tau_1
+      \leq 
+      \exists \beta :: \tau[\alpha/\nu\alpha.\tau]\leq (\beta \rightarrow \tau_2)\ .\ \beta 
     \rightsquigarrow \Delta_1
     \\\\
     \Delta \vdash
-    \forall \beta :: \tau[\alpha/\nu\alpha.\tau]\leq (\tau_1 \rightarrow \beta)\ .\ \beta \leq \tau_2
+      \tau_2
+      \leq 
+      \exists \beta :: \tau[\alpha/\nu\alpha.\tau]\leq (\tau_1 \rightarrow \beta)\ .\ \beta 
     \rightsquigarrow \Delta_2
   }
   { \Delta \vdash 
@@ -474,8 +478,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[recur-record-subrule]
   {  
-    \Delta\ \tau_0 \vdash \tau_1 \leq \exists \beta ::
-    (.l\ \tau_0\ \&\ \beta\ \&\ \tau_2) \leq \tau[\alpha/\mu\alpha.\tau]\ .\ \beta
+    \Delta\ \tau_0 \vdash 
+      \forall \beta ::
+      (.l\ \tau_0\ \&\ \beta\ \&\ \tau_2) \leq \tau[\alpha/\mu\alpha.\tau]\ .\ \beta
+      \leq 
+      \tau_1 
     \rightsquigarrow \Delta_1
     \\\\
     \Delta\ (\tau_0\ \&\ .l\ \tau_1)\vdash_{R} \tau_2  
@@ -487,8 +494,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[recur-field-subrule]
   {  
-    \Delta\ \tau_0 \vdash \tau_1 \leq \exists \beta ::
-    (.l\ \tau_0\ \&\ \beta) \leq \tau[\alpha/\mu\alpha.\tau]\ .\ \beta
+    \Delta\ \tau_0 \vdash 
+      \forall \beta ::
+      (.l\ \tau_0\ \&\ \beta) \leq \tau[\alpha/\mu\alpha.\tau]\ .\ \beta
+      \leq 
+      \tau_1 
     \rightsquigarrow \Delta_1
   }
   {\Delta\ \tau_0 \vdash_{R} .l\ \tau_1\ 
