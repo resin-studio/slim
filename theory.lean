@@ -418,33 +418,6 @@ partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
   else
     τ
 
-
-/-
-(X ; Y) <: μ _
-
-X <: ∃ α :: ((α ; Y) <: μ _). α 
-Y <: ∃ β :: ((X ; β) <: μ _). β
--/
-
-def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
-  | (.field l ty'), mu_ty => 
-      let ty := .exis 1 ( 
-        (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
-        (Ty.lower_binding 1 (unroll mu_ty))
-      ) (.bvar 0)
-      [(ty', ty)]
-  | .inter (.field l ty') rem_ty, mu_ty => 
-      let ty := 
-      [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
-
-      let rem := make_field_constraints (Ty.inter prev_ty (.field l ty')) rem_ty mu_ty
-      if rem.length = 0 then
-        []
-      else 
-        (ty', ty) :: rem
-  | _, _ => [] 
-
-
 partial def Ty.equal (env_ty : List (Nat × Ty)) : Ty -> Ty -> Bool
   | .dynamic, .dynamic => true
   | .bvar id1, .bvar id2 => if id1 = id2 then true else false 
@@ -541,6 +514,30 @@ def linearize_fields : Ty -> Option (List (String × Ty))
       (l, ty2) :: linear_ty1
     )
   | _ => none
+
+/-
+(X ; Y) <: μ _
+
+(∀ α :: ((α ; Y) <: unroll (μ _)). α) <: X
+(∀ β :: ((X ; β) <: unroll (μ _)). β) <: Y
+-/
+def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
+  | (.field l ty), mu_ty => 
+      let ty' := .univ 1 ( 
+        (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
+        (Ty.lower_binding 1 (unroll mu_ty))
+      ) (.bvar 0)
+      [(ty', ty)]
+  | .inter (.field l ty) rem_ty, mu_ty => 
+      let ty' := 
+      [: ∀ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
+
+      let rem := make_field_constraints (Ty.inter prev_ty (.field l ty)) rem_ty mu_ty
+      if rem.length = 0 then
+        []
+      else 
+        (ty', ty) :: rem
+  | _, _ => [] 
 
 
 
@@ -642,9 +639,10 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
 
   | ty', .recur ty =>
     /-
-    X × Y <: μ _
-    X <: (∃ α :: (α × Y <: unroll(μ _)) . α)
-    Y <: (∃ β :: (X × β <: unroll(μ _)) . β)
+    (X ; Y) <: μ _
+
+    (∀ α :: ((α ; Y) <: unroll (μ _)). α) <: X
+    (∀ β :: ((X ; β) <: unroll (μ _)). β) <: Y
     -/
     bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
     let cs := (make_field_constraints Ty.dynamic ty'' (Ty.recur ty))
@@ -669,15 +667,14 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       let ty := [: ⟨ty⟩ ↑ 0 / [?] :]
       unify i env_ty ty' ty
 
-  | .corec ty_corec, Ty.case ty1 ty2 =>
+  | .corec ty_corec, Ty.case ty1' ty2' =>
     /-
     ν _ <: X -> Y 
-    (∀ α :: (unroll(ν _) <: α -> Y) . α) <: X
-    (∀ β :: (unroll(ν _) <: X -> β) . β) <: Y 
+    X <: (∃ α :: (unroll(ν _) <: α -> Y) . α)
+    Y <: (∃ β :: (unroll(ν _) <: X -> β) . β) 
     -/
-
-    let ty1' := .univ 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2) (Ty.bvar 0) 
-    let ty2' := .univ 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case ty1 (Ty.bvar 0)) (Ty.bvar 0) 
+    let ty1 := .exis 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2') (Ty.bvar 0) 
+    let ty2 := .exis 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case ty1' (Ty.bvar 0)) (Ty.bvar 0) 
     bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) =>
     bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1)
@@ -789,12 +786,34 @@ def nat_list := [:
 -/
 
 #eval unify 3 [] [:
+    (.l (#zero ♢ & £1) & .r #nil ♢)
+:] (unroll nat_list)
+
+#eval unify 3 [] [:
     (.l (#zero ♢ | £1) & .r #nil ♢)
 :] (unroll nat_list)
 
 #eval unify 3 [] [:
     (#zero ♢ | £1)
 :] [: #zero ♢ :] 
+
+#eval unify 3 [] [:
+    (#zero ♢ & £1)
+:] [: #zero ♢ :] 
+
+/-
+-- Alternate
+∀ α ::
+  (.l α .r #nil () ≤ unroll μ _) . α
+≤ #zero
+
+(.l α .r #nil () ≤ unroll μ _)
+α ≤ #zero
+
+
+(.l (#zero & β) .r #nil () ≤ unroll μ _)
+
+-/
 
 
 #eval unify 3 [] [:
