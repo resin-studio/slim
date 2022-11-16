@@ -523,20 +523,20 @@ def linearize_fields : Ty -> Option (List (String × Ty))
 -/
 def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
   | (.field l ty), mu_ty => 
-      let ty' := .univ 1 ( 
+      let ty' := .exis 1 ( 
         (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
         (Ty.lower_binding 1 (unroll mu_ty))
       ) (.bvar 0)
-      [(ty', ty)]
+      [(ty, ty')]
   | .inter (.field l ty) rem_ty, mu_ty => 
       let ty' := 
-      [: ∀ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
+      [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
 
       let rem := make_field_constraints (Ty.inter prev_ty (.field l ty)) rem_ty mu_ty
       if rem.length = 0 then
         []
       else 
-        (ty', ty) :: rem
+        (ty, ty') :: rem
   | _, _ => [] 
 
 
@@ -775,6 +775,14 @@ def nat_list := [:
 #eval make_field_constraints Ty.dynamic [: (.l #zero ♢ & .r #nil ♢) :] nat_list
 
 #eval unify 3 [] 
+  [: #zero ♢ :] 
+  [: ∃ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨unroll nat_list⟩ . £0 :]
+
+#eval unify 3 [] 
+  [: #zero ♢ :] 
+  [: ∃ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨unroll nat_list⟩ . £0 :]
+
+#eval unify 3 [] 
   [: ∀ 1 :: (? & .l £0 & .r #nil ♢) ≤ ⟨unroll nat_list⟩ . £0 :]
   [: #zero ♢ :] 
 
@@ -818,8 +826,16 @@ def nat_list := [:
 :] nat_list 
 
 #eval unify 3 [] [:
+    (.l #zero ♢ & .r @0)
+:] nat_list 
+
+#eval unify 3 [] [:
     (.l #succ #zero ♢ & .r #cons @0)
 :] nat_list 
+
+#eval unify 3 [] 
+  [: #cons @0 :] 
+  [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨unroll nat_list⟩ . £0 :]
 
 #eval unify 3 [] 
   [: ∀ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨unroll nat_list⟩ . £0 :]
@@ -885,8 +901,6 @@ def plus := [:
     (∃ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
       (.x #succ £0 & .y £1 & .z #succ £2))
 :]
-
-
 
 #print plus
 
