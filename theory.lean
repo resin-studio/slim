@@ -632,7 +632,9 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
 
   | ty', .recur ty =>
-    -- simple but divergent: unify i env_ty ty' (unroll (Ty.recur ty))
+    -- bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
+    --   unify i env_ty ty'' (unroll (Ty.recur ty))
+    -- )
     bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
     let cs := (make_field_constraints Ty.dynamic ty'' (Ty.recur ty))
     if cs.length = 0 then
@@ -658,8 +660,7 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
 
   | .corec ty_corec, Ty.case ty1 ty2 =>
-    -- simple but divergent: unify i env_ty (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
-
+    -- unify i env_ty (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
     /-
     ν _ <: X -> Y 
     (∀ α :: (unroll(ν _) <: α -> Y) . α) <: X 

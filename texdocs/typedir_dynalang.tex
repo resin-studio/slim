@@ -353,9 +353,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[exis-free]
   { 
-    \Delta \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_1
+    \Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1
     \\
-    \Delta;\Delta_1 \vdash \tau' \leq \tau \rightsquigarrow \Delta_2
+    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_2
     \\
     \text{fresh}\ \widebar{\alpha}
   }
@@ -370,9 +370,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[univ-free]
   { 
-    \Delta \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_1
+    \Delta;\Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1
     \\
-    \Delta;\Delta_1 \vdash \tau' \leq \tau \rightsquigarrow \Delta_2
+    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_2
     \\
     \text{fresh}\ \widebar{\alpha}
   }
