@@ -488,14 +488,10 @@ partial def Ty.resolve (env_ty : List (Nat × Ty)) : Ty -> Ty
 def linearize_record : Ty -> Option Ty
   | .field l ty => 
     some (.field l ty)
-  | .inter (.field l ty1) .dynamic => 
-    some (.field l ty1)
   | .inter (.field l ty1) ty2 => 
     bind (linearize_record ty2) (fun linear_ty2 =>
       some (.inter (.field l ty1) linear_ty2)
     )
-  | .inter .dynamic (.field l ty2) => 
-    some (.field l ty2)
   | .inter ty1 (.field l ty2) => 
     bind (linearize_record ty1) (fun linear_ty1 =>
       some (.inter (.field l ty2) linear_ty1)
@@ -800,9 +796,20 @@ def nat_list := [:
   [: (.l #zero ♢ & .r @0) :] 
   nat_list
 
--- TODO: order of rules affects whether variable @0 is intersection or union 
--- modify rules so they are independent of unification order
--- attempt 1: symmetrical rule of two undefined variables
+-- TODO: why does this terminate?
+#eval unify 3 [] 
+  [: (.l @0 & .r @1) :] 
+  nat_list
+
+#eval unify 3 [] 
+  [: @0 :] 
+  [: ∃ 1 :: (.l £0 & .r @1) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+
+#eval unroll nat_list 
+#eval unify 3 [] 
+  [: (.l @2 & .r @1) :] 
+  (unroll nat_list)
+
 #eval unify 3 [] 
   [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
   [: @0 :] 
