@@ -840,7 +840,7 @@ def nat_list := [:
 #eval unify 3 [] 
   [: @0 :] 
   [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
-
+-- NOTE: the problem lies in liberating bound variables!!
 #eval unify 3 [] 
   [: (.l  #zero ♢ & .r @0) :] 
   [:  ⟨(unroll nat_list)⟩ :]
