@@ -801,20 +801,6 @@ def nat_list := [:
     (#zero ♢ & £1)
 :] [: #zero ♢ :] 
 
-/-
--- Alternate
-∀ α ::
-  (.l α .r #nil () ≤ unroll μ _) . α
-≤ #zero
-
-(.l α .r #nil () ≤ unroll μ _)
-α ≤ #zero
-
-
-(.l (#zero & β) .r #nil () ≤ unroll μ _)
-
--/
-
 
 #eval unify 3 [] [:
     (.l #succ #zero ♢ & .r #cons #nil ♢)
@@ -824,6 +810,19 @@ def nat_list := [:
     (.l #zero ♢ & .r #dumb ♢)
 :] nat_list 
 
+#eval unify 3 [] 
+  [: #dumb ♢ :] 
+  [: ∃ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
+
+#eval unify 3 [] 
+  [: #nil ♢ :] 
+  [: ∃ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
+
+#eval unify 3 [] 
+  [: ∀ 1 :: (.l #zero ♢ & .r £0 ) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩. £0:]
+  [: #dumb ♢ :] 
+
+-- TODO: why can't it solve for @0?
 #eval unify 3 [] [:
     (.l #zero ♢ & .r @0)
 :] nat_list 
@@ -838,10 +837,18 @@ def nat_list := [:
 
 #eval unify 3 [] 
   [: #cons @0 :] 
-  [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨unroll nat_list⟩ . £0 :]
+  [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
 
 #eval unify 3 [] 
-  [: ∀ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨unroll nat_list⟩ . £0 :]
+  [: #cons ♢ :] 
+  [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+
+#eval unify 3 [] 
+  [: #cons #nil ♢ :] 
+  [: ∃ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+
+#eval unify 3 [] 
+  [: ∀ 1 :: (.l #succ #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
   [: #cons @0 :] 
 
 #eval unify 3 [] 
