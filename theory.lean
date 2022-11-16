@@ -141,11 +141,10 @@ def liberate (i : Nat) : Nat -> List (Nat × Ty)
   | 0 => []
   | n + 1 => (i, [: ? :]) :: (liberate (i + 1) n)
 
-def refresh (i : Nat) (n : Nat) : (Nat × List (Nat × Ty) × List Ty) := 
+def refresh (i : Nat) (n : Nat) : (Nat × List Ty) := 
   let args := (List.range n).map (fun j => .fvar (i + j))
-  let env_ty' :=  liberate i n 
   let i' := i + n 
-  (i', env_ty', args)
+  (i', args)
 
 
 -- partial def merge (op : T -> T -> T) (df : T) (env_ty1 : List (Nat × T))  (env_ty2 : List (Nat × T)) : List (Nat × T) :=
@@ -570,7 +569,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     ))
 
   | ty', .exis n (ty_c1, ty_c2) ty =>
-    let (i, env_ty, args) := refresh i n 
+    let (i, args) := refresh i n 
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty := Ty.raise_binding 0 args ty
@@ -586,7 +585,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
 
 
   | .univ n (ty_c1, ty_c2) ty', ty =>
-    let (i, env_ty, args) := refresh i n 
+    let (i, args) := refresh i n 
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty' := Ty.raise_binding 0 args ty'
@@ -835,12 +834,19 @@ def nat_list := [:
   )
 
 #eval [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ @55 . £0 :]
+#eval Ty.raise_binding 0 [ [:@0:] ] [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ @55 . £0 :]
+#eval Ty.raise_binding 0 [ [:@0:] ] [: (.l  #zero ♢ & .r £0) :]
+#eval Ty.raise_binding 0 [ [:@0:] ] [: £0 :]
+
+#eval Ty.raise_binding 0 [ [:@0:] ] [: ⟨Ty.lower_binding 1 (unroll nat_list)⟩ :]
+#eval (unroll nat_list)
+
 #eval [: ⟨Ty.lower_binding 1 (unroll nat_list)⟩ :]
 #eval [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
 #eval unify 3 [] 
   [: @0 :] 
   [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
--- NOTE: the problem lies in liberating bound variables!!
+
 #eval unify 3 [] 
   [: (.l  #zero ♢ & .r @0) :] 
   [:  ⟨(unroll nat_list)⟩ :]
