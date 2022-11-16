@@ -569,27 +569,13 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       some (i, env_ty2 ++ env_ty1)
     ))
 
-  | .fvar id, ty  => match lookup id env_ty with 
-    | none => some (i + 1, [
-        (id, .inter (roll_recur id ty) (Ty.fvar i)),
-        (i, Ty.dynamic)
-      ]) 
-    | some ty' => unify i env_ty ty' ty 
-
-  | ty', .fvar id  => match lookup id env_ty with 
-    | none => some (i + 1, [
-        (id, .union (roll_corec id ty') (Ty.fvar i)),
-        (id + 1, Ty.dynamic)
-      ]) 
-    | some ty => unify i env_ty ty' ty 
-
   | ty', .exis n (ty_c1, ty_c2) ty =>
     let (i, env_ty, args) := refresh i n 
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty := Ty.raise_binding 0 args ty
-    bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-    bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
+    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) =>
+    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) => 
       some (i, env_ty2 ++ env_ty1)
     ))
     -- list[{x;z}] <: ∃ X :: (X <: {x}) . list[X]
@@ -604,10 +590,25 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty' := Ty.raise_binding 0 args ty'
-    bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-    bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
+    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) =>
+    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) => 
       some (i, env_ty2 ++ env_ty1)
     ))
+
+  | .fvar id, ty  => match lookup id env_ty with 
+    | none => some (i + 1, [
+        (id, .inter (roll_recur id ty) (Ty.fvar i)),
+        (i, Ty.dynamic)
+      ]) 
+    | some ty' => unify i env_ty ty' ty 
+
+  | ty', .fvar id  => match lookup id env_ty with 
+    | none => some (i + 1, [
+        (id, .union (roll_corec id ty') (Ty.fvar i)),
+        (id + 1, Ty.dynamic)
+      ]) 
+    | some ty => unify i env_ty ty' ty 
+
 
   | .exis n (ty_c1, ty_c2) ty', ty =>
     if Ty.equal env_ty (.exis n (ty_c1, ty_c2) ty') ty then
@@ -833,9 +834,17 @@ def nat_list := [:
     some (Ty.resolve env_ty [: @0 :])
   )
 
+#eval [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ @55 . £0 :]
+#eval [: ⟨Ty.lower_binding 1 (unroll nat_list)⟩ :]
+#eval [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
 #eval unify 3 [] 
   [: @0 :] 
   [: ∃ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+
+#eval unify 3 [] 
+  [: (.l  #zero ♢ & .r @0) :] 
+  [:  ⟨(unroll nat_list)⟩ :]
+
 
 #eval unify 3 [] 
   [: ∀ 1 :: (.l  #zero ♢ & .r £0) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
