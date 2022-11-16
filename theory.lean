@@ -765,25 +765,15 @@ def nat_list := [:
 
 #eval (unroll nat_list)
 
-#eval [:
-    (.l #succ #zero ♢ & .r #cons #nil ♢)
-:]
+#eval [: (.l #succ #zero ♢ & .r #cons #nil ♢) :]
 
-#eval unify 3 [] [:
-    (.l #zero ♢ & .r #nil ♢)
-:] nat_list
-/-
+#eval unify 3 [] 
+  [: (.l #zero ♢ & .r #nil ♢) :] 
+  nat_list
 
-#zero ≤ ∃ α ::
-  (.l α .r #nil () ≤ unroll μ _) . α
-
-(.l α .r #nil () ≤ unroll μ _)
-#zero ≤ α
-
-
-(.l (#zero | β) .r #nil () ≤ unroll μ _)
-
--/
+#eval unify 3 [] 
+  [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨unroll nat_list⟩ . £0 :]
+  [: #zero ♢ :] 
 
 #eval unify 3 [] [:
     (.l (#zero ♢ & £1) & .r #nil ♢)
