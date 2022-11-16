@@ -522,20 +522,20 @@ Y <: (∃ β :: ((X ; β) <: unroll (μ _)). β)
 -/
 def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
   | (.field l ty1), mu_ty => 
-      let ty2 := .univ 1 ( 
+      let ty2 := .exis 1 ( 
         (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
         (Ty.lower_binding 1 (unroll mu_ty))
       ) (.bvar 0)
-      [(ty2, ty1)]
+      [(ty1, ty2)]
   | .inter (.field l ty1) rem_ty, mu_ty => 
       let ty2 := 
-      [: ∀ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
+      [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
 
       let rem := make_field_constraints (Ty.inter prev_ty (.field l ty1)) rem_ty mu_ty
       if rem.length = 0 then
         []
       else 
-        (ty2, ty1) :: rem
+        (ty1, ty2) :: rem
   | _, _ => [] 
 
 
@@ -573,8 +573,8 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty := Ty.raise_binding 0 args ty
-    bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-    bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
+    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) =>
+    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) => 
       some (i, env_ty2 ++ env_ty1)
     ))
     -- list[{x;z}] <: ∃ X :: (X <: {x}) . list[X]
@@ -589,18 +589,10 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty' := Ty.raise_binding 0 args ty'
-    bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-    bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
+    bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty1) =>
+    bind (unify i (env_ty1 ++ env_ty) ty' ty) (fun (i, env_ty2) => 
       some (i, env_ty2 ++ env_ty1)
     ))
-
-
-  | .fvar id, ty  => match lookup id env_ty with 
-    | none => some (i + 1, [
-        (id, .inter (roll_recur id ty) (Ty.fvar i)),
-        (i, Ty.dynamic)
-      ]) 
-    | some ty' => unify i env_ty ty' ty 
 
   | ty', .fvar id  => match lookup id env_ty with 
     | none => some (i + 1, [
@@ -608,6 +600,13 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
         (id + 1, Ty.dynamic)
       ]) 
     | some ty => unify i env_ty ty' ty 
+
+  | .fvar id, ty  => match lookup id env_ty with 
+    | none => some (i + 1, [
+        (id, .inter (roll_recur id ty) (Ty.fvar i)),
+        (i, Ty.dynamic)
+      ]) 
+    | some ty' => unify i env_ty ty' ty 
 
 
   | .exis n (ty_c1, ty_c2) ty', ty =>
@@ -663,16 +662,16 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
       unify i env_ty ty' ty
 
 
-  | .corec ty_corec, Ty.case ty1' ty2' =>
+  | .corec ty_corec, Ty.case ty1 ty2 =>
     /-
     ν _ <: X -> Y 
-    X <: (∃ α :: (unroll(ν _) <: α -> Y) . α)
-    Y <: (∃ β :: (unroll(ν _) <: X -> β) . β) 
+    (∀ α :: (unroll(ν _) <: α -> Y) . α) <: X 
+    (∀ β :: (unroll(ν _) <: X -> β) . β) <: Y
     -/
-    let ty1 := .exis 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2') (Ty.bvar 0) 
-    let ty2 := .exis 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case ty1' (Ty.bvar 0)) (Ty.bvar 0) 
-    bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) =>
-    bind (unify i env_ty ty2' ty2) (fun (i, env_ty2) =>
+    let ty1'' := .univ 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2) (Ty.bvar 0) 
+    let ty2'' := .univ 1 (Ty.lower_binding 1 (unroll (.corec ty_corec)), .case ty1 (Ty.bvar 0)) (Ty.bvar 0) 
+    bind (unify i env_ty ty1'' ty1 ) (fun (i, env_ty1) =>
+    bind (unify i env_ty ty2'' ty2 ) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1)
     ))
 
@@ -793,8 +792,17 @@ def nat_list := [:
   [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
   [: #zero ♢ :] 
 
+#eval unify 3 [] 
+  [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
+  [: @0 :] 
+
+#eval unify 3 [] 
+  [: (.l #zero ♢ & .r @0) :] 
+  nat_list
+
 -- TODO: order of rules affects whether variable @0 is intersection or union 
 -- modify rules so they are independent of unification order
+-- attempt 1: symmetrical rule of two undefined variables
 #eval unify 3 [] 
   [: ∀ 1 :: (.l £0 & .r #nil ♢) ≤ ⟨Ty.lower_binding 1 (unroll nat_list)⟩ . £0 :]
   [: @0 :] 
