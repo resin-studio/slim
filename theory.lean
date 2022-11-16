@@ -518,25 +518,25 @@ def linearize_fields : Ty -> Option (List (String × Ty))
 /-
 (X ; Y) <: μ _
 
-(∀ α :: ((α ; Y) <: unroll (μ _)). α) <: X
-(∀ β :: ((X ; β) <: unroll (μ _)). β) <: Y
+X <: (∃ α :: ((α ; Y) <: unroll (μ _)). α)
+Y <: (∃ β :: ((X ; β) <: unroll (μ _)). β)
 -/
 def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
-  | (.field l ty), mu_ty => 
-      let ty' := .exis 1 ( 
+  | (.field l ty1), mu_ty => 
+      let ty2 := .exis 1 ( 
         (Ty.inter (Ty.lower_binding 1 prev_ty) (.field l (.bvar 0))),
         (Ty.lower_binding 1 (unroll mu_ty))
       ) (.bvar 0)
-      [(ty, ty')]
-  | .inter (.field l ty) rem_ty, mu_ty => 
-      let ty' := 
+      [(ty1, ty2)]
+  | .inter (.field l ty1) rem_ty, mu_ty => 
+      let ty2 := 
       [: ∃ 1 :: (⟨prev_ty⟩↓1 & (#⟨l⟩ £0) & ⟨rem_ty⟩↓1) ≤ ⟨unroll mu_ty⟩↓1 . £0 :]
 
-      let rem := make_field_constraints (Ty.inter prev_ty (.field l ty)) rem_ty mu_ty
+      let rem := make_field_constraints (Ty.inter prev_ty (.field l ty1)) rem_ty mu_ty
       if rem.length = 0 then
         []
       else 
-        (ty, ty') :: rem
+        (ty1, ty2) :: rem
   | _, _ => [] 
 
 
@@ -568,7 +568,6 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
     bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
       some (i, env_ty2 ++ env_ty1)
     ))
-
 
   | .fvar id, ty  => match lookup id env_ty with 
     | none => some (i + 1, [
@@ -637,13 +636,8 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
   | .tag l ty', .recur ty =>
     unify i env_ty (.tag l ty') (unroll (.recur ty))
 
-  | ty', .recur ty =>
-    /-
-    (X ; Y) <: μ _
 
-    (∀ α :: ((α ; Y) <: unroll (μ _)). α) <: X
-    (∀ β :: ((X ; β) <: unroll (μ _)). β) <: Y
-    -/
+  | ty', .recur ty =>
     bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
     let cs := (make_field_constraints Ty.dynamic ty'' (Ty.recur ty))
     if cs.length = 0 then
@@ -666,6 +660,7 @@ partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : Ty -> Ty -> Option (Na
       let ty' := [: ⟨ty'⟩ ↑ 0 / [?] :]
       let ty := [: ⟨ty⟩ ↑ 0 / [?] :]
       unify i env_ty ty' ty
+
 
   | .corec ty_corec, Ty.case ty1' ty2' =>
     /-
@@ -826,8 +821,16 @@ def nat_list := [:
 :] nat_list 
 
 #eval unify 3 [] [:
+    (.l #zero ♢ & .r #dumb ♢)
+:] nat_list 
+
+#eval unify 3 [] [:
     (.l #zero ♢ & .r @0)
 :] nat_list 
+
+#eval unify 3 [] [:
+    (.l #zero ♢ & .r @0)
+:] (unroll nat_list) 
 
 #eval unify 3 [] [:
     (.l #succ #zero ♢ & .r #cons @0)
