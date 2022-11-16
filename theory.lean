@@ -823,9 +823,15 @@ def nat_list := [:
   [: #dumb ♢ :] 
 
 -- TODO: does the solution for @0 look so wrong?
-#eval unify 3 [] [:
-    (.l #zero ♢ & .r @0)
-:] nat_list 
+#eval unify 3 [] 
+  [: (.l #zero ♢ & .r @0) :] 
+  nat_list
+
+#eval bind (unify 3 [] 
+  [: (.l #zero ♢ & .r @0) :] 
+  nat_list) (fun (i, env_ty) =>
+    some (Ty.resolve env_ty [: @0 :])
+  )
 
 #eval unify 3 [] 
   [: @0 :] 
