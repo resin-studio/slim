@@ -632,22 +632,22 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
 
   | ty', .recur ty =>
-    -- bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
-    --   unify i env_ty ty'' (unroll (Ty.recur ty))
-    -- )
     bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
-    let cs := (make_field_constraints Ty.dynamic ty'' (Ty.recur ty))
-    if cs.length = 0 then
-      none
-    else
-      List.foldl (fun 
-        | some (i, env_ty1), (ty_c1, ty_c2) => 
-          bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty2) =>
-            some (i, env_ty2 ++ env_ty1)
-          )
-        | none, _ => none
-      ) (some (i, [])) cs
+      unify i env_ty ty'' (unroll (Ty.recur ty))
     )
+    -- bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
+    -- let cs := (make_field_constraints Ty.dynamic ty'' (Ty.recur ty))
+    -- if cs.length = 0 then
+    --   none
+    -- else
+    --   List.foldl (fun 
+    --     | some (i, env_ty1), (ty_c1, ty_c2) => 
+    --       bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty2) =>
+    --         some (i, env_ty2 ++ env_ty1)
+    --       )
+    --     | none, _ => none
+    --   ) (some (i, [])) cs
+    -- )
 
 
   | .corec ty', .corec ty =>
@@ -660,18 +660,18 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
 
   | .corec ty_corec, Ty.case ty1 ty2 =>
-    -- unify i env_ty (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
-    /-
-    ν _ <: X -> Y 
-    (∀ α :: (unroll(ν _) <: α -> Y) . α) <: X 
-    (∀ β :: (unroll(ν _) <: X -> β) . β) <: Y
-    -/
-    let ty1' := .univ 1 ((unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2) (Ty.bvar 0) 
-    let ty2' := .univ 1 ((unroll (.corec ty_corec)), .case ty1 (Ty.bvar 0)) (Ty.bvar 0) 
-    bind (unify i env_ty ty1' ty1 ) (fun (i, env_ty1) =>
-    bind (unify i env_ty ty2' ty2 ) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1)
-    ))
+    unify i env_ty (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
+    -- /-
+    -- ν _ <: X -> Y 
+    -- (∀ α :: (unroll(ν _) <: α -> Y) . α) <: X 
+    -- (∀ β :: (unroll(ν _) <: X -> β) . β) <: Y
+    -- -/
+    -- let ty1' := .univ 1 ((unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2) (Ty.bvar 0) 
+    -- let ty2' := .univ 1 ((unroll (.corec ty_corec)), .case ty1 (Ty.bvar 0)) (Ty.bvar 0) 
+    -- bind (unify i env_ty ty1' ty1 ) (fun (i, env_ty1) =>
+    -- bind (unify i env_ty ty2' ty2 ) (fun (i, env_ty2) =>
+    --   some (i, env_ty2 ++ env_ty1)
+    -- ))
 
 
   | .union ty1 ty2, ty => 
@@ -773,6 +773,55 @@ def nat_list := [:
 #eval unify 3 [] 
   [: (.l #zero ♢ & .r #nil ♢) :] 
   nat_list
+
+#eval unify 3 [] 
+  [: (.l #zero ♢ & .r @0) :] 
+  nat_list
+
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r @0 & .g #scooby ♢) :] 
+  [: (.l #succ #zero ♢ & .r #ooga ♢ & .g #scooby ♢) | (.l #zero ♢ & .r #booga ♢) :] 
+
+
+
+#eval unroll nat_list
+-- TODO: why does this diverge?
+-- #eval unify 3 [] 
+--   [: (.l #succ #zero ♢ & .r #cons @0) :] 
+--   nat_list
+
+-- #eval unify 3 [] 
+  -- [: (.l #succ #zero ♢ & .r #cons @0) :] 
+  -- [: 
+  --     ∃ 2 :: .l £0 & .r £1 ≤ (μ 1 .
+  --       .l #zero ♢ & .r #nil ♢ |
+  --       ∃ 2 :: .l £0 & .r £1 ≤ £2 .
+  --         .l #succ £0 & .r #cons £1
+  --     ) .
+  --       .l #succ £0 & .r #cons £1
+  -- :]
+
+
+#eval unify_all 3 [
+  ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :])
+]
+
+#eval unify_all 3 [
+  ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :]),
+  (
+    [: .l @33 & .r @44  :], 
+    [:μ 1 .
+        .l #zero ♢ & .r #nil ♢ |
+        ∃ 2 :: .l £0 & .r £1 ≤ £2 .
+          .l #succ £0 & .r #cons £1
+    :]
+  )
+]
+
+-- #eval unify_all 3 [
+--   ([: (.l #zero ♢ & .r @0) :], nat_list),
+--   ([: #nil ♢ :], [: @0 :])
+-- ]
 
 -- #eval (linearize_record [: (.l #zero ♢ & .r #nil ♢) :])
 -- #eval (Ty.resolve [] [: (.l #zero ♢ & .r #nil ♢) :])
