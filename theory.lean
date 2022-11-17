@@ -719,56 +719,56 @@ def unify_all (i : Nat) (cs : List (Ty × Ty)) : List (Nat × List (Nat × Ty)) 
   ) [(i, [])] cs
 
 
--- def zero_ := [: 
---     #zero ♢
--- :]
+def zero_ := [: 
+    #zero ♢
+:]
 
--- #eval unify 3 [] [:
---     (#dumb ♢)
--- :] zero_
+#eval unify 3 [] [:
+    (#dumb ♢)
+:] zero_
 
--- #eval unify 3 [] [:
---     (#zero ♢)
--- :] zero_
+#eval unify 3 [] [:
+    (#zero ♢)
+:] zero_
 
--- /-
---   μ nat .
---     #zero ♢ | 
---     #succ nat 
--- -/
--- def nat_ := [: 
---   μ 1 . 
---     #zero ♢ |
---     #succ £0
--- :]
--- #eval nat_
+/-
+  μ nat .
+    #zero ♢ | 
+    #succ nat 
+-/
+def nat_ := [: 
+  μ 1 . 
+    #zero ♢ |
+    #succ £0
+:]
+#eval nat_
 
--- #eval unify 3 [] [:
---     (#zero ♢)
--- :] nat_ 
+#eval unify 3 [] [:
+    (#zero ♢)
+:] nat_ 
 
--- #eval unify 3 [] [:
---     (#succ (#zero ♢))
--- :] nat_ 
+#eval unify 3 [] [:
+    (#succ (#zero ♢))
+:] nat_ 
 
--- #eval unify 3 [] [:
---     (#succ (@0))
--- :] nat_ 
+#eval unify 3 [] [:
+    (#succ (@0))
+:] nat_ 
 
--- def nat_list := [: 
---   μ 1 .
---     .l #zero ♢ & .r #nil ♢ |
---     ∃ 2 :: .l £0 & .r £1 ≤ £2 .
---       .l #succ £0 & .r #cons £1
--- :]
+def nat_list := [: 
+  μ 1 .
+    .l #zero ♢ & .r #nil ♢ |
+    ∃ 2 :: .l £0 & .r £1 ≤ £2 .
+      .l #succ £0 & .r #cons £1
+:]
 
--- #eval unify 3 [] 
---   [: (.l #zero ♢ & .r #nil ♢) :] 
---   nat_list
+#eval unify 3 [] 
+  [: (.l #zero ♢ & .r #nil ♢) :] 
+  nat_list
 
--- #eval unify 3 [] 
---   [: (.l #zero ♢ & .r #dumb ♢) :] 
---   nat_list
+#eval unify 3 [] 
+  [: (.l #zero ♢ & .r #dumb ♢) :] 
+  nat_list
 
 -- -- this is divergent
 -- /-
@@ -777,157 +777,156 @@ def unify_all (i : Nat) (cs : List (Ty × Ty)) : List (Nat × List (Nat × Ty)) 
 --   nat_list
 -- -/
 
--- #eval unify 3 [] 
---   [: (.l #zero ♢ & .r @0) :] 
---   nat_list
+#eval unify 3 [] 
+  [: (.l #zero ♢ & .r @0) :] 
+  nat_list
 
--- #eval unify 3 [] 
---   [: (.l #succ #zero ♢ & .r @0 & .g #scooby ♢) :] 
---   [: (.l #succ #zero ♢ & .r #ooga ♢ & .g #scooby ♢) | (.l #zero ♢ & .r #booga ♢) :] 
-
-
--- #eval unify 3 [] 
---   [: (.l #succ #zero ♢ & .r #cons @0) :] 
---   nat_list
-
--- #eval unify 3 [] 
---   [: (.l #succ #zero ♢ & .r @0) :] 
---   nat_list
-
--- #eval unify 3 [] 
---   [: (.l #succ #zero ♢ & .r #cons #cons @0) :] 
---   nat_list
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r @0 & .g #scooby ♢) :] 
+  [: (.l #succ #zero ♢ & .r #ooga ♢ & .g #scooby ♢) | (.l #zero ♢ & .r #booga ♢) :] 
 
 
--- #eval unify 3 [] 
---   [: (.l #succ #zero ♢ & .r #cons @0) :] 
---   [: 
---       ∃ 2 :: .l £0 & .r £1 ≤ (μ 1 .
---         .l #zero ♢ & .r #nil ♢ |
---         ∃ 2 :: .l £0 & .r £1 ≤ £2 .
---           .l #succ £0 & .r #cons £1
---       ) .
---         .l #succ £0 & .r #cons £1
---   :]
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r #cons @0) :] 
+  nat_list
 
--- #eval unify_all 3 [
---   ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :])
--- ]
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r @0) :] 
+  nat_list
 
--- #eval unify_all 3 [
---   ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :]),
---   (
---     [: .l @33 & .r @44  :], 
---     [:μ 1 .
---         .l #zero ♢ & .r #nil ♢ |
---         ∃ 2 :: .l £0 & .r £1 ≤ £2 .
---           .l #succ £0 & .r #cons £1
---     :]
---   )
--- ]
-
--- /-
---   μ plus .
---     ∃ N .  
---       #zero ♢ × N × N | 
-
---     ∃ X Y Z :: X, Y, Z ≤ plus .  
---       #succ X × Y × #succ Z
--- -/
--- def plus := [: 
---   μ 1 . 
---     (∃ 1 . 
---       (.x #zero ♢ & .y £0 & .z £0)) |
-
---     (∃ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
---       (.x #succ £0 & .y £1 & .z #succ £2))
--- :]
-
--- #print plus
-
--- #eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
--- #eval [: #succ #succ #zero ♢ :]  
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r #cons #cons @0) :] 
+  nat_list
 
 
--- #eval unify 3 [] [:
---     .x #zero ♢ &
---     .y @0 &
---     .z #zero ♢
--- :] plus
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r #cons @0) :] 
+  [: 
+      ∃ 2 :: .l £0 & .r £1 ≤ (μ 1 .
+        .l #zero ♢ & .r #nil ♢ |
+        ∃ 2 :: .l £0 & .r £1 ≤ £2 .
+          .l #succ £0 & .r #cons £1
+      ) .
+        .l #succ £0 & .r #cons £1
+  :]
+
+#eval unify_all 3 [
+  ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :])
+]
+
+#eval unify_all 3 [
+  ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :]),
+  (
+    [: .l @33 & .r @44  :], 
+    [:μ 1 .
+        .l #zero ♢ & .r #nil ♢ |
+        ∃ 2 :: .l £0 & .r £1 ≤ £2 .
+          .l #succ £0 & .r #cons £1
+    :]
+  )
+]
+
+/-
+  μ plus .
+    ∃ N .  
+      #zero ♢ × N × N | 
+
+    ∃ X Y Z :: X, Y, Z ≤ plus .  
+      #succ X × Y × #succ Z
+-/
+def plus := [: 
+  μ 1 . 
+    (∃ 1 . 
+      (.x #zero ♢ & .y £0 & .z £0)) |
+
+    (∃ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
+      (.x #succ £0 & .y £1 & .z #succ £2))
+:]
+
+#print plus
+
+#eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
+#eval [: #succ #succ #zero ♢ :]  
 
 
--- #eval unify 3 [] [:
---   (
---     .x (#succ #zero ♢) &
---     .y (#succ #zero ♢) &
---     .z (@0)
---   )
--- :] plus
+#eval unify 3 [] [:
+    .x #zero ♢ &
+    .y @0 &
+    .z #zero ♢
+:] plus
 
--- #eval unify 3 [] [:
---   (
---     .x (#succ #succ #zero ♢) &
---     .y (#succ #zero ♢) &
---     .z (@0)
---   )
--- :] plus
 
--- #eval unify 3 [] [:
---   (
---     .x (#succ #zero ♢) &
---     .y (@0) &
---     .z (#succ #succ #zero ♢)
---   )
--- :] plus
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (#succ #zero ♢) &
+    .z (@0)
+  )
+:] plus
 
--- #eval unify 3 [] [:
---   (
---     .x (#succ #zero ♢) &
---     .y (#succ #succ #zero ♢) &
---     .z (@0)
---   )
--- :] plus
+#eval unify 3 [] [:
+  (
+    .x (#succ #succ #zero ♢) &
+    .y (#succ #zero ♢) &
+    .z (@0)
+  )
+:] plus
 
--- #eval unify 3 [] [:
---   (
---     .x #zero ♢ &
---     .y @0 &
---     .z #succ #succ #zero ♢
---   )
--- :] plus
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (@0) &
+    .z (#succ #succ #zero ♢)
+  )
+:] plus
 
--- #eval unify 3 [] [:
---   (
---     .x (#succ #zero ♢) &
---     .y (@0) &
---     .z (#succ (#succ #succ (#zero ♢)))
---   )
--- :] plus
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (#succ #succ #zero ♢) &
+    .z (@0)
+  )
+:] plus
 
--- #eval unify 3 [] [:
---   (
---     .x (@0) &
---     .y (@1) &
---     .z (#succ #zero ♢)
---   )
--- :] plus
+#eval unify 3 [] [:
+  (
+    .x #zero ♢ &
+    .y @0 &
+    .z #succ #succ #zero ♢
+  )
+:] plus
 
--- #eval unify 3 [] [:
---   (
---     .x (#succ #zero ♢) &
---     .y (@0) &
---     .z (@1)
---   )
--- :] plus
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (@0) &
+    .z (#succ (#succ #succ (#zero ♢)))
+  )
+:] plus
 
--- -- TODO: modify union unification semantics to create seperate type environments 
--- #eval unify 3 [] [:
---   (
---     .x (@0) & -- zero & succ zero
---     .y (#succ #zero ♢) &
---     .z (@1) -- succ zero & zero
---   )
--- :] plus
+#eval unify 3 [] [:
+  (
+    .x (@0) &
+    .y (@1) &
+    .z (#succ #zero ♢)
+  )
+:] plus
+
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (@0) &
+    .z (@1)
+  )
+:] plus
+
+#eval unify 3 [] [:
+  (
+    .x (@0) & -- zero & succ zero
+    .y (#succ #zero ♢) &
+    .z (@1) -- succ zero & zero
+  )
+:] plus
 
 
 -- /-
