@@ -912,6 +912,23 @@ def plus := [:
   )
 :] plus
 
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (@0) &
+    .z (@1)
+  )
+:] plus
+
+-- TODO: modify union unification semantics to create seperate type environments 
+#eval unify 3 [] [:
+  (
+    .x (@0) & -- zero & succ zero
+    .y (#succ #zero ♢) &
+    .z (@1) -- succ zero & zero
+  )
+:] plus
+
 
 /-
 t ::=                             term
