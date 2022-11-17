@@ -716,9 +716,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \Omega_1 \in M_1
     \\\\
     \Delta;\Omega_1\ \Gamma \vdash t : \alpha 
-      \rightsquigarrow N_1
+      \rightsquigarrow N_2
     \ \wedge\ 
-    \Omega_2\ .\ \tau' \in N_1 
+    \Omega_2\ .\ \tau' \in N_2
     \\\\
     \} = N
   }
@@ -736,9 +736,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \Omega_1 \in M_1
     \\\\
     \Delta;\Omega_1\ \Gamma \vdash t : \alpha 
-      \rightsquigarrow N_1
+      \rightsquigarrow N_2
     \ \wedge\ 
-    \Omega_2\ .\ \tau' \in N_1
+    \Omega_2\ .\ \tau' \in N_2
     \\\\
     \} = N
   }
@@ -840,54 +840,102 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[Proj]
   {
-    \Delta\ \Gamma \vdash t_1 : .l\ \tau \rightsquigarrow \Delta_1\ .\ \tau_1
-    \\
     \text{fresh}\ \alpha
     \\
-    \Delta\;\Delta_1 \vdash \tau_1 \leq .l\ \alpha \rightsquigarrow \Delta_2 
+    \{\Omega_1;\Omega_2\ .\ \alpha \ |\ 
+    \\\\
+    \Delta\ \Gamma \vdash t_1 : .l\ \tau \rightsquigarrow N_1
+    \ \wedge\ 
+    \Omega_1\ .\ \tau_1 \in N_1
+    \\\\
+    \Delta;\Omega_1 \vdash \tau_1 \leq .l\ \alpha \rightsquigarrow M_2
+    \ \wedge\ 
+    \Omega_2 \in M_2
+    \\\\
+    \} = N
   }
   {\Delta\ \Gamma \vdash t_1.l : \tau 
-    \rightsquigarrow \Delta_1;\Delta_2\ .\ \alpha} 
+    \rightsquigarrow N} 
 
 \inferrule[App]
   { 
-    \Delta\ \Gamma \vdash t_2 : (? \rightarrow \tau) 
-      \rightsquigarrow \Delta_1\ .\ \tau_2 
-    \\\\
     \text{fresh}\ \alpha \\ \text{fresh}\ \beta
     \\
-    \Delta;\Delta_1 \vdash \tau_2 \leq \alpha \rightarrow \beta 
-      \rightsquigarrow \Delta_2
+    \{\Omega_1;\Omega_2;\Omega_3;\Omega_4\ .\ \beta |\ 
     \\\\
-    \Delta;\Delta_1;\Delta_2\ \Gamma \vdash t_1 : \alpha 
-      \rightsquigarrow \Delta_3\ .\ \tau_1' 
+    \Delta\ \Gamma \vdash t_2 : (? \rightarrow \tau) 
+      \rightsquigarrow N_1
+    \ \wedge\ 
+    \Omega_1\ .\ \tau_2 \in N_1
+    \ \wedge\ 
     \\\\
-    \Delta;\Delta_1;\Delta_2;\Delta_3 \vdash \tau_2 \leq \tau_1' \rightarrow \tau  
-      \rightsquigarrow \Delta_4 
+    \Delta;\Omega_1 \vdash \tau_2 \leq \alpha \rightarrow \beta 
+      \rightsquigarrow M_2 
+    \ \wedge\ 
+    \Omega_2 \in M_2
+    \ \wedge\ 
+    \\\\
+    \Delta;\Omega_1;\Omega_2\ \Gamma \vdash t_1 : \alpha 
+      \rightsquigarrow N_3
+    \ \wedge\ 
+    \Omega_3\ .\ \tau_1' \in N_3
+    \ \wedge\ 
+    \\\\
+    \Delta;\Omega_1;\Omega_2;\Omega_3 \vdash \tau_2 \leq \tau_1' \rightarrow \tau  
+      \rightsquigarrow M_4
+    \ \wedge\ 
+    \Omega_4 \in M_4 
+    \\\\
+    \} = N
   }
   {\Delta\ \Gamma \vdash t_2\ t_1 : \tau 
-    \rightsquigarrow \Delta_1;\Delta_2;\Delta_3;\Delta_4\ .\ \beta} 
+    \rightsquigarrow  N
+    } 
 
 \inferrule[Let]
   { 
     \text{fresh}\ \widebar{\alpha}
     \\
-    \Delta\ \Gamma \vdash t_1 : \tau_1[?/\widebar{\alpha}] \rightsquigarrow \Delta_1\ .\ \tau_1' 
-    \\
-    \Delta;\Delta_1\ \Gamma,x \mapsto (\forall \beta :: \beta \leq \tau_1[?/\widebar{\alpha}]\ .\ \beta) 
-      \vdash t : \tau \rightsquigarrow \Delta_2\ .\ \tau' 
+    \{ \Omega_1;\Omega_2\ .\ \tau' \ |\ 
+    \\\\
+    \Delta\ \Gamma \vdash t_1 : \tau_1[?/\widebar{\alpha}] 
+    \rightsquigarrow N_1
+    \ \wedge\ 
+    \Omega_1\ .\ \tau_1' \in N_1
+    \ \wedge\ 
+    \\\\
+    \Delta;\Omega_1\ \Gamma,x \mapsto (\forall \beta :: \beta \leq \tau_1[?/\widebar{\alpha}]\ .\ \beta) 
+      \vdash t : \tau \rightsquigarrow N_2
+    \ \wedge\ 
+    \\\\
+    \Omega_2\ .\ \tau' \in N_2
+    \\\\
+    \} = N
   }
-  {\Delta\ \Gamma \vdash (\text{let}\ x : \tau_1 = t_1\ .\ t) : \tau \rightsquigarrow \Delta_1\Delta_2\ .\ \tau'} 
+  {\Delta\ \Gamma \vdash (\text{let}\ x : \tau_1 = t_1\ .\ t) : \tau 
+  \rightsquigarrow N} 
 
 \inferrule[Fix]
   { 
-    \Delta\ \Gamma \vdash t_1 : \tau \rightarrow \tau \rightsquigarrow \Delta_1\ .\ \tau_1' 
-    \\
     \text{fresh}\ \alpha
     \\
-    \Delta;\Delta_1 \vdash \tau_1' \leq \alpha \rightarrow \alpha \rightsquigarrow \Delta_2 
+    \{ \Omega_1;\Omega_2\ .\ \alpha \ |\ 
+    \\\\
+    \Delta\ \Gamma \vdash t_1 : \tau \rightarrow \tau 
+    \rightsquigarrow N_1
+    \ \wedge\  
+    \Omega_1\ .\ \tau_1' \in N_1
+    \ \wedge\  
+    \\
+    \Delta;\Omega_1 \vdash \tau_1' \leq \alpha \rightarrow \alpha 
+    \rightsquigarrow M_2
+    \ \wedge\  
+    \Omega_2 \in M_2
+    \\\\
+    \} = N
   }
-  {\Delta\ \Gamma \vdash \text{fix}\ t_1 : \tau \rightsquigarrow \Delta_1;\Delta_2\ .\ \alpha} 
+  {\Delta\ \Gamma \vdash \text{fix}\ t_1 : \tau 
+  \rightsquigarrow N} 
 
 
 \end{mathpar}
