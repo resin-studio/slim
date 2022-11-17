@@ -297,14 +297,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \inferrule[]
   { } 
   {
-    \omega\ ;\ \cdot = \omega 
+    \Omega\ ;\ \cdot = \Omega 
   } 
 
 \inferrule[]
   { } 
   {
-    \omega_1\ ;\ (\omega_2,\alpha \mapsto \tau) =
-    (\omega_1;\omega_2),\alpha \mapsto \tau
+    \Omega_1\ ;\ (\Omega_2,\alpha \mapsto \tau) =
+    (\Omega_1;\Omega_2),\alpha \mapsto \tau
   } 
 
 
@@ -312,9 +312,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   { } 
   {
     M_1 * M_2 =
-    \bigcup_{\omega_1 \in M_1}
-    \bigcup_{\omega_2 \in M_2}
-    \{ \omega_1 ; \omega_2 \}
+    \{ \Omega_1 ; \Omega_2 \ |\ 
+    \Omega_1 \in M_1
+    \ \wedge\ 
+    \Omega_2 \in M_2
+    \}
   } 
 
 \inferrule[equiv]
@@ -361,7 +363,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   }
   {\Delta \vdash \alpha \leq \tau	
     \rightsquigarrow  
-    \cdot,\alpha \mapsto \tau_1 \ \&\ \beta
+    \{ \cdot,\alpha \mapsto \tau_1 \ \&\ \beta \}
   } 
 
 \inferrule[var-rght]
@@ -372,14 +374,24 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \tau = \tau_1
     % Note: universal rule should execute before this rule to free the bound variables before writing. 
   }
-  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  \cdot,\alpha \mapsto \tau_1 \ |\ \beta } 
-
+  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  
+    \{ \cdot,\alpha \mapsto \tau_1 \ |\ \beta  \}
+  } 
 
 \inferrule[exis-free]
   { 
-    \Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1
-    \\
-    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_2
+    \{ \Omega_1;\Omega_2 \ |\ 
+    \\\\
+      \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
+      \ \wedge\
+      \Omega_1 \in M_1
+      \ \wedge\
+    \\\\
+      \Delta;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
+      \ \wedge\
+      \Omega_2 \in M_2
+    \\\\
+    \} = M
     \\
     \text{fresh}\ \widebar{\alpha}
   }
@@ -389,14 +401,23 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \leq 
       (\exists \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau)
       \rightsquigarrow
-      \Delta_1;\Delta_2
+      M 
   }
 
 \inferrule[univ-free]
   { 
-    \Delta;\Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1
-    \\
-    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow \Delta_2
+    \{ \Omega_1;\Omega_2 \ |\ 
+    \\\\
+    \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
+    \ \wedge\
+    \Omega_1 \in M_1
+    \ \wedge\
+    \\\\
+    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
+    \ \wedge\
+    \Omega_2 \in M_2
+    \\\\
+    \} = M
     \\
     \text{fresh}\ \widebar{\alpha}
   }
@@ -406,7 +427,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \leq 
       \tau
       \rightsquigarrow
-      \Delta_1;\Delta_2
+      M
   }
 
 
