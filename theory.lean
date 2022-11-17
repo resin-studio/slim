@@ -828,10 +828,8 @@ def nat_list := [:
 
 /-
   μ plus .
-    #zero ♢ × #zero ♢ × #zero ♢ | 
-
-    ∃ N :: #zero , N, N ≤ plus .  
-      #zero ♢ × #succ N × #succ N | 
+    ∃ N .  
+      #zero ♢ × N × N | 
 
     ∃ X Y Z :: X, Y, Z ≤ plus .  
       #succ X × Y × #succ Z
@@ -903,6 +901,14 @@ def plus := [:
     .x (#succ #zero ♢) &
     .y (@0) &
     .z (#succ (#succ #succ (#zero ♢)))
+  )
+:] plus
+
+#eval unify 3 [] [:
+  (
+    .x (@0) &
+    .y (@1) &
+    .z (#succ #zero ♢)
   )
 :] plus
 
