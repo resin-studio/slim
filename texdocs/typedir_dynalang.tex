@@ -680,42 +680,70 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[Unit]
   { 
-    \Delta \vdash \diamondsuit \leq \tau \rightsquigarrow \Delta_1 
+    \{\Omega\ .\ \diamondsuit \ |\ 
+    \\\\
+    \Delta \vdash \diamondsuit \leq \tau \rightsquigarrow M
+    \ \wedge\ 
+    \Omega \in M
+    \\\\
+    \} = N 
   }
-  {\Delta\ \Gamma \vdash () : \tau  \rightsquigarrow \Delta_1\ .\ \diamondsuit } 
+  {\Delta\ \Gamma \vdash () : \tau  \rightsquigarrow N } 
 
 \inferrule[Var]
   { 
     \Gamma(x) = \tau'
     \\
-    \Delta \vdash \tau' \leq \tau \rightsquigarrow \Delta_1
+    \{\Omega\ .\ \tau' \ |\ 
+    \\\\
+    \Delta \vdash \tau' \leq \tau \rightsquigarrow M 
+    \ \wedge\ 
+    \Omega \in M
+    \\\\
+    \} = N
   }
   {\Delta\ \Gamma \vdash x : \tau  
-    \rightsquigarrow \Delta_1\ .\ \tau' } 
+    \rightsquigarrow N } 
 
 \inferrule[Tag]
   { 
     \text{fresh}\ \alpha
     \\
-    \Delta \vdash \#l\ \alpha \leq \tau \rightsquigarrow \Delta_1
+    \{\Omega_1;\Omega_2\ .\ \tau' \ |\ 
     \\\\
-    \Delta;\Delta_1\ \Gamma \vdash t : \alpha 
-      \rightsquigarrow \Delta_2\ .\ \tau'
+    \Delta \vdash \#l\ \alpha \leq \tau \rightsquigarrow M_1 
+    \ \wedge\ 
+    \Omega_1 \in M_1
+    \\\\
+    \Delta;\Omega_1\ \Gamma \vdash t : \alpha 
+      \rightsquigarrow N_1
+    \ \wedge\ 
+    \Omega_2\ .\ \tau' \in N_1 
+    \\\\
+    \} = N
   }
   {\Delta\ \Gamma \vdash \#l\ t : \tau  
-    \rightsquigarrow \Delta_1;\Delta_2\ .\ \tau' } 
+    \rightsquigarrow N} 
 
 \inferrule[Field]
   { 
     \text{fresh}\ \alpha
     \\
-    \Delta \vdash .l\ \alpha \leq \tau \rightsquigarrow \Delta_1
+    \{\Omega_1;\Omega_2\ .\ \tau' \ |\ 
     \\\\
-    \Delta;\Delta_1\ \Gamma \vdash t : \alpha 
-      \rightsquigarrow \Delta_2\ .\ \tau'
+    \Delta \vdash .l\ \alpha \leq \tau \rightsquigarrow M_1
+    \ \wedge\ 
+    \Omega_1 \in M_1
+    \\\\
+    \Delta;\Omega_1\ \Gamma \vdash t : \alpha 
+      \rightsquigarrow N_1
+    \ \wedge\ 
+    \Omega_2\ .\ \tau' \in N_1
+    \\\\
+    \} = N
   }
   {\Delta\ \Gamma \vdash .l\ t : \tau  
-    \rightsquigarrow \Delta_1;\Delta_2\ .\ \tau' } 
+    \rightsquigarrow N } 
 
 \inferrule[Record]
   {
