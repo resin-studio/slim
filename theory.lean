@@ -582,7 +582,7 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty := Ty.raise_binding 0 args ty
     bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-    bind (unify i (env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
+    bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
       some (i, env_ty2 ++ env_ty1)
     ))
     -- )
@@ -783,24 +783,29 @@ def nat_list := [:
   [: (.l #succ #zero ♢ & .r #ooga ♢ & .g #scooby ♢) | (.l #zero ♢ & .r #booga ♢) :] 
 
 
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r #cons @0) :] 
+  nat_list
 
-#eval unroll nat_list
--- TODO: why does this diverge?
--- #eval unify 3 [] 
---   [: (.l #succ #zero ♢ & .r #cons @0) :] 
---   nat_list
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r @0) :] 
+  nat_list
 
--- #eval unify 3 [] 
-  -- [: (.l #succ #zero ♢ & .r #cons @0) :] 
-  -- [: 
-  --     ∃ 2 :: .l £0 & .r £1 ≤ (μ 1 .
-  --       .l #zero ♢ & .r #nil ♢ |
-  --       ∃ 2 :: .l £0 & .r £1 ≤ £2 .
-  --         .l #succ £0 & .r #cons £1
-  --     ) .
-  --       .l #succ £0 & .r #cons £1
-  -- :]
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r #cons #cons @0) :] 
+  nat_list
 
+
+#eval unify 3 [] 
+  [: (.l #succ #zero ♢ & .r #cons @0) :] 
+  [: 
+      ∃ 2 :: .l £0 & .r £1 ≤ (μ 1 .
+        .l #zero ♢ & .r #nil ♢ |
+        ∃ 2 :: .l £0 & .r £1 ≤ £2 .
+          .l #succ £0 & .r #cons £1
+      ) .
+        .l #succ £0 & .r #cons £1
+  :]
 
 #eval unify_all 3 [
   ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :])
