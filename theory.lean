@@ -836,52 +836,75 @@ def nat_list := [:
     ∃ X Y Z :: X, Y, Z ≤ plus .  
       #succ X × Y × #succ Z
 -/
--- def plus := [: 
---   μ 1 . 
---     (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) |
+def plus := [: 
+  μ 1 . 
+    (∃ 1 . 
+      (.x #zero ♢ & .y £0 & .z £0)) |
 
---     (∃ 1 :: (.x #zero ♢ & .y £0 & .z £0) ≤ £1 .   
---       (.x #zero ♢ & .y #succ £0 & .z #succ £0)) |
+    (∃ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
+      (.x #succ £0 & .y £1 & .z #succ £2))
+:]
 
---     (∃ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
---       (.x #succ £0 & .y £1 & .z #succ £2))
--- :]
+#print plus
 
--- #print plus
-
--- #eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
--- #eval [: #succ #succ #zero ♢ :]  
+#eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
+#eval [: #succ #succ #zero ♢ :]  
 
 
--- #eval unify 3 [] [:
---     .x #zero ♢ &
---     .y @0 &
---     .z #zero ♢
--- :] plus
+#eval unify 3 [] [:
+    .x #zero ♢ &
+    .y @0 &
+    .z #zero ♢
+:] plus
 
--- #eval unify 3 [] [:
---   (
---     .x #zero ♢ &
---     .y @0 &
---     .z #succ #succ #zero ♢
---   )
--- :] plus
 
--- #eval unify 3 [] [:
---   (
---     .x (#succ #zero ♢) &
---     .y (@0) &
---     .z (#succ (#succ #succ (#zero ♢)))
---   )
--- :] plus
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (#succ #zero ♢) &
+    .z (@0)
+  )
+:] plus
 
--- #eval unify 3 [] [:
---   (
---     .x (#succ #zero ♢) &
---     .y (#succ #zero ♢) &
---     .z (@0)
---   )
--- :] plus
+#eval unify 3 [] [:
+  (
+    .x (#succ #succ #zero ♢) &
+    .y (#succ #zero ♢) &
+    .z (@0)
+  )
+:] plus
+
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (@0) &
+    .z (#succ #succ #zero ♢)
+  )
+:] plus
+
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (#succ #succ #zero ♢) &
+    .z (@0)
+  )
+:] plus
+
+#eval unify 3 [] [:
+  (
+    .x #zero ♢ &
+    .y @0 &
+    .z #succ #succ #zero ♢
+  )
+:] plus
+
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (@0) &
+    .z (#succ (#succ #succ (#zero ♢)))
+  )
+:] plus
 
 
 /-
