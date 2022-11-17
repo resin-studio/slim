@@ -749,52 +749,87 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   {
     \text{fresh}\ \alpha \\ \text{fresh}\ \beta
     \\
+    \{\Omega;\Omega_1;\Omega_2\ .\ \tau_1'\ \&\ \tau_2' \ |\ 
+    \\\\
     \Delta \vdash .l\ \alpha\ \&\ \beta \leq \tau 
-      \rightsquigarrow \Delta_{\alpha\beta}
+      \rightsquigarrow M
+    \ \wedge\ 
+    \Omega \in M 
+    \ \wedge\ 
     \\
-    \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash .l\ t_1 : .l\ \alpha  
-      \rightsquigarrow \Delta_1\ .\ \tau_1'
+    \Delta;\Omega\ \Gamma \vdash .l\ t_1 : .l\ \alpha  
+      \rightsquigarrow N_1
+    \ \wedge\ 
+    \Omega_1\ .\ \tau_1' \in N_1
+    \ \wedge\ 
     \\
-    \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash t_2 : \beta  
-      \rightsquigarrow \Delta_1\ .\ \tau_2'
+    \Delta;\Omega\ \Gamma \vdash t_2 : \beta  
+      \rightsquigarrow N_2
+    \ \wedge\ 
+    \Omega_2\ .\ \tau_2' \in N_2
+    \\\\
+    \} = N
   }
   {\Delta\ \Gamma \vdash (.l\ t_1;\ t_2) : \tau  
-    \rightsquigarrow \Delta_{\alpha\beta};\Delta_1;\Delta_2\ .\ \tau_1'\ \&\ \tau_2' } 
+    \rightsquigarrow N} 
 
 \inferrule[Case]
   { 
-    \text{fresh}\ \widebar{\alpha} \\ \text{fresh}\ \beta
+    \text{fresh}\ \widebar{\alpha} \\ \text{fresh}\ \beta \\  
+    \Gamma \vdash_{pat}\ t_1 : \tau_1[?/\widebar{\alpha}] \rightsquigarrow \Gamma_1
     \\
+    \{\Omega_1;\Omega_2\ .\ \tau_1[?/\widebar{\alpha}] \rightarrow \tau_2' \ |\ 
+    \\\\
     \Delta\ \Gamma \vdash
       \tau_1[?/\widebar{\alpha}] \rightarrow \beta \leq \tau
-      \rightsquigarrow \Delta_1
+      \rightsquigarrow M_1 
+    \ \wedge\ 
+    \Omega_1 \in M_1
+    \ \wedge\ 
     \\\\
-    \Gamma \vdash_{pat}\ t_1 : \tau_1 \rightsquigarrow \Gamma_1
-    \\
-    \Delta;\Delta_1\ \Gamma;\Gamma_2 \vdash 
+    \Delta;\Omega_1\ \Gamma;\Gamma_1 \vdash 
       t_2 : \beta  
-      \rightsquigarrow \Delta_2\ .\ \tau_2'
+      \rightsquigarrow N_1
+    \ \wedge\ 
+    \Omega_2\ .\ \tau_2' \in N_1
+    \\\\
+    \} = N
   }
   {\Delta\ \Gamma \vdash 
     (\lambda\ t_1 : \tau_1 \Rightarrow t_2) : \tau  
-    \rightsquigarrow \Delta_1;\Delta_2\ .\ \tau_1[?/\widebar{\alpha}] \rightarrow \tau_2'
+    \rightsquigarrow 
+    N
   } 
 
 \inferrule[Function]
   {
     \text{fresh}\ \alpha \\ \text{fresh}\ \beta
     \\
-    \Delta \vdash (\tau_p \rightarrow \alpha)\ \&\ \beta \leq \tau  \rightsquigarrow \Delta_{\alpha\beta}
-    \\
-    \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash \lambda\ t_p : \tau_p \Rightarrow t_1 : 
+    \{\Omega;\Omega_1;\Omega_2\ .\ \tau_1'\ \&\ \tau_2' \ |\ 
+    \\\\
+    \Delta \vdash (\tau_p \rightarrow \alpha)\ \&\ \beta \leq \tau  
+    \rightsquigarrow M
+    \ \wedge\ 
+    \Omega \in M
+    \ \wedge\ 
+    \\\\
+    \Delta;\Omega\ \Gamma \vdash \lambda\ t_p : \tau_p \Rightarrow t_1 : 
       (\tau_p \rightarrow \alpha)  
-      \rightsquigarrow \Delta_1\ .\ \tau_1'
-    \\
-    \Delta;\Delta_{\alpha\beta}\ \Gamma \vdash t_2 : \beta  
-      \rightsquigarrow \Delta_1\ .\ \tau_2'
+      \rightsquigarrow N_1
+    \ \wedge\
+    \Omega_1\ .\ \tau_1' \in N_1
+    \ \wedge\ 
+    \\\\
+    \Delta;\Omega\ \Gamma \vdash t_2 : \beta  
+      \rightsquigarrow N_2
+    \ \wedge\ 
+    \Omega_2\ .\ \tau_2' \in N_2
+    \\\\
+    \} = N
   }
   {\Delta\ \Gamma \vdash (\lambda\ t_p : \tau_p \Rightarrow t_1\ ;\ t_2) : \tau  
-    \rightsquigarrow \Delta_{\alpha\beta};\Delta_1;\Delta_2\ .\ \tau_1'\ \&\ \tau_2' } 
+    \rightsquigarrow 
+    N } 
 
 \end{mathpar}
 \caption{Inference typing: part 1}
