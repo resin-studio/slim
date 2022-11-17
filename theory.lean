@@ -535,44 +535,55 @@ def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
 
 
 
+/-
+
+result:
+empty list is failure
+non-empty list represents the solutions of unification
+
+-/
 partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : 
-Ty -> Ty -> Option (Nat × List (Nat × Ty))
+Ty -> Ty -> List (Nat × List (Nat × Ty))
   | .bvar id1, .bvar id2  =>
     if id1 = id2 then 
-      some (i, [])
+      [ (i, []) ]
     else
-      none
+      .nil
 
-  | .unit, .unit => some (i, []) 
+  | .unit, .unit => [ (i, []) ] 
 
   | .tag l' ty', .tag l ty =>
     if l' = l then
       unify i env_ty ty' ty
     else
-      none
+      .nil 
 
   | .field l' ty', .field l ty =>
     if l' = l then
       unify i env_ty ty' ty
     else
-      none
+      .nil
 
   | .case ty1 ty2', .case ty1' ty2 =>
-    bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
-    bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1)
+    List.bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
+    List.bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
+      [ (i, env_ty2 ++ env_ty1) ]
     ))
+    -- bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
+    -- bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
+    --   some (i, env_ty2 ++ env_ty1)
+    -- ))
 
   | ty', .fvar id  => match lookup id env_ty with 
-    | none => some (i + 1, [
+    | none => [ (i + 1, [
         (id, .union (roll_corec id ty') (Ty.fvar i))
-      ]) 
+      ]) ]
     | some ty => unify i env_ty ty' ty 
 
   | .fvar id, ty  => match lookup id env_ty with 
-    | none => some (i + 1, [
+    | none => [ (i + 1, [
         (id, .inter (roll_recur id ty) (Ty.fvar i))
-      ]) 
+      ]) ]
     | some ty' => unify i env_ty ty' ty 
 
 
@@ -581,9 +592,9 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty := Ty.raise_binding 0 args ty
-    bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-    bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
-      some (i, env_ty2 ++ env_ty1)
+    List.bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
+    List.bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
+      [ (i, env_ty2 ++ env_ty1) ]
     ))
     -- )
     -- list[{x;z}] <: ∃ X :: (X <: {x}) . list[X]
@@ -598,30 +609,30 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty' := Ty.raise_binding 0 args ty'
-    bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-    bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
-      some (i, env_ty2 ++ env_ty1)
+    List.bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
+    List.bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
+      [ (i, env_ty2 ++ env_ty1) ]
     ))
 
   | .exis n (ty_c1, ty_c2) ty', ty =>
     if Ty.equal env_ty (.exis n (ty_c1, ty_c2) ty') ty then
-      some (i, []) 
+      [ (i, [])  ]
     else
-      none
+      .nil
 
   | ty', .univ n (ty_c1, ty_c2) ty =>
     if Ty.equal env_ty ty' (.univ n (ty_c1, ty_c2) ty) then
-      some (i, [])
+      [ (i, []) ]
     else
-      none
+      .nil 
 
-  | .dynamic, _ => some (i, []) 
-  | _, .dynamic => some (i, []) 
+  | .dynamic, _ => [ (i, [])  ]
+  | _, .dynamic => [ (i, []) ]
 
 
   | .recur ty', .recur ty =>
     if Ty.equal env_ty ty' ty then
-      some (i, [])
+      [ (i, []) ]
     else
       let ty' := [: ⟨ty'⟩ ↑ 0 / [?]:]
       let ty := [: ⟨ty⟩ ↑ 0 / [?]:]
@@ -632,9 +643,9 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
 
   | ty', .recur ty =>
-    bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
-      unify i env_ty ty'' (unroll (Ty.recur ty))
-    )
+    match linearize_record (Ty.resolve env_ty ty') with 
+      | .some ty'' => unify i env_ty ty'' (unroll (Ty.recur ty))
+      | .none => .nil
     -- bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
     -- let cs := (make_field_constraints Ty.dynamic ty'' (Ty.recur ty))
     -- if cs.length = 0 then
@@ -652,7 +663,7 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
   | .corec ty', .corec ty =>
     if Ty.equal env_ty ty' ty then
-      some (i, [])
+      [ (i, []) ]
     else
       let ty' := [: ⟨ty'⟩ ↑ 0 / [?] :]
       let ty := [: ⟨ty⟩ ↑ 0 / [?] :]
@@ -675,9 +686,9 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
 
 
   | .union ty1 ty2, ty => 
-    bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
-    bind (unify i (env_ty1 ++ env_ty) ty2 ty) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1)
+    List.bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
+    List.bind (unify i (env_ty1 ++ env_ty) ty2 ty) (fun (i, env_ty2) =>
+      [ (i, env_ty2 ++ env_ty1) ]
     ))
     -- list[{x;y}] | list[{x;z}] <: list[X]
     -- list[{x;y}] <: list[X]
@@ -685,753 +696,742 @@ Ty -> Ty -> Option (Nat × List (Nat × Ty))
     -- list[{x;z}] <: list[{x;y} | Y]
 
   | ty, .union ty1 ty2 => 
-    match unify i env_ty ty ty1 with
-      | .none => unify i env_ty ty ty2
-      | .some (i, env_ty1) =>
-        match (unify i (env_ty1 ++ env_ty) ty ty2) with
-          | .none => some (i, env_ty1)
-          | .some (i, env_ty2) => some (i, env_ty2 ++ env_ty1)
+    (unify i env_ty ty ty1) ++ (unify i env_ty ty ty2)
 
 
   | ty, .inter ty1 ty2 => 
-    bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
-    bind (unify i (env_ty1 ++ env_ty) ty ty2) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1)
+    List.bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
+    List.bind (unify i (env_ty1 ++ env_ty) ty ty2) (fun (i, env_ty2) =>
+      [ (i, env_ty2 ++ env_ty1) ]
     ))
 
   | .inter ty1 ty2, ty => 
-    match (unify i env_ty ty1 ty) with
-      | .none => (unify i env_ty ty2 ty)
-      | .some (i, env_ty1) => 
-        match (unify i (env_ty1 ++ env_ty) ty2 ty) with
-          | .none => (i, env_ty1)
-          | .some (i, env_ty2) => some (i, env_ty2 ++ env_ty1)
+    (unify i env_ty ty1 ty) ++ (unify i env_ty ty2 ty)
 
-  | _, _ => none
+  | _, _ => .nil 
 
-def unify_all (i : Nat) (cs : List (Ty × Ty)) := 
-  List.foldl (fun 
-    | some (i, env_ty1), (ty_c1, ty_c2) => 
-      bind (unify i env_ty1 ty_c1 ty_c2) (fun (i, env_ty2) =>
-        some (i, env_ty2 ++ env_ty1)
-      )
-    | none, _ => none
-  ) (some (i, [])) cs
-
-
-def zero_ := [: 
-    #zero ♢
-:]
-
-#eval unify 3 [] [:
-    (#dumb ♢)
-:] zero_
-
-#eval unify 3 [] [:
-    (#zero ♢)
-:] zero_
-
-/-
-  μ nat .
-    #zero ♢ | 
-    #succ nat 
--/
-def nat_ := [: 
-  μ 1 . 
-    #zero ♢ |
-    #succ £0
-:]
-#eval nat_
-
-#eval unify 3 [] [:
-    (#zero ♢)
-:] nat_ 
-
-#eval unify 3 [] [:
-    (#succ (#zero ♢))
-:] nat_ 
-
-#eval unify 3 [] [:
-    (#succ (@0))
-:] nat_ 
-
-def nat_list := [: 
-  μ 1 .
-    .l #zero ♢ & .r #nil ♢ |
-    ∃ 2 :: .l £0 & .r £1 ≤ £2 .
-      .l #succ £0 & .r #cons £1
-:]
-
-#eval unify 3 [] 
-  [: (.l #zero ♢ & .r #nil ♢) :] 
-  nat_list
-
-#eval unify 3 [] 
-  [: (.l #zero ♢ & .r #dumb ♢) :] 
-  nat_list
-
--- this is divergent
-/-
-#eval unify 3 [] 
-  [: (.l @0 & .r @1) :] 
-  nat_list
--/
-
-#eval unify 3 [] 
-  [: (.l #zero ♢ & .r @0) :] 
-  nat_list
-
-#eval unify 3 [] 
-  [: (.l #succ #zero ♢ & .r @0 & .g #scooby ♢) :] 
-  [: (.l #succ #zero ♢ & .r #ooga ♢ & .g #scooby ♢) | (.l #zero ♢ & .r #booga ♢) :] 
-
-
-#eval unify 3 [] 
-  [: (.l #succ #zero ♢ & .r #cons @0) :] 
-  nat_list
-
-#eval unify 3 [] 
-  [: (.l #succ #zero ♢ & .r @0) :] 
-  nat_list
-
-#eval unify 3 [] 
-  [: (.l #succ #zero ♢ & .r #cons #cons @0) :] 
-  nat_list
-
-
-#eval unify 3 [] 
-  [: (.l #succ #zero ♢ & .r #cons @0) :] 
-  [: 
-      ∃ 2 :: .l £0 & .r £1 ≤ (μ 1 .
-        .l #zero ♢ & .r #nil ♢ |
-        ∃ 2 :: .l £0 & .r £1 ≤ £2 .
-          .l #succ £0 & .r #cons £1
-      ) .
-        .l #succ £0 & .r #cons £1
-  :]
-
-#eval unify_all 3 [
-  ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :])
-]
-
-#eval unify_all 3 [
-  ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :]),
-  (
-    [: .l @33 & .r @44  :], 
-    [:μ 1 .
-        .l #zero ♢ & .r #nil ♢ |
-        ∃ 2 :: .l £0 & .r £1 ≤ £2 .
-          .l #succ £0 & .r #cons £1
-    :]
-  )
-]
-
-/-
-  μ plus .
-    ∃ N .  
-      #zero ♢ × N × N | 
-
-    ∃ X Y Z :: X, Y, Z ≤ plus .  
-      #succ X × Y × #succ Z
--/
-def plus := [: 
-  μ 1 . 
-    (∃ 1 . 
-      (.x #zero ♢ & .y £0 & .z £0)) |
-
-    (∃ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
-      (.x #succ £0 & .y £1 & .z #succ £2))
-:]
-
-#print plus
-
-#eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
-#eval [: #succ #succ #zero ♢ :]  
-
-
-#eval unify 3 [] [:
-    .x #zero ♢ &
-    .y @0 &
-    .z #zero ♢
-:] plus
-
-
-#eval unify 3 [] [:
-  (
-    .x (#succ #zero ♢) &
-    .y (#succ #zero ♢) &
-    .z (@0)
-  )
-:] plus
-
-#eval unify 3 [] [:
-  (
-    .x (#succ #succ #zero ♢) &
-    .y (#succ #zero ♢) &
-    .z (@0)
-  )
-:] plus
-
-#eval unify 3 [] [:
-  (
-    .x (#succ #zero ♢) &
-    .y (@0) &
-    .z (#succ #succ #zero ♢)
-  )
-:] plus
-
-#eval unify 3 [] [:
-  (
-    .x (#succ #zero ♢) &
-    .y (#succ #succ #zero ♢) &
-    .z (@0)
-  )
-:] plus
-
-#eval unify 3 [] [:
-  (
-    .x #zero ♢ &
-    .y @0 &
-    .z #succ #succ #zero ♢
-  )
-:] plus
-
-#eval unify 3 [] [:
-  (
-    .x (#succ #zero ♢) &
-    .y (@0) &
-    .z (#succ (#succ #succ (#zero ♢)))
-  )
-:] plus
-
-#eval unify 3 [] [:
-  (
-    .x (@0) &
-    .y (@1) &
-    .z (#succ #zero ♢)
-  )
-:] plus
-
-#eval unify 3 [] [:
-  (
-    .x (#succ #zero ♢) &
-    .y (@0) &
-    .z (@1)
-  )
-:] plus
-
--- TODO: modify union unification semantics to create seperate type environments 
-#eval unify 3 [] [:
-  (
-    .x (@0) & -- zero & succ zero
-    .y (#succ #zero ♢) &
-    .z (@1) -- succ zero & zero
-  )
-:] plus
-
-
-/-
-t ::=                             term
-  _                               hole 
-  x                               variable
-  ()                              unit
-  #l t                            tag
-  fs                              record
-  cs                              function
-  t.l                             projection
-  t t                             application
-  let x : τ = t in t              binding
-  fix t                           recursion
-
-cs ::=                            cases
-  for p => t                      singleton 
-  cs ; for p => t                 extension 
-
-fs ::=                            fields 
-  .l t                            singleton 
-  fs ; .l t                       extension
--/
-
-/-
-
-m ::=                             substitution map
-  ⬝                                empty
-  α / τ :: m                      extension
-
-env_tm ::=                             typing environment 
-  ⬝                                empty
-  x : τ :: env_tm                      extension
-
--/
-
-inductive Tm : Type
-  | hole : Tm 
-  | bvar : Nat -> Tm 
-  | fvar : Nat -> Tm 
-  | unit : Tm
-  | tag : String -> Tm -> Tm
-  | record : List (String × Tm) -> Tm
-  | func : List (Nat × Tm × Ty × Tm) -> Tm
-  | proj : Tm -> String -> Tm
-  | app : Tm -> Tm -> Tm
-  | letb : Ty -> Tm -> Tm -> Tm
-  | fix : Tm -> Tm
-
-
--- NOTE: there is no need to instantiate in infer. All that jazz happens in subtype/unify
--- the assymetry of subtyping makes it clear when to instantiate/raise/free a variable
--- and when to unroll a looping type
-
--- notation convetion:
-  -- prime tick marks for updated versions
-  -- numbers for new parts
-  -- no subscripts
-  -- no greek
-  -- general to specific, 
-    -- e.g. env_ty, (not ty_env)
-    -- e.g. ty_recur, (not mu_ty)
-
-
-partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat × Ty))
-  | Tm.fvar id, ty =>
-    match lookup id env_tm with
-      | some _ => none 
-      | none => [(id, ty)] 
-  | .tag l_tm tm, .tag l_ty ty => 
-    if l_tm = l_ty then
-      patvars env_tm tm ty 
-    else none
-  | .record fds, ty  => 
-    bind (linearize_fields ty) (fun linear_ty =>
-      if linear_ty.length = fds.length then
-        List.foldl (fun acc => fun (l, tm)  =>
-          bind acc (fun env_tm_1 =>
-          bind (lookup_record l linear_ty) (fun ty =>
-          bind (patvars (env_tm_1 ++ env_tm) tm ty) (fun env_tm_2 =>
-            some (env_tm_2 ++ env_tm_1)
-          )))
-        ) (some []) fds
-      else
-        none
-    )
-  -- TODO: finish
-  | _, _ => none
-
-
-def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty
-  | .dynamic => 
-    (i + 1, .fvar i) 
-  | .bvar id => (i, .bvar id)
-  | .fvar id => (i, .fvar id)
-  | .unit => (i, .unit)
-  | .tag l ty => 
-    let (i, ty) := (Ty.dynamic_subst i ty)
-    (i, .tag l ty) 
-  | .field l ty => 
-    let (i, ty) := Ty.dynamic_subst i ty
-    (i, .field l ty) 
-  | .union ty1 ty2 => 
-      let (i, ty1) := (Ty.dynamic_subst i ty1)
-      let (i, ty2) := (Ty.dynamic_subst i ty2)
-      (i, .union ty1 ty2)
-  | .inter ty1 ty2 => 
-      let (i, ty1) := (Ty.dynamic_subst i ty1)
-      let (i, ty2) := (Ty.dynamic_subst i ty2)
-      (i, .inter ty1 ty2)
-  | .case ty1 ty2 => 
-      let (i, ty1) := (Ty.dynamic_subst i ty1)
-      let (i, ty2) := (Ty.dynamic_subst i ty2)
-      (i, .case ty1 ty2)
-  | .univ n (ty_c1, ty_c2) ty => 
-    let (i, ty_c1) := Ty.dynamic_subst i ty_c1
-    let (i, ty_c2) := Ty.dynamic_subst i ty_c2
-    let (i, ty) := (Ty.dynamic_subst i ty)
-    (i, .univ n (ty_c1, ty_c2) ty)
-  | .exis n (ty_c1, ty_c2) ty => 
-    let (i, ty_c1) := Ty.dynamic_subst i ty_c1
-    let (i, ty_c2) := Ty.dynamic_subst i ty_c2
-    let (i, ty) := (Ty.dynamic_subst i ty)
-    (i, .exis n (ty_c1, ty_c2) ty)
-  | .recur ty => 
-    let (i, ty) := Ty.dynamic_subst i ty
-    (i, .recur ty)
-  | .corec ty => 
-    let (i, ty) := Ty.dynamic_subst i ty
-    (i, .corec ty)
-
-/-
-NOTE: infer returns a refined type in addition the type variable assignments
-assignments alone do not refine enough due to subtyping
-NOTE: deconstructing types is reduced to unification 
--/
-partial def infer 
-  (i : Nat)
-  (env_ty : List (Nat × Ty)) (env_tm : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
-  Option (Nat × List (Nat × Ty) × Ty) := match t with
-  | .unit => bind (unify i env_ty Ty.unit ty) (fun (i, env_ty) =>
-      (i, env_ty, Ty.unit)
-    )
-  | .bvar _ => none
-  | .fvar id =>
-    bind (lookup id env_tm) (fun ty' =>
-      let (i, ty_x, env_ty_x) := (i + 1, .fvar i, [(i, ty')])
-      bind (unify i (env_ty_x ++ env_ty) ty_x ty) (fun (i, env_ty1) =>
-        some (i, env_ty1 ++ env_ty_x, ty_x)
-      )
-    ) 
-
-  | .tag l t1 =>   
-    let (i, ty1) := (i + 1, .fvar i) 
-    bind (unify i (env_ty) (.tag l ty1) ty) (fun (i, env_ty1) =>
-    bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
-      some (i, env_ty2 ++ env_ty1, .tag l ty1')
+def unify_all (i : Nat) (cs : List (Ty × Ty)) : List (Nat × List (Nat × Ty)) := 
+  List.foldl (fun u_env_ty1 => fun (ty_c1, ty_c2) => 
+    List.bind u_env_ty1 (fun (i, env_ty1) => 
+    List.bind (unify i env_ty1 ty_c1 ty_c2) (fun (i, env_ty2) =>
+      [ (i, env_ty2 ++ env_ty1) ]
     ))
+  ) [(i, [])] cs
 
-  | .record [] => none
 
-  | .record ((l, t1) :: .nil) =>
-    let (i, ty1) := (i + 1, .fvar i) 
-    bind (unify i (env_ty) (.tag l ty1) ty) (fun (i, env_ty1) =>
-    bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
-      some (i, env_ty2 ++ env_ty1, .tag l ty1')
-    ))
+-- def zero_ := [: 
+--     #zero ♢
+-- :]
 
-  | .record (fd :: fds) =>
-    let (i, ty_fd) := (i + 1, Ty.fvar i) 
-    let (i, ty_fds) := (i + 1, Ty.fvar i) 
-    bind (unify i env_ty (Ty.inter ty_fd ty_fds) ty) (fun (i, env_ty1) => 
-    bind (infer i (env_ty1 ++ env_ty) env_tm (.record fds) ty_fds) (fun (i, env_ty_fds, ty_fds') =>
-    bind (infer i (env_ty1 ++ env_ty) env_tm (.record [fd]) ty_fd) (fun (i, env_ty_fd, ty_fd') =>
-      some (i, env_ty_fd ++ env_ty_fds ++ env_ty1, .inter ty_fd' ty_fds')
-    )))
+-- #eval unify 3 [] [:
+--     (#dumb ♢)
+-- :] zero_
+
+-- #eval unify 3 [] [:
+--     (#zero ♢)
+-- :] zero_
+
+-- /-
+--   μ nat .
+--     #zero ♢ | 
+--     #succ nat 
+-- -/
+-- def nat_ := [: 
+--   μ 1 . 
+--     #zero ♢ |
+--     #succ £0
+-- :]
+-- #eval nat_
+
+-- #eval unify 3 [] [:
+--     (#zero ♢)
+-- :] nat_ 
+
+-- #eval unify 3 [] [:
+--     (#succ (#zero ♢))
+-- :] nat_ 
+
+-- #eval unify 3 [] [:
+--     (#succ (@0))
+-- :] nat_ 
+
+-- def nat_list := [: 
+--   μ 1 .
+--     .l #zero ♢ & .r #nil ♢ |
+--     ∃ 2 :: .l £0 & .r £1 ≤ £2 .
+--       .l #succ £0 & .r #cons £1
+-- :]
+
+-- #eval unify 3 [] 
+--   [: (.l #zero ♢ & .r #nil ♢) :] 
+--   nat_list
+
+-- #eval unify 3 [] 
+--   [: (.l #zero ♢ & .r #dumb ♢) :] 
+--   nat_list
+
+-- -- this is divergent
+-- /-
+-- #eval unify 3 [] 
+--   [: (.l @0 & .r @1) :] 
+--   nat_list
+-- -/
+
+-- #eval unify 3 [] 
+--   [: (.l #zero ♢ & .r @0) :] 
+--   nat_list
+
+-- #eval unify 3 [] 
+--   [: (.l #succ #zero ♢ & .r @0 & .g #scooby ♢) :] 
+--   [: (.l #succ #zero ♢ & .r #ooga ♢ & .g #scooby ♢) | (.l #zero ♢ & .r #booga ♢) :] 
+
+
+-- #eval unify 3 [] 
+--   [: (.l #succ #zero ♢ & .r #cons @0) :] 
+--   nat_list
+
+-- #eval unify 3 [] 
+--   [: (.l #succ #zero ♢ & .r @0) :] 
+--   nat_list
+
+-- #eval unify 3 [] 
+--   [: (.l #succ #zero ♢ & .r #cons #cons @0) :] 
+--   nat_list
+
+
+-- #eval unify 3 [] 
+--   [: (.l #succ #zero ♢ & .r #cons @0) :] 
+--   [: 
+--       ∃ 2 :: .l £0 & .r £1 ≤ (μ 1 .
+--         .l #zero ♢ & .r #nil ♢ |
+--         ∃ 2 :: .l £0 & .r £1 ≤ £2 .
+--           .l #succ £0 & .r #cons £1
+--       ) .
+--         .l #succ £0 & .r #cons £1
+--   :]
+
+-- #eval unify_all 3 [
+--   ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :])
+-- ]
+
+-- #eval unify_all 3 [
+--   ([: (.l #succ #zero ♢ & .r #cons @0) :], [: .l #succ @33 & .r #cons @44 :]),
+--   (
+--     [: .l @33 & .r @44  :], 
+--     [:μ 1 .
+--         .l #zero ♢ & .r #nil ♢ |
+--         ∃ 2 :: .l £0 & .r £1 ≤ £2 .
+--           .l #succ £0 & .r #cons £1
+--     :]
+--   )
+-- ]
+
+-- /-
+--   μ plus .
+--     ∃ N .  
+--       #zero ♢ × N × N | 
+
+--     ∃ X Y Z :: X, Y, Z ≤ plus .  
+--       #succ X × Y × #succ Z
+-- -/
+-- def plus := [: 
+--   μ 1 . 
+--     (∃ 1 . 
+--       (.x #zero ♢ & .y £0 & .z £0)) |
+
+--     (∃ 3 :: (.x £0 & .y £1 & .z £2) ≤ £3 .   
+--       (.x #succ £0 & .y £1 & .z #succ £2))
+-- :]
+
+-- #print plus
+
+-- #eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
+-- #eval [: #succ #succ #zero ♢ :]  
+
+
+-- #eval unify 3 [] [:
+--     .x #zero ♢ &
+--     .y @0 &
+--     .z #zero ♢
+-- :] plus
+
+
+-- #eval unify 3 [] [:
+--   (
+--     .x (#succ #zero ♢) &
+--     .y (#succ #zero ♢) &
+--     .z (@0)
+--   )
+-- :] plus
+
+-- #eval unify 3 [] [:
+--   (
+--     .x (#succ #succ #zero ♢) &
+--     .y (#succ #zero ♢) &
+--     .z (@0)
+--   )
+-- :] plus
+
+-- #eval unify 3 [] [:
+--   (
+--     .x (#succ #zero ♢) &
+--     .y (@0) &
+--     .z (#succ #succ #zero ♢)
+--   )
+-- :] plus
+
+-- #eval unify 3 [] [:
+--   (
+--     .x (#succ #zero ♢) &
+--     .y (#succ #succ #zero ♢) &
+--     .z (@0)
+--   )
+-- :] plus
+
+-- #eval unify 3 [] [:
+--   (
+--     .x #zero ♢ &
+--     .y @0 &
+--     .z #succ #succ #zero ♢
+--   )
+-- :] plus
+
+-- #eval unify 3 [] [:
+--   (
+--     .x (#succ #zero ♢) &
+--     .y (@0) &
+--     .z (#succ (#succ #succ (#zero ♢)))
+--   )
+-- :] plus
+
+-- #eval unify 3 [] [:
+--   (
+--     .x (@0) &
+--     .y (@1) &
+--     .z (#succ #zero ♢)
+--   )
+-- :] plus
+
+-- #eval unify 3 [] [:
+--   (
+--     .x (#succ #zero ♢) &
+--     .y (@0) &
+--     .z (@1)
+--   )
+-- :] plus
+
+-- -- TODO: modify union unification semantics to create seperate type environments 
+-- #eval unify 3 [] [:
+--   (
+--     .x (@0) & -- zero & succ zero
+--     .y (#succ #zero ♢) &
+--     .z (@1) -- succ zero & zero
+--   )
+-- :] plus
+
+
+-- /-
+-- t ::=                             term
+--   _                               hole 
+--   x                               variable
+--   ()                              unit
+--   #l t                            tag
+--   fs                              record
+--   cs                              function
+--   t.l                             projection
+--   t t                             application
+--   let x : τ = t in t              binding
+--   fix t                           recursion
+
+-- cs ::=                            cases
+--   for p => t                      singleton 
+--   cs ; for p => t                 extension 
+
+-- fs ::=                            fields 
+--   .l t                            singleton 
+--   fs ; .l t                       extension
+-- -/
+
+-- /-
+
+-- m ::=                             substitution map
+--   ⬝                                empty
+--   α / τ :: m                      extension
+
+-- env_tm ::=                             typing environment 
+--   ⬝                                empty
+--   x : τ :: env_tm                      extension
+
+-- -/
+
+-- inductive Tm : Type
+--   | hole : Tm 
+--   | bvar : Nat -> Tm 
+--   | fvar : Nat -> Tm 
+--   | unit : Tm
+--   | tag : String -> Tm -> Tm
+--   | record : List (String × Tm) -> Tm
+--   | func : List (Nat × Tm × Ty × Tm) -> Tm
+--   | proj : Tm -> String -> Tm
+--   | app : Tm -> Tm -> Tm
+--   | letb : Ty -> Tm -> Tm -> Tm
+--   | fix : Tm -> Tm
+
+
+-- -- NOTE: there is no need to instantiate in infer. All that jazz happens in subtype/unify
+-- -- the assymetry of subtyping makes it clear when to instantiate/raise/free a variable
+-- -- and when to unroll a looping type
+
+-- -- notation convetion:
+--   -- prime tick marks for updated versions
+--   -- numbers for new parts
+--   -- no subscripts
+--   -- no greek
+--   -- general to specific, 
+--     -- e.g. env_ty, (not ty_env)
+--     -- e.g. ty_recur, (not mu_ty)
+
+
+-- partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat × Ty))
+--   | Tm.fvar id, ty =>
+--     match lookup id env_tm with
+--       | some _ => none 
+--       | none => [(id, ty)] 
+--   | .tag l_tm tm, .tag l_ty ty => 
+--     if l_tm = l_ty then
+--       patvars env_tm tm ty 
+--     else none
+--   | .record fds, ty  => 
+--     bind (linearize_fields ty) (fun linear_ty =>
+--       if linear_ty.length = fds.length then
+--         List.foldl (fun acc => fun (l, tm)  =>
+--           bind acc (fun env_tm_1 =>
+--           bind (lookup_record l linear_ty) (fun ty =>
+--           bind (patvars (env_tm_1 ++ env_tm) tm ty) (fun env_tm_2 =>
+--             some (env_tm_2 ++ env_tm_1)
+--           )))
+--         ) (some []) fds
+--       else
+--         none
+--     )
+--   -- TODO: finish
+--   | _, _ => none
+
+
+-- def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty
+--   | .dynamic => 
+--     (i + 1, .fvar i) 
+--   | .bvar id => (i, .bvar id)
+--   | .fvar id => (i, .fvar id)
+--   | .unit => (i, .unit)
+--   | .tag l ty => 
+--     let (i, ty) := (Ty.dynamic_subst i ty)
+--     (i, .tag l ty) 
+--   | .field l ty => 
+--     let (i, ty) := Ty.dynamic_subst i ty
+--     (i, .field l ty) 
+--   | .union ty1 ty2 => 
+--       let (i, ty1) := (Ty.dynamic_subst i ty1)
+--       let (i, ty2) := (Ty.dynamic_subst i ty2)
+--       (i, .union ty1 ty2)
+--   | .inter ty1 ty2 => 
+--       let (i, ty1) := (Ty.dynamic_subst i ty1)
+--       let (i, ty2) := (Ty.dynamic_subst i ty2)
+--       (i, .inter ty1 ty2)
+--   | .case ty1 ty2 => 
+--       let (i, ty1) := (Ty.dynamic_subst i ty1)
+--       let (i, ty2) := (Ty.dynamic_subst i ty2)
+--       (i, .case ty1 ty2)
+--   | .univ n (ty_c1, ty_c2) ty => 
+--     let (i, ty_c1) := Ty.dynamic_subst i ty_c1
+--     let (i, ty_c2) := Ty.dynamic_subst i ty_c2
+--     let (i, ty) := (Ty.dynamic_subst i ty)
+--     (i, .univ n (ty_c1, ty_c2) ty)
+--   | .exis n (ty_c1, ty_c2) ty => 
+--     let (i, ty_c1) := Ty.dynamic_subst i ty_c1
+--     let (i, ty_c2) := Ty.dynamic_subst i ty_c2
+--     let (i, ty) := (Ty.dynamic_subst i ty)
+--     (i, .exis n (ty_c1, ty_c2) ty)
+--   | .recur ty => 
+--     let (i, ty) := Ty.dynamic_subst i ty
+--     (i, .recur ty)
+--   | .corec ty => 
+--     let (i, ty) := Ty.dynamic_subst i ty
+--     (i, .corec ty)
+
+-- /-
+-- NOTE: infer returns a refined type in addition the type variable assignments
+-- assignments alone do not refine enough due to subtyping
+-- NOTE: deconstructing types is reduced to unification 
+-- -/
+-- partial def infer 
+--   (i : Nat)
+--   (env_ty : List (Nat × Ty)) (env_tm : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
+--   Option (Nat × List (Nat × Ty) × Ty) := match t with
+--   | .unit => bind (unify i env_ty Ty.unit ty) (fun (i, env_ty) =>
+--       (i, env_ty, Ty.unit)
+--     )
+--   | .bvar _ => none
+--   | .fvar id =>
+--     bind (lookup id env_tm) (fun ty' =>
+--       let (i, ty_x, env_ty_x) := (i + 1, .fvar i, [(i, ty')])
+--       bind (unify i (env_ty_x ++ env_ty) ty_x ty) (fun (i, env_ty1) =>
+--         some (i, env_ty1 ++ env_ty_x, ty_x)
+--       )
+--     ) 
+
+--   | .tag l t1 =>   
+--     let (i, ty1) := (i + 1, .fvar i) 
+--     bind (unify i (env_ty) (.tag l ty1) ty) (fun (i, env_ty1) =>
+--     bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
+--       some (i, env_ty2 ++ env_ty1, .tag l ty1')
+--     ))
+
+--   | .record [] => none
+
+--   | .record ((l, t1) :: .nil) =>
+--     let (i, ty1) := (i + 1, .fvar i) 
+--     bind (unify i (env_ty) (.tag l ty1) ty) (fun (i, env_ty1) =>
+--     bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
+--       some (i, env_ty2 ++ env_ty1, .tag l ty1')
+--     ))
+
+--   | .record (fd :: fds) =>
+--     let (i, ty_fd) := (i + 1, Ty.fvar i) 
+--     let (i, ty_fds) := (i + 1, Ty.fvar i) 
+--     bind (unify i env_ty (Ty.inter ty_fd ty_fds) ty) (fun (i, env_ty1) => 
+--     bind (infer i (env_ty1 ++ env_ty) env_tm (.record fds) ty_fds) (fun (i, env_ty_fds, ty_fds') =>
+--     bind (infer i (env_ty1 ++ env_ty) env_tm (.record [fd]) ty_fd) (fun (i, env_ty_fd, ty_fd') =>
+--       some (i, env_ty_fd ++ env_ty_fds ++ env_ty1, .inter ty_fd' ty_fds')
+--     )))
   
-  | .func [] => none
-  | .func ((n, p, ty_p, b) :: .nil) => 
-    let (i, ty_p) := Ty.dynamic_subst i ty_p 
-    let (i, ty_b) := (i + 1, .fvar i)
-    bind (patvars env_tm p ty_p) (fun env_tm1 =>
-      if env_tm1.length = n then
-        bind (unify i (env_ty) (.case ty_p ty_b) ty) (fun (i, env_ty1) =>
-        bind (infer i (env_ty1 ++ env_ty) (env_tm1 ++ env_tm) b ty_b) (fun (i, env_ty2, ty_b') =>
-          some (i, env_ty2 ++ env_ty1, Ty.case ty_p ty_b')
-        ))
-      else none
-    )
+--   | .func [] => none
+--   | .func ((n, p, ty_p, b) :: .nil) => 
+--     let (i, ty_p) := Ty.dynamic_subst i ty_p 
+--     let (i, ty_b) := (i + 1, .fvar i)
+--     bind (patvars env_tm p ty_p) (fun env_tm1 =>
+--       if env_tm1.length = n then
+--         bind (unify i (env_ty) (.case ty_p ty_b) ty) (fun (i, env_ty1) =>
+--         bind (infer i (env_ty1 ++ env_ty) (env_tm1 ++ env_tm) b ty_b) (fun (i, env_ty2, ty_b') =>
+--           some (i, env_ty2 ++ env_ty1, Ty.case ty_p ty_b')
+--         ))
+--       else none
+--     )
 
-  | .func (f :: fs) =>
-    let (i, ty_f) := (i + 1, Ty.fvar i) 
-    let (i, ty_fs) := (i + 1, Ty.fvar i) 
-    bind (unify i env_ty (Ty.inter ty_f ty_fs) ty) (fun (i, env_ty1) => 
-    bind (infer i (env_ty1 ++ env_ty) env_tm (.func fs) ty_fs) (fun (i, env_ty_fs, ty_fs') =>
-    bind (infer i (env_ty1 ++ env_ty) env_tm (.func [f]) ty_f) (fun (i, env_ty_f, ty_f') =>
-      some (i, env_ty_f ++ env_ty_fs, .inter ty_f' ty_fs')
-    )))
+--   | .func (f :: fs) =>
+--     let (i, ty_f) := (i + 1, Ty.fvar i) 
+--     let (i, ty_fs) := (i + 1, Ty.fvar i) 
+--     bind (unify i env_ty (Ty.inter ty_f ty_fs) ty) (fun (i, env_ty1) => 
+--     bind (infer i (env_ty1 ++ env_ty) env_tm (.func fs) ty_fs) (fun (i, env_ty_fs, ty_fs') =>
+--     bind (infer i (env_ty1 ++ env_ty) env_tm (.func [f]) ty_f) (fun (i, env_ty_f, ty_f') =>
+--       some (i, env_ty_f ++ env_ty_fs, .inter ty_f' ty_fs')
+--     )))
 
-  | .proj t1 l =>
-    let (i, ty') := (i + 1, Ty.fvar i)
-    bind (infer i env_ty env_tm t1 (Ty.field l ty)) (fun (i, env_ty1, ty1) =>
-    bind (unify i (env_ty1 ++ env_ty) ty1 (Ty.field l ty')) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1, ty')
-    ))
+--   | .proj t1 l =>
+--     let (i, ty') := (i + 1, Ty.fvar i)
+--     bind (infer i env_ty env_tm t1 (Ty.field l ty)) (fun (i, env_ty1, ty1) =>
+--     bind (unify i (env_ty1 ++ env_ty) ty1 (Ty.field l ty')) (fun (i, env_ty2) =>
+--       some (i, env_ty2 ++ env_ty1, ty')
+--     ))
 
-    -- bind (linearize_fields ty1) (fun list_field =>
-    -- bind (lookup_record l list_field) (fun ty' =>
+--     -- bind (linearize_fields ty1) (fun list_field =>
+--     -- bind (lookup_record l list_field) (fun ty' =>
 
-  | .app t2 t1 =>
-    let (i, ty') := (i + 1, Ty.fvar i)
-    let (i, ty1) := (i + 1, Ty.fvar i)
-    bind (infer i (env_ty) env_tm t2 (Ty.case .dynamic ty)) (fun (i, env_ty1, ty2) =>
-    -- ty2 = ty1 -> ty'
-    bind (unify i (env_ty1 ++ env_ty) ty2 (.case ty1 ty')) (fun (i, env_ty2) =>
-    bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
-    bind (unify i (env_ty3 ++ env_ty2 ++ env_ty1 ++ env_ty) ty2 (Ty.case ty1' ty)) (fun (i, env_ty4) =>
-      some (i, env_ty4 ++ env_ty3 ++ env_ty2  ++ env_ty1 , ty')
-    ))))
+--   | .app t2 t1 =>
+--     let (i, ty') := (i + 1, Ty.fvar i)
+--     let (i, ty1) := (i + 1, Ty.fvar i)
+--     bind (infer i (env_ty) env_tm t2 (Ty.case .dynamic ty)) (fun (i, env_ty1, ty2) =>
+--     -- ty2 = ty1 -> ty'
+--     bind (unify i (env_ty1 ++ env_ty) ty2 (.case ty1 ty')) (fun (i, env_ty2) =>
+--     bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
+--     bind (unify i (env_ty3 ++ env_ty2 ++ env_ty1 ++ env_ty) ty2 (Ty.case ty1' ty)) (fun (i, env_ty4) =>
+--       some (i, env_ty4 ++ env_ty3 ++ env_ty2  ++ env_ty1 , ty')
+--     ))))
 
-  | .letb ty1 t1 t => 
-    let (i, ty1) := Ty.dynamic_subst i ty1
-    let (i, env_tmx) := (i + 1, [(i, Ty.univ 1 (Ty.bvar 0, ty1) (Ty.bvar 0))]) 
-    bind (infer i (env_ty) env_tm t1 ty1) (fun (i, env_ty1, _) =>
-    bind (infer i (env_ty1 ++ env_ty) (env_tmx ++ env_tm) t ty) (fun (i, env_ty2, ty') =>
-      some (i, env_ty2 ++ env_ty1, ty')
-    ))
+--   | .letb ty1 t1 t => 
+--     let (i, ty1) := Ty.dynamic_subst i ty1
+--     let (i, env_tmx) := (i + 1, [(i, Ty.univ 1 (Ty.bvar 0, ty1) (Ty.bvar 0))]) 
+--     bind (infer i (env_ty) env_tm t1 ty1) (fun (i, env_ty1, _) =>
+--     bind (infer i (env_ty1 ++ env_ty) (env_tmx ++ env_tm) t ty) (fun (i, env_ty2, ty') =>
+--       some (i, env_ty2 ++ env_ty1, ty')
+--     ))
 
 
-  | .fix t1 =>
-    let (i, ty') := (i + 1, Ty.fvar i)
-    bind (infer i env_ty env_tm t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
-    bind (unify i (env_ty1 ++ env_ty) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
-      some (i, env_ty2 ++ env_ty1, ty')
-    ))
-    /-
-      (λ x => fix (λ self =>  
-        λ #zero () => #nil () ;  
-        λ #succ n => #cons (x, self n)
-      ))
+--   | .fix t1 =>
+--     let (i, ty') := (i + 1, Ty.fvar i)
+--     bind (infer i env_ty env_tm t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
+--     bind (unify i (env_ty1 ++ env_ty) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
+--       some (i, env_ty2 ++ env_ty1, ty')
+--     ))
+--     /-
+--       (λ x => fix (λ self =>  
+--         λ #zero () => #nil () ;  
+--         λ #succ n => #cons (x, self n)
+--       ))
       
-      (α -> ( 
-        #zero ♢ -> #nil ♢ &
-        ∀ N L :: α <: (N -> L) .
-          #succ N -> #cons (X × L)) 
-      )) <: τ -> τ
+--       (α -> ( 
+--         #zero ♢ -> #nil ♢ &
+--         ∀ N L :: α <: (N -> L) .
+--           #succ N -> #cons (X × L)) 
+--       )) <: τ -> τ
 
-      ( 
-        #zero ♢ -> #nil ♢ &
-        ∀ N L :: α <: (N -> L) .
-          #succ N -> #cons (X × L)) 
-      ) <: α 
+--       ( 
+--         #zero ♢ -> #nil ♢ &
+--         ∀ N L :: α <: (N -> L) .
+--           #succ N -> #cons (X × L)) 
+--       ) <: α 
 
-      -- via roll_rec
-      (ν α .  
-        #zero ♢ -> #nil ♢ &
-        ∀ N L :: α <: (N -> L) .
-          #succ N -> #cons (X × L)) 
-      )
+--       -- via roll_rec
+--       (ν α .  
+--         #zero ♢ -> #nil ♢ &
+--         ∀ N L :: α <: (N -> L) .
+--           #succ N -> #cons (X × L)) 
+--       )
 
-      -- via sugar
-      X -> ((ν (N -> L) . 
-        #zero ♢ -> #nil  ♢ &
-        #succ N -> #cons (X × L)) 
-      )
+--       -- via sugar
+--       X -> ((ν (N -> L) . 
+--         #zero ♢ -> #nil  ♢ &
+--         #succ N -> #cons (X × L)) 
+--       )
 
-    -/
+--     -/
 
-  | _ => none
+--   | _ => none
 
--- examples 
-/-
-## type flow
-- how types move between contexts
+-- -- examples 
+-- /-
+-- ## type flow
+-- - how types move between contexts
 
-### inferred type
-- infer type from form and context 
-```
-#zero()
+-- ### inferred type
+-- - infer type from form and context 
+-- ```
+-- #zero()
 
--- infer _ _ ⊢ #zero() : _ = some _, #zero[]
-```
+-- -- infer _ _ ⊢ #zero() : _ = some _, #zero[]
+-- ```
 
-### propagated type
-- propagate type to solve type constraints locally 
-```
-(for n : nat =>
-  let first = (for (x,y) : [str;?] => x) in
-  first (n, _) 
+-- ### propagated type
+-- - propagate type to solve type constraints locally 
+-- ```
+-- (for n : nat =>
+--   let first = (for (x,y) : [str;?] => x) in
+--   first (n, _) 
 
-  -- infer {n : nat} ⊢ first (n, _) : _ = none
-    -- infer {n : nat} ⊢ (n,_) : [str;?]  = none
-      -- solve _ ⊢ nat ⊆ str = none
-)
-```
+--   -- infer {n : nat} ⊢ first (n, _) : _ = none
+--     -- infer {n : nat} ⊢ (n,_) : [str;?]  = none
+--       -- solve _ ⊢ nat ⊆ str = none
+-- )
+-- ```
 
-## type adaptation 
-- how types adjust to changing contexts 
+-- ## type adaptation 
+-- - how types adjust to changing contexts 
 
-### narrowed type
-```
-(for i2n : int -> nat => 
-(for s2n : str -> nat => 
-  (for x : ? => (i2n x, s2n x))
+-- ### narrowed type
+-- ```
+-- (for i2n : int -> nat => 
+-- (for s2n : str -> nat => 
+--   (for x : ? => (i2n x, s2n x))
 
-  -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = some _ , int & str -> [nat;nat] 
-    -- infer {x : α} {α ⊆ ?} ⊢ (i2n x, s2n x) : _ = some _ , nat;nat
-    -- solve {α ⊆ ?} ⊢ α ⊆ int = some {α ⊆ int & ?}  
-    -- solve {α ⊆ int & ?} ⊢ α ⊆ str = some {α ⊆ int & str & ?}  
-      -- solve {α ⊆ int & β, β ⊆ ?} ⊢ int & β ⊆ str = some {β ⊆ str & ?}  
-        -- solve {...} ⊢ int ⊆ str ∨ β ⊆ str = some {β ⊆ str & ?}  
-          -- solve {...} ⊢ β ⊆ str = some {β ⊆ str & ?}  
+--   -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = some _ , int & str -> [nat;nat] 
+--     -- infer {x : α} {α ⊆ ?} ⊢ (i2n x, s2n x) : _ = some _ , nat;nat
+--     -- solve {α ⊆ ?} ⊢ α ⊆ int = some {α ⊆ int & ?}  
+--     -- solve {α ⊆ int & ?} ⊢ α ⊆ str = some {α ⊆ int & str & ?}  
+--       -- solve {α ⊆ int & β, β ⊆ ?} ⊢ int & β ⊆ str = some {β ⊆ str & ?}  
+--         -- solve {...} ⊢ int ⊆ str ∨ β ⊆ str = some {β ⊆ str & ?}  
+--           -- solve {...} ⊢ β ⊆ str = some {β ⊆ str & ?}  
 
-))
-```
-- maintain leniency while increasing strictness
-  - combine intersection (i.e. &) with dynamic type (i.e. ?)
-- lenient
-  - maintain bottom actual type
-  - τ & ? = τ & ⊥ = ⊥
-- strict
-  - narrow dynamic expected type from known expected type
-  - τ & ? = τ & ⊤ = τ 
-
-
-### widened type
-```
-(pair : ∀ α . α -> α -> [α ; α] => 
-(n : int => 
-(s : str => 
-  pair n s
-
-  -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
-    -- solve {α ⊆ ?} ⊢ int ⊆ α = some {α ⊆ int | ?} 
-    -- solve {α ⊆ int | ?} ⊢ str ⊆ α = some {α ⊆ int | str | ?} 
-      -- solve {α ⊆ int | β, β ⊆ ?} ⊢ str ⊆ int | β  = some {β ⊆ str | ?} 
-        -- solve {...} ⊢ str ⊆ int ∨ str ⊆ β = some {β ⊆ str | ?}
-          -- solve {...} ⊢ str ⊆ β = some {β ⊆ str | ?}
-)))
-```
-- maintain leniency while increasing strictness
-  - combine union (i.e. |) with dynamic type (i.e. ?)
-- lenient
-  - maintain top expected type 
-  - τ | ? = τ | ⊤ = ⊤ 
-- strict
-  - widen dynamic actual type from known actual type
-  - τ | ? = τ | ⊥ = τ  
-
-## type expression 
-- how types index into types 
-
-### record type
-```
-let pair = (for x, y =>
-  .left x .right y
-
-  -- infer {x : α, y : β} _ ⊢ (.left x .right y) : _ = some _ , (.left α) & (.right β)
-)
-```
-
-### function type
-```
-fix (size =>
-  for #nil() => #zero()
-  for #cons(_, xs) => #succ(size xs)
-
-  -- infer {size : α -> β} _ ⊢ (for ... for ...) : α = some _ , (#nil[] -> #zero[]) & (#cons[_;α] -> #succ[β])
-)
-```
+-- ))
+-- ```
+-- - maintain leniency while increasing strictness
+--   - combine intersection (i.e. &) with dynamic type (i.e. ?)
+-- - lenient
+--   - maintain bottom actual type
+--   - τ & ? = τ & ⊥ = ⊥
+-- - strict
+--   - narrow dynamic expected type from known expected type
+--   - τ & ? = τ & ⊤ = τ 
 
 
-### tags induction type
-```
-μ list .  
-  #nil[] | 
-  ∃ α . #cons[α;list]
-```
-```
-μ nat . 
-  #zero[] | 
-  #succ[nat]
-```
+-- ### widened type
+-- ```
+-- (pair : ∀ α . α -> α -> [α ; α] => 
+-- (n : int => 
+-- (s : str => 
+--   pair n s
 
-### relational induction type 
-```
-μ list_len .
-  [#nil[] ; #zero[]] |
-  ∃ {list,nat} [list;nat] ⊆ list_len
-    [#cons[α;list] ; #succ[nat]]
-```
+--   -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
+--     -- solve {α ⊆ ?} ⊢ int ⊆ α = some {α ⊆ int | ?} 
+--     -- solve {α ⊆ int | ?} ⊢ str ⊆ α = some {α ⊆ int | str | ?} 
+--       -- solve {α ⊆ int | β, β ⊆ ?} ⊢ str ⊆ int | β  = some {β ⊆ str | ?} 
+--         -- solve {...} ⊢ str ⊆ int ∨ str ⊆ β = some {β ⊆ str | ?}
+--           -- solve {...} ⊢ str ⊆ β = some {β ⊆ str | ?}
+-- )))
+-- ```
+-- - maintain leniency while increasing strictness
+--   - combine union (i.e. |) with dynamic type (i.e. ?)
+-- - lenient
+--   - maintain top expected type 
+--   - τ | ? = τ | ⊤ = ⊤ 
+-- - strict
+--   - widen dynamic actual type from known actual type
+--   - τ | ? = τ | ⊥ = τ  
 
+-- ## type expression 
+-- - how types index into types 
 
-```
-μ nat_list .
-  [#zero[] ; #nil[]] |
-  ∃ {nat,list} [nat;list] ⊆ nat_list .
-    [#succ[nat] ; #cons[α;list]]
-```
+-- ### record type
+-- ```
+-- let pair = (for x, y =>
+--   .left x .right y
 
--- equivalent to the notion
-```
-  [#nil[] ; #zero[]] ⊆ list_len ∧
+--   -- infer {x : α, y : β} _ ⊢ (.left x .right y) : _ = some _ , (.left α) & (.right β)
+-- )
+-- ```
 
-  ∀ list;nat ,
-    ([list;nat] ⊆ list_len --> [#cons[α;list] ; #succ[nat]] ⊆ list_len)
-```
+-- ### function type
+-- ```
+-- fix (size =>
+--   for #nil() => #zero()
+--   for #cons(_, xs) => #succ(size xs)
 
--- related to the sigma type from dependent type theory
-```
-type dlist (n ⊆ nat) := list for n;list ⊆ nat_list 
-
-(Σ n ⊆ nat . dlist n) ≡ nat_list 
-
-(Σ n ⊆ nat . list for n;list ⊆ nat_list . list) ≡ nat_list 
-```
-
-
-### function induction type 
-
-```
-μ list_to_len .
-  [#nil[] -> #zero[]] & 
-  ∀ {list,nat} [list -> nat] ⊆ list_to_len .  
-    [#cons[α;list] -> #succ[nat]]
-```
-
-```
-μ nat_to_list .
-  [#nil[] -> #zero[]] & 
-  ∀ {nat,list} [nat -> list] ⊆ nat_to_list .  
-    [#succ[nat] -> #cons[α;list]]
-```
+--   -- infer {size : α -> β} _ ⊢ (for ... for ...) : α = some _ , (#nil[] -> #zero[]) & (#cons[_;α] -> #succ[β])
+-- )
+-- ```
 
 
-## type range
-- how types may be used over various terms 
+-- ### tags induction type
+-- ```
+-- μ list .  
+--   #nil[] | 
+--   ∃ α . #cons[α;list]
+-- ```
+-- ```
+-- μ nat . 
+--   #zero[] | 
+--   #succ[nat]
+-- ```
 
-### generalized type
-```
-(for one : nat =>
-(for hello : str =>
+-- ### relational induction type 
+-- ```
+-- μ list_len .
+--   [#nil[] ; #zero[]] |
+--   ∃ {list,nat} [list;nat] ⊆ list_len
+--     [#cons[α;list] ; #succ[nat]]
+-- ```
 
-let f = for x => x in
 
-let one' = f one in 
+-- ```
+-- μ nat_list .
+--   [#zero[] ; #nil[]] |
+--   ∃ {nat,list} [nat;list] ⊆ nat_list .
+--     [#succ[nat] ; #cons[α;list]]
+-- ```
 
--- infer {f : ∀ {α} . α -> α} _ ⊢ (f one) : _ = some _ , nat 
+-- -- equivalent to the notion
+-- ```
+--   [#nil[] ; #zero[]] ⊆ list_len ∧
 
-let hello' = f hello in
+--   ∀ list;nat ,
+--     ([list;nat] ⊆ list_len --> [#cons[α;list] ; #succ[nat]] ⊆ list_len)
+-- ```
 
--- infer {f : ∀ {α} . α -> α} _ ⊢ (f hello) : _ = some _ , str 
-)
-```
+-- -- related to the sigma type from dependent type theory
+-- ```
+-- type dlist (n ⊆ nat) := list for n;list ⊆ nat_list 
 
-### specialized type 
-```
-(for one : nat =>
-(for hello : str =>
+-- (Σ n ⊆ nat . dlist n) ≡ nat_list 
 
-(for f => 
-  let one' = f one in
+-- (Σ n ⊆ nat . list for n;list ⊆ nat_list . list) ≡ nat_list 
+-- ```
 
-  -- infer {f : α} _ ⊢ (f one) = some {α ⊆ nat -> ?} , _
 
-  let hello' = f hello in
+-- ### function induction type 
 
-  -- infer {f : α} _ ⊢ (f hello) = none 
+-- ```
+-- μ list_to_len .
+--   [#nil[] -> #zero[]] & 
+--   ∀ {list,nat} [list -> nat] ⊆ list_to_len .  
+--     [#cons[α;list] -> #succ[nat]]
+-- ```
 
-  ...
-)(for x => x)
-))
-```
--/
+-- ```
+-- μ nat_to_list .
+--   [#nil[] -> #zero[]] & 
+--   ∀ {nat,list} [nat -> list] ⊆ nat_to_list .  
+--     [#succ[nat] -> #cons[α;list]]
+-- ```
 
--- background
-/-
 
-- a unityped language allows all terms to belong to the same type, known as top (i.e. ⊤)
+-- ## type range
+-- - how types may be used over various terms 
 
-- a subtyping language enables terms to be reused across different levels of restriction
-- no terms belong to the most restrictive type, known as bottom (i.e. ⊥)
+-- ### generalized type
+-- ```
+-- (for one : nat =>
+-- (for hello : str =>
 
-- a term may be used at a position:
-  - if the term's actual type is a subtype of the position's expected type
-  - if the position's expected type is a supertype of the term's actual type
+-- let f = for x => x in
 
-- types may be widened by the union operator (i.e. |).
-  - widening an expected type increases leniency
-  - widening an actual type increases strictness
+-- let one' = f one in 
 
-- types may be narrowed by the intersection operator (i.e. &)
-  - narrowing an expected type increases strictness
-  - narrowing an actual type increases leniency 
+-- -- infer {f : ∀ {α} . α -> α} _ ⊢ (f one) : _ = some _ , nat 
 
-- the dynamic type (i.e. ?) has special consistent subtyping semantics
-  - behaves like a bottom type for actual types
-  - behaves like a top type for expected types
+-- let hello' = f hello in
 
-- the singleton type (e.g. #l []) corresponds to a single literal term
--/
+-- -- infer {f : ∀ {α} . α -> α} _ ⊢ (f hello) : _ = some _ , str 
+-- )
+-- ```
 
-/-
-- consider adding relative complement type 
-  - i.e. binary negation type operator
-  - i.e. (τ1 \ τ2) ⊆ (τ1 & ¬ τ2), where ⊤ / τ2 = ¬ τ2)
--/
+-- ### specialized type 
+-- ```
+-- (for one : nat =>
+-- (for hello : str =>
+
+-- (for f => 
+--   let one' = f one in
+
+--   -- infer {f : α} _ ⊢ (f one) = some {α ⊆ nat -> ?} , _
+
+--   let hello' = f hello in
+
+--   -- infer {f : α} _ ⊢ (f hello) = none 
+
+--   ...
+-- )(for x => x)
+-- ))
+-- ```
+-- -/
+
+-- -- background
+-- /-
+
+-- - a unityped language allows all terms to belong to the same type, known as top (i.e. ⊤)
+
+-- - a subtyping language enables terms to be reused across different levels of restriction
+-- - no terms belong to the most restrictive type, known as bottom (i.e. ⊥)
+
+-- - a term may be used at a position:
+--   - if the term's actual type is a subtype of the position's expected type
+--   - if the position's expected type is a supertype of the term's actual type
+
+-- - types may be widened by the union operator (i.e. |).
+--   - widening an expected type increases leniency
+--   - widening an actual type increases strictness
+
+-- - types may be narrowed by the intersection operator (i.e. &)
+--   - narrowing an expected type increases strictness
+--   - narrowing an actual type increases leniency 
+
+-- - the dynamic type (i.e. ?) has special consistent subtyping semantics
+--   - behaves like a bottom type for actual types
+--   - behaves like a top type for expected types
+
+-- - the singleton type (e.g. #l []) corresponds to a single literal term
+-- -/
+
+-- /-
+-- - consider adding relative complement type 
+--   - i.e. binary negation type operator
+--   - i.e. (τ1 \ τ2) ⊆ (τ1 & ¬ τ2), where ⊤ / τ2 = ¬ τ2)
+-- -/
