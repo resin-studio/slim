@@ -126,4 +126,141 @@
 
 \end{frame}
 
+
+\begin{frame}[fragile]
+  \frametitle{Expressive: widening}
+
+  \begin{lstlisting}
+  ($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
+  ($\lambda$ n : int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
+    pair n s
+  )))
+  \end{lstlisting}
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Expressive: narrowing}
+
+  \begin{lstlisting}
+  ($\lambda$ i2n : int $\rightarrow$ nat $\Rightarrow$ 
+  ($\lambda$ s2n : str $\rightarrow$ nat $\Rightarrow$ 
+    $\lambda$ x $\Rightarrow$ (i2n x, s2n x)
+  ))
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Expressive: relational record}
+
+  \begin{lstlisting}[]
+  let measurement : $\mu$ (nat $\times$ list) .
+    #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
+    #succ nat $\times$ #cons (? $\times$ list)
+  \end{lstlisting} 
+
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Expressive: relational record expanded}
+
+  \begin{lstlisting}[]
+  let measurement : 
+  $\exists$ $\alpha$ . $\mu$ nat_and_list .
+    #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
+    $\exists$ nat list :: 
+      (nat $\times$ list) $\leq$ nat_and_list .
+      #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+  \end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Expressive: relational record comparison (Synquid)}
+
+  \begin{lstlisting}[keywords={termination, measure, data, where}]
+  termination measure len :: List $\beta$ $\rightarrow$ Nat 
+  data List $\beta$ where
+    Nil :: {v: List $\beta$ | len v = 0}
+    Cons :: $\beta$ $\rightarrow$ xs: List $\beta$ $\rightarrow$ 
+      {v: List $\beta$ | len v = len xs + 1}
+
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Expressive: relational function}
+
+  \begin{lstlisting}[]
+  let replicate : 
+  $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
+    #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
+    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+  \end{lstlisting}
+
+
+\end{frame}
+
+\begin{frame}[fragile]
+
+  \frametitle{Expressive: relational function expanded}
+
+  \begin{lstlisting}[]
+  let replicate : 
+  $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
+    #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
+    $\forall$ nat list :: 
+      nat_to_list $\leq$ (nat $\rightarrow$ list) .
+      #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+  \end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]
+
+  \frametitle{Expressive: relational function comparison (Synquid)}
+
+  \begin{lstlisting}[keywords={termination, measure, data, where}]
+  replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$ 
+    {v: List $\alpha$ | len v = n}
+
+  \end{lstlisting}
+
+  \hfill
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Expressive: recursive pattern matching}
+  \begin{lstlisting}[]
+  let replicate = 
+  $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
+    $\lambda$ #zero () $\Rightarrow$ #nil () ;
+    $\lambda$ #succ n $\Rightarrow$ #cons (x, self n)
+  ) 
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Expressive: unification of nat}
+
+  \begin{lstlisting}[]
+  nat $\equiv$ $\mu$ nat .
+    #zero $\diamondsuit$ | 
+    #succ nat
+
+  > #zero $\diamondsuit$ $\leq$ nat 
+  < {$\cdot$} 
+
+  > #succ #succ #zero $\diamondsuit$ $\leq$ nat 
+  < {$\cdot$} 
+
+  > #succ $\alpha$ $\leq$ nat 
+  < {($\cdot$,$\alpha\mapsto$ $\mu$ $\beta$ .  #zero $\diamondsuit$ | #succ $\beta$)} 
+  
+  \end{lstlisting} 
+
+\end{frame}
+
+
+
 \end{document}
