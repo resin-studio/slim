@@ -1,3 +1,5 @@
+-- TODO: look into widening in abstract interpretation
+
 inductive Ty : Type
   | dynamic : Ty
   | bvar : Nat -> Ty  
