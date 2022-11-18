@@ -270,7 +270,13 @@
   $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     $\lambda$ #zero () $\Rightarrow$ #nil () ;
     $\lambda$ #succ n $\Rightarrow$ #cons (x, self n)
-  ) 
+  )
+
+
+  let replicate : 
+  $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
+    #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
+    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
   \end{lstlisting}
 \end{frame}
 
