@@ -676,8 +676,8 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
     if Ty.equal env_ty ty' ty then
       [ (i, []) ]
     else
-      let ty' := [: ⟨ty'⟩ ↑ 0 / [?]:]
-      let ty := [: ⟨ty⟩ ↑ 0 / [?]:]
+      let ty' := [: ⟨ty'⟩ ↑ 0 / [μ 1 . ⟨ty⟩]:]
+      let ty := [: ⟨ty⟩ ↑ 0 / [μ 1 . ⟨ty⟩]:]
       unify i env_ty ty' ty
 
   | .tag l ty', .recur ty =>
@@ -707,8 +707,8 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
     if Ty.equal env_ty ty' ty then
       [ (i, []) ]
     else
-      let ty' := [: ⟨ty'⟩ ↑ 0 / [?] :]
-      let ty := [: ⟨ty⟩ ↑ 0 / [?] :]
+      let ty' := [: ⟨ty'⟩ ↑ 0 / [μ 1 . ⟨ty'⟩] :]
+      let ty := [: ⟨ty⟩ ↑ 0 / [μ 1 . ⟨ty'⟩] :]
       unify i env_ty ty' ty
 
 
