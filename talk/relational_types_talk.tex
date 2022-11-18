@@ -73,6 +73,10 @@
   \frametitle{Specification}
   \begin{itemize}
   \item Types as specification 
+    \begin{itemize}
+    \item Universal spec: examples, abstract values, resource usage, 
+      pure, temporal, quantitative, probabilistic 
+    \end{itemize}
   \item Propagation of types   
     \begin{itemize}
     \item Expected types decomposed to locally guide at holes and leaf terms   
@@ -286,7 +290,7 @@
 
 
 \begin{frame}[fragile]
-  \frametitle{Expressivity: unification of nat}
+  \frametitle{Expressivity: unification with nat}
 
   \begin{lstlisting}[]
   nat $\equiv$ $\mu$ nat .
@@ -306,9 +310,31 @@
 
 \end{frame}
 
+\begin{frame}[fragile]
+  \frametitle{Expressivity: unification with nat and even}
+
+  \begin{lstlisting}[]
+  nat $\equiv$ $\mu$ nat .
+    #zero $\diamondsuit$ | 
+    #succ nat
+
+  even $\equiv$ $\mu$ even .
+    #zero $\diamondsuit$ | 
+    #succ #succ even 
+
+
+  > even $\leq$ nat 
+  < $\cdot$
+
+  > nat $\leq$ even 
+  < $\emptyset$
+  \end{lstlisting} 
+
+\end{frame}
+
 
 \begin{frame}[fragile]
-  \frametitle{Expressivity: unification of nat list relation}
+  \frametitle{Expressivity: unification with nat list relation}
 
   \begin{lstlisting}[]
   nat_list $\equiv$ $\mu$ (nat $\times$ list) .
@@ -340,7 +366,7 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Expressivity: unification of plus relation}
+  \frametitle{Expressivity: unification with plus relation}
 
   \begin{lstlisting}[]
   plus $\equiv$ $\mu$ plus .

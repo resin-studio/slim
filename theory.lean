@@ -785,6 +785,15 @@ def nat_ := [:
 :]
 #eval nat_
 
+def even := [: 
+  μ 1 . 
+    #zero ♢ |
+    #succ #succ £0
+:]
+
+#eval unify 3 [] even nat_ 
+#eval unify 3 [] nat_ even
+
 #eval unify 3 [] [:
     (#zero ♢)
 :] nat_ 
