@@ -274,6 +274,7 @@
   \end{lstlisting}
 \end{frame}
 
+
 \begin{frame}[fragile]
   \frametitle{Expressivity: unification of nat}
 
@@ -281,6 +282,7 @@
   nat $\equiv$ $\mu$ nat .
     #zero $\diamondsuit$ | 
     #succ nat
+
 
   > #zero $\diamondsuit$ $\leq$ nat 
   < $\cdot$
@@ -290,10 +292,10 @@
 
   > #succ $\alpha$ $\leq$ nat 
   < $\cdot$, $\alpha$ $\mapsto$ $\mu$ $\beta$ .  #zero $\diamondsuit$ | #succ $\beta$
-  
   \end{lstlisting} 
 
 \end{frame}
+
 
 \begin{frame}[fragile]
   \frametitle{Expressivity: unification of nat list relation}
@@ -316,6 +318,18 @@
 
 
 \begin{frame}[fragile]
+  \frametitle{Expressivity: plus relation}
+
+  \begin{lstlisting}[]
+  $\mu$ plus .
+    $\exists$ $\alpha$ . 
+      (.x #zero $\diamondsuit$ & .y $\alpha$ & .z $\alpha$) |
+    $\exists$ $\alpha$ $\beta$ $\gamma$ :: (.x $\alpha$ & .y $\beta$ & .z $\gamma$) $\leq$ plus . 
+      .x #succ $\alpha$ & .y $\beta$ & .z #succ $\gamma$
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
   \frametitle{Expressivity: unification of plus relation}
 
   \begin{lstlisting}[]
@@ -325,6 +339,7 @@
     $\exists$ $\alpha$ $\beta$ $\gamma$ :: (.x $\alpha$ & .y $\beta$ & .z $\gamma$) $\leq$ plus . 
       .x #succ $\alpha$ & .y $\beta$ & .z #succ $\gamma$
 
+
   > (.x #succ #zero $\diamondsuit$ & .y $\alpha$ &
      .z #succ #succ #zero $\diamondsuit$) $\leq$ plus
   < $\cdot$, $\alpha$ $\mapsto$ #succ #zero $\diamondsuit$)
@@ -332,7 +347,6 @@
   > (.x $\alpha$ & .y $\beta$ & .z #succ #zero $\diamondsuit$) $\leq$ plus
   < $\cdot$, $\alpha$ $\mapsto$ #zero $\diamondsuit$, $\beta$ $\mapsto$ #succ #zero $\diamondsuit$
   < $\cdot$, $\alpha$ $\mapsto$ #succ #zero $\diamondsuit$, $\beta$ $\mapsto$ #zero $\diamondsuit$
-
   \end{lstlisting}
 
 
