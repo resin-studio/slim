@@ -100,14 +100,35 @@
   $\lambda$ n : nat $\Rightarrow$
     let first = ($\lambda$ (x,y) : (str $\times$ str) $\Rightarrow$ x) .
     first (n, _) 
+  \end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Propagation: down}
+
+  \begin{lstlisting}
+  $\lambda$ n : nat $\Rightarrow$
+    let first = ($\lambda$ (x,y) : (str $\times$ str) $\Rightarrow$ x) .
+    first (n, _) 
 
     
   (n, _) : str $\times$ str
   n : str   
   nat $\leq$ str 
   _ : str  
-    
+  \end{lstlisting}
 
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Propagation: up}
+
+  \begin{lstlisting}
+  $\lambda$ upper : str $\rightarrow$ str $\Rightarrow$
+  $\hdots$
+  $\lambda$ x $\Rightarrow$ $\lambda$ y $\Rightarrow$
+    #cons(upper x,#cons(upper y,#nil()))
   \end{lstlisting}
 
 \end{frame}
@@ -125,7 +146,6 @@
 
   str $\rightarrow$ str $\rightarrow$
     #cons(str $\times$ #cons(str $\times$ #nil$\diamondsuit$))
-
   \end{lstlisting}
 
 \end{frame}
