@@ -112,7 +112,7 @@
 
   \begin{lstlisting}
 
-  upper : str -> str
+  $\lambda$ upper : str $\rightarrow$ str $\Rightarrow$
   $\hdots$
   $\lambda$ x $\Rightarrow$ $\lambda$ y $\Rightarrow$
     #cons(upper x,#cons(upper y,#nil()))
@@ -131,7 +131,8 @@
   \begin{lstlisting}
   ($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
   ($\lambda$ n : int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
-    pair n s
+    let p = pair n s
+    $\hdots$
   )))
 
   \end{lstlisting}
@@ -144,7 +145,8 @@
   \begin{lstlisting}
   ($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
   ($\lambda$ n : int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
-    pair n s
+    let p = pair n s
+    $\hdots$
   )))
 
   $\alpha$ $\mapsto$ (int | ?) 
@@ -161,7 +163,8 @@
   \begin{lstlisting}
   ($\lambda$ i2n : int $\rightarrow$ nat $\Rightarrow$ 
   ($\lambda$ s2n : str $\rightarrow$ nat $\Rightarrow$ 
-    $\lambda$ x $\Rightarrow$ (i2n x, s2n x)
+    let f = $\lambda$ x $\Rightarrow$ (i2n x, s2n x)
+    $\hdots$
   ))
   \end{lstlisting}
 \end{frame}
@@ -172,7 +175,8 @@
   \begin{lstlisting}
   ($\lambda$ i2n : int $\rightarrow$ nat $\Rightarrow$ 
   ($\lambda$ s2n : str $\rightarrow$ nat $\Rightarrow$ 
-    $\lambda$ x $\Rightarrow$ (i2n x, s2n x)
+    let f = $\lambda$ x $\Rightarrow$ (i2n x, s2n x)
+    $\hdots$
   ))
   
   x : $\alpha$
