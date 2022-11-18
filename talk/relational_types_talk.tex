@@ -29,10 +29,8 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Problem}
+  \frametitle{Problem: synthesize a program}
 
-  
-  Synthesize a program:
   \begin{itemize}
   \item initial program with holes 
   \item initial specification  
@@ -52,8 +50,8 @@
   def foo(x):
       if isinstance(x, int):
           return x + 1 
-      elif isinstance(x, str): 
-          return x + "abc"
+      else:
+        return x + "abc"
   \end{lstlisting}
 \end{frame}
 
@@ -67,6 +65,63 @@
 
   fun foo(Int x) = x + 1
     | foo(Str x) = x ^ "abc"
+  \end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Specification}
+  \begin{itemize}
+  \item Types as specification 
+  \item Propagation of types   
+    \begin{itemize}
+    \item Expected types decomposed to locally guide at holes and leaf terms   
+    \item Actual types synthesized in case annotations missing 
+    \end{itemize}
+
+  \item Expressive types    
+    \begin{itemize}
+    \item Subtyping since static bounds unprescribed 
+    \item Union and Intersection types to expand and narrow static bounds 
+    \item Precise relations to guide effectively   
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Propagation: down}
+
+  \begin{lstlisting}
+  $\lambda$ n : nat $\Rightarrow$
+    let first = ($\lambda$ (x,y) : (str $\times$ str) $\Rightarrow$ x) .
+    first (n, _) 
+
+    
+    (n, _) : str $\times$ str
+
+    n : str   _ : str  
+
+    nat $\leq$ str 
+    
+
+  \end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Propagation: up}
+
+  \begin{lstlisting}
+
+  upper : str -> str
+  $\hdots$
+  $\lambda$ x $\Rightarrow$ $\lambda$ y $\Rightarrow$
+    #cons(upper x,#cons(upper y,#nil()))
+
+
+  str $\rightarrow$ str $\rightarrow$
+    #cons(str $\times$ #cons(str $\times$ #nil$\diamondsuit$))
+
   \end{lstlisting}
 
 \end{frame}
