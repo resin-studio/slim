@@ -1,0 +1,74 @@
+\documentclass{beamer}
+
+\usepackage{mathpartir}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+
+
+\lstset{
+    identifierstyle=\color{violet},
+    % textcolor=blue,
+    % keywordstyle=\color{blue},
+    keywordstyle=\text,
+    basicstyle=\ttfamily,
+    mathescape=true,
+    showspaces=false,
+    morekeywords={let, fix}
+}
+
+\title{Program synthesis with relational types}
+\author{Thomas Logan}
+\date{18 November 2022}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}
+  \frametitle{Problem}
+
+  
+  Synthesize a program:
+  \begin{itemize}
+  \item initial program with holes 
+  \item initial specification  
+  \item optional annotations  
+  \item unprescribed static bounds
+  \item comparable to popular scripting languages
+    \begin{itemize}
+    \item .e.g. Python, JavaScript  
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Unprescribed static bounds in Python}
+
+  \begin{lstlisting}[language=Python]
+  def foo(x):
+      if isinstance(x, int):
+          return x + 1 
+      elif isinstance(x, str): 
+          return x + "abc"
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Prescribed static bounds with datatypes}
+
+  \begin{lstlisting}[language=ML]
+  datatype int_or_str = 
+      Int of int | 
+      Str of string
+
+  fun foo(Int x) = x + 1
+    | foo(Str x) = x ^ "abc"
+  \end{lstlisting}
+
+\end{frame}
+
+\end{document}
