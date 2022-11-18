@@ -361,5 +361,21 @@
 
 
 \end{frame}
+\begin{frame}[fragile]
+  \frametitle{Expressivity: comparison to Prolog}
+
+  \begin{lstlisting}[]
+  plus(0, A, A).
+  plus(s(A), B, s(C)) :- plus(A, B, C).
+
+
+  $\mu$ plus .
+    $\exists$ $\alpha$ . 
+      (.x #zero $\diamondsuit$ & .y $\alpha$ & .z $\alpha$) |
+    $\exists$ $\alpha$ $\beta$ $\gamma$ :: (.x $\alpha$ & .y $\beta$ & .z $\gamma$) $\leq$ plus . 
+      .x #succ $\alpha$ & .y $\beta$ & .z #succ $\gamma$
+  \end{lstlisting}
+
+\end{frame}
 
 \end{document}
