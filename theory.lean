@@ -466,7 +466,7 @@ partial def Ty.resolve (env_ty : List (Nat × Ty)) : Ty -> Ty
   | .bvar id => Ty.bvar id  
   | .fvar id => match lookup id env_ty with
     | some ty => Ty.resolve env_ty ty 
-    | none => .dynamic
+    | none => Ty.fvar id 
   | .unit => .unit 
   | .tag l ty => Ty.tag l (Ty.resolve env_ty ty) 
   | .field l ty => Ty.field l (Ty.resolve env_ty ty) 
@@ -685,8 +685,7 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
 
 
   | ty', .recur ty =>
-    let (i, ty') := Ty.dynamic_subst i (Ty.resolve env_ty ty')
-    match linearize_record ty' with 
+    match linearize_record (Ty.resolve env_ty ty') with 
       | .some ty'' => unify i env_ty ty'' (unroll (Ty.recur ty))
       | .none => .nil
     -- bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
@@ -903,13 +902,13 @@ def plus := [:
 :] plus
 
 
--- #eval unify 3 [] [:
---   (
---     .x (#succ #zero ♢) &
---     .y (#succ #zero ♢) &
---     .z (@0)
---   )
--- :] plus
+#eval unify 3 [] [:
+  (
+    .x (#succ #zero ♢) &
+    .y (#succ #zero ♢) &
+    .z (@0)
+  )
+:] plus
 
 #eval unify 3 [] [:
   (
