@@ -32,11 +32,11 @@
   \frametitle{Problem: synthesize a program}
 
   \begin{itemize}
-  \item initial program with holes 
-  \item initial specification  
-  \item optional annotations  
-  \item unprescribed static bounds
-  \item comparable to popular scripting languages
+  \item Initial program with holes 
+  \item Initial specification  
+  \item Optional annotations  
+  \item Unprescribed static bounds
+  \item Comparable to popular scripting languages
     \begin{itemize}
     \item .e.g. Python, JavaScript  
     \end{itemize}
@@ -79,10 +79,10 @@
     \item Actual types synthesized in case annotations missing 
     \end{itemize}
 
-  \item Expressive types    
+  \item Expressivity of types    
     \begin{itemize}
-    \item Subtyping since static bounds unprescribed 
-    \item Union and Intersection types to expand and narrow static bounds 
+    \item Subtyping since static bounds are unprescribed 
+    \item Unions and intersections to widen and narrow static bounds 
     \item Precise relations to guide effectively   
     \end{itemize}
   \end{itemize}
@@ -97,11 +97,10 @@
     first (n, _) 
 
     
-    (n, _) : str $\times$ str
-
-    n : str   _ : str  
-
-    nat $\leq$ str 
+  (n, _) : str $\times$ str
+  n : str   
+  nat $\leq$ str 
+  _ : str  
     
 
   \end{lstlisting}
@@ -126,21 +125,38 @@
 
 \end{frame}
 
-
 \begin{frame}[fragile]
-  \frametitle{Expressive: widening}
+  \frametitle{Expressivity: widening}
 
   \begin{lstlisting}
   ($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
   ($\lambda$ n : int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
     pair n s
   )))
+
   \end{lstlisting}
 \end{frame}
 
 
 \begin{frame}[fragile]
-  \frametitle{Expressive: narrowing}
+  \frametitle{Expressivity: widening}
+
+  \begin{lstlisting}
+  ($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
+  ($\lambda$ n : int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
+    pair n s
+  )))
+
+  $\alpha$ $\mapsto$ (int | ?) 
+  $\alpha$ $\mapsto$ (int | str | ?)
+  pair : $\top$ $\rightarrow$ $\top$ $\rightarrow$ (int | str)  
+
+  \end{lstlisting}
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Expressivity: narrowing}
 
   \begin{lstlisting}
   ($\lambda$ i2n : int $\rightarrow$ nat $\Rightarrow$ 
@@ -151,7 +167,25 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Expressive: relational record}
+  \frametitle{Expressivity: narrowing}
+
+  \begin{lstlisting}
+  ($\lambda$ i2n : int $\rightarrow$ nat $\Rightarrow$ 
+  ($\lambda$ s2n : str $\rightarrow$ nat $\Rightarrow$ 
+    $\lambda$ x $\Rightarrow$ (i2n x, s2n x)
+  ))
+  
+  x : $\alpha$
+  $\alpha$ $\mapsto$ (int & ?)
+  $\alpha$ $\mapsto$ (int & str & ?)
+  x : $\bot$
+  $\lambda$ x $\Rightarrow$ (i2n x, s2n x) : 
+    (int & str) $\rightarrow$ (nat $\times$ nat) 
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Expressivity: relational record}
 
   \begin{lstlisting}[]
   let measurement : $\mu$ (nat $\times$ list) .
@@ -162,7 +196,7 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Expressive: relational record expanded}
+  \frametitle{Expressivity: relational record expanded}
 
   \begin{lstlisting}[]
   let measurement : 
@@ -176,7 +210,7 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Expressive: relational record comparison (Synquid)}
+  \frametitle{Expressivity: relational record comparison (Synquid)}
 
   \begin{lstlisting}[keywords={termination, measure, data, where}]
   termination measure len :: List $\beta$ $\rightarrow$ Nat 
@@ -189,7 +223,7 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Expressive: relational function}
+  \frametitle{Expressivity: relational function}
 
   \begin{lstlisting}[]
   let replicate : 
@@ -203,7 +237,7 @@
 
 \begin{frame}[fragile]
 
-  \frametitle{Expressive: relational function expanded}
+  \frametitle{Expressivity: relational function expanded}
 
   \begin{lstlisting}[]
   let replicate : 
@@ -218,7 +252,7 @@
 
 \begin{frame}[fragile]
 
-  \frametitle{Expressive: relational function comparison (Synquid)}
+  \frametitle{Expressivity: relational function comparison (Synquid)}
 
   \begin{lstlisting}[keywords={termination, measure, data, where}]
   replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$ 
@@ -230,7 +264,7 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Expressive: recursive pattern matching}
+  \frametitle{Expressivity: recursive pattern matching}
   \begin{lstlisting}[]
   let replicate = 
   $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
@@ -241,7 +275,7 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Expressive: unification of nat}
+  \frametitle{Expressivity: unification of nat}
 
   \begin{lstlisting}[]
   nat $\equiv$ $\mu$ nat .
@@ -262,7 +296,7 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Expressive: unification of nat list relation}
+  \frametitle{Expressivity: unification of nat list relation}
 
   \begin{lstlisting}[]
   nat_list $\equiv$ $\mu$ (nat $\times$ list) .
@@ -282,7 +316,7 @@
 
 
 \begin{frame}[fragile]
-  \frametitle{Expressive: unification of plus relation}
+  \frametitle{Expressivity: unification of plus relation}
 
   \begin{lstlisting}[]
   plus $\equiv$ $\mu$ plus .
