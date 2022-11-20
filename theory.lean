@@ -1008,44 +1008,50 @@ partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat �
   | _, _ => none
 
 
-def refresh (i : Nat) : Ty -> (Nat × Ty)
+def Ty.refresh (i : Nat) : Ty -> (Nat × Ty)
   | .bvar id => (i + 1, Ty.bvar id) 
   | .fvar _ => (i + 1, Ty.fvar i)
   | .unit => (i + 1, .unit) 
   | .tag l ty => 
-    let (i, ty) := refresh i ty 
+    let (i, ty) := Ty.refresh i ty 
     (i, Ty.tag l ty) 
   | .field l ty => 
-    let (i, ty) := refresh i ty 
+    let (i, ty) := Ty.refresh i ty 
     (i, Ty.field l ty) 
   | .union ty1 ty2 => 
-    let (i, ty1) := refresh i ty1
-    let (i, ty2) := refresh i ty2
+    let (i, ty1) := Ty.refresh i ty1
+    let (i, ty2) := Ty.refresh i ty2
     (i, .union ty1 ty2)
   | .inter ty1 ty2 => 
-    let (i, ty1) := refresh i ty1
-    let (i, ty2) := refresh i ty2
+    let (i, ty1) := Ty.refresh i ty1
+    let (i, ty2) := Ty.refresh i ty2
     (i, .inter ty1 ty2)
   | .case ty1 ty2 => 
-    let (i, ty1) := refresh i ty1
-    let (i, ty2) := refresh i ty2
+    let (i, ty1) := Ty.refresh i ty1
+    let (i, ty2) := Ty.refresh i ty2
     (i, .case ty1 ty2)
   | .univ n (cty1, cty2) ty => 
-    let (i, cty1) := refresh i cty1
-    let (i, cty2) := refresh i cty2
-    let (i, ty) := refresh i ty
+    let (i, cty1) := Ty.refresh i cty1
+    let (i, cty2) := Ty.refresh i cty2
+    let (i, ty) := Ty.refresh i ty
     (i, .univ n (cty1, cty2) ty)
   | .exis n (cty1, cty2) ty => 
-    let (i, cty1) := refresh i cty1
-    let (i, cty2) := refresh i cty2
-    let (i, ty) := refresh i ty
+    let (i, cty1) := Ty.refresh i cty1
+    let (i, cty2) := Ty.refresh i cty2
+    let (i, ty) := Ty.refresh i ty
     (i, .exis n (cty1, cty2) ty)
   | .recur ty =>
-    let (i, ty) := refresh i ty
+    let (i, ty) := Ty.refresh i ty
     (i, .recur ty)
   | .corec ty =>
-    let (i, ty) := refresh i ty
+    let (i, ty) := Ty.refresh i ty
     (i, .corec ty)
+
+  def Ty.combine (i : Nat) (u_env_ty : List (List (Nat × Ty))) (ty : Ty) : (Nat × Ty) := 
+    List.foldl (fun (i, uty) => fun env_ty =>
+      let (i, ty) := Ty.refresh i (Ty.resolve env_ty ty) 
+      (i, Ty.union ty uty)
+    ) (i + 1, .fvar i) u_env_ty 
 
 -- /-
 -- NOTE: infer returns a refined type in addition the type variable assignments
