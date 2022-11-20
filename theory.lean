@@ -139,11 +139,6 @@ def lookup_record (key : String) : List (String × T) -> Option T
 --   | 0 => []
 --   | n + 1 => (i, [: ? :]) :: (liberate (i + 1) n)
 
-def refresh (i : Nat) (n : Nat) : (Nat × List Ty) := 
-  let args := (List.range n).map (fun j => .fvar (i + j))
-  let i' := i + n 
-  (i', args)
-
 -- partial def merge (op : T -> T -> T) (df : T) (env_ty1 : List (Nat × T))  (env_ty2 : List (Nat × T)) : List (Nat × T) :=
 --   List.bind env_ty1 (fun (key₁, v₁) =>
 --   List.bind env_ty2 (fun (key₂, v₂) =>
@@ -588,7 +583,8 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
 
 
   | ty', .exis n (ty_c1, ty_c2) ty =>
-    let (i, args) := refresh i n 
+    let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
+
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty := Ty.raise_binding 0 args ty
@@ -605,7 +601,7 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
 
 
   | .univ n (ty_c1, ty_c2) ty', ty =>
-    let (i, args) := refresh i n 
+    let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty' := Ty.raise_binding 0 args ty'
@@ -1011,6 +1007,45 @@ partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat �
   -- TODO: finish
   | _, _ => none
 
+
+def refresh (i : Nat) : Ty -> (Nat × Ty)
+  | .bvar id => (i + 1, Ty.bvar id) 
+  | .fvar _ => (i + 1, Ty.fvar i)
+  | .unit => (i + 1, .unit) 
+  | .tag l ty => 
+    let (i, ty) := refresh i ty 
+    (i, Ty.tag l ty) 
+  | .field l ty => 
+    let (i, ty) := refresh i ty 
+    (i, Ty.field l ty) 
+  | .union ty1 ty2 => 
+    let (i, ty1) := refresh i ty1
+    let (i, ty2) := refresh i ty2
+    (i, .union ty1 ty2)
+  | .inter ty1 ty2 => 
+    let (i, ty1) := refresh i ty1
+    let (i, ty2) := refresh i ty2
+    (i, .inter ty1 ty2)
+  | .case ty1 ty2 => 
+    let (i, ty1) := refresh i ty1
+    let (i, ty2) := refresh i ty2
+    (i, .case ty1 ty2)
+  | .univ n (cty1, cty2) ty => 
+    let (i, cty1) := refresh i cty1
+    let (i, cty2) := refresh i cty2
+    let (i, ty) := refresh i ty
+    (i, .univ n (cty1, cty2) ty)
+  | .exis n (cty1, cty2) ty => 
+    let (i, cty1) := refresh i cty1
+    let (i, cty2) := refresh i cty2
+    let (i, ty) := refresh i ty
+    (i, .exis n (cty1, cty2) ty)
+  | .recur ty =>
+    let (i, ty) := refresh i ty
+    (i, .recur ty)
+  | .corec ty =>
+    let (i, ty) := refresh i ty
+    (i, .corec ty)
 
 -- /-
 -- NOTE: infer returns a refined type in addition the type variable assignments
