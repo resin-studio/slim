@@ -47,7 +47,6 @@ syntax "@"slm:90 : slm
 syntax "♢" : slm
 syntax "#"slm:90 slm:90 : slm
 syntax "."slm:90 slm:90 : slm
-syntax "?" : slm
 syntax:50 slm:50 "->" slm:51 : slm
 syntax:60 slm:60 "|" slm:61 : slm
 syntax:60 slm:60 "+" slm:61 : slm
@@ -206,7 +205,6 @@ well_founded α ∀ env_ty ⟨τ' ⊆ α⟩ . τ =
 -/
 
 def Ty.occurs (key : Nat)  : Ty -> Bool 
-  -- | [: ? :] => false 
   | .bvar id => false 
   | .fvar id => key = id 
   | .unit => false 
