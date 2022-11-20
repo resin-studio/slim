@@ -1,7 +1,6 @@
 -- TODO: look into widening in abstract interpretation
 
 inductive Ty : Type
-  | dynamic : Ty
   | bvar : Nat -> Ty  
   | fvar : Nat -> Ty
   | unit : Ty
@@ -22,7 +21,6 @@ def Ty.repr [Repr α] (ty : Ty) (n : Nat) : Format :=
   -- let _ : ToFormat α := ⟨repr⟩
   match ty, n with
     | _ , _ => ""
-    -- | .dynamic, _ => Format.text "?" 
     -- | .bvar : Nat -> Ty  
     -- | .fvar : Nat -> Ty
     -- | .unit : Ty
@@ -84,16 +82,15 @@ macro_rules
   | `([: ♢ :]) => `(Ty.unit)
   | `([: #$a $b:slm :]) => `(Ty.tag [: $a :] [: $b :])
   | `([: .$a $b:slm :]) => `(Ty.field [: $a :] [: $b :])
-  | `([: ? :]) => `(Ty.dynamic)
   | `([: $a -> $b :]) => `(Ty.case [: $a :] [: $b :])
   | `([: $a | $b :]) => `(Ty.union [: $a :] [: $b :])
   | `([: $a + $b :]) => `(Ty.union [: #inl $a :] [: #inr $b :])
   | `([: $a & $b :]) => `(Ty.inter [: $a :] [: $b :])
   | `([: $a × $b :]) => `(Ty.inter [: .left $a :] [: .right $b :])
   | `([: ∀ $a :: $b ≤ $c . $d :]) => `(Ty.univ [: $a :] ([: $b :], [: $c :]) [: $d :])
-  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] ([: £$a :], [: ? :]) [: $b :] )
+  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] ([: £$a :], [: £$a :]) [: $b :] )
   | `([: ∃ $a :: $b ≤ $c . $d  :]) => `(Ty.exis [: $a :] ([: $b :], [: $c :]) [: $d :])
-  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] ([: £$a :], [: ? :]) [: $b :] )
+  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] ([: £$a :], [: £$a :]) [: $b :] )
   | `([: μ 1 . $a :]) => `(Ty.recur [: $a :])
   | `([: ν 1 . $a :]) => `(Ty.corec [: $a :])
 
@@ -110,24 +107,24 @@ macro_rules
       .l #succ £0 & .r #cons £1)
 :]
 
-#check [: £0 | ? :]
-#check [: £0 & ? :]
-#check [: £0 × ? :]
-#check [: £0 + ? :]
+#check [: £0 | @0 :]
+#check [: £0 & @0 :]
+#check [: £0 × @0 :]
+#check [: £0 + @0 :]
 def x := 0
-#check [: ∀ 1 :: £0 ≤ ? . £⟨x⟩ :]
-#check [: ∀ 1 :: £0 ≤ ? . £0 :]
-#check [: ∀ 2 :: ? ≤ ? . £0 :]
+#check [: ∀ 1 :: £0 ≤ @0 . £⟨x⟩ :]
+#check [: ∀ 1 :: £0 ≤ @0 . £0 :]
+#check [: ∀ 2 :: @0 ≤ @0 . £0 :]
 #check [: ∀ 2 . £0 :]
 #check [: ♢ :]
 #check [: @24 :]
 #check [: #foo ♢ | #boo ♢ :]
 #check [: μ 1 . #foo £0 :]
-#check [: μ 1 . #foo £0  & ? | @2 & ?:]
-#check [: £3 & ? -> @1 | @2 :]
-#check [: μ 1 . #foo £0 & ? | @2 & ? -> @1 | @2 :]
-#check [: μ 1 . #foo £0 & ? | @2 & ? :]
-#check [: ? :]
+#check [: μ 1 . #foo £0  & @0 | @2 & @0:]
+#check [: £3 & @0 -> @1 | @2 :]
+#check [: μ 1 . #foo £0 & @0 | @2 & @0 -> @1 | @2 :]
+#check [: μ 1 . #foo £0 & @0 | @2 & @0 :]
+#check [: @0 :]
 
 
 
@@ -209,7 +206,7 @@ well_founded α ∀ env_ty ⟨τ' ⊆ α⟩ . τ =
 -/
 
 def Ty.occurs (key : Nat)  : Ty -> Bool 
-  | [: ? :] => false 
+  -- | [: ? :] => false 
   | .bvar id => false 
   | .fvar id => key = id 
   | .unit => false 
@@ -225,7 +222,6 @@ def Ty.occurs (key : Nat)  : Ty -> Bool
   | .corec ty => (Ty.occurs key ty)
 
 def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
-  | .dynamic => .dynamic 
   | .bvar id => .bvar id 
   | .fvar id => (match lookup id m with
     | some ty => ty 
@@ -269,13 +265,12 @@ macro_rules
   | `([: $a % $b:sub :]) => `(Ty.free_subst [sub: $b :] [: $a :])
 
 
--- #check [: (£1) % [1 / ?] :]
-#check [: (£1) % [1/?] :]
+-- #check [: (£1) % [1 / @0] :]
+#check [: (£1) % [1/@0] :]
 
 #check Fin
 
 def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
-  | .dynamic => .dynamic 
   | .bvar id => 
       if h : start ≤ id ∧ (id - start) < args.length then
         let i : Fin args.length := {
@@ -311,7 +306,7 @@ macro_rules
   | `([: $a ↑ $b / $c :]) => `(Ty.raise_binding [: $b :] [: $c :] [: $a :])
 
 
-def τ := [: ? :]
+def τ := [: @0 :]
 #check [: ⟨τ⟩ ↑ 0 / [μ 1 . ⟨τ⟩]:]
 
 
@@ -378,7 +373,6 @@ partial def unroll : Ty -> Ty
   | ty => ty
 
 -- def Ty.lower_binding (depth : Nat) : Ty -> Ty
---   | .dynamic => .dynamic 
 --   | .bvar id => .bvar (id + depth)
 --   | .fvar id => .fvar id 
 --   | .unit => .unit
@@ -418,53 +412,7 @@ partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
   else
     τ
 
-partial def Ty.equal (env_ty : List (Nat × Ty)) : Ty -> Ty -> Bool
-  | .dynamic, .dynamic => true
-  | .bvar id1, .bvar id2 => if id1 = id2 then true else false 
-  | .fvar id1, .fvar id2 => if id1 = id2 then true else false
-  | .unit, .unit => true
-  | .tag l1 ty1, .tag l2 ty2 =>
-    l1 = l2 ∧ (
-      Ty.equal env_ty ty1 ty2 
-    )
-  | .field l1 ty1, .field l2 ty2 =>
-    l1 = l2 ∧ (
-      Ty.equal env_ty ty1 ty2 
-    )
-
-  | .union ty1 ty2, .union ty3 ty4 =>
-    Ty.equal env_ty ty1 ty3 ∧
-    Ty.equal env_ty ty2 ty4
-
-  | .inter ty1 ty2, .inter ty3 ty4 =>
-    Ty.equal env_ty ty1 ty3 ∧
-    Ty.equal env_ty ty2 ty4
-
-  | .case ty1 ty2, .case ty3 ty4 =>
-    Ty.equal env_ty ty1 ty3 ∧
-    Ty.equal env_ty ty2 ty4
-
-  | .univ n1 (tyc1, tyc2) ty1, .univ n2 (tyc3, tyc4) ty2 =>
-    n1 = n2 ∧
-    Ty.equal env_ty tyc1 tyc3 ∧
-    Ty.equal env_ty tyc2 tyc4 ∧
-    Ty.equal env_ty ty1 ty2
-
-  | .exis n1 (tyc1, tyc2) ty1, .exis n2 (tyc3, tyc4) ty2 =>
-    n1 = n2 ∧
-    Ty.equal env_ty tyc1 tyc3 ∧
-    Ty.equal env_ty tyc2 tyc4 ∧
-    Ty.equal env_ty ty1 ty2
-
-  | .recur ty1, .recur ty2 =>
-    Ty.equal env_ty ty1 ty2
-
-  | .corec ty1, .corec ty2 =>
-    Ty.equal env_ty ty1 ty2
-  | _, _ => false
-
 partial def Ty.resolve (env_ty : List (Nat × Ty)) : Ty -> Ty
-  | .dynamic => Ty.dynamic  
   | .bvar id => Ty.bvar id  
   | .fvar id => match lookup id env_ty with
     | some ty => Ty.resolve env_ty ty 
@@ -486,6 +434,56 @@ partial def Ty.resolve (env_ty : List (Nat × Ty)) : Ty -> Ty
   | .recur ty => Ty.recur (Ty.resolve env_ty ty)
   | .corec ty => Ty.corec (Ty.resolve env_ty ty)
 
+
+partial def Ty.equal_syntax : Ty -> Ty -> Bool
+  | .bvar id1, .bvar id2 => if id1 = id2 then true else false 
+  | .fvar id1, .fvar id2 => if id1 = id2 then true else false 
+  | .unit, .unit => true
+  | .tag l1 ty1, .tag l2 ty2 =>
+    l1 = l2 ∧ (
+      Ty.equal_syntax ty1 ty2 
+    )
+  | .field l1 ty1, .field l2 ty2 =>
+    l1 = l2 ∧ (
+      Ty.equal_syntax ty1 ty2 
+    )
+
+  | .union ty1 ty2, .union ty3 ty4 =>
+    Ty.equal_syntax ty1 ty3 ∧
+    Ty.equal_syntax ty2 ty4
+
+  | .inter ty1 ty2, .inter ty3 ty4 =>
+    Ty.equal_syntax ty1 ty3 ∧
+    Ty.equal_syntax ty2 ty4
+
+  | .case ty1 ty2, .case ty3 ty4 =>
+    Ty.equal_syntax ty1 ty3 ∧
+    Ty.equal_syntax ty2 ty4
+
+  | .univ n1 (tyc1, tyc2) ty1, .univ n2 (tyc3, tyc4) ty2 =>
+    n1 = n2 ∧
+    Ty.equal_syntax tyc1 tyc3 ∧
+    Ty.equal_syntax tyc2 tyc4 ∧
+    Ty.equal_syntax ty1 ty2
+
+  | .exis n1 (tyc1, tyc2) ty1, .exis n2 (tyc3, tyc4) ty2 =>
+    n1 = n2 ∧
+    Ty.equal_syntax tyc1 tyc3 ∧
+    Ty.equal_syntax tyc2 tyc4 ∧
+    Ty.equal_syntax ty1 ty2
+
+  | .recur ty1, .recur ty2 =>
+    Ty.equal_syntax ty1 ty2
+
+  | .corec ty1, .corec ty2 =>
+    Ty.equal_syntax ty1 ty2
+  | _, _ => false
+
+partial def Ty.equal (env_ty : List (Nat × Ty)) (ty1 : Ty) (ty2 : Ty) : Bool :=
+  let ty1 := Ty.resolve env_ty ty1 
+  let ty2 := Ty.resolve env_ty ty2 
+  Ty.equal_syntax ty1 ty2 
+
 def linearize_record : Ty -> Option Ty
   | .field l ty => 
     some (.field l ty)
@@ -500,46 +498,6 @@ def linearize_record : Ty -> Option Ty
   | _ => none
 
 
-def Ty.dynamic_subst (i : Nat) : Ty -> Nat × Ty
-  | .dynamic => 
-    (i + 1, .fvar i) 
-  | .bvar id => (i, .bvar id)
-  | .fvar id => (i, .fvar id)
-  | .unit => (i, .unit)
-  | .tag l ty => 
-    let (i, ty) := (Ty.dynamic_subst i ty)
-    (i, .tag l ty) 
-  | .field l ty => 
-    let (i, ty) := Ty.dynamic_subst i ty
-    (i, .field l ty) 
-  | .union ty1 ty2 => 
-      let (i, ty1) := (Ty.dynamic_subst i ty1)
-      let (i, ty2) := (Ty.dynamic_subst i ty2)
-      (i, .union ty1 ty2)
-  | .inter ty1 ty2 => 
-      let (i, ty1) := (Ty.dynamic_subst i ty1)
-      let (i, ty2) := (Ty.dynamic_subst i ty2)
-      (i, .inter ty1 ty2)
-  | .case ty1 ty2 => 
-      let (i, ty1) := (Ty.dynamic_subst i ty1)
-      let (i, ty2) := (Ty.dynamic_subst i ty2)
-      (i, .case ty1 ty2)
-  | .univ n (ty_c1, ty_c2) ty => 
-    let (i, ty_c1) := Ty.dynamic_subst i ty_c1
-    let (i, ty_c2) := Ty.dynamic_subst i ty_c2
-    let (i, ty) := (Ty.dynamic_subst i ty)
-    (i, .univ n (ty_c1, ty_c2) ty)
-  | .exis n (ty_c1, ty_c2) ty => 
-    let (i, ty_c1) := Ty.dynamic_subst i ty_c1
-    let (i, ty_c2) := Ty.dynamic_subst i ty_c2
-    let (i, ty) := (Ty.dynamic_subst i ty)
-    (i, .exis n (ty_c1, ty_c2) ty)
-  | .recur ty => 
-    let (i, ty) := Ty.dynamic_subst i ty
-    (i, .recur ty)
-  | .corec ty => 
-    let (i, ty) := Ty.dynamic_subst i ty
-    (i, .corec ty)
 
 def linearize_fields : Ty -> Option (List (String × Ty))
   | .field l ty => some [(l, ty)]
@@ -670,10 +628,6 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
     else
       .nil 
 
-  | .dynamic, _ => [ (i, [])  ]
-  | _, .dynamic => [ (i, []) ]
-
-
   | .recur ty', .recur ty =>
     if Ty.equal env_ty ty' ty then
       [ (i, []) ]
@@ -690,20 +644,6 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
     match linearize_record (Ty.resolve env_ty ty') with 
       | .some ty'' => unify i env_ty ty'' (unroll (Ty.recur ty))
       | .none => .nil
-    -- bind (linearize_record (Ty.resolve env_ty ty')) (fun ty'' =>
-    -- let cs := (make_field_constraints Ty.dynamic ty'' (Ty.recur ty))
-    -- if cs.length = 0 then
-    --   none
-    -- else
-    --   List.foldl (fun 
-    --     | some (i, env_ty1), (ty_c1, ty_c2) => 
-    --       bind (unify i env_ty ty_c1 ty_c2) (fun (i, env_ty2) =>
-    --         some (i, env_ty2 ++ env_ty1)
-    --       )
-    --     | none, _ => none
-    --   ) (some (i, [])) cs
-    -- )
-
 
   | .corec ty', .corec ty =>
     if Ty.equal env_ty ty' ty then
@@ -1125,7 +1065,6 @@ partial def infer
   
   | .func [] => .nil 
   | .func ((n, p, ty_p, b) :: .nil) => 
-    let (i, ty_p) := Ty.dynamic_subst i ty_p 
     let (i, ty_b) := (i + 1, .fvar i)
     (match (patvars env_tm p ty_p) with 
       | .some env_tm1 =>
@@ -1160,7 +1099,8 @@ partial def infer
   | .app t2 t1 =>
     let (i, ty') := (i + 1, Ty.fvar i)
     let (i, ty1) := (i + 1, Ty.fvar i)
-    List.bind (infer i (env_ty) env_tm t2 (Ty.case .dynamic ty)) (fun (i, env_ty1, ty2) =>
+    let (i, ty_x) := (i + 1, Ty.fvar i)
+    List.bind (infer i (env_ty) env_tm t2 (Ty.case ty_x ty)) (fun (i, env_ty1, ty2) =>
     -- ty2 = ty1 -> ty'
     List.bind (unify i (env_ty1 ++ env_ty) ty2 (.case ty1 ty')) (fun (i, env_ty2) =>
     List.bind (infer i (env_ty2 ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty3, ty1') =>
@@ -1169,7 +1109,6 @@ partial def infer
     ))))
 
   | .letb ty1 t1 t => 
-    let (i, ty1) := Ty.dynamic_subst i ty1
     let (i, env_tmx) := (i + 1, [(i, Ty.univ 1 (Ty.bvar 0, ty1) (Ty.bvar 0))]) 
     List.bind (infer i (env_ty) env_tm t1 ty1) (fun (i, env_ty1, _) =>
     List.bind (infer i (env_ty1 ++ env_ty) (env_tmx ++ env_tm) t ty) (fun (i, env_ty2, ty') =>
