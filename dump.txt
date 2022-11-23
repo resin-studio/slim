@@ -621,3 +621,278 @@ Field[]
 e : {.l0 : T0, ... .ln : Tn}     .l : union(.l0 | ... | .ln)
 \-------------------------------------------------------------
 e.l : T
+
+
+
+-- -- examples 
+-- /-
+-- ## type flow
+-- - how types move between contexts
+
+-- ### inferred type
+-- - infer type from form and context 
+-- ```
+-- #zero()
+
+-- -- infer _ _ ⊢ #zero() : _ = some _, #zero[]
+-- ```
+
+-- ### propagated type
+-- - propagate type to solve type constraints locally 
+-- ```
+-- (for n : nat =>
+--   let first = (for (x,y) : [str;?] => x) in
+--   first (n, _) 
+
+--   -- infer {n : nat} ⊢ first (n, _) : _ = none
+--     -- infer {n : nat} ⊢ (n,_) : [str;?]  = none
+--       -- solve _ ⊢ nat ⊆ str = none
+-- )
+-- ```
+
+-- ## type adaptation 
+-- - how types adjust to changing contexts 
+
+-- ### narrowed type
+-- ```
+-- (for i2n : int -> nat => 
+-- (for s2n : str -> nat => 
+--   (for x : ? => (i2n x, s2n x))
+
+--   -- infer _ _ ⊢ (for x : ? => (i2n x, s2n x)) : _ = some _ , int & str -> [nat;nat] 
+--     -- infer {x : α} {α ⊆ ?} ⊢ (i2n x, s2n x) : _ = some _ , nat;nat
+--     -- solve {α ⊆ ?} ⊢ α ⊆ int = some {α ⊆ int & ?}  
+--     -- solve {α ⊆ int & ?} ⊢ α ⊆ str = some {α ⊆ int & str & ?}  
+--       -- solve {α ⊆ int & β, β ⊆ ?} ⊢ int & β ⊆ str = some {β ⊆ str & ?}  
+--         -- solve {...} ⊢ int ⊆ str ∨ β ⊆ str = some {β ⊆ str & ?}  
+--           -- solve {...} ⊢ β ⊆ str = some {β ⊆ str & ?}  
+
+-- ))
+-- ```
+-- - maintain leniency while increasing strictness
+--   - combine intersection (i.e. &) with dynamic type (i.e. ?)
+-- - lenient
+--   - maintain bottom actual type
+--   - τ & ? = τ & ⊥ = ⊥
+-- - strict
+--   - narrow dynamic expected type from known expected type
+--   - τ & ? = τ & ⊤ = τ 
+
+
+-- ### widened type
+-- ```
+-- (pair : ∀ α . α -> α -> [α ; α] => 
+-- (n : int => 
+-- (s : str => 
+--   pair n s
+
+--   -- infer _ _ ⊢ (pair n s) = _ , [int|str ; int|str] 
+--     -- solve {α ⊆ ?} ⊢ int ⊆ α = some {α ⊆ int | ?} 
+--     -- solve {α ⊆ int | ?} ⊢ str ⊆ α = some {α ⊆ int | str | ?} 
+--       -- solve {α ⊆ int | β, β ⊆ ?} ⊢ str ⊆ int | β  = some {β ⊆ str | ?} 
+--         -- solve {...} ⊢ str ⊆ int ∨ str ⊆ β = some {β ⊆ str | ?}
+--           -- solve {...} ⊢ str ⊆ β = some {β ⊆ str | ?}
+-- )))
+-- ```
+-- - maintain leniency while increasing strictness
+--   - combine union (i.e. |) with dynamic type (i.e. ?)
+-- - lenient
+--   - maintain top expected type 
+--   - τ | ? = τ | ⊤ = ⊤ 
+-- - strict
+--   - widen dynamic actual type from known actual type
+--   - τ | ? = τ | ⊥ = τ  
+
+-- ## type expression 
+-- - how types index into types 
+
+-- ### record type
+-- ```
+-- let pair = (for x, y =>
+--   .left x .right y
+
+--   -- infer {x : α, y : β} _ ⊢ (.left x .right y) : _ = some _ , (.left α) & (.right β)
+-- )
+-- ```
+
+-- ### function type
+-- ```
+-- fix (size =>
+--   for #nil() => #zero()
+--   for #cons(_, xs) => #succ(size xs)
+
+--   -- infer {size : α -> β} _ ⊢ (for ... for ...) : α = some _ , (#nil[] -> #zero[]) & (#cons[_;α] -> #succ[β])
+-- )
+-- ```
+
+
+-- ### tags induction type
+-- ```
+-- μ list .  
+--   #nil[] | 
+--   ∃ α . #cons[α;list]
+-- ```
+-- ```
+-- μ nat . 
+--   #zero[] | 
+--   #succ[nat]
+-- ```
+
+-- ### relational induction type 
+-- ```
+-- μ list_len .
+--   [#nil[] ; #zero[]] |
+--   ∃ {list,nat} [list;nat] ⊆ list_len
+--     [#cons[α;list] ; #succ[nat]]
+-- ```
+
+
+-- ```
+-- μ nat_list .
+--   [#zero[] ; #nil[]] |
+--   ∃ {nat,list} [nat;list] ⊆ nat_list .
+--     [#succ[nat] ; #cons[α;list]]
+-- ```
+
+-- -- equivalent to the notion
+-- ```
+--   [#nil[] ; #zero[]] ⊆ list_len ∧
+
+--   ∀ list;nat ,
+--     ([list;nat] ⊆ list_len --> [#cons[α;list] ; #succ[nat]] ⊆ list_len)
+-- ```
+
+-- -- related to the sigma type from dependent type theory
+-- ```
+-- type dlist (n ⊆ nat) := list for n;list ⊆ nat_list 
+
+-- (Σ n ⊆ nat . dlist n) ≡ nat_list 
+
+-- (Σ n ⊆ nat . list for n;list ⊆ nat_list . list) ≡ nat_list 
+-- ```
+
+
+-- ### function induction type 
+
+-- ```
+-- μ list_to_len .
+--   [#nil[] -> #zero[]] & 
+--   ∀ {list,nat} [list -> nat] ⊆ list_to_len .  
+--     [#cons[α;list] -> #succ[nat]]
+-- ```
+
+-- ```
+-- μ nat_to_list .
+--   [#nil[] -> #zero[]] & 
+--   ∀ {nat,list} [nat -> list] ⊆ nat_to_list .  
+--     [#succ[nat] -> #cons[α;list]]
+-- ```
+
+
+-- ## type range
+-- - how types may be used over various terms 
+
+-- ### generalized type
+-- ```
+-- (for one : nat =>
+-- (for hello : str =>
+
+-- let f = for x => x in
+
+-- let one' = f one in 
+
+-- -- infer {f : ∀ {α} . α -> α} _ ⊢ (f one) : _ = some _ , nat 
+
+-- let hello' = f hello in
+
+-- -- infer {f : ∀ {α} . α -> α} _ ⊢ (f hello) : _ = some _ , str 
+-- )
+-- ```
+
+-- ### specialized type 
+-- ```
+-- (for one : nat =>
+-- (for hello : str =>
+
+-- (for f => 
+--   let one' = f one in
+
+--   -- infer {f : α} _ ⊢ (f one) = some {α ⊆ nat -> ?} , _
+
+--   let hello' = f hello in
+
+--   -- infer {f : α} _ ⊢ (f hello) = none 
+
+--   ...
+-- )(for x => x)
+-- ))
+-- ```
+-- -/
+
+-- -- background
+-- /-
+
+-- - a unityped language allows all terms to belong to the same type, known as top (i.e. ⊤)
+
+-- - a subtyping language enables terms to be reused across different levels of restriction
+-- - no terms belong to the most restrictive type, known as bottom (i.e. ⊥)
+
+-- - a term may be used at a position:
+--   - if the term's actual type is a subtype of the position's expected type
+--   - if the position's expected type is a supertype of the term's actual type
+
+-- - types may be widened by the union operator (i.e. |).
+--   - widening an expected type increases leniency
+--   - widening an actual type increases strictness
+
+-- - types may be narrowed by the intersection operator (i.e. &)
+--   - narrowing an expected type increases strictness
+--   - narrowing an actual type increases leniency 
+
+-- - the dynamic type (i.e. ?) has special consistent subtyping semantics
+--   - behaves like a bottom type for actual types
+--   - behaves like a top type for expected types
+
+-- - the singleton type (e.g. #l []) corresponds to a single literal term
+-- -/
+
+-- /-
+-- - consider adding relative complement type 
+--   - i.e. binary negation type operator
+--   - i.e. (τ1 \ τ2) ⊆ (τ1 & ¬ τ2), where ⊤ / τ2 = ¬ τ2)
+-- -/
+
+
+/-
+FIX ...
+  (λ x => fix (λ self =>  
+    λ #zero () => #nil () ;  
+    λ #succ n => #cons (x, self n)
+  ))
+  
+  (α -> ( 
+    #zero ♢ -> #nil ♢ &
+    ∀ N L :: α <: (N -> L) .
+      #succ N -> #cons (X × L)) 
+  )) <: τ -> τ
+
+  ( 
+    #zero ♢ -> #nil ♢ &
+    ∀ N L :: α <: (N -> L) .
+      #succ N -> #cons (X × L)) 
+  ) <: α 
+
+  -- via roll_rec
+  (ν α .  
+    #zero ♢ -> #nil ♢ &
+    ∀ N L :: α <: (N -> L) .
+      #succ N -> #cons (X × L)) 
+  )
+
+  -- via sugar
+  X -> ((ν (N -> L) . 
+    #zero ♢ -> #nil  ♢ &
+    #succ N -> #cons (X × L)) 
+  )
+
+-/
