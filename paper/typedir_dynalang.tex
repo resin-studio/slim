@@ -678,6 +678,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \begin{figure}[h]
 \begin{mathpar}
 
+
+\inferrule[Hole]
+  { }
+  {\Delta\ \Gamma \vdash \_ : \tau  \rightsquigarrow \{\} } 
+
 \inferrule[Unit]
   { 
     \{\Omega\ .\ \diamondsuit \ |\ 
@@ -709,7 +714,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   { 
     \text{fresh}\ \alpha
     \\
-    \{\Omega_1;\Omega_2\ .\ \tau' \ |\ 
+    \{\Omega_1;\Omega_2\ .\ \#l\ \tau' \ |\ 
     \\\\
     \Delta \vdash \#l\ \alpha \leq \tau \rightsquigarrow M_1 
     \ \wedge\ 
@@ -725,52 +730,62 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   {\Delta\ \Gamma \vdash \#l\ t : \tau  
     \rightsquigarrow N} 
 
-\inferrule[Field]
-  { 
-    \text{fresh}\ \alpha
-    \\
-    \{\Omega_1;\Omega_2\ .\ \tau' \ |\ 
-    \\\\
-    \Delta \vdash .l\ \alpha \leq \tau \rightsquigarrow M_1
-    \ \wedge\ 
-    \Omega_1 \in M_1
-    \\\\
-    \Delta;\Omega_1\ \Gamma \vdash t : \alpha 
-      \rightsquigarrow N_2
-    \ \wedge\ 
-    \Omega_2\ .\ \tau' \in N_2
-    \\\\
-    \} = N
-  }
-  {\Delta\ \Gamma \vdash .l\ t : \tau  
-    \rightsquigarrow N } 
+% \inferrule[Field]
+%   { 
+%     \text{fresh}\ \alpha
+%     \\
+%     \{\Omega_1;\Omega_2\ .\ \tau' \ |\ 
+%     \\\\
+%     \Delta \vdash .l\ \alpha \leq \tau \rightsquigarrow M_1
+%     \ \wedge\ 
+%     \Omega_1 \in M_1
+%     \\\\
+%     \Delta;\Omega_1\ \Gamma \vdash t : \alpha 
+%       \rightsquigarrow N_2
+%     \ \wedge\ 
+%     \Omega_2\ .\ \tau' \in N_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash .l\ t : \tau  
+%     \rightsquigarrow N } 
+
+% \inferrule[Record]
+%   {
+%     \text{fresh}\ \alpha \\ \text{fresh}\ \beta
+%     \\
+%     \{\Omega;\Omega_1;\Omega_2\ .\ \tau_1'\ \&\ \tau_2' \ |\ 
+%     \\\\
+%     \Delta \vdash .l\ \alpha\ \&\ \beta \leq \tau 
+%       \rightsquigarrow M
+%     \ \wedge\ 
+%     \Omega \in M 
+%     \ \wedge\ 
+%     \\
+%     \Delta;\Omega\ \Gamma \vdash .l\ t_1 : .l\ \alpha  
+%       \rightsquigarrow N_1
+%     \ \wedge\ 
+%     \Omega_1\ .\ \tau_1' \in N_1
+%     \ \wedge\ 
+%     \\
+%     \Delta;\Omega\ \Gamma \vdash t_2 : \beta  
+%       \rightsquigarrow N_2
+%     \ \wedge\ 
+%     \Omega_2\ .\ \tau_2' \in N_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash (.l\ t_1;\ t_2) : \tau  
+%     \rightsquigarrow N} 
 
 \inferrule[Record]
   {
-    \text{fresh}\ \alpha \\ \text{fresh}\ \beta
-    \\
-    \{\Omega;\Omega_1;\Omega_2\ .\ \tau_1'\ \&\ \tau_2' \ |\ 
+    \{ (.l\ t_1, \alpha)\ |\
     \\\\
-    \Delta \vdash .l\ \alpha\ \&\ \beta \leq \tau 
-      \rightsquigarrow M
-    \ \wedge\ 
-    \Omega \in M 
-    \ \wedge\ 
-    \\
-    \Delta;\Omega\ \Gamma \vdash .l\ t_1 : .l\ \alpha  
-      \rightsquigarrow N_1
-    \ \wedge\ 
-    \Omega_1\ .\ \tau_1' \in N_1
-    \ \wedge\ 
-    \\
-    \Delta;\Omega\ \Gamma \vdash t_2 : \beta  
-      \rightsquigarrow N_2
-    \ \wedge\ 
-    \Omega_2\ .\ \tau_2' \in N_2
-    \\\\
-    \} = N
+    \text{fresh}\ \alpha \\  
+    \}
   }
-  {\Delta\ \Gamma \vdash (.l\ t_1;\ t_2) : \tau  
+  {\Delta\ \Gamma \vdash t : \tau  
     \rightsquigarrow N} 
 
 \inferrule[Case]

@@ -1147,11 +1147,10 @@ partial def infer
       )
 
       let f_step := fun acc => (fun (l, t1, ty1) =>
-        List.bind u_env_ty1 (fun (_, env_ty1) =>
         List.bind acc (fun (i, env_ty_acc, ty_acc) =>
-        List.bind (infer i (env_ty_acc ++ env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
-          [(i, env_ty_x ++ env_ty_acc ++ env_ty1, Ty.inter (Ty.field l ty1') ty_acc)]
-        )))
+        List.bind (infer i (env_ty_acc ++ env_ty) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
+          [(i, env_ty_x ++ env_ty_acc, Ty.inter (Ty.field l ty1') ty_acc)]
+        ))
       )
 
       List.foldl f_step (f_base hd) tl 
@@ -1182,18 +1181,17 @@ partial def infer
       )
 
       let f_step := fun acc => fun (n, p, ty_p, b, ty_b) =>
-        List.bind u_env_ty1 (fun (_, env_ty1) =>
         List.bind acc (fun (i, env_ty_acc, ty_acc) =>
         match (patvars env_tm p ty_p) with
         | .some env_tm1 =>
           List.bind (infer i 
-            (env_ty_acc ++ env_ty1 ++ env_ty) (env_tm1 ++ env_tm) 
+            (env_ty_acc ++ env_ty) (env_tm1 ++ env_tm) 
             b ty_b
           ) (fun (i, env_ty2, ty_b') =>
-            [(i, env_ty2 ++ env_ty_acc ++ env_ty1, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
+            [(i, env_ty2 ++ env_ty_acc, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
           )
         | .none => .nil
-        ))
+        )
 
       List.foldl f_step (f_base hd) tl 
 
