@@ -1169,13 +1169,18 @@ partial def infer
       ) (Ty.case ty_p ty_b) tl 
       let u_env_ty1 := unify i env_ty ty' ty 
 
+      -- TODO: figure out how to extract variables and types from pattern
       let f_base := (fun (n, p, ty_p, b, ty_b) =>
         List.bind u_env_ty1 (fun (i, env_ty1) =>
         match (patvars env_tm p ty_p) with
         | .some env_tm1 =>
-          List.bind (infer i (env_ty1 ++ env_ty) (env_tm1 ++ env_tm) b ty_b) (fun (i, env_ty2, ty_b') =>
-            [(i, env_ty2 ++ env_ty1, Ty.case ty_p ty_b')]
-          )
+          if env_tm1.length = n then
+            let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
+            let b := Tm.raise_binding 0 args b  
+            List.bind (infer i (env_ty1 ++ env_ty) (env_tm1 ++ env_tm) b ty_b) (fun (i, env_ty2, ty_b') =>
+              [(i, env_ty2 ++ env_ty1, Ty.case ty_p ty_b')]
+            )
+          else .nil
         | .none => .nil
         )
       )
@@ -1184,12 +1189,16 @@ partial def infer
         List.bind acc (fun (i, env_ty_acc, ty_acc) =>
         match (patvars env_tm p ty_p) with
         | .some env_tm1 =>
-          List.bind (infer i 
-            (env_ty_acc ++ env_ty) (env_tm1 ++ env_tm) 
-            b ty_b
-          ) (fun (i, env_ty2, ty_b') =>
-            [(i, env_ty2 ++ env_ty_acc, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
-          )
+          if env_tm1.length = n then
+            let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
+            let b := Tm.raise_binding 0 args b  
+            List.bind (infer i 
+              (env_ty_acc ++ env_ty) (env_tm1 ++ env_tm) 
+              b ty_b
+            ) (fun (i, env_ty2, ty_b') =>
+              [(i, env_ty2 ++ env_ty_acc, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
+            )
+          else .nil
         | .none => .nil
         )
 
@@ -1214,7 +1223,8 @@ partial def infer
 
   | .letb ty1 t1 t => 
     List.bind (infer i (env_ty) env_tm t1 ty1) (fun (i, env_ty1, ty1') =>
-    let (i, env_tmx) := (i + 1, [(i, Ty.univ 1 (Ty.bvar 0, ty1') (Ty.bvar 0))]) 
+    let (i, x, env_tmx) := (i + 1, Tm.fvar i, [(i, Ty.univ 1 (Ty.bvar 0, ty1') (Ty.bvar 0))]) 
+    let t := Tm.raise_binding 0 [x] t 
     List.bind (infer i (env_ty1 ++ env_ty) (env_tmx ++ env_tm) t ty) (fun (i, env_ty2, ty') =>
       [ (i, env_ty2 ++ env_ty1, ty') ]
     ))
