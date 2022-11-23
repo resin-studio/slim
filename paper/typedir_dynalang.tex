@@ -765,13 +765,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   { 
     \text{fresh\_fields}\ t = fields 
     \\
-    \text{intersect}\ \{.l\ \tau_1\ |\ (l, t_1, \tau_1) \in fields \} = \tau'
+    \text{intersect}\ \{.l\ \tau_1\ |\ (.l\ t_1, \tau_1) \in fields \} = \tau'
     \\
     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
     \\\\
     \text{intersect}\ \{N_1\ |\ 
     \\\\
-    (l, t_1, \tau_1) \in fields
+    (.l\ t_1, \tau_1) \in fields
     \ \wedge\ 
     \Omega \in M
     \ \wedge\ 
@@ -785,9 +785,26 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[Function]
   {
-    % TODO
+    \text{fresh\_cases}\ t = cases 
+    \\
+    \text{intersect}\ \{\tau_1 \rightarrow \tau_2\ |\ (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases \} = \tau'
+    \\
+    \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
+    \\\\
+    \text{intersect}\ \{N_2\ |\ 
+    \\\\
+    (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
+    \ \wedge\ 
+    \\\\
+    \text{patvars}\ t_1\ \tau_1 = \Gamma_x
+    \ \wedge\ 
+    \Omega \in M
+    \ \wedge\ 
+    \\\\
+    \Delta;\Omega\ \Gamma;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
+    \} = N
   }
-  {\Delta\ \Gamma \vdash (\lambda\ t_p : \tau_p \Rightarrow t_1\ ;\ t_2) : \tau  
+  {\Delta\ \Gamma \vdash t : \tau  
     \rightsquigarrow 
     N } 
 
@@ -798,6 +815,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \begin{figure}[h]
 \begin{mathpar}
 
+% TODO
 \inferrule[Proj]
   {
     \text{fresh}\ \alpha
