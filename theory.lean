@@ -264,34 +264,34 @@ macro_rules
 #check Fin
 
 def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
-  | .bvar id => 
-      if h : start ≤ id ∧ (id - start) < args.length then
-        let i : Fin args.length := {
-          val := (id - start),
-          isLt := (match h with | And.intro _ h' => h') 
-        } 
-        args.get i 
-      else
-        .bvar id
-  | .fvar id => .fvar id 
-  | .unit => .unit
-  | .tag l ty => .tag l (Ty.raise_binding start args ty) 
-  | .field l ty => .field l (Ty.raise_binding start args ty)
-  | .union ty1 ty2 => .union (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
-  | .inter ty1 ty2 => .inter (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
-  | .case ty1 ty2 => .case (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
-  | .univ n (ty_c1, ty_c2) ty => (.univ
-    n
-    (Ty.raise_binding (start + n) args ty_c1, Ty.raise_binding (start + n) args ty_c2)
-    (Ty.raise_binding (start + n) args ty)
-  )
-  | .exis n (ty_c1, ty_c2) ty => (.exis
-    n
-    (Ty.raise_binding (start + n) args ty_c1, Ty.raise_binding (start + n) args ty_c2)
-    (Ty.raise_binding (start + n) args ty)
-  )
-  | .recur ty => .recur (Ty.raise_binding (start + 1) args ty)
-  | .corec ty => .corec (Ty.raise_binding (start + 1) args ty)
+| .bvar id => 
+    if h : start ≤ id ∧ (id - start) < args.length then
+      let i : Fin args.length := {
+        val := (id - start),
+        isLt := (match h with | And.intro _ h' => h') 
+      } 
+      args.get i 
+    else
+      .bvar id
+| .fvar id => .fvar id 
+| .unit => .unit
+| .tag l ty => .tag l (Ty.raise_binding start args ty) 
+| .field l ty => .field l (Ty.raise_binding start args ty)
+| .union ty1 ty2 => .union (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
+| .inter ty1 ty2 => .inter (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
+| .case ty1 ty2 => .case (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
+| .univ n (ty_c1, ty_c2) ty => (.univ
+  n
+  (Ty.raise_binding (start + n) args ty_c1, Ty.raise_binding (start + n) args ty_c2)
+  (Ty.raise_binding (start + n) args ty)
+)
+| .exis n (ty_c1, ty_c2) ty => (.exis
+  n
+  (Ty.raise_binding (start + n) args ty_c1, Ty.raise_binding (start + n) args ty_c2)
+  (Ty.raise_binding (start + n) args ty)
+)
+| .recur ty => .recur (Ty.raise_binding (start + 1) args ty)
+| .corec ty => .corec (Ty.raise_binding (start + 1) args ty)
 
 syntax slm "↑" slm "/" slm : slm 
 
@@ -1094,6 +1094,43 @@ def Ty.refresh (i : Nat) : Ty -> (Nat × Ty)
   --     (i, Ty.compact_union ty uty)
   --   ) (i + 1, .fvar i) u_env_ty 
 
+partial def Tm.raise_binding (start : Nat) (args : List Tm) : Tm -> Tm
+| .hole => Tm.hole 
+| .bvar id => 
+    if h : start ≤ id ∧ (id - start) < args.length then
+      let i : Fin args.length := {
+        val := (id - start),
+        isLt := (match h with | And.intro _ h' => h') 
+      } 
+      args.get i 
+    else
+      .bvar id
+| .fvar id => Tm.fvar id 
+| .unit => Tm.unit 
+| .tag l t => Tm.tag l (Tm.raise_binding start args t)
+| .record fds =>
+  Tm.record (List.map (fun (l, t) =>
+    (l, Tm.raise_binding start args t)
+  ) fds)
+| .func fs =>
+  Tm.func (List.map (fun (n, tp, ty_p, tb) =>
+    let tp := Tm.raise_binding (start + n) args tp 
+    let tb := Tm.raise_binding (start + n) args tb
+    (n, tp, ty_p, tb)
+  ) fs)
+| .proj t l => 
+  Tm.proj (Tm.raise_binding start args t) l
+| .app t1 t2 =>
+  Tm.app 
+    (Tm.raise_binding start args t1) 
+    (Tm.raise_binding start args t2)
+| .letb ty1 t1 t2 =>
+  Tm.letb ty1 
+    (Tm.raise_binding start args t1)
+    (Tm.raise_binding (start + 1) args t2)
+| .fix t =>
+  Tm.fix (Tm.raise_binding start args t)
+
 -- /-
 -- NOTE: infer returns a refined type in addition the type variable assignments
 -- assignments alone do not refine enough due to subtyping
@@ -1172,10 +1209,11 @@ partial def infer
       -- TODO: figure out how to extract variables and types from pattern
       let f_base := (fun (n, p, ty_p, b, ty_b) =>
         List.bind u_env_ty1 (fun (i, env_ty1) =>
+        let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
+        let p := Tm.raise_binding 0 args p 
         match (patvars env_tm p ty_p) with
         | .some env_tm1 =>
           if env_tm1.length = n then
-            let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
             let b := Tm.raise_binding 0 args b  
             List.bind (infer i (env_ty1 ++ env_ty) (env_tm1 ++ env_tm) b ty_b) (fun (i, env_ty2, ty_b') =>
               [(i, env_ty2 ++ env_ty1, Ty.case ty_p ty_b')]
@@ -1187,10 +1225,11 @@ partial def infer
 
       let f_step := fun acc => fun (n, p, ty_p, b, ty_b) =>
         List.bind acc (fun (i, env_ty_acc, ty_acc) =>
+        let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
+        let p := Tm.raise_binding 0 args p 
         match (patvars env_tm p ty_p) with
         | .some env_tm1 =>
           if env_tm1.length = n then
-            let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
             let b := Tm.raise_binding 0 args b  
             List.bind (infer i 
               (env_ty_acc ++ env_ty) (env_tm1 ++ env_tm) 
