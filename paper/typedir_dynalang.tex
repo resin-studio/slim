@@ -1032,6 +1032,7 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 \item Polymorphic functions with set-theoretic types, part 1 - \url{https://www.irif.fr/~gc/papers/polydeuces-part1.pdf}
 \item Polymorphic functions with set-theoretic types, part 2 - \url{https://www.irif.fr/~gc/papers/polydeuces-part2.pdf}
 \item Revisiting occurrence typing - \url{https://arxiv.org/pdf/1907.05590.pdf} 
+\item An ideal model for recursive polymorphic types; MacQueen, Plotkin, Sethi; Metric/Contraction/Banach fixed point theorem
 
 
 \end{enumerate}
@@ -1040,13 +1041,24 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 
 \end{document}
 
-%% - 0. introduction 
-%% - 1. motivating example / overview 
-%% - 2. problem statement 
-%% - 3. overall synthesis/inference algorithm 
-  % include how type information propagates
-  % abstract away relation type details
-  % includes propagation of types
-%% - 4. unification / relational types
-  % including dynamic types
+% TODO:
+% write paper 
+  % - 0. introduction 
+  % - 1. motivating example / overview 
+  % - 2. problem statement 
+  % - 3. overall synthesis/inference algorithm/rules 
+    % include how type information propagates
+    % abstract away relation type details
+    % includes propagation of types
+% - 4. unification / subtyping / relational typing
   % including recursion over intersection and functions
+% find decision procedure for relational types
+  % does Banach fixed-point theorem extend to relational types?
+  % contraction maps?
+  % metric spaces?
+  % abstract interpretation notion of widening?
+% extend type inference to program synthesis 
+% write dynamic semantics 
+% implement proof of soundness
+% implement translation from surface syntax to nameless syntax 
+% implement pretty printer 
