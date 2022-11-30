@@ -1033,6 +1033,7 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 \item Polymorphic functions with set-theoretic types, part 2 - \url{https://www.irif.fr/~gc/papers/polydeuces-part2.pdf}
 \item Revisiting occurrence typing - \url{https://arxiv.org/pdf/1907.05590.pdf} 
 \item An ideal model for recursive polymorphic types; MacQueen, Plotkin, Sethi; Metric/Contraction/Banach fixed point theorem
+\item Bottom-up synthesis of recursive functional programs using angelic execution - Anders Miltner et al
 
 
 \end{enumerate}
@@ -1050,8 +1051,8 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
     % include how type information propagates
     % abstract away relation type details
     % includes propagation of types
-% - 4. unification / subtyping / relational typing
-  % including recursion over intersection and functions
+  % - 4. unification / subtyping / relational typing
+    % including recursion over intersection and functions
 % find decision procedure for relational types (subtyping over induction on compound types)
   % terminate if one side is compound with all variables and other is recursive? 
   % Banach fixed-point theorem?
@@ -1068,6 +1069,11 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
   % SAT and SMT?
 % extend type inference to program synthesis 
   % does angelic synthesis work for this?
+% determine if negation/relative complement is needed to improve program synthesis 
+  % see anti-specification in Anders' paper
+  % https://courses.cs.washington.edu/courses/cse507/14au/sched.html
+  % https://www.cs.utexas.edu/~bornholt/post/synthesis-explained.html
+  % https://people.csail.mit.edu/asolar/SynthesisCourse/Lecture1.htm
 % write dynamic semantics 
 % implement proof of soundness
 % implement translation from surface syntax to nameless syntax 
