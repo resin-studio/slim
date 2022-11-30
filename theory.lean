@@ -490,8 +490,6 @@ def linearize_record : Ty -> Option Ty
     )
   | _ => none
 
-
-
 def linearize_fields : Ty -> Option (List (String × Ty))
   | .field l ty => some [(l, ty)]
   | .inter (.field l ty1) ty2 => 
@@ -503,6 +501,20 @@ def linearize_fields : Ty -> Option (List (String × Ty))
       (l, ty2) :: linear_ty1
     )
   | _ => none
+
+
+#check List.any
+
+def wellformed_record_type (env_ty : List (Nat × Ty)) (ty : Ty) : Bool :=
+  match linearize_fields (Ty.reduce env_ty ty) with
+    | .some fields => 
+      List.any fields (fun (k_fd, ty_fd) =>
+        match ty_fd with
+          | .fvar _ => false 
+          | _ => true 
+      ) 
+    | .none => false
+
 
 /-
 (X ; Y) <: μ _
@@ -635,9 +647,10 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
 
 
   | ty', .recur ty =>
-    match linearize_record (Ty.reduce env_ty ty') with 
-      | .some ty'' => unify i env_ty ty'' (unroll (Ty.recur ty))
-      | .none => .nil
+    if wellformed_record_type env_ty ty' then 
+      unify i env_ty ty' (unroll (Ty.recur ty))
+    else
+      .nil
 
   | .corec ty', .corec ty =>
     if Ty.equal env_ty ty' ty then
@@ -649,6 +662,9 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
 
 
   | .corec ty_corec, Ty.case ty1 ty2 =>
+    -- TODO: extend to more complex function types: 
+      -- e.g. T -> T -> T -> T or (T × T) -> (T × T) -> ...   
+    -- TODO: add wellformed_function_type check
     unify i env_ty (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
     -- /-
     -- ν _ <: X -> Y 
@@ -695,6 +711,76 @@ def unify_all (i : Nat) (cs : List (Ty × Ty)) : List (Nat × List (Nat × Ty)) 
       [ (i, env_ty2 ++ env_ty1) ]
     ))
   ) [(i, [])] cs
+
+
+def Ty.refresh (i : Nat) : Ty -> (Nat × Ty)
+  | .bvar id => (i + 1, Ty.bvar id) 
+  | .fvar _ => (i + 1, Ty.fvar i)
+  | .unit => (i + 1, .unit) 
+  | .tag l ty => 
+    let (i, ty) := Ty.refresh i ty 
+    (i, Ty.tag l ty) 
+  | .field l ty => 
+    let (i, ty) := Ty.refresh i ty 
+    (i, Ty.field l ty) 
+  | .union ty1 ty2 => 
+    let (i, ty1) := Ty.refresh i ty1
+    let (i, ty2) := Ty.refresh i ty2
+    (i, .union ty1 ty2)
+  | .inter ty1 ty2 => 
+    let (i, ty1) := Ty.refresh i ty1
+    let (i, ty2) := Ty.refresh i ty2
+    (i, .inter ty1 ty2)
+  | .case ty1 ty2 => 
+    let (i, ty1) := Ty.refresh i ty1
+    let (i, ty2) := Ty.refresh i ty2
+    (i, .case ty1 ty2)
+  | .univ n (cty1, cty2) ty => 
+    let (i, cty1) := Ty.refresh i cty1
+    let (i, cty2) := Ty.refresh i cty2
+    let (i, ty) := Ty.refresh i ty
+    (i, .univ n (cty1, cty2) ty)
+  | .exis n (cty1, cty2) ty => 
+    let (i, cty1) := Ty.refresh i cty1
+    let (i, cty2) := Ty.refresh i cty2
+    let (i, ty) := Ty.refresh i ty
+    (i, .exis n (cty1, cty2) ty)
+  | .recur ty =>
+    let (i, ty) := Ty.refresh i ty
+    (i, .recur ty)
+  | .corec ty =>
+    let (i, ty) := Ty.refresh i ty
+    (i, .corec ty)
+
+partial def Ty.union_all : (List Ty) -> Option Ty
+  | [] => none
+  | t::ts =>
+    let ts := List.filter
+      (fun t' => not (Ty.equal_syntax t t'))
+      ts
+    match Ty.union_all ts with
+      | .none => .some t
+      | .some t' => Ty.union t t'
+
+
+partial def Ty.collapse 
+  (i : Nat) (env_ty : List (Nat × Ty)) 
+  (u_env_ty_x: List (Nat × List (Nat × Ty))) (ty : Ty): 
+List (Nat × Ty) :=
+  let list_ty := List.map 
+    (fun (_, env_ty_ext) =>
+      Ty.reduce (env_ty_ext ++ env_ty) ty
+    ) u_env_ty_x 
+  match (Ty.union_all list_ty) with
+    | .some ty => [ (Ty.refresh i ty) ]
+    | .none => []
+
+
+
+partial def unify_collapse (i : Nat) (env_ty) (ty1) (ty2) (ty_result) :=
+  Ty.collapse i env_ty (
+    unify i env_ty ty1 ty2
+  ) ty_result
 
 
 def zero_ := [: 
@@ -757,12 +843,10 @@ def nat_list := [:
   [: (.l #zero ♢ & .r #dumb ♢) :] 
   nat_list
 
--- -- this is divergent
--- -- /-
--- -- #eval unify 3 [] 
--- --   [: (.l @0 & .r @1) :] 
--- --   nat_list
--- -- -/
+-- this is record type is not wellformed 
+#eval unify 3 [] 
+  [: (.l @0 & .r @1) :] 
+  nat_list
 
 #eval unify 3 [] 
   [: (.l #zero ♢ & .r @0) :] 
@@ -773,6 +857,7 @@ def nat_list := [:
 --   [: (.l #succ #zero ♢ & .r #ooga ♢ & .g #scooby ♢) | (.l #zero ♢ & .r #booga ♢) :] 
 
 
+-- expected @0 → #nil
 #eval unify 3 [] 
   [: (.l #succ #zero ♢ & .r #cons @0) :] 
   nat_list
@@ -780,6 +865,18 @@ def nat_list := [:
 #eval unify 3 [] 
   [: (.l #succ #succ #zero ♢ & .r #cons @0) :] 
   nat_list
+
+
+def examp1 := unify 3 [] 
+  [: (.l #succ #succ #zero ♢ & .r #cons @0) :] 
+  nat_list
+
+#eval Ty.collapse 10 [] examp1 [: @0 :] 
+
+#eval unify_collapse 3 [] 
+  [: (.l #succ #succ #zero ♢ & .r #cons @0) :] 
+  nat_list
+  [: @0:]
 
 -- #eval unify 3 [] 
 --   [: (.l #succ #zero ♢ & .r @0) :] 
@@ -1008,67 +1105,7 @@ partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat �
   | _, _ => none
 
 
-def Ty.refresh (i : Nat) : Ty -> (Nat × Ty)
-  | .bvar id => (i + 1, Ty.bvar id) 
-  | .fvar _ => (i + 1, Ty.fvar i)
-  | .unit => (i + 1, .unit) 
-  | .tag l ty => 
-    let (i, ty) := Ty.refresh i ty 
-    (i, Ty.tag l ty) 
-  | .field l ty => 
-    let (i, ty) := Ty.refresh i ty 
-    (i, Ty.field l ty) 
-  | .union ty1 ty2 => 
-    let (i, ty1) := Ty.refresh i ty1
-    let (i, ty2) := Ty.refresh i ty2
-    (i, .union ty1 ty2)
-  | .inter ty1 ty2 => 
-    let (i, ty1) := Ty.refresh i ty1
-    let (i, ty2) := Ty.refresh i ty2
-    (i, .inter ty1 ty2)
-  | .case ty1 ty2 => 
-    let (i, ty1) := Ty.refresh i ty1
-    let (i, ty2) := Ty.refresh i ty2
-    (i, .case ty1 ty2)
-  | .univ n (cty1, cty2) ty => 
-    let (i, cty1) := Ty.refresh i cty1
-    let (i, cty2) := Ty.refresh i cty2
-    let (i, ty) := Ty.refresh i ty
-    (i, .univ n (cty1, cty2) ty)
-  | .exis n (cty1, cty2) ty => 
-    let (i, cty1) := Ty.refresh i cty1
-    let (i, cty2) := Ty.refresh i cty2
-    let (i, ty) := Ty.refresh i ty
-    (i, .exis n (cty1, cty2) ty)
-  | .recur ty =>
-    let (i, ty) := Ty.refresh i ty
-    (i, .recur ty)
-  | .corec ty =>
-    let (i, ty) := Ty.refresh i ty
-    (i, .corec ty)
 
--- partial def Ty.union_all : (List Ty) -> Option Ty
---   | [] => none
---   | t::ts =>
---     let ts := List.filter
---       (fun t' => not (Ty.equal_syntax t t'))
---       ts
---     match Ty.union_all ts with
---       | .none => .some t
---       | .some t' => Ty.union t t'
-
-
--- partial def Ty.collapse 
---   (i : Nat) (env_ty : List (Nat × Ty)) 
---   (u_env_ty_x: List (Nat × List (Nat × Ty))) (ty : Ty): 
--- List (Nat × Ty) :=
---   let list_ty := List.map 
---     (fun (_, env_ty_ext) =>
---       Ty.reduce (env_ty_ext ++ env_ty) ty
---     ) u_env_ty_x 
---   match (Ty.union_all list_ty) with
---     | .some ty => [ (Ty.refresh i ty) ]
---     | .none => []
 
   -- partial def Ty.intersect_all : (List (Option Ty)) -> Option Ty
   --   | [] => none
@@ -1206,7 +1243,6 @@ partial def infer
       ) (Ty.case ty_p ty_b) tl 
       let u_env_ty1 := unify i env_ty ty' ty 
 
-      -- TODO: figure out how to extract variables and types from pattern
       let f_base := (fun (n, p, ty_p, b, ty_b) =>
         List.bind u_env_ty1 (fun (i, env_ty1) =>
         let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
