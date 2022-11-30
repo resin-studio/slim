@@ -1,5 +1,3 @@
--- TODO: look into widening in abstract interpretation
-
 inductive Ty : Type
   | bvar : Nat -> Ty  
   | fvar : Nat -> Ty
@@ -17,25 +15,48 @@ inductive Ty : Type
 
 open Std
 
-def Ty.repr [Repr α] (ty : Ty) (n : Nat) : Format :=
-  -- let _ : ToFormat α := ⟨repr⟩
+
+#eval List.repr [1,2,3] 0
+
+#eval String.append "x" "y"
+#eval "x" ++ "y"
+
+protected def Ty.repr (ty : Ty) (n : Nat) : Format :=
+  -- let _ : ToFormat Ty := ⟨repr⟩
   match ty, n with
-    | _ , _ => ""
-    -- | .bvar : Nat -> Ty  
-    -- | .fvar : Nat -> Ty
-    -- | .unit : Ty
-    -- | .tag : String -> Ty -> Ty
-    -- | .field : String -> Ty -> Ty
-    -- | .union : Ty -> Ty -> Ty
-    -- | .inter : Ty -> Ty -> Ty
-    -- | .case : Ty -> Ty -> Ty
-    -- | .univ : Nat -> Ty × Ty -> Ty -> Ty
-    -- | .exis : Nat -> Ty × Ty -> Ty -> Ty
-    -- | .recur : Ty -> Ty
-    -- | .corec : Ty -> Ty
+    | .bvar id, _ => 
+      "£" ++ repr id
+    | .fvar id, _ =>
+      "@" ++ repr id
+    | .unit, _ => "♢" 
+    | .tag l ty1, _ => 
+      "#" ++ l ++ " " ++ (Ty.repr ty1 (n + 1))
+    | .field l ty1, _ => 
+      "." ++ l ++ " " ++ (Ty.repr ty1 (n + 1))
+    | .union ty1 ty2, _ =>
+      Format.bracket "(" ((Ty.repr ty1 (n + 1)) ++ " | " ++ (Ty.repr ty2 (n + 1))) ")"
+    | .inter ty1 ty2, _ =>
+      Format.bracket "(" ((Ty.repr ty1 (n + 1)) ++ " & " ++ (Ty.repr ty2 (n + 1))) ")"
+    | .case ty1 ty2, _ =>
+      Format.bracket "(" ((Ty.repr ty1 (n + 1)) ++ " -> " ++ (Ty.repr ty2 (n + 1))) ")"
+    | .univ n (ty_c1, ty_c2) ty_pl, _ =>
+      "∀ " ++ (repr n) ++ " :: " ++
+      (Ty.repr ty_c1 (n + 1)) ++ " ≤ " ++ (Ty.repr ty_c2 (n + 1)) ++ " . " ++ 
+      (Ty.repr ty_pl (n + 1))
+    | .exis n (ty_c1, ty_c2) ty_pl, _ =>
+      "∃ " ++ (repr n) ++ " :: " ++
+      (Ty.repr ty_c1 (n + 1)) ++ " ≤ " ++ (Ty.repr ty_c2 (n + 1)) ++ " . " ++ 
+      (Ty.repr ty_pl (n + 1))
+    | .recur ty1, _ =>
+      "μ 1 . " ++ (Ty.repr ty1 (n + 1))
+    | .corec ty1, _ =>
+      "ν 1 . " ++ (Ty.repr ty1 (n + 1))
+
+instance : Repr Ty where
+  reprPrec := Ty.repr
 
 -- instance : Repr Ty where 
---   def reprPrec ty n := Ty.to_string ty n
+--   def reprPrec ty n := Ty.repr ty n
 
 
 declare_syntax_cat slm
@@ -124,6 +145,9 @@ def x := 0
 #check [: μ 1 . #foo £0 & @0 | @2 & @0 -> @1 | @2 :]
 #check [: μ 1 . #foo £0 & @0 | @2 & @0 :]
 #check [: @0 :]
+
+#eval [: ∀ 2 :: @0 ≤ @0 . £0 :]
+#eval [: μ 1 . #foo £0 & @0 | @2 & @0 :]
 
 
 
