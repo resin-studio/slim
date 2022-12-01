@@ -16,13 +16,7 @@ inductive Ty : Type
 open Std
 
 
-#eval List.repr [1,2,3] 0
-
-#eval String.append "x" "y"
-#eval "x" ++ "y"
-
 protected def Ty.repr (ty : Ty) (n : Nat) : Format :=
-  -- let _ : ToFormat Ty := ⟨repr⟩
   match ty, n with
     | .bvar id, _ => 
       "£" ++ repr id
@@ -30,27 +24,27 @@ protected def Ty.repr (ty : Ty) (n : Nat) : Format :=
       "@" ++ repr id
     | .unit, _ => "♢" 
     | .tag l ty1, _ => 
-      "#" ++ l ++ " " ++ (Ty.repr ty1 (n + 1))
+      "#" ++ l ++ " " ++ (Ty.repr ty1 n)
     | .field l ty1, _ => 
-      "." ++ l ++ " " ++ (Ty.repr ty1 (n + 1))
+      "." ++ l ++ " " ++ (Ty.repr ty1 n)
     | .union ty1 ty2, _ =>
-      Format.bracket "(" ((Ty.repr ty1 (n + 1)) ++ " | " ++ (Ty.repr ty2 (n + 1))) ")"
+      Format.bracket "(" ((Ty.repr ty1 n) ++ " | " ++ (Ty.repr ty2 n)) ")"
     | .inter ty1 ty2, _ =>
-      Format.bracket "(" ((Ty.repr ty1 (n + 1)) ++ " & " ++ (Ty.repr ty2 (n + 1))) ")"
+      Format.bracket "(" ((Ty.repr ty1 n) ++ " & " ++ (Ty.repr ty2 n)) ")"
     | .case ty1 ty2, _ =>
-      Format.bracket "(" ((Ty.repr ty1 (n + 1)) ++ " -> " ++ (Ty.repr ty2 (n + 1))) ")"
+      Format.bracket "(" ((Ty.repr ty1 n) ++ " -> " ++ (Ty.repr ty2 n)) ")"
     | .univ n (ty_c1, ty_c2) ty_pl, _ =>
       "∀ " ++ (repr n) ++ " :: " ++
-      (Ty.repr ty_c1 (n + 1)) ++ " ≤ " ++ (Ty.repr ty_c2 (n + 1)) ++ " . " ++ 
-      (Ty.repr ty_pl (n + 1))
+      (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " . " ++ 
+      (Ty.repr ty_pl n)
     | .exis n (ty_c1, ty_c2) ty_pl, _ =>
       "∃ " ++ (repr n) ++ " :: " ++
-      (Ty.repr ty_c1 (n + 1)) ++ " ≤ " ++ (Ty.repr ty_c2 (n + 1)) ++ " . " ++ 
-      (Ty.repr ty_pl (n + 1))
+      (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " . " ++ 
+      (Ty.repr ty_pl n)
     | .recur ty1, _ =>
-      "μ 1 . " ++ (Ty.repr ty1 (n + 1))
+      "μ 1 . " ++ (Ty.repr ty1 n)
     | .corec ty1, _ =>
-      "ν 1 . " ++ (Ty.repr ty1 (n + 1))
+      "ν 1 . " ++ (Ty.repr ty1 n)
 
 instance : Repr Ty where
   reprPrec := Ty.repr
