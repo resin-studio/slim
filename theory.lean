@@ -1122,14 +1122,11 @@ partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat �
       else
         none
     )
-  -- | tag : String -> Tm -> Tm
-  -- | record : List (String × Tm) -> Tm
   -- | func : List (Nat × Tm × Ty × Tm) -> Tm
   -- | proj : Tm -> String -> Tm
   -- | app : Tm -> Tm -> Tm
   -- | letb : Ty -> Tm -> Tm -> Tm
   -- | fix : Tm -> Tm
-  -- TODO: finish
   | _, _ => none
 
 
