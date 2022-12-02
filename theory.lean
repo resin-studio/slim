@@ -1,3 +1,16 @@
+import Init.Data.Hashable
+
+import Lean.Data.AssocList
+import Lean.Data.PersistentHashMap
+open Lean PersistentHashMap
+
+-- open Lean
+-- import init.data.persistenthashmap
+-- import init.lean.format
+-- open Lean PersistentHashMap
+instance [Hashable T]: Hashable (T × T) where
+  hash | (a, b) => mixHash (hash a) (hash b)
+
 inductive Ty : Type
   | bvar : Nat -> Ty  
   | fvar : Nat -> Ty
@@ -7,11 +20,11 @@ inductive Ty : Type
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
   | case : Ty -> Ty -> Ty
-  | univ : Nat -> Ty × Ty -> Ty -> Ty
-  | exis : Nat -> Ty × Ty -> Ty -> Ty
+  | univ : Nat -> Ty -> Ty -> Ty -> Ty
+  | exis : Nat -> Ty -> Ty -> Ty -> Ty
   | recur : Ty -> Ty
   | corec : Ty -> Ty
-  deriving Repr
+  deriving Repr, Inhabited, Hashable
 
 open Std
 
@@ -33,11 +46,11 @@ protected def Ty.repr (ty : Ty) (n : Nat) : Format :=
       Format.bracket "(" ((Ty.repr ty1 n) ++ " & " ++ (Ty.repr ty2 n)) ")"
     | .case ty1 ty2, _ =>
       Format.bracket "(" ((Ty.repr ty1 n) ++ " -> " ++ (Ty.repr ty2 n)) ")"
-    | .univ n (ty_c1, ty_c2) ty_pl, _ =>
+    | .univ n ty_c1 ty_c2 ty_pl, _ =>
       "∀ " ++ (repr n) ++ " :: " ++
       (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " . " ++ 
       (Ty.repr ty_pl n)
-    | .exis n (ty_c1, ty_c2) ty_pl, _ =>
+    | .exis n ty_c1 ty_c2 ty_pl, _ =>
       "∃ " ++ (repr n) ++ " :: " ++
       (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " . " ++ 
       (Ty.repr ty_pl n)
@@ -101,10 +114,10 @@ macro_rules
   | `([: $a + $b :]) => `(Ty.union [: #inl $a :] [: #inr $b :])
   | `([: $a & $b :]) => `(Ty.inter [: $a :] [: $b :])
   | `([: $a × $b :]) => `(Ty.inter [: .left $a :] [: .right $b :])
-  | `([: ∀ $a :: $b ≤ $c . $d :]) => `(Ty.univ [: $a :] ([: $b :], [: $c :]) [: $d :])
-  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] ([: £$a :], [: £$a :]) [: $b :] )
-  | `([: ∃ $a :: $b ≤ $c . $d  :]) => `(Ty.exis [: $a :] ([: $b :], [: $c :]) [: $d :])
-  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] ([: £$a :], [: £$a :]) [: $b :] )
+  | `([: ∀ $a :: $b ≤ $c . $d :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
+  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: £$a :] [: £$a :] [: $b :] )
+  | `([: ∃ $a :: $b ≤ $c . $d  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
+  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] [: £$a :] [: £$a :] [: $b :] )
   | `([: μ 1 . $a :]) => `(Ty.recur [: $a :])
   | `([: ν 1 . $a :]) => `(Ty.corec [: $a :])
 
@@ -148,6 +161,7 @@ def x := 0
 def lookup (key : Nat) : List (Nat × T) -> Option T
   | (k,v) :: bs => if key = k then some v else lookup key bs 
   | [] => none
+
 
 def lookup_record (key : String) : List (String × T) -> Option T
   | (k,v) :: bs => if key = k then some v else lookup_record key bs 
@@ -227,8 +241,8 @@ def Ty.occurs (key : Nat)  : Ty -> Bool
   -- | .union ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
   | .inter ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
   | .case ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
-  | .univ n (ty_c1, ty_c2) ty => (Ty.occurs key ty_c1) ∨ (Ty.occurs key ty_c2) ∨ (Ty.occurs key ty)
-  | .exis n (ty_c1, ty_c2) ty => (Ty.occurs key ty_c1) ∨ (Ty.occurs key ty_c2) ∨ (Ty.occurs key ty)
+  | .univ n ty_c1 ty_c2 ty => (Ty.occurs key ty_c1) ∨ (Ty.occurs key ty_c2) ∨ (Ty.occurs key ty)
+  | .exis n ty_c1 ty_c2 ty => (Ty.occurs key ty_c1) ∨ (Ty.occurs key ty_c2) ∨ (Ty.occurs key ty)
   | .recur ty => (Ty.occurs key ty)
   | .corec ty => (Ty.occurs key ty)
 
@@ -244,14 +258,12 @@ def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
   | .union ty1 ty2 => .union (Ty.free_subst m ty1) (Ty.free_subst m ty2)
   | .inter ty1 ty2 => .inter (Ty.free_subst m ty1) (Ty.free_subst m ty2)
   | .case ty1 ty2 => .case (Ty.free_subst m ty1) (Ty.free_subst m ty2)
-  | .univ n (ty_c1, ty_c2) ty => (.univ
-    n
-    (Ty.free_subst m ty_c1, Ty.free_subst m ty_c2) 
+  | .univ n ty_c1 ty_c2 ty => (.univ n 
+    (Ty.free_subst m ty_c1) (Ty.free_subst m ty_c2)
     (Ty.free_subst m ty)
   )
-  | .exis n (ty_c1, ty_c2) ty => (.exis
-    n
-    (Ty.free_subst m ty_c1, Ty.free_subst m ty_c2) 
+  | .exis n ty_c1 ty_c2 ty => (.exis n
+    (Ty.free_subst m ty_c1) (Ty.free_subst m ty_c2) 
     (Ty.free_subst m ty)
   )
   | .recur ty => .recur (Ty.free_subst m ty)
@@ -298,14 +310,12 @@ def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
 | .union ty1 ty2 => .union (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
 | .inter ty1 ty2 => .inter (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
 | .case ty1 ty2 => .case (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
-| .univ n (ty_c1, ty_c2) ty => (.univ
-  n
-  (Ty.raise_binding (start + n) args ty_c1, Ty.raise_binding (start + n) args ty_c2)
+| .univ n ty_c1 ty_c2 ty => (.univ n
+  (Ty.raise_binding (start + n) args ty_c1) (Ty.raise_binding (start + n) args ty_c2)
   (Ty.raise_binding (start + n) args ty)
 )
-| .exis n (ty_c1, ty_c2) ty => (.exis
-  n
-  (Ty.raise_binding (start + n) args ty_c1, Ty.raise_binding (start + n) args ty_c2)
+| .exis n ty_c1 ty_c2 ty => (.exis n
+  (Ty.raise_binding (start + n) args ty_c1) (Ty.raise_binding (start + n) args ty_c2)
   (Ty.raise_binding (start + n) args ty)
 )
 | .recur ty => .recur (Ty.raise_binding (start + 1) args ty)
@@ -434,13 +444,13 @@ partial def Ty.reduce (env_ty : List (Nat × Ty)) : Ty -> Ty
   | .union ty1 ty2 => Ty.union (Ty.reduce env_ty ty1) (Ty.reduce env_ty ty2)
   | .inter ty1 ty2 => Ty.inter (Ty.reduce env_ty ty1) (Ty.reduce env_ty ty2)
   | .case ty1 ty2 => Ty.case (Ty.reduce env_ty ty1) (Ty.reduce env_ty ty2)
-  | .univ n (cty1, cty2) ty => 
+  | .univ n cty1 cty2 ty => 
       Ty.univ n  
-        (Ty.reduce env_ty cty1, Ty.reduce env_ty cty2)
+        (Ty.reduce env_ty cty1) (Ty.reduce env_ty cty2)
         (Ty.reduce env_ty ty)
-  | .exis n (cty1, cty2) ty => 
+  | .exis n cty1 cty2 ty => 
       Ty.exis n  
-        (Ty.reduce env_ty cty1, Ty.reduce env_ty cty2)
+        (Ty.reduce env_ty cty1) (Ty.reduce env_ty cty2)
         (Ty.reduce env_ty ty)
   | .recur ty => Ty.recur (Ty.reduce env_ty ty)
   | .corec ty => Ty.corec (Ty.reduce env_ty ty)
@@ -471,13 +481,13 @@ partial def Ty.equal_syntax : Ty -> Ty -> Bool
     Ty.equal_syntax ty1 ty3 ∧
     Ty.equal_syntax ty2 ty4
 
-  | .univ n1 (tyc1, tyc2) ty1, .univ n2 (tyc3, tyc4) ty2 =>
+  | .univ n1 tyc1 tyc2 ty1, .univ n2 tyc3 tyc4 ty2 =>
     n1 = n2 ∧
     Ty.equal_syntax tyc1 tyc3 ∧
     Ty.equal_syntax tyc2 tyc4 ∧
     Ty.equal_syntax ty1 ty2
 
-  | .exis n1 (tyc1, tyc2) ty1, .exis n2 (tyc3, tyc4) ty2 =>
+  | .exis n1 tyc1 tyc2 ty1, .exis n2 tyc3 tyc4 ty2 =>
     n1 = n2 ∧
     Ty.equal_syntax tyc1 tyc3 ∧
     Ty.equal_syntax tyc2 tyc4 ∧
@@ -542,10 +552,10 @@ Y <: (∃ β :: ((X ; β) <: unroll (μ _)). β)
 -/
 def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty) 
   | (.field l ty1), mu_ty => 
-      let ty2 := .exis 1 ( 
-        (Ty.inter (prev_ty) (.field l (.bvar 0))),
-        ((unroll mu_ty))
-      ) (.bvar 0)
+      let ty2 := .exis 1  
+        (Ty.inter (prev_ty) (.field l (.bvar 0)))
+        (unroll mu_ty)
+        (.bvar 0)
       [(ty1, ty2)]
   | .inter (.field l ty1) rem_ty, mu_ty => 
       let ty2 := 
@@ -567,6 +577,7 @@ empty list is failure
 non-empty list represents the solutions of unification
 
 -/
+-- partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) : 
 partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : 
 Ty -> Ty -> List (Nat × List (Nat × Ty))
   | .bvar id1, .bvar id2  =>
@@ -612,7 +623,7 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
     | some ty' => unify i env_ty ty' ty 
 
 
-  | ty', .exis n (ty_c1, ty_c2) ty =>
+  | ty', .exis n ty_c1 ty_c2 ty =>
     let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
 
     let ty_c1 := Ty.raise_binding 0 args ty_c1
@@ -630,7 +641,7 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
     -- Y := {z} | ⊥
 
 
-  | .univ n (ty_c1, ty_c2) ty', ty =>
+  | .univ n ty_c1 ty_c2 ty', ty =>
     let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
     let ty_c1 := Ty.raise_binding 0 args ty_c1
     let ty_c2 := Ty.raise_binding 0 args ty_c2
@@ -640,14 +651,14 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
       [ (i, env_ty2 ++ env_ty1) ]
     ))
 
-  | .exis n (ty_c1, ty_c2) ty', ty =>
-    if Ty.equal env_ty (.exis n (ty_c1, ty_c2) ty') ty then
+  | .exis n ty_c1 ty_c2 ty', ty =>
+    if Ty.equal env_ty (.exis n ty_c1 ty_c2 ty') ty then
       [ (i, [])  ]
     else
       .nil
 
-  | ty', .univ n (ty_c1, ty_c2) ty =>
-    if Ty.equal env_ty ty' (.univ n (ty_c1, ty_c2) ty) then
+  | ty', .univ n ty_c1 ty_c2 ty =>
+    if Ty.equal env_ty ty' (.univ n ty_c1 ty_c2 ty) then
       [ (i, []) ]
     else
       .nil 
@@ -753,16 +764,16 @@ def Ty.refresh (i : Nat) : Ty -> (Nat × Ty)
     let (i, ty1) := Ty.refresh i ty1
     let (i, ty2) := Ty.refresh i ty2
     (i, .case ty1 ty2)
-  | .univ n (cty1, cty2) ty => 
+  | .univ n cty1 cty2 ty => 
     let (i, cty1) := Ty.refresh i cty1
     let (i, cty2) := Ty.refresh i cty2
     let (i, ty) := Ty.refresh i ty
-    (i, .univ n (cty1, cty2) ty)
-  | .exis n (cty1, cty2) ty => 
+    (i, .univ n cty1 cty2 ty)
+  | .exis n cty1 cty2 ty => 
     let (i, cty1) := Ty.refresh i cty1
     let (i, cty2) := Ty.refresh i cty2
     let (i, ty) := Ty.refresh i ty
-    (i, .exis n (cty1, cty2) ty)
+    (i, .exis n cty1 cty2 ty)
   | .recur ty =>
     let (i, ty) := Ty.refresh i ty
     (i, .recur ty)
@@ -1321,7 +1332,7 @@ partial def infer
 
   | .letb ty1 t1 t => 
     List.bind (infer i (env_ty) env_tm t1 ty1) (fun (i, env_ty1, ty1') =>
-    let (i, x, env_tmx) := (i + 1, Tm.fvar i, [(i, Ty.univ 1 (Ty.bvar 0, ty1') (Ty.bvar 0))]) 
+    let (i, x, env_tmx) := (i + 1, Tm.fvar i, [(i, Ty.univ 1 (Ty.bvar 0) ty1' (Ty.bvar 0))]) 
     let t := Tm.raise_binding 0 [x] t 
     List.bind (infer i (env_ty1 ++ env_ty) (env_tmx ++ env_tm) t ty) (fun (i, env_ty2, ty') =>
       [ (i, env_ty2 ++ env_ty1, ty') ]
