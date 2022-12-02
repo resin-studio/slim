@@ -1098,8 +1098,8 @@ inductive Tm : Type
 
 
 partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat × Ty))
-  | .hole, _ => none 
-  | .unit, _ => none
+  | .hole, _ => some [] 
+  | .unit, _ => some [] 
   | .bvar _, _ => none
   | .fvar id, ty =>
     match lookup id env_tm with
@@ -1109,6 +1109,7 @@ partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat �
     if l_tm = l_ty then
       patvars env_tm tm ty 
     else none
+  | .tag _ _, _ => none 
   | .record fds, ty  => 
     bind (linearize_fields ty) (fun linear_ty =>
       if linear_ty.length = fds.length then
@@ -1122,14 +1123,11 @@ partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat �
       else
         none
     )
-  -- | func : List (Nat × Tm × Ty × Tm) -> Tm
-  -- | proj : Tm -> String -> Tm
-  -- | app : Tm -> Tm -> Tm
-  -- | letb : Ty -> Tm -> Tm -> Tm
-  -- | fix : Tm -> Tm
-  | _, _ => none
-
-
+  | .func _, _ => none
+  | .proj _ _, _ => none
+  | .app _ _, _ => none
+  | .letb _ _ _, _ => none
+  | .fix _, _ => none
 
 
   -- partial def Ty.intersect_all : (List (Option Ty)) -> Option Ty
