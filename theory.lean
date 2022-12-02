@@ -1071,9 +1071,9 @@ def plus := [:
 
 inductive Tm : Type
   | hole : Tm 
+  | unit : Tm
   | bvar : Nat -> Tm 
   | fvar : Nat -> Tm 
-  | unit : Tm
   | tag : String -> Tm -> Tm
   | record : List (String × Tm) -> Tm
   | func : List (Nat × Tm × Ty × Tm) -> Tm
@@ -1098,7 +1098,10 @@ inductive Tm : Type
 
 
 partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat × Ty))
-  | Tm.fvar id, ty =>
+  | .hole, _ => none 
+  | .unit, _ => none
+  | .bvar _, _ => none
+  | .fvar id, ty =>
     match lookup id env_tm with
       | some _ => none 
       | none => [(id, ty)] 
@@ -1119,6 +1122,13 @@ partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat �
       else
         none
     )
+  -- | tag : String -> Tm -> Tm
+  -- | record : List (String × Tm) -> Tm
+  -- | func : List (Nat × Tm × Ty × Tm) -> Tm
+  -- | proj : Tm -> String -> Tm
+  -- | app : Tm -> Tm -> Tm
+  -- | letb : Ty -> Tm -> Tm -> Tm
+  -- | fix : Tm -> Tm
   -- TODO: finish
   | _, _ => none
 
