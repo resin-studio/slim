@@ -1,13 +1,8 @@
 import Init.Data.Hashable
-
 import Lean.Data.AssocList
 import Lean.Data.PersistentHashMap
 open Lean PersistentHashMap
 
--- open Lean
--- import init.data.persistenthashmap
--- import init.lean.format
--- open Lean PersistentHashMap
 instance [Hashable T]: Hashable (T × T) where
   hash | (a, b) => mixHash (hash a) (hash b)
 
@@ -24,7 +19,7 @@ inductive Ty : Type
   | exis : Nat -> Ty -> Ty -> Ty -> Ty
   | recur : Ty -> Ty
   | corec : Ty -> Ty
-  deriving Repr, Inhabited, Hashable
+  deriving Repr, Inhabited, Hashable, BEq
 
 open Std
 
@@ -433,9 +428,9 @@ partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
   else
     τ
 
-partial def Ty.reduce (env_ty : List (Nat × Ty)) : Ty -> Ty
+partial def Ty.reduce (env_ty : PHashMap Nat Ty) : Ty -> Ty
   | .bvar id => Ty.bvar id  
-  | .fvar id => match lookup id env_ty with
+  | .fvar id => match env_ty.find? id with
     | some ty => Ty.reduce env_ty ty 
     | none => Ty.fvar id 
   | .unit => .unit 
@@ -500,7 +495,7 @@ partial def Ty.equal_syntax : Ty -> Ty -> Bool
     Ty.equal_syntax ty1 ty2
   | _, _ => false
 
-partial def Ty.equal (env_ty : List (Nat × Ty)) (ty1 : Ty) (ty2 : Ty) : Bool :=
+partial def Ty.equal (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
   let ty1 := Ty.reduce env_ty ty1 
   let ty2 := Ty.reduce env_ty ty2 
   Ty.equal_syntax ty1 ty2 
@@ -533,7 +528,7 @@ def linearize_fields : Ty -> Option (List (String × Ty))
 
 #check List.any
 
-def wellformed_record_type (env_ty : List (Nat × Ty)) (ty : Ty) : Bool :=
+def wellformed_record_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
   match linearize_fields (Ty.reduce env_ty ty) with
     | .some fields => 
       List.any fields (fun (k_fd, ty_fd) =>
@@ -569,6 +564,26 @@ def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
   | _, _ => [] 
 
 
+def PHashMap.insert_all [BEq α] [Hashable α] 
+(base : PHashMap α β) (ext : PHashMap α β) : PHashMap α β :=
+  ext.foldl (init := base) fun m k v => m.insert k v
+
+-- instance [BEq α] [Hashable α] : Append (PHashMap α β) where
+--   append := PHashMap.insert_all
+
+infixl:65   " ;; " => PHashMap.insert_all
+
+def PHashMap.from_list [BEq α] [Hashable α] 
+(source : List (α × β)) : PHashMap α β :=
+  source.foldl (init := {}) fun m (k, v) => m.insert k v
+
+protected def PHashMap.repr [Repr (α × β)] [BEq α] [Hashable α] 
+(m : PHashMap α β) (n : Nat) : Format :=
+  List.repr (toList m) n
+
+instance [Repr (α × β)] [BEq α] [Hashable α] : Repr (PHashMap α β) where
+  reprPrec := PHashMap.repr
+
 
 /-
 
@@ -576,17 +591,18 @@ result:
 empty list is failure
 non-empty list represents the solutions of unification
 
+
 -/
--- partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) : 
-partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : 
-Ty -> Ty -> List (Nat × List (Nat × Ty))
+-- partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : 
+partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) : 
+Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   | .bvar id1, .bvar id2  =>
     if id1 = id2 then 
-      [ (i, []) ]
+      [ (i, {}) ]
     else
       .nil
 
-  | .unit, .unit => [ (i, []) ] 
+  | .unit, .unit => [ (i, {}) ] 
 
   | .tag l' ty', .tag l ty =>
     if l' = l then
@@ -602,24 +618,24 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
 
   | .case ty1 ty2', .case ty1' ty2 =>
     List.bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
-    List.bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
-      [ (i, env_ty2 ++ env_ty1) ]
+    List.bind (unify i (env_ty ;; env_ty1) ty2' ty2) (fun (i, env_ty2) =>
+      [ (i, env_ty1 ;; env_ty2) ]
     ))
-    -- bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
-    -- bind (unify i (env_ty1 ++ env_ty) ty2' ty2) (fun (i, env_ty2) =>
-    --   some (i, env_ty2 ++ env_ty1)
-    -- ))
 
-  | ty', .fvar id  => match lookup id env_ty with 
-    | none => [ (i + 1, [
-        (id, .union (roll_corec id ty') (Ty.fvar i))
-      ]) ]
+  | ty', .fvar id  => match env_ty.find? id with 
+    | none => [ 
+        (i + 1, PHashMap.from_list [
+          (id, Ty.union (roll_corec id ty') (Ty.fvar i))
+        ]) 
+      ]
     | some ty => unify i env_ty ty' ty 
 
-  | .fvar id, ty  => match lookup id env_ty with 
-    | none => [ (i + 1, [
-        (id, .inter (roll_recur id ty) (Ty.fvar i))
-      ]) ]
+  | .fvar id, ty  => match env_ty.find? id with 
+    | none => [ 
+        (i + 1, PHashMap.from_list [
+          (id, Ty.inter (roll_recur id ty) (Ty.fvar i))
+        ]) 
+      ]
     | some ty' => unify i env_ty ty' ty 
 
 
@@ -630,15 +646,9 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty := Ty.raise_binding 0 args ty
     List.bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-    List.bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
-      [ (i, env_ty2 ++ env_ty1) ]
+    List.bind (unify i (env_ty ;; env_ty1) ty_c1 ty_c2) (fun (i, env_ty2) => 
+      [ (i, env_ty1 ;; env_ty2) ]
     ))
-    -- )
-    -- list[{x;z}] <: ∃ X :: (X <: {x}) . list[X]
-    -- X := {x} & Y |- list[{x;z}] <: list[X]
-    -- X := {x} & Y |- list[{x;z}] <: list[{x} & Y]
-    -- |- {x;z} <: {x} & Y
-    -- Y := {z} | ⊥
 
 
   | .univ n ty_c1 ty_c2 ty', ty =>
@@ -647,25 +657,25 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
     let ty_c2 := Ty.raise_binding 0 args ty_c2
     let ty' := Ty.raise_binding 0 args ty'
     List.bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-    List.bind (unify i (env_ty1 ++ env_ty) ty_c1 ty_c2) (fun (i, env_ty2) => 
-      [ (i, env_ty2 ++ env_ty1) ]
+    List.bind (unify i (env_ty ;; env_ty1) ty_c1 ty_c2) (fun (i, env_ty2) => 
+      [ (i, env_ty1 ;; env_ty2) ]
     ))
 
   | .exis n ty_c1 ty_c2 ty', ty =>
     if Ty.equal env_ty (.exis n ty_c1 ty_c2 ty') ty then
-      [ (i, [])  ]
+      [ (i, {})  ]
     else
       .nil
 
   | ty', .univ n ty_c1 ty_c2 ty =>
     if Ty.equal env_ty ty' (.univ n ty_c1 ty_c2 ty) then
-      [ (i, []) ]
+      [ (i, {}) ]
     else
       .nil 
 
   | .recur ty', .recur ty =>
     if Ty.equal env_ty ty' ty then
-      [ (i, []) ]
+      [ (i, {}) ]
     else
       let ty' := [: ⟨ty'⟩ ↑ 0 / [μ 1 . ⟨ty⟩]:]
       let ty := [: ⟨ty⟩ ↑ 0 / [μ 1 . ⟨ty⟩]:]
@@ -683,7 +693,7 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
 
   | .corec ty', .corec ty =>
     if Ty.equal env_ty ty' ty then
-      [ (i, []) ]
+      [ (i, {}) ]
     else
       let ty' := [: ⟨ty'⟩ ↑ 0 / [μ 1 . ⟨ty'⟩] :]
       let ty := [: ⟨ty⟩ ↑ 0 / [μ 1 . ⟨ty'⟩] :]
@@ -695,28 +705,13 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
       -- e.g. T -> T -> T -> T or (T × T) -> (T × T) -> ...   
     -- TODO: add wellformed_function_type check
     unify i env_ty (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
-    -- /-
-    -- ν _ <: X -> Y 
-    -- (∀ α :: (unroll(ν _) <: α -> Y) . α) <: X 
-    -- (∀ β :: (unroll(ν _) <: X -> β) . β) <: Y
-    -- -/
-    -- let ty1' := .univ 1 ((unroll (.corec ty_corec)), .case (Ty.bvar 0) ty2) (Ty.bvar 0) 
-    -- let ty2' := .univ 1 ((unroll (.corec ty_corec)), .case ty1 (Ty.bvar 0)) (Ty.bvar 0) 
-    -- bind (unify i env_ty ty1' ty1 ) (fun (i, env_ty1) =>
-    -- bind (unify i env_ty ty2' ty2 ) (fun (i, env_ty2) =>
-    --   some (i, env_ty2 ++ env_ty1)
-    -- ))
 
 
   | .union ty1 ty2, ty => 
     List.bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
-    List.bind (unify i (env_ty1 ++ env_ty) ty2 ty) (fun (i, env_ty2) =>
-      [ (i, env_ty2 ++ env_ty1) ]
+    List.bind (unify i (env_ty ;; env_ty1) ty2 ty) (fun (i, env_ty2) =>
+      [ (i, env_ty1 ;; env_ty2) ]
     ))
-    -- list[{x;y}] | list[{x;z}] <: list[X]
-    -- list[{x;y}] <: list[X]
-    -- X := {x;y} | Y |- list[{x;z}] <: list[X]
-    -- list[{x;z}] <: list[{x;y} | Y]
 
   | ty, .union ty1 ty2 => 
     (unify i env_ty ty ty1) ++ (unify i env_ty ty ty2)
@@ -724,8 +719,8 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
 
   | ty, .inter ty1 ty2 => 
     List.bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
-    List.bind (unify i (env_ty1 ++ env_ty) ty ty2) (fun (i, env_ty2) =>
-      [ (i, env_ty2 ++ env_ty1) ]
+    List.bind (unify i (env_ty ;; env_ty1) ty ty2) (fun (i, env_ty2) =>
+      [ (i, env_ty1 ;; env_ty2) ]
     ))
 
   | .inter ty1 ty2, ty => 
@@ -733,13 +728,13 @@ Ty -> Ty -> List (Nat × List (Nat × Ty))
 
   | _, _ => .nil 
 
-def unify_all (i : Nat) (cs : List (Ty × Ty)) : List (Nat × List (Nat × Ty)) := 
+def unify_all (i : Nat) (cs : List (Ty × Ty)) : List (Nat × PHashMap Nat Ty) := 
   List.foldl (fun u_env_ty1 => fun (ty_c1, ty_c2) => 
     List.bind u_env_ty1 (fun (i, env_ty1) => 
     List.bind (unify i env_ty1 ty_c1 ty_c2) (fun (i, env_ty2) =>
-      [ (i, env_ty2 ++ env_ty1) ]
+      [ (i, env_ty1 ;; env_ty2) ]
     ))
-  ) [(i, [])] cs
+  ) [(i, {})] cs
 
 
 def Ty.refresh (i : Nat) : Ty -> (Nat × Ty)
@@ -793,16 +788,13 @@ partial def Ty.union_all : (List Ty) -> Option Ty
 
 
 partial def Ty.collapse 
-  (i : Nat) (env_ty : List (Nat × Ty)) 
-  (u_env_ty_x: List (Nat × List (Nat × Ty))) (ty : Ty): 
-List (Nat × Ty) :=
-  let list_ty := List.map 
+  (i : Nat) (env_ty : PHashMap Nat Ty) 
+  (u_env_ty_x: List (Nat × PHashMap Nat Ty)) (ty : Ty): 
+List Ty :=
+  List.map 
     (fun (_, env_ty_ext) =>
-      Ty.reduce (env_ty_ext ++ env_ty) ty
+      Ty.reduce (env_ty ;; env_ty_ext) ty
     ) u_env_ty_x 
-  match (Ty.union_all list_ty) with
-    | .some ty => [ (Ty.refresh i ty) ]
-    | .none => []
 
 
 
@@ -816,11 +808,13 @@ def zero_ := [:
     #zero ♢
 :]
 
-#eval unify 3 [] [:
-    (#dumb ♢)
-:] zero_
+#eval ({} : PHashMap Nat Ty)
 
-#eval unify 3 [] [:
+#eval (unify 3 {} [:
+    (#dumb ♢)
+:] zero_)
+
+#eval unify 3 {} [:
     (#zero ♢)
 :] zero_
 
@@ -842,18 +836,18 @@ def even := [:
     #succ #succ £0
 :]
 
-#eval unify 3 [] even nat_ 
-#eval unify 3 [] nat_ even
+#eval unify 3 {} even nat_ 
+#eval unify 3 {} nat_ even
 
-#eval unify 3 [] [:
+#eval unify 3 {} [:
     (#zero ♢)
 :] nat_ 
 
-#eval unify 3 [] [:
+#eval unify 3 {} [:
     (#succ (#zero ♢))
 :] nat_ 
 
-#eval unify 3 [] [:
+#eval unify 3 {} [:
     (#succ (@0))
 :] nat_ 
 
@@ -864,20 +858,20 @@ def nat_list := [:
       .l #succ £0 & .r #cons £1
 :]
 
-#eval unify 3 [] 
+#eval unify 3 {} 
   [: (.l #zero ♢ & .r #nil ♢) :] 
   nat_list
 
-#eval unify 3 [] 
+#eval unify 3 {} 
   [: (.l #zero ♢ & .r #dumb ♢) :] 
   nat_list
 
 -- this is record type is not wellformed 
-#eval unify 3 [] 
+#eval unify 3 {} 
   [: (.l @0 & .r @1) :] 
   nat_list
 
-#eval unify 3 [] 
+#eval unify 3 {} 
   [: (.l #zero ♢ & .r @0) :] 
   nat_list
 
@@ -887,31 +881,31 @@ def nat_list := [:
 
 
 -- expected @0 → #nil
-#eval unify 3 [] 
+#eval unify 3 {} 
   [: (.l #succ #zero ♢ & .r #cons @0) :] 
   nat_list
 
-#eval unify 3 [] 
+#eval unify 3 {} 
   [: (.l #succ #succ #zero ♢ & .r #cons @0) :] 
   nat_list
 
 
-def examp1 := unify 3 [] 
+def examp1 := unify 3 {} 
   [: (.l #succ #succ #zero ♢ & .r #cons @0) :] 
   nat_list
 
-#eval Ty.collapse 10 [] examp1 [: @0 :] 
+#eval Ty.collapse 10 {} examp1 [: @0 :] 
 
-#eval unify_collapse 3 [] 
+#eval unify_collapse 3 {} 
   [: (.l #succ #succ #zero ♢ & .r #cons @0) :] 
   nat_list
   [: @0:]
 
--- #eval unify 3 [] 
+-- #eval unify 3 {} 
 --   [: (.l #succ #zero ♢ & .r @0) :] 
 --   nat_list
 
-#eval unify 3 [] 
+#eval unify 3 {} 
   [: (.l #succ #zero ♢ & .r #cons #cons @0) :] 
   nat_list
 
@@ -966,14 +960,14 @@ def plus := [:
 -- #eval [: #succ #succ #zero ♢ :]  
 
 
-#eval unify 3 [] [:
+#eval unify 3 {} [:
     .x #zero ♢ &
     .y @0 &
     .z #zero ♢
 :] plus
 
 
-#eval unify 3 [] [:
+#eval unify 3 {} [:
   (
     .x (#succ #zero ♢) &
     .y (#succ #zero ♢) &
@@ -981,21 +975,32 @@ def plus := [:
   )
 :] plus
 
-#eval unify 3 [] [:
+#eval unify_collapse 3 {} [:
+  (
+    .x (#succ #zero ♢) &
+    .y (#succ #zero ♢) &
+    .z (@0)
+  )
+:] plus 
+[: @0 :]
+
+#eval unify_collapse 3 {} [:
   (
     .x (#succ #succ #zero ♢) &
     .y (#succ #zero ♢) &
     .z (@0)
   )
 :] plus
+[: @0 :]
 
-#eval unify 3 [] [:
+#eval unify_collapse 3 {} [:
   (
     .x (#succ #zero ♢) &
     .y (@0) &
     .z (#succ #succ #zero ♢)
   )
 :] plus
+[: @0 :]
 
 -- #eval unify 3 [] [:
 --   (
@@ -1005,13 +1010,14 @@ def plus := [:
 --   )
 -- :] plus
 
-#eval unify 3 [] [:
+#eval unify_collapse 3 {} [:
   (
     .x #succ #zero ♢ &
     .y @0 &
     .z #succ #succ #zero ♢
   )
 :] plus
+[: @0 :]
 
 -- #eval unify 3 [] [:
 --   (
@@ -1021,13 +1027,14 @@ def plus := [:
 --   )
 -- :] plus
 
-#eval unify 3 [] [:
+#eval unify_collapse 3 {} [:
   (
     .x (@0) &
     .y (@1) &
     .z (#succ #zero ♢)
   )
 :] plus
+[: .x @0 & .y @1 :]
 
 -- #eval unify 3 [] [:
 --   (
@@ -1108,14 +1115,14 @@ inductive Tm : Type
 --     -- e.g. ty_recur, (not mu_ty)
 
 
-partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat × Ty))
-  | .hole, _ => some [] 
-  | .unit, _ => some [] 
+partial def patvars (env_tm : PHashMap Nat Ty): Tm -> Ty -> Option (PHashMap Nat Ty)
+  | .hole, _ => some {}
+  | .unit, _ => some {}
   | .bvar _, _ => none
   | .fvar id, ty =>
-    match lookup id env_tm with
+    match env_tm.find? id with
       | some _ => none 
-      | none => [(id, ty)] 
+      | none => .some (PHashMap.from_list [(id, ty)])
   | .tag l_tm tm, .tag l_ty ty => 
     if l_tm = l_ty then
       patvars env_tm tm ty 
@@ -1127,10 +1134,10 @@ partial def patvars (env_tm : List (Nat × Ty)): Tm -> Ty -> Option (List (Nat �
         List.foldl (fun acc => fun (l, tm)  =>
           bind acc (fun env_tm_1 =>
           bind (lookup_record l linear_ty) (fun ty =>
-          bind (patvars (env_tm_1 ++ env_tm) tm ty) (fun env_tm_2 =>
-            some (env_tm_2 ++ env_tm_1)
+          bind (patvars (env_tm ;; env_tm_1) tm ty) (fun env_tm_2 =>
+            some (env_tm_2 ;; env_tm_1)
           )))
-        ) (some []) fds
+        ) (some {}) fds
       else
         none
     )
@@ -1209,16 +1216,16 @@ partial def Tm.raise_binding (start : Nat) (args : List Tm) : Tm -> Tm
 -- -/
 partial def infer 
   (i : Nat)
-  (env_ty : List (Nat × Ty)) (env_tm : List (Nat × Ty)) (t : Tm) (ty : Ty) : 
-  List (Nat × (List (Nat × Ty)) × Ty) := match t with
+  (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
+  List (Nat × (PHashMap Nat Ty) × Ty) := match t with
   | Tm.hole => .nil
   | Tm.unit => 
     List.bind (unify i env_ty Ty.unit ty) (fun (i, env_ty_x) => 
       [(i, env_ty_x, Ty.unit)]
     )
-  | .bvar _ => .nil 
-  | .fvar id =>
-    match (lookup id env_tm) with 
+  | Tm.bvar _ => .nil 
+  | Tm.fvar id =>
+    match (env_tm.find? id) with 
       | .some ty' => 
         List.bind (unify i env_ty ty' ty) (fun (i, env_ty_x) =>
           [(i, env_ty_x, ty')]
@@ -1228,8 +1235,8 @@ partial def infer
   | .tag l t1 =>   
     let (i, ty1) := (i + 1, .fvar i)
     List.bind (unify i env_ty (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
-    List.bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
-      [ (i, env_ty_x ++ env_ty1, Ty.tag l ty1') ]
+    List.bind (infer i (env_ty ;; env_ty1) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
+      [ (i, env_ty1 ;; env_ty_x, Ty.tag l ty1') ]
     ))
 
   | .record fds =>
@@ -1249,15 +1256,15 @@ partial def infer
 
       let f_base := (fun (l, t1, ty1) =>
         List.bind u_env_ty1 (fun (i, env_ty1) =>
-        List.bind (infer i (env_ty1 ++ env_ty) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
-          [(i, env_ty2 ++ env_ty1, Ty.field l ty1')]
+        List.bind (infer i (env_ty ;; env_ty1) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
+          [(i, env_ty1 ;; env_ty2, Ty.field l ty1')]
         ))
       )
 
       let f_step := fun acc => (fun (l, t1, ty1) =>
         List.bind acc (fun (i, env_ty_acc, ty_acc) =>
-        List.bind (infer i (env_ty_acc ++ env_ty) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
-          [(i, env_ty_x ++ env_ty_acc, Ty.inter (Ty.field l ty1') ty_acc)]
+        List.bind (infer i (env_ty ;; env_ty_acc) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
+          [(i, env_ty_acc ;; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
         ))
       )
 
@@ -1283,10 +1290,10 @@ partial def infer
         let p := Tm.raise_binding 0 args p 
         match (patvars env_tm p ty_p) with
         | .some env_tm1 =>
-          if env_tm1.length = n then
+          if env_tm1.size == n then
             let b := Tm.raise_binding 0 args b  
-            List.bind (infer i (env_ty1 ++ env_ty) (env_tm1 ++ env_tm) b ty_b) (fun (i, env_ty2, ty_b') =>
-              [(i, env_ty2 ++ env_ty1, Ty.case ty_p ty_b')]
+            List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tm1) b ty_b) (fun (i, env_ty2, ty_b') =>
+              [(i, env_ty1 ;; env_ty2, Ty.case ty_p ty_b')]
             )
           else .nil
         | .none => .nil
@@ -1299,13 +1306,13 @@ partial def infer
         let p := Tm.raise_binding 0 args p 
         match (patvars env_tm p ty_p) with
         | .some env_tm1 =>
-          if env_tm1.length = n then
+          if env_tm1.size == n then
             let b := Tm.raise_binding 0 args b  
             List.bind (infer i 
-              (env_ty_acc ++ env_ty) (env_tm1 ++ env_tm) 
+              (env_ty ;; env_ty_acc) (env_tm ;; env_tm1) 
               b ty_b
             ) (fun (i, env_ty2, ty_b') =>
-              [(i, env_ty2 ++ env_ty_acc, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
+              [(i, env_ty_acc ;; env_ty2, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
             )
           else .nil
         | .none => .nil
@@ -1316,31 +1323,31 @@ partial def infer
   | .proj t1 l =>
     List.bind (infer i env_ty env_tm t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
     let (i, ty') := (i + 1, Ty.fvar i)
-    List.bind (unify i (env_ty1 ++ env_ty) ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
-      [(i, env_ty2 ++ env_ty1, ty')]
+    List.bind (unify i (env_ty ;; env_ty1) ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
+      [(i, env_ty1 ;; env_ty2, ty')]
     ))
 
   | .app t1 t2 =>
     let (i, ty2) := (i + 1, Ty.fvar i)
     List.bind (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1') =>
-    List.bind (infer i (env_ty1 ++ env_ty) env_tm t2 ty2) (fun (i, env_ty2, ty2') =>
+    List.bind (infer i (env_ty ;; env_ty1) env_tm t2 ty2) (fun (i, env_ty2, ty2') =>
     let (i, ty') := (i + 1, Ty.fvar i)
-    List.bind (unify i (env_ty2 ++ env_ty1 ++ env_ty) ty1' (Ty.case ty2' ty')) (fun (i, env_ty3) =>
-      [(i, env_ty3 ++ env_ty2 ++ env_ty1, ty')]
+    List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) ty1' (Ty.case ty2' ty')) (fun (i, env_ty3) =>
+      [(i, env_ty1 ;; env_ty2 ;; env_ty3, ty')]
     )))
 
 
   | .letb ty1 t1 t => 
     List.bind (infer i (env_ty) env_tm t1 ty1) (fun (i, env_ty1, ty1') =>
-    let (i, x, env_tmx) := (i + 1, Tm.fvar i, [(i, Ty.univ 1 (Ty.bvar 0) ty1' (Ty.bvar 0))]) 
+    let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, Ty.univ 1 (Ty.bvar 0) ty1' (Ty.bvar 0))]) 
     let t := Tm.raise_binding 0 [x] t 
-    List.bind (infer i (env_ty1 ++ env_ty) (env_tmx ++ env_tm) t ty) (fun (i, env_ty2, ty') =>
-      [ (i, env_ty2 ++ env_ty1, ty') ]
+    List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tmx) t ty) (fun (i, env_ty2, ty') =>
+      [ (i, env_ty1 ;; env_ty2, ty') ]
     ))
 
   | .fix t1 =>
     List.bind (infer i env_ty env_tm t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
     let (i, ty') := (i + 1, Ty.fvar i)
-    List.bind (unify i (env_ty1 ++ env_ty) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
-      [ (i, env_ty2 ++ env_ty1, ty') ]
+    List.bind (unify i (env_ty ;; env_ty1) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
+      [ (i, env_ty1 ;; env_ty2, ty') ]
     ))
