@@ -2,9 +2,7 @@ import Init.Data.Hashable
 import Lean.Data.AssocList
 import Lean.Data.PersistentHashMap
 open Lean PersistentHashMap
-
-instance [Hashable T]: Hashable (T × T) where
-  hash | (a, b) => mixHash (hash a) (hash b)
+open Std
 
 inductive Ty : Type
   | bvar : Nat -> Ty  
@@ -21,45 +19,41 @@ inductive Ty : Type
   | corec : Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
 
-open Std
-
-
 protected def Ty.repr (ty : Ty) (n : Nat) : Format :=
-  match ty, n with
-    | .bvar id, _ => 
-      "£" ++ repr id
-    | .fvar id, _ =>
-      "@" ++ repr id
-    | .unit, _ => "♢" 
-    | .tag l ty1, _ => 
-      "#" ++ l ++ " " ++ (Ty.repr ty1 n)
-    | .field l ty1, _ => 
-      "." ++ l ++ " " ++ (Ty.repr ty1 n)
-    | .union ty1 ty2, _ =>
-      Format.bracket "(" ((Ty.repr ty1 n) ++ " | " ++ (Ty.repr ty2 n)) ")"
-    | .inter ty1 ty2, _ =>
-      Format.bracket "(" ((Ty.repr ty1 n) ++ " & " ++ (Ty.repr ty2 n)) ")"
-    | .case ty1 ty2, _ =>
-      Format.bracket "(" ((Ty.repr ty1 n) ++ " -> " ++ (Ty.repr ty2 n)) ")"
-    | .univ n ty_c1 ty_c2 ty_pl, _ =>
-      "∀ " ++ (repr n) ++ " :: " ++
-      (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " . " ++ 
-      (Ty.repr ty_pl n)
-    | .exis n ty_c1 ty_c2 ty_pl, _ =>
-      "∃ " ++ (repr n) ++ " :: " ++
-      (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " . " ++ 
-      (Ty.repr ty_pl n)
-    | .recur ty1, _ =>
-      "μ 1 . " ++ (Ty.repr ty1 n)
-    | .corec ty1, _ =>
-      "ν 1 . " ++ (Ty.repr ty1 n)
+match ty, n with
+| .bvar id, _ => 
+  "£" ++ repr id
+| .fvar id, _ =>
+  "@" ++ repr id
+| .unit, _ => "♢" 
+| .tag l ty1, _ => 
+  "#" ++ l ++ " " ++ (Ty.repr ty1 n)
+| .field l ty1, _ => 
+  "." ++ l ++ " " ++ (Ty.repr ty1 n)
+| .union ty1 ty2, _ =>
+  Format.bracket "(" ((Ty.repr ty1 n) ++ " |" ++ Format.line ++ (Ty.repr ty2 n)) ")"
+| .inter ty1 ty2, _ =>
+  Format.bracket "(" ((Ty.repr ty1 n) ++ " &" ++ Format.line ++ (Ty.repr ty2 n)) ")"
+| .case ty1 ty2, _ =>
+  Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
+| .univ n ty_c1 ty_c2 ty_pl, _ =>
+  "∀ " ++ (repr n) ++ " :: " ++
+  (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " ." ++ Format.line ++ 
+  (Ty.repr ty_pl n)
+| .exis n ty_c1 ty_c2 ty_pl, _ =>
+  "∃ " ++ (repr n) ++ " :: " ++
+  (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " ." ++ Format.line ++ 
+  (Ty.repr ty_pl n)
+| .recur ty1, _ =>
+  "μ 1 . " ++ (Ty.repr ty1 n)
+| .corec ty1, _ =>
+  "ν 1 . " ++ (Ty.repr ty1 n)
 
 instance : Repr Ty where
   reprPrec := Ty.repr
 
 -- instance : Repr Ty where 
 --   def reprPrec ty n := Ty.repr ty n
-
 
 declare_syntax_cat slm
 syntax num : slm 
@@ -128,6 +122,7 @@ macro_rules
     (∃ 2 :: .l £0 & .r £1 ≤ £3 .
       .l #succ £0 & .r #cons £1)
 :]
+
 
 #check [: £0 | @0 :]
 #check [: £0 & @0 :]
@@ -1053,39 +1048,6 @@ def plus := [:
 -- :] plus
 
 
--- /-
--- t ::=                             term
---   _                               hole 
---   x                               variable
---   ()                              unit
---   #l t                            tag
---   fs                              record
---   cs                              function
---   t.l                             projection
---   t t                             application
---   let x : τ = t in t              binding
---   fix t                           recursion
-
--- cs ::=                            cases
---   for p => t                      singleton 
---   cs ; for p => t                 extension 
-
--- fs ::=                            fields 
---   .l t                            singleton 
---   fs ; .l t                       extension
--- -/
-
--- /-
-
--- m ::=                             substitution map
---   ⬝                                empty
---   α / τ :: m                      extension
-
--- env_tm ::=                             typing environment 
---   ⬝                                empty
---   x : τ :: env_tm                      extension
-
--- -/
 
 inductive Tm : Type
   | hole : Tm 
@@ -1100,10 +1062,6 @@ inductive Tm : Type
   | letb : Ty -> Tm -> Tm -> Tm
   | fix : Tm -> Tm
 
-
--- -- NOTE: there is no need to instantiate in infer. All that jazz happens in subtype/unify
--- -- the assymetry of subtyping makes it clear when to instantiate/raise/free a variable
--- -- and when to unroll a looping type
 
 -- -- notation convetion:
 --   -- prime tick marks for updated versions
@@ -1209,145 +1167,153 @@ partial def Tm.raise_binding (start : Nat) (args : List Tm) : Tm -> Tm
 | .fix t =>
   Tm.fix (Tm.raise_binding start args t)
 
--- /-
--- NOTE: infer returns a refined type in addition the type variable assignments
--- assignments alone do not refine enough due to subtyping
--- NOTE: deconstructing types is reduced to unification 
--- -/
-partial def infer 
-  (i : Nat)
-  (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
-  List (Nat × (PHashMap Nat Ty) × Ty) := match t with
-  | Tm.hole => .nil
-  | Tm.unit => 
-    List.bind (unify i env_ty Ty.unit ty) (fun (i, env_ty_x) => 
-      [(i, env_ty_x, Ty.unit)]
+
+partial def infer (i : Nat)
+(env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
+List (Nat × (PHashMap Nat Ty) × Ty) := 
+match t with
+| Tm.hole => .nil
+| Tm.unit => 
+  List.bind (unify i env_ty Ty.unit ty) (fun (i, env_ty_x) => 
+    [(i, env_ty_x, Ty.unit)]
+  )
+| Tm.bvar _ => .nil 
+| Tm.fvar id =>
+  match (env_tm.find? id) with 
+    | .some ty' => 
+      List.bind (unify i env_ty ty' ty) (fun (i, env_ty_x) =>
+        [(i, env_ty_x, ty')]
+      )
+    | .none => .nil 
+
+| .tag l t1 =>   
+  let (i, ty1) := (i + 1, .fvar i)
+  List.bind (unify i env_ty (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
+  List.bind (infer i (env_ty ;; env_ty1) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
+    [ (i, env_ty1 ;; env_ty_x, Ty.tag l ty1') ]
+  ))
+
+| .record fds =>
+  let (i, trips) := List.foldl (fun (i, ty_acc) => fun (l, t1) =>
+    (i + 1, (l, t1, (Ty.fvar i)) :: ty_acc)
+  ) (i, []) fds
+
+  match trips with
+  | [] => .nil
+  | hd :: tl =>
+    let (l, t1, ty1) := hd
+    let ty' := List.foldl (fun ty_acc => fun (l, _, ty1) => 
+      Ty.inter (Ty.field l ty1) ty_acc 
+    ) (Ty.field l ty1) tl 
+    let u_env_ty1 := unify i env_ty ty' ty 
+
+
+    let f_base := (fun (l, t1, ty1) =>
+      List.bind u_env_ty1 (fun (i, env_ty1) =>
+      List.bind (infer i (env_ty ;; env_ty1) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
+        [(i, env_ty1 ;; env_ty2, Ty.field l ty1')]
+      ))
     )
-  | Tm.bvar _ => .nil 
-  | Tm.fvar id =>
-    match (env_tm.find? id) with 
-      | .some ty' => 
-        List.bind (unify i env_ty ty' ty) (fun (i, env_ty_x) =>
-          [(i, env_ty_x, ty')]
-        )
-      | .none => .nil 
 
-  | .tag l t1 =>   
-    let (i, ty1) := (i + 1, .fvar i)
-    List.bind (unify i env_ty (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
-    List.bind (infer i (env_ty ;; env_ty1) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
-      [ (i, env_ty1 ;; env_ty_x, Ty.tag l ty1') ]
-    ))
+    let f_step := fun acc => (fun (l, t1, ty1) =>
+      List.bind acc (fun (i, env_ty_acc, ty_acc) =>
+      List.bind (infer i (env_ty ;; env_ty_acc) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
+        [(i, env_ty_acc ;; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
+      ))
+    )
 
-  | .record fds =>
-    let (i, trips) := List.foldl (fun (i, ty_acc) => fun (l, t1) =>
-      (i + 1, (l, t1, (Ty.fvar i)) :: ty_acc)
-    ) (i, []) fds
+    List.foldl f_step (f_base hd) tl 
 
-    match trips with
-    | [] => .nil
-    | hd :: tl =>
-      let (l, t1, ty1) := hd
-      let ty' := List.foldl (fun ty_acc => fun (l, _, ty1) => 
-        Ty.inter (Ty.field l ty1) ty_acc 
-      ) (Ty.field l ty1) tl 
-      let u_env_ty1 := unify i env_ty ty' ty 
+| .func fs =>
+  let (i, fs_typed) := List.foldl (fun (i, ty_acc) => fun (n, p, ty_p, b) =>
+    (i + 1, (n, p, ty_p, b, (Ty.fvar i)) :: ty_acc)
+  ) (i, []) fs
 
+  match fs_typed with
+  | [] => .nil
+  | hd :: tl =>
+    let (n, p, ty_p, b, ty_b) := hd 
+    let ty' := List.foldl (fun ty_acc => fun (n, p, ty_p, b, ty_b) => 
+      Ty.inter (Ty.case ty_p ty_b) ty_acc 
+    ) (Ty.case ty_p ty_b) tl 
+    let u_env_ty1 := unify i env_ty ty' ty 
 
-      let f_base := (fun (l, t1, ty1) =>
-        List.bind u_env_ty1 (fun (i, env_ty1) =>
-        List.bind (infer i (env_ty ;; env_ty1) env_tm t1 ty1) (fun (i, env_ty2, ty1') =>
-          [(i, env_ty1 ;; env_ty2, Ty.field l ty1')]
-        ))
+    let f_base := (fun (n, p, ty_p, b, ty_b) =>
+      List.bind u_env_ty1 (fun (i, env_ty1) =>
+      let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
+      let p := Tm.raise_binding 0 args p 
+      match (patvars env_tm p ty_p) with
+      | .some env_tm1 =>
+        if env_tm1.size == n then
+          let b := Tm.raise_binding 0 args b  
+          List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tm1) b ty_b) (fun (i, env_ty2, ty_b') =>
+            [(i, env_ty1 ;; env_ty2, Ty.case ty_p ty_b')]
+          )
+        else .nil
+      | .none => .nil
+      )
+    )
+
+    let f_step := fun acc => fun (n, p, ty_p, b, ty_b) =>
+      List.bind acc (fun (i, env_ty_acc, ty_acc) =>
+      let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
+      let p := Tm.raise_binding 0 args p 
+      match (patvars env_tm p ty_p) with
+      | .some env_tm1 =>
+        if env_tm1.size == n then
+          let b := Tm.raise_binding 0 args b  
+          List.bind (infer i 
+            (env_ty ;; env_ty_acc) (env_tm ;; env_tm1) 
+            b ty_b
+          ) (fun (i, env_ty2, ty_b') =>
+            [(i, env_ty_acc ;; env_ty2, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
+          )
+        else .nil
+      | .none => .nil
       )
 
-      let f_step := fun acc => (fun (l, t1, ty1) =>
-        List.bind acc (fun (i, env_ty_acc, ty_acc) =>
-        List.bind (infer i (env_ty ;; env_ty_acc) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
-          [(i, env_ty_acc ;; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
-        ))
-      )
+    List.foldl f_step (f_base hd) tl 
 
-      List.foldl f_step (f_base hd) tl 
+| .proj t1 l =>
+  List.bind (infer i env_ty env_tm t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
+  let (i, ty') := (i + 1, Ty.fvar i)
+  List.bind (unify i (env_ty ;; env_ty1) ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
+    [(i, env_ty1 ;; env_ty2, ty')]
+  ))
 
-  | .func fs =>
-    let (i, fs_typed) := List.foldl (fun (i, ty_acc) => fun (n, p, ty_p, b) =>
-      (i + 1, (n, p, ty_p, b, (Ty.fvar i)) :: ty_acc)
-    ) (i, []) fs
-
-    match fs_typed with
-    | [] => .nil
-    | hd :: tl =>
-      let (n, p, ty_p, b, ty_b) := hd 
-      let ty' := List.foldl (fun ty_acc => fun (n, p, ty_p, b, ty_b) => 
-        Ty.inter (Ty.case ty_p ty_b) ty_acc 
-      ) (Ty.case ty_p ty_b) tl 
-      let u_env_ty1 := unify i env_ty ty' ty 
-
-      let f_base := (fun (n, p, ty_p, b, ty_b) =>
-        List.bind u_env_ty1 (fun (i, env_ty1) =>
-        let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
-        let p := Tm.raise_binding 0 args p 
-        match (patvars env_tm p ty_p) with
-        | .some env_tm1 =>
-          if env_tm1.size == n then
-            let b := Tm.raise_binding 0 args b  
-            List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tm1) b ty_b) (fun (i, env_ty2, ty_b') =>
-              [(i, env_ty1 ;; env_ty2, Ty.case ty_p ty_b')]
-            )
-          else .nil
-        | .none => .nil
-        )
-      )
-
-      let f_step := fun acc => fun (n, p, ty_p, b, ty_b) =>
-        List.bind acc (fun (i, env_ty_acc, ty_acc) =>
-        let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
-        let p := Tm.raise_binding 0 args p 
-        match (patvars env_tm p ty_p) with
-        | .some env_tm1 =>
-          if env_tm1.size == n then
-            let b := Tm.raise_binding 0 args b  
-            List.bind (infer i 
-              (env_ty ;; env_ty_acc) (env_tm ;; env_tm1) 
-              b ty_b
-            ) (fun (i, env_ty2, ty_b') =>
-              [(i, env_ty_acc ;; env_ty2, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
-            )
-          else .nil
-        | .none => .nil
-        )
-
-      List.foldl f_step (f_base hd) tl 
-
-  | .proj t1 l =>
-    List.bind (infer i env_ty env_tm t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
-    let (i, ty') := (i + 1, Ty.fvar i)
-    List.bind (unify i (env_ty ;; env_ty1) ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
-      [(i, env_ty1 ;; env_ty2, ty')]
-    ))
-
-  | .app t1 t2 =>
-    let (i, ty2) := (i + 1, Ty.fvar i)
-    List.bind (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1') =>
-    List.bind (infer i (env_ty ;; env_ty1) env_tm t2 ty2) (fun (i, env_ty2, ty2') =>
-    let (i, ty') := (i + 1, Ty.fvar i)
-    List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) ty1' (Ty.case ty2' ty')) (fun (i, env_ty3) =>
-      [(i, env_ty1 ;; env_ty2 ;; env_ty3, ty')]
-    )))
+| .app t1 t2 =>
+  let (i, ty2) := (i + 1, Ty.fvar i)
+  List.bind (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i (env_ty ;; env_ty1) env_tm t2 ty2) (fun (i, env_ty2, ty2') =>
+  let (i, ty') := (i + 1, Ty.fvar i)
+  List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) ty1' (Ty.case ty2' ty')) (fun (i, env_ty3) =>
+    [(i, env_ty1 ;; env_ty2 ;; env_ty3, ty')]
+  )))
 
 
-  | .letb ty1 t1 t => 
-    List.bind (infer i (env_ty) env_tm t1 ty1) (fun (i, env_ty1, ty1') =>
-    let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, Ty.univ 1 (Ty.bvar 0) ty1' (Ty.bvar 0))]) 
-    let t := Tm.raise_binding 0 [x] t 
-    List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tmx) t ty) (fun (i, env_ty2, ty') =>
-      [ (i, env_ty1 ;; env_ty2, ty') ]
-    ))
+| .letb ty1 t1 t => 
+  List.bind (infer i (env_ty) env_tm t1 ty1) (fun (i, env_ty1, ty1') =>
+  let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, Ty.univ 1 (Ty.bvar 0) ty1' (Ty.bvar 0))]) 
+  let t := Tm.raise_binding 0 [x] t 
+  List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tmx) t ty) (fun (i, env_ty2, ty') =>
+    [ (i, env_ty1 ;; env_ty2, ty') ]
+  ))
 
-  | .fix t1 =>
-    List.bind (infer i env_ty env_tm t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
-    let (i, ty') := (i + 1, Ty.fvar i)
-    List.bind (unify i (env_ty ;; env_ty1) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
-      [ (i, env_ty1 ;; env_ty2, ty') ]
-    ))
+| .fix t1 =>
+  List.bind (infer i env_ty env_tm t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
+  let (i, ty') := (i + 1, Ty.fvar i)
+  List.bind (unify i (env_ty ;; env_ty1) ty1' (.case ty' ty')) (fun (i, env_ty2) =>
+    [ (i, env_ty1 ;; env_ty2, ty') ]
+  ))
+
+
+partial def infer_collapse (t : Tm) : List Ty :=
+  List.bind (infer 1 {} {} t [: @0 :]) (fun (_, env_ty, ty) =>
+    [Ty.reduce env_ty ty]
+  )
+
+-- #eval infer_collapse [: :] 
+
+
+
+
