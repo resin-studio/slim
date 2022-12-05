@@ -19,6 +19,7 @@ inductive Ty : Type
   | corec : Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
 
+
 protected def Ty.repr (ty : Ty) (n : Nat) : Format :=
 match ty, n with
 | .bvar id, _ => 
@@ -52,8 +53,58 @@ match ty, n with
 instance : Repr Ty where
   reprPrec := Ty.repr
 
--- instance : Repr Ty where 
---   def reprPrec ty n := Ty.repr ty n
+
+inductive Tm : Type
+  | hole : Tm 
+  | unit : Tm
+  | bvar : Nat -> Tm 
+  | fvar : Nat -> Tm 
+  | tag : String -> Tm -> Tm
+  | record : List (String × Tm) -> Tm
+  | func : List (Nat × Tm × Ty × Tm) -> Tm
+  | proj : Tm -> String -> Tm
+  | app : Tm -> Tm -> Tm
+  | letb : Ty -> Tm -> Tm -> Tm
+  | fix : Tm -> Tm
+  deriving Repr, Inhabited, BEq
+
+def indent(n : Nat) : String :=
+  Nat.fold (fun | _, acc => acc ++ "  " ) n ""
+
+protected partial def Tm.repr (t : Tm) (n : Nat) : Format :=
+match t with
+| .hole => 
+  "_"
+| .unit =>
+  "()"
+| .bvar id =>
+  "(bx " ++ repr id ++ ")"
+| .fvar id => 
+  "(fx " ++ repr id ++ ")"
+| .tag l t1 =>
+  "#" ++ l ++ " " ++ (Tm.repr t1 n)
+| record fds =>
+  let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
+    "." ++ l ++ " " ++ Tm.repr t1 n ⟩
+  Format.bracket "{" (Format.joinSep fds (";" ++ Format.line)) "}"
+| func fs =>
+  let _ : ToFormat (Nat × Tm × Ty × Tm) := ⟨fun (n_p, pat, ty_pat, tb) =>
+    "(λ " ++ (repr n_p) ++ "/" ++ (Tm.repr pat n) ++ " : " ++ (Ty.repr ty_pat n) ++ 
+    " => " ++ "\n" ++ 
+    (indent n) ++ (Tm.repr tb (n + 1)) ++ ")"
+    ⟩
+  Format.bracket "{" (Format.joinSep fs (";\n")) "}"
+| .proj t1 l =>
+  Tm.repr t1 n ++ "." ++ l
+| .app t1 t2 =>
+  Format.bracket "(" (Tm.repr t1 n) ")" ++ Tm.repr t2 n
+| .letb ty1 t1 t2 =>
+  "letb 1 : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " ." ++
+  Format.line  ++ (Tm.repr t2 n) 
+| .fix t1 =>
+  Format.bracket "(" ("fix " ++ (Tm.repr t1 n)) ")"
+
+
 
 declare_syntax_cat slm
 syntax num : slm 
@@ -1048,19 +1099,6 @@ def plus := [:
 -- :] plus
 
 
-
-inductive Tm : Type
-  | hole : Tm 
-  | unit : Tm
-  | bvar : Nat -> Tm 
-  | fvar : Nat -> Tm 
-  | tag : String -> Tm -> Tm
-  | record : List (String × Tm) -> Tm
-  | func : List (Nat × Tm × Ty × Tm) -> Tm
-  | proj : Tm -> String -> Tm
-  | app : Tm -> Tm -> Tm
-  | letb : Ty -> Tm -> Tm -> Tm
-  | fix : Tm -> Tm
 
 
 -- -- notation convetion:
