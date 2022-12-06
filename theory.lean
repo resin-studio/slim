@@ -86,14 +86,14 @@ match t with
 | record fds =>
   let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
     "." ++ l ++ " " ++ Tm.repr t1 n ⟩
-  Format.bracket "{" (Format.joinSep fds (";" ++ Format.line)) "}"
+  Format.bracket "[" (Format.joinSep fds (";" ++ Format.line)) "]"
 | func fs =>
   let _ : ToFormat (Nat × Tm × Ty × Tm) := ⟨fun (n_p, pat, ty_pat, tb) =>
     "(λ " ++ (repr n_p) ++ "/" ++ (Tm.repr pat n) ++ " : " ++ (Ty.repr ty_pat n) ++ 
     " => " ++ "\n" ++ 
     (indent n) ++ (Tm.repr tb (n + 1)) ++ ")"
     ⟩
-  Format.bracket "{" (Format.joinSep fs (";\n")) "}"
+  Format.bracket "[" (Format.joinSep fs (";\n")) "]"
 | .proj t1 l =>
   Tm.repr t1 n ++ "." ++ l
 | .app t1 t2 =>
@@ -110,6 +110,7 @@ declare_syntax_cat slm
 syntax num : slm 
 syntax ident : slm
 syntax "[" slm,+ "]" : slm 
+-- type
 syntax "£"slm:90 : slm
 syntax "@"slm:90 : slm
 syntax "♢" : slm
@@ -126,6 +127,19 @@ syntax:74 "∀" slm "::" slm "≤" slm "." slm:75 : slm
 syntax:74 "∀" slm "." slm:75 : slm 
 syntax "μ 1 ." slm : slm 
 syntax "ν 1 ." slm : slm 
+
+-- subterm
+syntax:100 "λ" slm "/" slm ":" slm "=>" slm : slm 
+--term
+syntax:100 "_" : slm
+syntax:100 "()" : slm
+syntax:100 "(bx" slm:100 ")" : slm
+syntax:100 "(fx "slm:100 ")" : slm
+syntax:100 "|#"slm:100 slm:100 : slm
+syntax:100 "(" slm:100 "." slm:100 ")" : slm 
+syntax:100 "(" slm:100 slm:100 ")" : slm 
+syntax:100 "letb 1 = " slm:100 ":" slm "." slm:100 : slm 
+syntax:100 "fix " slm:100 : slm 
 
 syntax:50 slm:50 "⊆" slm:51 : slm
 
@@ -160,6 +174,9 @@ macro_rules
   | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] [: £$a :] [: £$a :] [: $b :] )
   | `([: μ 1 . $a :]) => `(Ty.recur [: $a :])
   | `([: ν 1 . $a :]) => `(Ty.corec [: $a :])
+-- --Tm
+--   | `([: (bx $n) :]) => `(Tm.bvar [: $n :])
+--   | `([: (fx $n) :]) => `(Tm.fvar [: $n :])
 
 -- generic
   | `([: ($a) :]) => `([: $a :])
