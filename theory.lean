@@ -26,15 +26,15 @@ match ty, n with
   "Z." ++ repr id
 | .fvar id, _ =>
   "X." ++ repr id
-| .unit, _ => "♢" 
+| .unit, _ => "@" 
 | .tag l ty1, _ => 
   "#" ++ l ++ " " ++ (Ty.repr ty1 n)
 | .field l ty1, _ => 
-  "." ++ l ++ " " ++ (Ty.repr ty1 n)
+  Format.bracket "(" (l ++ " >-" ++ Format.line ++ (Ty.repr ty1 n)) ")"
 | .union ty1 ty2, _ =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " |" ++ Format.line ++ (Ty.repr ty2 n)) ")"
 | .inter ty1 ty2, _ =>
-  Format.bracket "(" ((Ty.repr ty1 n) ++ " &" ++ Format.line ++ (Ty.repr ty2 n)) ")"
+  Format.bracket "(" ((Ty.repr ty1 n) ++ " ;" ++ Format.line ++ (Ty.repr ty2 n)) ")"
 | .case ty1 ty2, _ =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
 | .univ n ty_c1 ty_c2 ty_pl, _ =>
@@ -82,18 +82,18 @@ match t with
 | .fvar id => 
   "x." ++ repr id
 | .tag l t1 =>
-  "#" ++ l ++ " " ++ (Tm.repr t1 n)
+  "#[" ++ l ++ " " ++ (Tm.repr t1 n) ++ "]"
 | record fds =>
   let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
-    "." ++ l ++ " " ++ Tm.repr t1 n ⟩
-  Format.bracket "[" (Format.joinSep fds (";" ++ Format.line)) "]"
+    l ++ " := " ++ Tm.repr t1 n ⟩
+  "χ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
 | func fs =>
   let _ : ToFormat (Nat × Tm × Ty × Tm) := ⟨fun (n_p, pat, ty_pat, tb) =>
-    "(λ " ++ (repr n_p) ++ "/" ++ (Tm.repr pat n) ++ " : " ++ (Ty.repr ty_pat n) ++ 
+    (repr n_p) ++ "/" ++ (Tm.repr pat n) ++ " : " ++ (Ty.repr ty_pat n) ++ 
     " => " ++ "\n" ++ 
     (indent n) ++ (Tm.repr tb (n + 1)) ++ ")"
     ⟩
-  Format.bracket "[" (Format.joinSep fs (";\n")) "]"
+  "λ" ++ Format.bracket "[" (Format.joinSep fs (",\n")) "]"
 | .proj t1 l =>
   Tm.repr t1 n ++ "." ++ l
 | .app t1 t2 =>
@@ -113,15 +113,15 @@ syntax "[" slm,+ "]" : slm
 -- type
 syntax "Z."slm:90 : slm
 syntax "X."slm:90 : slm
-syntax "♢" : slm
+syntax "@" : slm
 syntax "#"slm:90 slm:90 : slm
-syntax "."slm:90 slm:90 : slm
+syntax slm:90 ">-" slm:90 : slm
 syntax:50 slm:50 "->" slm:51 : slm
 syntax:60 slm:60 "|" slm:61 : slm
 syntax:60 slm:60 "+" slm:61 : slm
 syntax:64 "∃" slm "::" slm "≤" slm  "." slm:65 : slm 
 syntax:64 "∃" slm "." slm:65 : slm 
-syntax:70 slm:70 "&" slm:71 : slm
+syntax:70 slm:70 ";" slm:71 : slm
 syntax:70 slm:70 "×" slm:71 : slm
 syntax:74 "∀" slm "::" slm "≤" slm "." slm:75 : slm 
 syntax:74 "∀" slm "." slm:75 : slm 
@@ -133,9 +133,9 @@ syntax:100 "_" : slm
 syntax:100 "()" : slm
 syntax:100 "z." slm:100 : slm
 syntax:100 "x." slm:100 : slm
-syntax:100 "|#"slm:100 slm:100 : slm
+syntax:100 "#["slm:100 slm:100 "]" : slm
 syntax:100 slm:100 ":=" slm:100 : slm
-syntax:100 "|."slm : slm
+syntax:100 "χ" slm : slm
 syntax:100 slm "*" slm ":" slm "=>" slm : slm 
 syntax:100 "λ" slm : slm 
 syntax:100 "(" slm:100 "." slm:100 ")" : slm 
@@ -162,14 +162,14 @@ macro_rules
 -- Ty 
   | `([: Z.$n :]) => `(Ty.bvar [: $n :])
   | `([: X.$n:slm :]) => `(Ty.fvar [: $n :])
-  | `([: ♢ :]) => `(Ty.unit)
+  | `([: @ :]) => `(Ty.unit)
   | `([: #$a $b:slm :]) => `(Ty.tag [: $a :] [: $b :])
-  | `([: .$a $b:slm :]) => `(Ty.field [: $a :] [: $b :])
+  | `([: $a >- $b:slm :]) => `(Ty.field [: $a :] [: $b :])
   | `([: $a -> $b :]) => `(Ty.case [: $a :] [: $b :])
   | `([: $a | $b :]) => `(Ty.union [: $a :] [: $b :])
   | `([: $a + $b :]) => `(Ty.union [: #inl $a :] [: #inr $b :])
-  | `([: $a & $b :]) => `(Ty.inter [: $a :] [: $b :])
-  | `([: $a × $b :]) => `(Ty.inter [: .left $a :] [: .right $b :])
+  | `([: $a ; $b :]) => `(Ty.inter [: $a :] [: $b :])
+  | `([: $a × $b :]) => `(Ty.inter [: left >- $a :] [: right >- $b :])
   | `([: ∀ $a :: $b ≤ $c . $d :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
   | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: Z.$a :] [: Z.$a :] [: $b :] )
   | `([: ∃ $a :: $b ≤ $c . $d  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
@@ -181,11 +181,11 @@ macro_rules
   | `([: () :]) => `(Tm.unit)
   | `([: x.$n :]) => `(Tm.bvar [: $n :])
   | `([: z.$n :]) => `(Tm.fvar [: $n :])
-  | `([: |# $a $b :]) => `(Tm.tag [: $a :] [: $b :])
+  | `([: #[ $a $b ] :]) => `(Tm.tag [: $a :] [: $b :])
   | `([: $a := $b :]) => `(([: $a :], [: $b :]))
   | `([: $a * $b : $c => $d :]) => `(([: $a :], [: $b :], [: $c :], [: $d :]))
-  | `([: |. $a :]) => `(Tm.record [: $a :])
-  | `([: λ $a :]) => `(Tm.function [: $a :])
+  | `([: χ $a :]) => `(Tm.record [: $a :])
+  | `([: λ $a :]) => `(Tm.func [: $a :])
   | `([: ($a . $b) :]) => `(Tm.proj [: $a :] [: $b :])
   | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
   | `([: letb 1 : $a = $b . $c :]) => `(Tm.letb [: $a :] [: $b :] [: $c :])
@@ -396,15 +396,15 @@ can't unroll on lhs
 co-recursive types
 
 ν (nat -> list) . 
-  #zero -> #nil & 
+  #zero -> #nil ; 
   #succ nat -> #cons (? × list)
 
 desugar 
 
 ν nat_to_list . 
-  #zero -> #nil & 
+  #zero -> #nil ; 
   #succ nat -> #cons (? × list)
-    &> (nat -> list) ≤ nat_to_list .
+    ;> (nat -> list) ≤ nat_to_list .
 
 unroll on lhs of subtyping
 can't unroll on rhs
@@ -598,7 +598,7 @@ def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
       [(ty1, ty2)]
   | .inter (.field l ty1) rem_ty, mu_ty => 
       let ty2 := 
-      [: ∃ 1 :: (⟨prev_ty⟩ & (#⟨l⟩ Z.0) & ⟨rem_ty⟩) ≤ ⟨unroll mu_ty⟩ . Z.0 :]
+      [: ∃ 1 :: (⟨prev_ty⟩ ; (#⟨l⟩ Z.0) ; ⟨rem_ty⟩) ≤ ⟨unroll mu_ty⟩ . Z.0 :]
 
       let rem := make_field_constraints (Ty.inter prev_ty (.field l ty1)) rem_ty mu_ty
       if rem.length = 0 then
@@ -849,7 +849,7 @@ partial def unify_collapse (i : Nat) (env_ty) (ty1) (ty2) (ty_result) :=
 
 
 def zero_ := [: 
-    #zero ♢
+    #zero @
 :]
 
 
@@ -1113,14 +1113,14 @@ partial def infer_collapse (t : Tm) : List Ty :=
 #eval [: Z.0 :]
 #eval [: Z.0 :]
 #eval [: 
-    ∃ 2 :: .l Z.0 & .r Z.1 ≤ Z.3 .
-      .l #succ Z.0 & .r #cons Z.1  |
-    (∃ 2 :: .l Z.0 & .r Z.1 ≤ Z.3 .
-      .l #succ Z.0 & .r #cons Z.1)
+    ∃ 2 :: l >- Z.0 ; r >- Z.1 ≤ Z.3 .
+      l >- #succ Z.0 ; r >- #cons Z.1  |
+    (∃ 2 :: l >- Z.0 ; r >- Z.1 ≤ Z.3 .
+      l >- #succ Z.0 ; r >- #cons Z.1)
 :]
 
 #check [: Z.0 | X.0 :]
-#check [: Z.0 & X.0 :]
+#check [: Z.0 ; X.0 :]
 #check [: Z.0 × X.0 :]
 #check [: Z.0 + X.0 :]
 def x := 0
@@ -1128,45 +1128,45 @@ def x := 0
 #check [: ∀ 1 :: Z.0 ≤ X.0 . Z.0 :]
 #check [: ∀ 2 :: X.0 ≤ X.0 . Z.0 :]
 #check [: ∀ 2 . Z.0 :]
-#check [: ♢ :]
+#check [: @ :]
 #check [: X.24 :]
-#check [: #foo ♢ | #boo ♢ :]
+#check [: #foo @ | #boo @ :]
 #check [: μ 1 . #foo Z.0 :]
-#check [: μ 1 . #foo Z.0  & X.0 | X.2 & X.0:]
-#check [: Z.3 & X.0 -> X.1 | X.2 :]
-#check [: μ 1 . #foo Z.0 & X.0 | X.2 & X.0 -> X.1 | X.2 :]
-#check [: μ 1 . #foo Z.0 & X.0 | X.2 & X.0 :]
+#check [: μ 1 . #foo Z.0  ; X.0 | X.2 ; X.0:]
+#check [: Z.3 ; X.0 -> X.1 | X.2 :]
+#check [: μ 1 . #foo Z.0 ; X.0 | X.2 ; X.0 -> X.1 | X.2 :]
+#check [: μ 1 . #foo Z.0 ; X.0 | X.2 ; X.0 :]
 #check [: X.0 :]
 
 #eval [: ∀ 2 :: X.0 ≤ X.0 . Z.0 :]
-#eval [: μ 1 . #foo Z.0 & X.0 | X.2 & X.0 :]
+#eval [: μ 1 . #foo Z.0 ; X.0 | X.2 ; X.0 :]
 
 
 #eval ({} : PHashMap Nat Ty)
 
 #eval (unify 3 {} [:
-    (#dumb ♢)
+    (#dumb @)
 :] zero_)
 
 #eval unify 3 {} [:
-    (#zero ♢)
+    (#zero @)
 :] zero_
 
 /-
   μ nat .
-    #zero ♢ | 
+    #zero @ | 
     #succ nat 
 -/
 def nat_ := [: 
   μ 1 . 
-    #zero ♢ |
+    #zero @ |
     #succ Z.0
 :]
 #eval nat_
 
 def even := [: 
   μ 1 . 
-    #zero ♢ |
+    #zero @ |
     #succ #succ Z.0
 :]
 
@@ -1174,11 +1174,11 @@ def even := [:
 #eval unify 3 {} nat_ even
 
 #eval unify 3 {} [:
-    (#zero ♢)
+    (#zero @)
 :] nat_ 
 
 #eval unify 3 {} [:
-    (#succ (#zero ♢))
+    (#succ (#zero @))
 :] nat_ 
 
 #eval unify 3 {} [:
@@ -1187,86 +1187,86 @@ def even := [:
 
 def nat_list := [: 
   μ 1 .
-    .l #zero ♢ & .r #nil ♢ |
-    ∃ 2 :: .l Z.0 & .r Z.1 ≤ Z.2 .
-      .l #succ Z.0 & .r #cons Z.1
+    l >- #zero @ ; r >- #nil @ |
+    ∃ 2 :: l >- Z.0 ; r >- Z.1 ≤ Z.2 .
+      l >- #succ Z.0 ; r >- #cons Z.1
 :]
 
 #eval unify 3 {} 
-  [: (.l #zero ♢ & .r #nil ♢) :] 
+  [: (l >- #zero @ ; r >- #nil @) :] 
   nat_list
 
 #eval unify 3 {} 
-  [: (.l #zero ♢ & .r #dumb ♢) :] 
+  [: (l >- #zero @ ; r >- #dumb @) :] 
   nat_list
 
 -- this is record type is not wellformed 
 #eval unify 3 {} 
-  [: (.l X.0 & .r X.1) :] 
+  [: (l >- X.0 ; r >- X.1) :] 
   nat_list
 
 #eval unify 3 {} 
-  [: (.l #zero ♢ & .r X.0) :] 
+  [: (l >- #zero @ ; r >- X.0) :] 
   nat_list
 
 -- #eval unify 3 [] 
---   [: (.l #succ #zero ♢ & .r X.0 & .g #scooby ♢) :] 
---   [: (.l #succ #zero ♢ & .r #ooga ♢ & .g #scooby ♢) | (.l #zero ♢ & .r #booga ♢) :] 
+--   [: (l >- #succ #zero @ ; .r X.0 ; .g #scooby @) :] 
+--   [: (l >- #succ #zero @ ; .r #ooga @ ; .g #scooby @) | (l >- #zero @ ; r >- #booga @) :] 
 
 
 -- expected X.0 → #nil
 #eval unify 3 {} 
-  [: (.l #succ #zero ♢ & .r #cons X.0) :] 
+  [: (l >- #succ #zero @ ; r >- #cons X.0) :] 
   nat_list
 
 #eval unify 3 {} 
-  [: (.l #succ #succ #zero ♢ & .r #cons X.0) :] 
+  [: (l >- #succ #succ #zero @ ; r >- #cons X.0) :] 
   nat_list
 
 
 def examp1 := unify 3 {} 
-  [: (.l #succ #succ #zero ♢ & .r #cons X.0) :] 
+  [: (l >- #succ #succ #zero @ ; r >- #cons X.0) :] 
   nat_list
 
 #eval Ty.collapse 10 {} examp1 [: X.0 :] 
 
 #eval unify_collapse 3 {} 
-  [: (.l #succ #succ #zero ♢ & .r #cons X.0) :] 
+  [: (l >- #succ #succ #zero @ ; r >- #cons X.0) :] 
   nat_list
   [: X.0:]
 
 -- #eval unify 3 {} 
---   [: (.l #succ #zero ♢ & .r X.0) :] 
+--   [: (.l #succ #zero @ ; .r X.0) :] 
 --   nat_list
 
 #eval unify 3 {} 
-  [: (.l #succ #zero ♢ & .r #cons #cons X.0) :] 
+  [: (l >- #succ #zero @ ; r >- #cons #cons X.0) :] 
   nat_list
 
 
 -- #eval unify 3 [] 
---   [: (.l #succ #zero ♢ & .r #cons X.0) :] 
+--   [: (l >- #succ #zero @ ; r >- #cons X.0) :] 
 --   [: 
---       ∃ 2 :: .l Z.0 & .r Z.1 ≤ (μ 1 .
---         .l #zero ♢ & .r #nil ♢ |
---         ∃ 2 :: .l Z.0 & .r Z.1 ≤ Z.2 .
---           .l #succ Z.0 & .r #cons Z.1
+--       ∃ 2 :: l >- Z.0 ; r >- Z.1 ≤ (μ 1 .
+--         l >- #zero @ ; r >- #nil @ |
+--         ∃ 2 :: l >- Z.0 ; r >- Z.1 ≤ Z.2 .
+--           l >- #succ Z.0 ; r >- #cons Z.1
 --       ) .
---         .l #succ Z.0 & .r #cons Z.1
+--         l >- #succ Z.0 ; r >- #cons Z.1
 --   :]
 
 -- #eval unify_all 3 [
---   ([: (.l #succ #zero ♢ & .r #cons X.0) :], [: .l #succ X.33 & .r #cons X.44 :])
+--   ([: (l >- #succ #zero @ ; r >- #cons X.0) :], [: l >- #succ X.33 ; r >- #cons X.44 :])
 -- ]
 
 -- #eval unify_all 3 [
---   ([: (.l #succ #zero ♢ & .r #cons X.0) :], [: .l #succ X.33 & .r #cons X.44 :]),
+--   ([: (l >- #succ #zero @ ; r >- #cons X.0) :], [: l >- #succ X.33 ; r >- #cons X.44 :]),
 --   (
---     [: .l X.33 & .r X.44  :], 
+--     [: l >- X.33 ; r >- X.44  :], 
 --     [:μ 1 .
---         .l #zero ♢ & .r #nil ♢ |
---         ∃ 2 :: .l Z.0 & .r Z.1 ≤ Z.2 .
---           .l #succ Z.0 & .r #cons Z.1
+--         l >- #zero @ ; r >- #nil @ |
+--         ∃ 2 :: l >- Z.0 ; r >- Z.1 ≤ Z.2 .
+--           l >- #succ Z.0 ; r >- #cons Z.1
 --     :]
 --   )
 -- ]
@@ -1274,7 +1274,7 @@ def examp1 := unify 3 {}
 /-
   μ plus .
     ∃ N .  
-      #zero ♢ × N × N | 
+      #zero @ × N × N | 
 
     ∃ X Y Z :: X, Y, Z ≤ plus .  
       #succ X × Y × #succ Z
@@ -1282,107 +1282,133 @@ def examp1 := unify 3 {}
 def plus := [: 
   μ 1 . 
     (∃ 1 . 
-      (.x #zero ♢ & .y Z.0 & .z Z.0)) |
+      (x >- #zero @ ; y >- Z.0 ; z >- Z.0)) |
 
-    (∃ 3 :: (.x Z.0 & .y Z.1 & .z Z.2) ≤ Z.3 .   
-      (.x #succ Z.0 & .y Z.1 & .z #succ Z.2))
+    (∃ 3 :: (x >- Z.0 ; y >- Z.1 ; z >- Z.2) ≤ Z.3 .   
+      (x >- #succ Z.0 ; y >- Z.1 ; z >- #succ Z.2))
 :]
 
 -- #print plus
 
--- #eval [: (.x #zero ♢ & .y #zero ♢ & .z #zero ♢) :]  
--- #eval [: #succ #succ #zero ♢ :]  
+-- #eval [: (x >- #zero @ ; y >- #zero @ ; z >- #zero @) :]  
+-- #eval [: #succ #succ #zero @ :]  
 
 
 #eval unify 3 {} [:
-    .x #zero ♢ &
-    .y X.0 &
-    .z #zero ♢
+    x >- #zero @ ;
+    y >- X.0 ;
+    z >- #zero @
 :] plus
 
 
 #eval unify 3 {} [:
   (
-    .x (#succ #zero ♢) &
-    .y (#succ #zero ♢) &
-    .z (X.0)
+    x >- (#succ #zero @) ;
+    y >- (#succ #zero @) ;
+    z >- (X.0)
   )
 :] plus
 
 #eval unify_collapse 3 {} [:
   (
-    .x (#succ #zero ♢) &
-    .y (#succ #zero ♢) &
-    .z (X.0)
+    x >- (#succ #zero @) ;
+    y >- (#succ #zero @) ;
+    z >- (X.0)
   )
 :] plus 
 [: X.0 :]
 
 #eval unify_collapse 3 {} [:
   (
-    .x (#succ #succ #zero ♢) &
-    .y (#succ #zero ♢) &
-    .z (X.0)
+    x >- (#succ #succ #zero @) ;
+    y >- (#succ #zero @) ;
+    z >- (X.0)
   )
 :] plus
 [: X.0 :]
 
 #eval unify_collapse 3 {} [:
   (
-    .x (#succ #zero ♢) &
-    .y (X.0) &
-    .z (#succ #succ #zero ♢)
+    x >- (#succ #zero @) ;
+    y >- (X.0) ;
+    z >- (#succ #succ #zero @)
   )
 :] plus
 [: X.0 :]
 
 -- #eval unify 3 [] [:
 --   (
---     .x (#succ #zero ♢) &
---     .y (#succ #succ #zero ♢) &
---     .z (X.0)
+--     x >- (#succ #zero @) ;
+--     y >- (#succ #succ #zero @) ;
+--     z >- (X.0)
 --   )
 -- :] plus
 
 #eval unify_collapse 3 {} [:
   (
-    .x #succ #zero ♢ &
-    .y X.0 &
-    .z #succ #succ #zero ♢
+    x >- #succ #zero @ ;
+    y >- X.0 ;
+    z >- #succ #succ #zero @
   )
 :] plus
 [: X.0 :]
 
 -- #eval unify 3 [] [:
 --   (
---     .x (#succ #zero ♢) &
---     .y (X.0) &
---     .z (#succ (#succ #succ (#zero ♢)))
+--     x >- (#succ #zero @) ;
+--     y >- (X.0) ;
+--     z >- (#succ (#succ #succ (#zero @)))
 --   )
 -- :] plus
 
 #eval unify_collapse 3 {} [:
   (
-    .x (X.0) &
-    .y (X.1) &
-    .z (#succ #zero ♢)
+    x >- (X.0) ;
+    y >- (X.1) ;
+    z >- (#succ #zero @)
   )
 :] plus
-[: .x X.0 & .y X.1 :]
+[: x >- X.0 ; y >- X.1 :]
 
 -- #eval unify 3 [] [:
 --   (
---     .x (#succ #zero ♢) &
---     .y (X.0) &
---     .z (X.1)
+--     x >- (#succ #zero @) ;
+--     y >- (X.0) ;
+--     z >- (X.1)
 --   )
 -- :] plus
 
 -- #eval unify 3 [] [:
 --   (
---     .x (X.0) & -- zero & succ zero
---     .y (#succ #zero ♢) &
---     .z (X.1) -- succ zero & zero
+--     x >- (X.0) ; -- zero ; succ zero
+--     y >- (#succ #zero @) ;
+--     z >- (X.1) -- succ zero ; zero
 --   )
 -- :] plus
 
+
+-- term testing
+ #eval [:
+  λ[ 
+    1 * z.0 : X.0 => z.0,
+    1 * z.0 : X.0 => z.0 
+  ]
+ :]
+
+ #eval [:
+  χ[ 
+    left := x.0,
+    right := x.0
+  ]
+ :]
+
+--   χ[ 
+--     left := x.0,
+--     right := x.0
+--   ]
+
+--     left /- x.0,
+
+ #eval [:
+  #[hello x.0]
+ :]
