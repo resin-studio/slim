@@ -128,8 +128,6 @@ syntax:74 "∀" slm "." slm:75 : slm
 syntax "μ 1 ." slm : slm 
 syntax "ν 1 ." slm : slm 
 
--- subterm
-syntax:100 "λ" slm "/" slm ":" slm "=>" slm : slm 
 --term
 syntax:100 "_" : slm
 syntax:100 "()" : slm
@@ -137,9 +135,10 @@ syntax:100 "z." slm:100 : slm
 syntax:100 "x." slm:100 : slm
 syntax:100 "|#"slm:100 slm:100 : slm
 syntax:100 "|."slm:100 slm:100 : slm
+syntax:100 "λ" slm "/" slm ":" slm "=>" slm : slm 
 syntax:100 "(" slm:100 "." slm:100 ")" : slm 
 syntax:100 "(" slm:100 slm:100 ")" : slm 
-syntax:100 "letb 1 = " slm:100 ":" slm "." slm:100 : slm 
+syntax:100 "letb 1 : " slm:100 "=" slm:100 "." slm:100 : slm 
 syntax:100 "fix " slm:100 : slm 
 
 syntax:50 slm:50 "⊆" slm:51 : slm
@@ -182,16 +181,11 @@ macro_rules
   | `([: z.$n :]) => `(Tm.fvar [: $n :])
   | `([: |# $a $b :]) => `(Tm.tag [: $a :] [: $b :])
   | `([: |. $a $b :]) => `(([: $a :], [: $b :]))
-  -- | record : List (String × Tm) -> Tm
-  -- | func : List (Nat × Tm × Ty × Tm) -> Tm
-  -- | proj : Tm -> String -> Tm
-  -- | app : Tm -> Tm -> Tm
-  -- | letb : Ty -> Tm -> Tm -> Tm
-  -- | fix : Tm -> Tm
--- syntax:100 "(" slm:100 "." slm:100 ")" : slm 
--- syntax:100 "(" slm:100 slm:100 ")" : slm 
--- syntax:100 "letb 1 = " slm:100 ":" slm "." slm:100 : slm 
--- syntax:100 "fix " slm:100 : slm 
+  | `([: λ $a / $b : $c => $d :]) => `(([: $a :], [: $b :], [: $c :], [: $d :]))
+  | `([: ($a . $b) :]) => `(Tm.proj [: $a :] [: $b :])
+  | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
+  | `([: letb 1 : $a = $b . $c :]) => `(Tm.letb [: $a :] [: $b :] [: $c :])
+  | `([: fix $a :]) => `(Tm.fix [: $a :])
 
 -- generic
   | `([: ($a) :]) => `([: $a :])
