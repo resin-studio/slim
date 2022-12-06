@@ -134,8 +134,10 @@ syntax:100 "()" : slm
 syntax:100 "z." slm:100 : slm
 syntax:100 "x." slm:100 : slm
 syntax:100 "|#"slm:100 slm:100 : slm
-syntax:100 "|."slm:100 slm:100 : slm
-syntax:100 "λ" slm "/" slm ":" slm "=>" slm : slm 
+syntax:100 slm:100 ":=" slm:100 : slm
+syntax:100 "|."slm : slm
+syntax:100 slm "*" slm ":" slm "=>" slm : slm 
+syntax:100 "λ" slm : slm 
 syntax:100 "(" slm:100 "." slm:100 ")" : slm 
 syntax:100 "(" slm:100 slm:100 ")" : slm 
 syntax:100 "letb 1 : " slm:100 "=" slm:100 "." slm:100 : slm 
@@ -180,8 +182,10 @@ macro_rules
   | `([: x.$n :]) => `(Tm.bvar [: $n :])
   | `([: z.$n :]) => `(Tm.fvar [: $n :])
   | `([: |# $a $b :]) => `(Tm.tag [: $a :] [: $b :])
-  | `([: |. $a $b :]) => `(([: $a :], [: $b :]))
-  | `([: λ $a / $b : $c => $d :]) => `(([: $a :], [: $b :], [: $c :], [: $d :]))
+  | `([: $a := $b :]) => `(([: $a :], [: $b :]))
+  | `([: $a * $b : $c => $d :]) => `(([: $a :], [: $b :], [: $c :], [: $d :]))
+  | `([: |. $a :]) => `(Tm.record [: $a :])
+  | `([: λ $a :]) => `(Tm.function [: $a :])
   | `([: ($a . $b) :]) => `(Tm.proj [: $a :] [: $b :])
   | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
   | `([: letb 1 : $a = $b . $c :]) => `(Tm.letb [: $a :] [: $b :] [: $c :])
