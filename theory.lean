@@ -61,10 +61,10 @@ inductive Tm : Type
   | fvar : Nat -> Tm 
   | tag : String -> Tm -> Tm
   | record : List (String × Tm) -> Tm
-  | func : List (Nat × Tm × Ty × Tm) -> Tm
+  | func : List (Tm × Option Ty × Tm) -> Tm
   | proj : Tm -> String -> Tm
   | app : Tm -> Tm -> Tm
-  | letb : Ty -> Tm -> Tm -> Tm
+  | letb : Option Ty -> Tm -> Tm -> Tm
   | fix : Tm -> Tm
   deriving Repr, Inhabited, BEq
 
@@ -86,20 +86,29 @@ match t with
 | record fds =>
   let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
     l ++ " := " ++ Tm.repr t1 n ⟩
-  "χ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
+  "R " ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
 | func fs =>
-  let _ : ToFormat (Nat × Tm × Ty × Tm) := ⟨fun (n_p, pat, ty_pat, tb) =>
-    (repr n_p) ++ " * " ++ (Tm.repr pat n) ++ " : " ++ (Ty.repr ty_pat n) ++ 
-    " => " ++ (Tm.repr tb (n))
-    ⟩
-  "λ" ++ Format.bracket "[" (Format.joinSep fs (",\n")) "]"
+  let _ : ToFormat (Tm × Option Ty × Tm) := ⟨fun (pat, op_ty_pat, tb) =>
+    match op_ty_pat with
+    | .some ty_pat =>
+      (Tm.repr pat n) ++ " : " ++ (Ty.repr ty_pat n) ++ 
+      " => " ++ (Tm.repr tb (n))
+    | .none =>
+      (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
+  ⟩
+  "F " ++ Format.bracket "[" (Format.joinSep fs (",\n")) "]"
 | .proj t1 l =>
   Tm.repr t1 n ++ "." ++ l
 | .app t1 t2 =>
   Format.bracket "(" (Tm.repr t1 n) ")" ++ Tm.repr t2 n
-| .letb ty1 t1 t2 =>
-  "letb 1 : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " ." ++
-  Format.line  ++ (Tm.repr t2 n) 
+| .letb op_ty1 t1 t2 =>
+  match op_ty1 with
+  | .some ty1 =>
+    "let z.0 : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " ." ++
+    Format.line  ++ (Tm.repr t2 n) 
+  | .none =>
+    "let z.0 " ++ " = " ++  (Tm.repr t1 n) ++ " ." ++
+    Format.line  ++ (Tm.repr t2 n) 
 | .fix t1 =>
   Format.bracket "(" ("fix " ++ (Tm.repr t1 n)) ")"
 
@@ -137,12 +146,14 @@ syntax:100 "z." slm:100 : slm
 syntax:100 "x." slm:100 : slm
 syntax:100 slm:100 "/" slm:100 : slm
 syntax:100 slm:100 ":=" slm:100 : slm
-syntax:100 "χ" slm : slm
-syntax:100 slm "*" slm ":" slm "=>" slm : slm 
-syntax:100 "λ" slm : slm 
+syntax:100 "R" slm : slm
+syntax:99 "for" slm:100 ":" slm "=>" slm:99 : slm 
+syntax:99 "for" slm:100 "=>" slm:99 : slm 
+syntax:100 "F" slm : slm 
 syntax:100 "(" slm:100 "." slm:100 ")" : slm 
 syntax:100 "(" slm:100 slm:100 ")" : slm 
-syntax:100 "letb 1 : " slm:100 "=" slm:100 "." slm:100 : slm 
+syntax:100 "let z.0" ":" slm:100 "=" slm:100 "." slm:100 : slm 
+syntax:100 "let z.0" "=" slm:100 "." slm:100 : slm 
 syntax:100 "fix " slm:100 : slm 
 
 syntax:50 slm:50 "⊆" slm:51 : slm
@@ -185,12 +196,14 @@ macro_rules
   | `([: z.$n :]) => `(Tm.fvar [: $n :])
   | `([: $a / $b :]) => `(Tm.tag [: $a :] [: $b :])
   | `([: $a := $b :]) => `(([: $a :], [: $b :]))
-  | `([: $a * $b : $c => $d :]) => `(([: $a :], [: $b :], [: $c :], [: $d :]))
-  | `([: χ $a :]) => `(Tm.record [: $a :])
-  | `([: λ $a :]) => `(Tm.func [: $a :])
+  | `([: for $b : $c => $d :]) => `(([: $b :], Option.some [: $c :], [: $d :]))
+  | `([: for $b => $d :]) => `(([: $b :], Option.none, [: $d :]))
+  | `([: R $a :]) => `(Tm.record [: $a :])
+  | `([: F $a :]) => `(Tm.func [: $a :])
   | `([: ($a . $b) :]) => `(Tm.proj [: $a :] [: $b :])
   | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
-  | `([: letb 1 : $a = $b . $c :]) => `(Tm.letb [: $a :] [: $b :] [: $c :])
+  | `([: let z.0 : $a = $b . $c :]) => `(Tm.letb (Option.some [: $a :]) [: $b :] [: $c :])
+  | `([: let z.0 = $b . $c :]) => `(Tm.letb Option.none [: $b :] [: $c :])
   | `([: fix $a :]) => `(Tm.fix [: $a :])
 
 -- generic
@@ -860,6 +873,8 @@ partial def unify_collapse (i : Nat) (env_ty) (ty1) (ty2) (ty_result) :=
 --     -- e.g. ty_recur, (not mu_ty)
 
 
+-- TODO: rename patvars to freevars
+-- TODO: fix typing to match free variable type and create fresh variables for subparts
 partial def patvars (env_tm : PHashMap Nat Ty): Tm -> Ty -> Option (PHashMap Nat Ty)
   | .hole, _ => some {}
   | .unit, _ => some {}
@@ -917,6 +932,24 @@ partial def patvars (env_tm : PHashMap Nat Ty): Tm -> Ty -> Option (PHashMap Nat
   --     (i, Ty.compact_union ty uty)
   --   ) (i + 1, .fvar i) u_env_ty 
 
+
+partial def pattern_wellformed (i : Nat) : Tm -> Option Nat
+| .hole => some i 
+| .unit => some i 
+| .bvar id => if i == id then some (i + 1) else none
+| .fvar _ => none
+| .tag _ t1 => pattern_wellformed i t1 
+| .record fds => 
+  fds.foldl (fun 
+    | .some i, (l, t1) => pattern_wellformed i t1 
+    | .none, _ => none
+  ) (some i)
+| .func _ => none
+| .proj _ _ => none
+| .app _ _ => none
+| .letb _ _ _ => none
+| .fix _ => none
+
 partial def Tm.raise_binding (start : Nat) (args : List Tm) : Tm -> Tm
 | .hole => Tm.hole 
 | .bvar id => 
@@ -936,10 +969,13 @@ partial def Tm.raise_binding (start : Nat) (args : List Tm) : Tm -> Tm
     (l, Tm.raise_binding start args t)
   ) fds)
 | .func fs =>
-  Tm.func (List.map (fun (n, tp, ty_p, tb) =>
+  Tm.func (List.map (fun (tp, op_ty_p, tb) =>
+    let n := match pattern_wellformed 0 tp with
+    | .some n => n 
+    | .none => 0 
     let tp := Tm.raise_binding (start + n) args tp 
     let tb := Tm.raise_binding (start + n) args tb
-    (n, tp, ty_p, tb)
+    (tp, op_ty_p, tb)
   ) fs)
 | .proj t l => 
   Tm.proj (Tm.raise_binding start args t) l
@@ -954,6 +990,10 @@ partial def Tm.raise_binding (start : Nat) (args : List Tm) : Tm -> Tm
 | .fix t =>
   Tm.fix (Tm.raise_binding start args t)
 
+
+def Option.toList : Option T -> List T 
+| .some x => [x]
+| .none => []
 
 partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
@@ -1012,42 +1052,50 @@ match t with
     List.foldl f_step (f_base hd) tl 
 
 | .func fs =>
-  let (i, fs_typed) := List.foldl (fun (i, ty_acc) => fun (n, p, ty_p, b) =>
-    (i + 1, (n, p, ty_p, b, (Ty.fvar i)) :: ty_acc)
+  let (i, fs_typed) := List.foldl (fun (i, ty_acc) => fun (p, op_ty_p, b) =>
+    (i + 1, (p, op_ty_p, b, (Ty.fvar i)) :: ty_acc)
   ) (i, []) fs
 
   match fs_typed with
   | [] => .nil
   | hd :: tl =>
-    let (n, p, ty_p, b, ty_b) := hd 
-    let ty' := List.foldl (fun ty_acc => fun (n, p, ty_p, b, ty_b) => 
+    let (p, op_ty_p, b, ty_b) := hd 
+    let (i, ty_p) := match op_ty_p with
+      | .some ty_p => (i, ty_p)
+      | .none => (i + 1, Ty.fvar i)
+    let ty' := List.foldl (fun ty_acc => fun (p, op_ty_p, b, ty_b) => 
+      let (i, ty_p) := match op_ty_p with
+        | .some ty_p => (i, ty_p)
+        | .none => (i + 1, Ty.fvar i)
       Ty.inter (Ty.case ty_p ty_b) ty_acc 
     ) (Ty.case ty_p ty_b) tl 
     let u_env_ty1 := unify i env_ty ty' ty 
 
-    let f_base := (fun (n, p, ty_p, b, ty_b) =>
+    let f_base := (fun (p, op_ty_p, b, ty_b) =>
       List.bind u_env_ty1 (fun (i, env_ty1) =>
+      List.bind (pattern_wellformed 0 p).toList (fun n =>
       let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
       let p := Tm.raise_binding 0 args p 
-      match (patvars env_tm p ty_p) with
-      | .some env_tm1 =>
-        if env_tm1.size == n then
-          let b := Tm.raise_binding 0 args b  
-          List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tm1) b ty_b) (fun (i, env_ty2, ty_b') =>
-            [(i, env_ty1 ;; env_ty2, Ty.case ty_p ty_b')]
-          )
-        else .nil
-      | .none => .nil
-      )
+      let (i, ty_p) := match op_ty_p with
+        | .some ty_p => (i, ty_p)
+        | .none => (i + 1, Ty.fvar i)
+      List.bind (patvars env_tm p ty_p).toList (fun env_tm1 =>
+        let b := Tm.raise_binding 0 args b  
+        List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tm1) b ty_b) (fun (i, env_ty2, ty_b') =>
+          [(i, env_ty1 ;; env_ty2, Ty.case ty_p ty_b')]
+        )
+      )))
     )
 
-    let f_step := fun acc => fun (n, p, ty_p, b, ty_b) =>
+    let f_step := (fun acc => fun (p, op_ty_p, b, ty_b) =>
       List.bind acc (fun (i, env_ty_acc, ty_acc) =>
+      List.bind (pattern_wellformed 0 p).toList (fun n =>
       let (i, args) := (i + n, (List.range n).map (fun j => Tm.fvar (i + j)))
       let p := Tm.raise_binding 0 args p 
-      match (patvars env_tm p ty_p) with
-      | .some env_tm1 =>
-        if env_tm1.size == n then
+      let (i, ty_p) := match op_ty_p with
+        | .some ty_p => (i, ty_p)
+        | .none => (i + 1, Ty.fvar i)
+      List.bind (patvars env_tm p ty_p).toList (fun  env_tm1 =>
           let b := Tm.raise_binding 0 args b  
           List.bind (infer i 
             (env_ty ;; env_ty_acc) (env_tm ;; env_tm1) 
@@ -1055,9 +1103,8 @@ match t with
           ) (fun (i, env_ty2, ty_b') =>
             [(i, env_ty_acc ;; env_ty2, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
           )
-        else .nil
-      | .none => .nil
-      )
+      )))
+    )
 
     List.foldl f_step (f_base hd) tl 
 
@@ -1078,7 +1125,10 @@ match t with
   )))
 
 
-| .letb ty1 t1 t => 
+| .letb op_ty1 t1 t => 
+  let (i, ty1) := match op_ty1 with
+    | .some ty1 => (i, ty1) 
+    | .none => (i + 1, Ty.fvar i)
   List.bind (infer i (env_ty) env_tm t1 ty1) (fun (i, env_ty1, ty1') =>
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, Ty.univ 1 (Ty.bvar 0) ty1' (Ty.bvar 0))]) 
   let t := Tm.raise_binding 0 [x] t 
@@ -1394,19 +1444,27 @@ def plus := [:
 
 -- term testing
 #eval [:
-  λ[ 
-    1 * z.0 : X.0 => z.0,
-    1 * z.0 : X.0 => z.0 
+  F[ 
+    for z.0 : X.0 => z.0,
+    for z.0 : X.0 => z.0 
   ]
 :]
 
 #eval [:
-  χ[ 
+  R[ 
     left := x.0,
     right := x.0
   ]
 :]
 
+
+#eval [:
+  succ/zero/()
+:]
+
+#eval infer_collapse [:
+  succ/zero/()
+:]
 
 #eval [:
   succ/zero/()
