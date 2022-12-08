@@ -796,12 +796,19 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
     \ \wedge\ 
     \\\\
-    \text{patvars}\ t_1\ \tau_1 = \Gamma_x
+    \text{pat\_wf}\ t_1
+    \ \wedge\ 
+    \text{fresh\_env}\ t_1 = \Gamma_x
     \ \wedge\ 
     \Omega \in M
     \ \wedge\ 
     \\\\
-    \Delta;\Omega\ \Gamma;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
+    \Delta;\Omega\ \Gamma;\Gamma_x \vdash t_1 : \tau_1 \rightsquigarrow N_1
+    \ \wedge\ 
+    \Omega_1\ .\ \tau_1' \in N_1
+    \ \wedge\ 
+    \\\\
+    \Delta;\Omega;\Omega_1\ \Gamma;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
     \} = N
   }
   {\Delta\ \Gamma \vdash t : \tau  
