@@ -46,9 +46,9 @@ match ty, n with
   (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " ." ++ Format.line ++ 
   (Ty.repr ty_pl n)
 | .recur ty1, _ =>
-  "μ 1 . " ++ (Ty.repr ty1 n)
+  "μ Z.0 . " ++ (Ty.repr ty1 n)
 | .corec ty1, _ =>
-  "ν 1 . " ++ (Ty.repr ty1 n)
+  "ν Z.0 . " ++ (Ty.repr ty1 n)
 
 instance : Repr Ty where
   reprPrec := Ty.repr
@@ -136,8 +136,8 @@ syntax:70 slm:70 ";" slm:71 : slm
 syntax:70 slm:70 "×" slm:71 : slm
 syntax:74 "∀" slm "::" slm "≤" slm "." slm:75 : slm 
 syntax:74 "∀" slm "." slm:75 : slm 
-syntax "μ 1 ." slm : slm 
-syntax "ν 1 ." slm : slm 
+syntax "μ Z.0 ." slm : slm 
+syntax "ν Z.0 ." slm : slm 
 
 --term
 syntax:100 "_" : slm
@@ -187,8 +187,8 @@ macro_rules
   | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: Z.$a :] [: Z.$a :] [: $b :] )
   | `([: ∃ $a :: $b ≤ $c . $d  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
   | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] [: Z.$a :] [: Z.$a :] [: $b :] )
-  | `([: μ 1 . $a :]) => `(Ty.recur [: $a :])
-  | `([: ν 1 . $a :]) => `(Ty.corec [: $a :])
+  | `([: μ Z.0 . $a :]) => `(Ty.recur [: $a :])
+  | `([: ν Z.0 . $a :]) => `(Ty.corec [: $a :])
 --Tm
   | `([: _ :]) => `(Tm.hole)
   | `([: () :]) => `(Tm.unit)
@@ -382,7 +382,7 @@ macro_rules
 
 
 def τ := [: X.0 :]
-#check [: ⟨τ⟩ ↑ 0 // [μ 1 . ⟨τ⟩]:]
+#check [: ⟨τ⟩ ↑ 0 // [μ Z.0 . ⟨τ⟩]:]
 
 
 
@@ -441,10 +441,10 @@ can't unroll on rhs
 partial def unroll : Ty -> Ty
   | .recur ty => 
     -- Ty.raise_binding 0 [Ty.recur τ] τ 
-    [: ⟨ty⟩ ↑ 0 // [μ 1 . ⟨ty⟩]:]
+    [: ⟨ty⟩ ↑ 0 // [μ Z.0 . ⟨ty⟩]:]
   | .corec ty => 
     -- Ty.raise_binding 0 [Ty.recur τ] τ 
-    [: ⟨ty⟩ ↑ 0 // [ν 1 . ⟨ty⟩]:]
+    [: ⟨ty⟩ ↑ 0 // [ν Z.0 . ⟨ty⟩]:]
   | ty => ty
 
 -- def Ty.lower_binding (depth : Nat) : Ty -> Ty
@@ -477,13 +477,13 @@ partial def unroll : Ty -> Ty
 
 partial def roll_recur (key : Nat) (τ : Ty) : Ty :=
   if Ty.occurs key τ then
-    [: (μ 1 . ⟨τ⟩) % [⟨key⟩ // Z.0] :]
+    [: (μ Z.0 . ⟨τ⟩) % [⟨key⟩ // Z.0] :]
   else
     τ
 
 partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
   if Ty.occurs key τ then
-    [: (ν 1 . ⟨τ⟩) % [⟨key⟩ // Z.0] :]
+    [: (ν Z.0 . ⟨τ⟩) % [⟨key⟩ // Z.0] :]
   else
     τ
 
@@ -736,8 +736,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     if Ty.equal env_ty ty' ty then
       [ (i, {}) ]
     else
-      let ty' := [: ⟨ty'⟩ ↑ 0 // [μ 1 . ⟨ty⟩]:]
-      let ty := [: ⟨ty⟩ ↑ 0 // [μ 1 . ⟨ty⟩]:]
+      let ty' := [: ⟨ty'⟩ ↑ 0 // [μ Z.0 . ⟨ty⟩]:]
+      let ty := [: ⟨ty⟩ ↑ 0 // [μ Z.0 . ⟨ty⟩]:]
       unify i env_ty ty' ty
 
   | .tag l ty', .recur ty =>
@@ -754,8 +754,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     if Ty.equal env_ty ty' ty then
       [ (i, {}) ]
     else
-      let ty' := [: ⟨ty'⟩ ↑ 0 // [μ 1 . ⟨ty'⟩] :]
-      let ty := [: ⟨ty⟩ ↑ 0 // [μ 1 . ⟨ty'⟩] :]
+      let ty' := [: ⟨ty'⟩ ↑ 0 // [μ Z.0 . ⟨ty'⟩] :]
+      let ty := [: ⟨ty⟩ ↑ 0 // [μ Z.0 . ⟨ty'⟩] :]
       unify i env_ty ty' ty
 
 
@@ -875,6 +875,7 @@ partial def unify_collapse (i : Nat) (env_ty) (ty1) (ty2) (ty_result) :=
 
 -- TODO: rename patvars to freevars
 -- TODO: fix typing to match free variable type and create fresh variables for subparts
+-- partial def patvars (i : Nat) (env_tm : PHashMap Nat Ty): Tm -> Ty -> Option (Nat × (PHashMap Nat Ty))
 partial def patvars (env_tm : PHashMap Nat Ty): Tm -> Ty -> Option (PHashMap Nat Ty)
   | .hole, _ => some {}
   | .unit, _ => some {}
@@ -1152,9 +1153,9 @@ partial def infer_collapse (t : Tm) : List Ty :=
 -- #eval infer_collapse [: :] 
 
 
-
 -- testing below
 -- TODO: factor out into separate file
+-- ν
 
 #eval [: Z.0 :]
 #eval [: Z.0 :]
@@ -1182,15 +1183,15 @@ def x := 0
 #check [: @ :]
 #check [: X.24 :]
 #check [: foo^@ | boo^@ :]
-#check [: μ 1 . foo^Z.0 :]
-#check [: μ 1 . foo^Z.0  ; X.0 | X.2 ; X.0:]
+#check [: μ Z.0 . foo^Z.0 :]
+#check [: μ Z.0 . foo^Z.0  ; X.0 | X.2 ; X.0:]
 #check [: Z.3 ; X.0 -> X.1 | X.2 :]
-#check [: μ 1 . foo^Z.0 ; X.0 | X.2 ; X.0 -> X.1 | X.2 :]
-#check [: μ 1 . foo^Z.0 ; X.0 | X.2 ; X.0 :]
+#check [: μ Z.0 . foo^Z.0 ; X.0 | X.2 ; X.0 -> X.1 | X.2 :]
+#check [: μ Z.0 . foo^Z.0 ; X.0 | X.2 ; X.0 :]
 #check [: X.0 :]
 
 #eval [: ∀ 2 :: X.0 ≤ X.0 . Z.0 :]
-#eval [: μ 1 . foo^Z.0 ; X.0 | X.2 ; X.0 :]
+#eval [: μ Z.0 . foo^Z.0 ; X.0 | X.2 ; X.0 :]
 
 
 #eval ({} : PHashMap Nat Ty)
@@ -1213,14 +1214,14 @@ def zero_ := [:
     succ^nat 
 -/
 def nat_ := [: 
-  μ 1 . 
+  μ Z.0 . 
     zero^@ |
     succ^Z.0
 :]
 #eval nat_
 
 def even := [: 
-  μ 1 . 
+  μ Z.0 . 
     zero^@ |
     succ^succ^Z.0
 :]
@@ -1241,7 +1242,7 @@ def even := [:
 :] nat_ 
 
 def nat_list := [: 
-  μ 1 .
+  μ Z.0 .
     l ~ zero^@ ; r ~ nil^@ |
     ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ Z.2 .
       l ~ succ^Z.0 ; r ~ cons^Z.1
@@ -1302,7 +1303,7 @@ def examp1 := unify 3 {}
 -- #eval unify 3 [] 
 --   [: (l ~ succ^zero^@ ; r ~ cons^X.0) :] 
 --   [: 
---       ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ (μ 1 .
+--       ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ (μ Z.0 .
 --         l ~ zero^@ ; r ~ nil^@ |
 --         ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ Z.2 .
 --           l ~ succ^Z.0 ; r ~ cons^Z.1
@@ -1318,7 +1319,7 @@ def examp1 := unify 3 {}
 --   ([: (l ~ succ^zero^@ ; r ~ cons^X.0) :], [: l ~ succ^X.33 ; r ~ cons^X.44 :]),
 --   (
 --     [: l ~ X.33 ; r ~ X.44  :], 
---     [:μ 1 .
+--     [:μ Z.0 .
 --         l ~ zero^@ ; r ~ nil^@ |
 --         ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ Z.2 .
 --           l ~ succ^Z.0 ; r ~ cons^Z.1
@@ -1335,7 +1336,7 @@ def examp1 := unify 3 {}
       succ^X × Y × succ^Z
 -/
 def plus := [: 
-  μ 1 . 
+  μ Z.0 . 
     (∃ 1 . 
       (x ~ zero^@ ; y ~ Z.0 ; z ~ Z.0)) |
 

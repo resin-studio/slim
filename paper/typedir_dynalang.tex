@@ -1052,6 +1052,12 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 % Freeing variables happens in subtyping/unification due to subtyping asymmetry  
   % free variable in subtyping connects to free variable associated with term 
   % if expected type has free variable.
+% unification is solving for the greatest fixedpoint
+  % it terminates at a failure (bottom of lattice)
+  % or it terminates at a variable assignment 
+% Abstract interpretations' narrowing operator is embedded 
+  % failure (bottom) when two type structures are incompatible
+  % recursive types are only compatible with certain forms of compound types
 
 % TODO:
 % write paper 
@@ -1069,12 +1075,6 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
   % Banach fixed-point theorem?
   % contraction maps?
   % metric spaces?
-% find decision procedure for typing recursion? 
-  % add mu/nu binding as solution for circular subtyping? 
-  % abstract interpretation narrowing/widening?
-    % creates fixpoint of abstract values indicating termination
-    % this is not needed since typing is lexical;
-    % recursion is not interpreted as in abstract interpretation / flow analysis 
 % find efficient algorithm to mitigate combinatorial explosion 
   % due to intersection and union
   % SAT and SMT?
@@ -1089,3 +1089,7 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 % implement proof of soundness
 % implement translation from surface syntax to nameless syntax 
 % implement pretty printer 
+
+
+% POPL
+% talk to Megan about RTA form 
