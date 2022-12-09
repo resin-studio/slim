@@ -25,16 +25,16 @@ inductive Ty : Type
 protected def Ty.repr (ty : Ty) (n : Nat) : Format :=
 match ty with
 | .bvar id => 
-  "Z." ++ repr id
+  "β[" ++ repr id ++ "]"
 | .fvar id =>
-  "X." ++ repr id
+  "α[" ++ repr id ++ "]"
 | .unit => "@" 
 | .bot => "⊥" 
 | .top => "⊤" 
 | .tag l ty1 => 
   (l ++ "^" ++ (Ty.repr ty1 n))
 | .field l ty1 => 
-  (l ++ "~" ++ (Ty.repr ty1 n))
+  (l ++ " ~ " ++ (Ty.repr ty1 n))
 | .union ty1 ty2 =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " |" ++ Format.line ++ (Ty.repr ty2 n)) ")"
 | .inter ty1 ty2 =>
@@ -43,16 +43,16 @@ match ty with
   Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
 | .univ n ty_c1 ty_c2 ty_pl =>
   "∀ " ++ (repr n) ++ " :: " ++
-  (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " ." ++ Format.line ++ 
+  (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " =>" ++ Format.line ++ 
   (Ty.repr ty_pl n)
 | .exis n ty_c1 ty_c2 ty_pl =>
   "∃ " ++ (repr n) ++ " :: " ++
-  (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " ." ++ Format.line ++ 
+  (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " =>" ++ Format.line ++ 
   (Ty.repr ty_pl n)
 | .recur ty1 =>
-  "μ Z.0 . " ++ (Ty.repr ty1 n)
+  "μ β[0] => " ++ (Ty.repr ty1 n)
 | .corec ty1 =>
-  "ν Z.0 . " ++ (Ty.repr ty1 n)
+  "ν β[0] => " ++ (Ty.repr ty1 n)
 
 instance : Repr Ty where
   reprPrec := Ty.repr
@@ -82,15 +82,15 @@ match t with
 | .unit =>
   "()"
 | .bvar id =>
-  "z." ++ repr id
+  "y[" ++ repr id ++ "]"
 | .fvar id => 
-  "x." ++ repr id
+  "x[" ++ repr id ++ "]"
 | .tag l t1 =>
-  l ++ "/" ++ (Tm.repr t1 n)
+  l ++ "#" ++ (Tm.repr t1 n)
 | record fds =>
   let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
     l ++ " := " ++ Tm.repr t1 n ⟩
-  "R " ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
+  "χ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
 | func fs =>
   let _ : ToFormat (Tm × Option Ty × Tm) := ⟨fun (pat, op_ty_pat, tb) =>
     match op_ty_pat with
@@ -100,18 +100,18 @@ match t with
     | .none =>
       (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
   ⟩
-  "F " ++ Format.bracket "[" (Format.joinSep fs (",\n")) "]"
+  "λ" ++ Format.bracket "[" (Format.joinSep fs (",\n")) "]"
 | .proj t1 l =>
-  Tm.repr t1 n ++ "." ++ l
+  Tm.repr t1 n ++ "/" ++ l
 | .app t1 t2 =>
   Format.bracket "(" (Tm.repr t1 n) ")" ++ Tm.repr t2 n
 | .letb op_ty1 t1 t2 =>
   match op_ty1 with
   | .some ty1 =>
-    "let z.0 : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " ." ++
+    "let y[0] : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
     Format.line  ++ (Tm.repr t2 n) 
   | .none =>
-    "let z.0 " ++ " = " ++  (Tm.repr t1 n) ++ " ." ++
+    "let y[0] " ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
     Format.line  ++ (Tm.repr t2 n) 
 | .fix t1 =>
   Format.bracket "(" ("fix " ++ (Tm.repr t1 n)) ")"
@@ -122,45 +122,45 @@ instance : Repr Tm where
 
 
 declare_syntax_cat slm
-syntax num : slm 
-syntax ident : slm
+syntax:100 num : slm 
+syntax:100 ident : slm
 syntax "[" slm,+ "]" : slm 
 -- type
-syntax "Z."slm:90 : slm
-syntax "X."slm:90 : slm
-syntax "@" : slm
-syntax "⊥" : slm
-syntax "⊤" : slm
-syntax slm:90 "^" slm:90 : slm
-syntax slm:90 "~" slm:90 : slm
+syntax:90 "β["slm:100"]" : slm
+syntax:90 "α["slm:100"]" : slm
+syntax:90 "@" : slm
+syntax:90 "⊥" : slm
+syntax:90 "⊤" : slm
+syntax:90 slm:100 "^" slm:90 : slm
+syntax:90 slm:100 "~" slm:90 : slm
 syntax:50 slm:50 "->" slm:51 : slm
 syntax:60 slm:60 "|" slm:61 : slm
 syntax:60 slm:60 "+" slm:61 : slm
-syntax:64 "∃" slm "::" slm "≤" slm  "." slm:65 : slm 
-syntax:64 "∃" slm "." slm:65 : slm 
+syntax:64 "∃" slm "::" slm "≤" slm "=>" slm:65 : slm 
+syntax:64 "∃" slm "=>" slm:65 : slm 
 syntax:70 slm:70 ";" slm:71 : slm
 syntax:70 slm:70 "×" slm:71 : slm
-syntax:74 "∀" slm "::" slm "≤" slm "." slm:75 : slm 
-syntax:74 "∀" slm "." slm:75 : slm 
-syntax "μ Z.0 ." slm : slm 
-syntax "ν Z.0 ." slm : slm 
+syntax:74 "∀" slm "::" slm "≤" slm "=>" slm:75 : slm 
+syntax:74 "∀" slm "=>" slm:75 : slm 
+syntax:80 "μ β[0] =>" slm : slm 
+syntax:80 "ν β[0] =>" slm : slm 
 
 --term
-syntax:100 "_" : slm
-syntax:100 "()" : slm
-syntax:100 "z." slm:100 : slm
-syntax:100 "x." slm:100 : slm
-syntax:100 slm:100 "/" slm:100 : slm
-syntax:100 slm:100 ":=" slm:100 : slm
-syntax:100 "R" slm : slm
-syntax:99 "for" slm:100 ":" slm "=>" slm:99 : slm 
-syntax:99 "for" slm:100 "=>" slm:99 : slm 
-syntax:100 "F" slm : slm 
-syntax:100 "(" slm:100 "." slm:100 ")" : slm 
-syntax:100 "(" slm:100 slm:100 ")" : slm 
-syntax:100 "let z.0" ":" slm:100 "=" slm:100 "." slm:100 : slm 
-syntax:100 "let z.0" "=" slm:100 "." slm:100 : slm 
-syntax:100 "fix " slm:100 : slm 
+syntax:30 "_" : slm
+syntax:30 "()" : slm
+syntax:30 "y[" slm:90 "]": slm
+syntax:30 "x[" slm:90 "]" : slm
+syntax:30 slm:100 "#" slm:30 : slm
+syntax:30 slm:100 ":=" slm:30 : slm
+syntax:30 "χ" slm : slm
+syntax:20 "for" slm:30 ":" slm "=>" slm:20 : slm 
+syntax:20 "for" slm:30 "=>" slm:20 : slm 
+syntax:30 "λ" slm : slm 
+syntax:30 slm:30 "/" slm:100 : slm 
+syntax:30 "(" slm:30 slm:30 ")" : slm 
+syntax:30 "let y[0]" ":" slm:30 "=" slm:30 "=>" slm:30 : slm 
+syntax:30 "let y[0]" "=" slm:30 "=>" slm:30 : slm 
+syntax:30 "fix " slm:30 : slm 
 
 syntax:50 slm:50 "⊆" slm:51 : slm
 
@@ -179,8 +179,8 @@ macro_rules
   | `([: [$x:slm] :]) => `([ [: $x :] ])
   | `([: [$x,$xs:slm,*] :]) => `([: $x :] :: [: [$xs,*] :])
 -- Ty 
-  | `([: Z.$n :]) => `(Ty.bvar [: $n :])
-  | `([: X.$n:slm :]) => `(Ty.fvar [: $n :])
+  | `([: β[$n] :]) => `(Ty.bvar [: $n :])
+  | `([: α[$n:slm] :]) => `(Ty.fvar [: $n :])
   | `([: @ :]) => `(Ty.unit)
   | `([: ⊥ :]) => `(Ty.bot)
   | `([: ⊤ :]) => `(Ty.top)
@@ -191,27 +191,27 @@ macro_rules
   | `([: $a + $b :]) => `(Ty.union [: inl ^ $a :] [: inr ^ $b :])
   | `([: $a ; $b :]) => `(Ty.inter [: $a :] [: $b :])
   | `([: $a × $b :]) => `(Ty.inter [: left ~ $a :] [: right ~ $b :])
-  | `([: ∀ $a :: $b ≤ $c . $d :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
-  | `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: Z.$a :] [: Z.$a :] [: $b :] )
-  | `([: ∃ $a :: $b ≤ $c . $d  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
-  | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] [: Z.$a :] [: Z.$a :] [: $b :] )
-  | `([: μ Z.0 . $a :]) => `(Ty.recur [: $a :])
-  | `([: ν Z.0 . $a :]) => `(Ty.corec [: $a :])
+  | `([: ∀ $a :: $b ≤ $c => $d :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
+  | `([: ∀ $a:slm => $b:slm :]) => `(Ty.univ [: $a :] [: β[0] :] [: β[0] :] [: $b :] )
+  | `([: ∃ $a :: $b ≤ $c => $d  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
+  | `([: ∃ $a:slm => $b:slm :]) => `(Ty.exis [: $a :] [: β[0] :] [: β[0] :] [: $b :] )
+  | `([: μ β[0] => $a :]) => `(Ty.recur [: $a :])
+  | `([: ν β[0] => $a :]) => `(Ty.corec [: $a :])
 --Tm
   | `([: _ :]) => `(Tm.hole)
   | `([: () :]) => `(Tm.unit)
-  | `([: x.$n :]) => `(Tm.bvar [: $n :])
-  | `([: z.$n :]) => `(Tm.fvar [: $n :])
-  | `([: $a / $b :]) => `(Tm.tag [: $a :] [: $b :])
+  | `([: y[$n] :]) => `(Tm.bvar [: $n :])
+  | `([: x[$n] :]) => `(Tm.fvar [: $n :])
+  | `([: $a # $b :]) => `(Tm.tag [: $a :] [: $b :])
   | `([: $a := $b :]) => `(([: $a :], [: $b :]))
   | `([: for $b : $c => $d :]) => `(([: $b :], Option.some [: $c :], [: $d :]))
   | `([: for $b => $d :]) => `(([: $b :], Option.none, [: $d :]))
-  | `([: R $a :]) => `(Tm.record [: $a :])
-  | `([: F $a :]) => `(Tm.func [: $a :])
-  | `([: ($a . $b) :]) => `(Tm.proj [: $a :] [: $b :])
+  | `([: χ $a :]) => `(Tm.record [: $a :])
+  | `([: λ $a :]) => `(Tm.func [: $a :])
+  | `([: $a / $b :]) => `(Tm.proj [: $a :] [: $b :])
   | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
-  | `([: let z.0 : $a = $b . $c :]) => `(Tm.letb (Option.some [: $a :]) [: $b :] [: $c :])
-  | `([: let z.0 = $b . $c :]) => `(Tm.letb Option.none [: $b :] [: $c :])
+  | `([: let y[0] : $a = $b => $c :]) => `(Tm.letb (Option.some [: $a :]) [: $b :] [: $c :])
+  | `([: let y[0] = $b => $c :]) => `(Tm.letb Option.none [: $b :] [: $c :])
   | `([: fix $a :]) => `(Tm.fix [: $a :])
 
 -- generic
@@ -287,7 +287,7 @@ well_founded α τ1 | τ2 =
   well_founded α τ1 andalso
   well_founded α τ2
 
-well_founded α ∀ env_ty ⟨τ' ⊆ α⟩ . τ = 
+well_founded α ∀ env_ty ⟨τ' ⊆ α⟩ => τ = 
   α ∈ env_ty orelse
   decreasing τ τ' 
 ```
@@ -354,8 +354,8 @@ macro_rules
   | `([: $a % $b:sub :]) => `(Ty.free_subst [sub: $b :] [: $a :])
 
 
--- #check [: (Z.1) % [1 // X.0] :]
-#check [: (Z.1) % [1//X.0] :]
+-- #check [: (β[1]) % [1 // α[0]] :]
+#check [: (β[1]) % [1//α[0]] :]
 
 #check Fin
 
@@ -395,8 +395,8 @@ macro_rules
   | `([: $a ↑ $b // $c :]) => `(Ty.raise_binding [: $b :] [: $c :] [: $a :])
 
 
-def τ := [: X.0 :]
-#check [: ⟨τ⟩ ↑ 0 // [μ Z.0 . ⟨τ⟩]:]
+def τ := [: α[0] :]
+#check [: ⟨τ⟩ ↑ 0 // [μ β[0] => ⟨τ⟩]:]
 
 
 
@@ -455,10 +455,10 @@ can't unroll on rhs
 partial def unroll : Ty -> Ty
   | .recur ty => 
     -- Ty.raise_binding 0 [Ty.recur τ] τ 
-    [: ⟨ty⟩ ↑ 0 // [μ Z.0 . ⟨ty⟩]:]
+    [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
   | .corec ty => 
     -- Ty.raise_binding 0 [Ty.recur τ] τ 
-    [: ⟨ty⟩ ↑ 0 // [ν Z.0 . ⟨ty⟩]:]
+    [: ⟨ty⟩ ↑ 0 // [ν β[0] => ⟨ty⟩]:]
   | ty => ty
 
 -- def Ty.lower_binding (depth : Nat) : Ty -> Ty
@@ -491,13 +491,13 @@ partial def unroll : Ty -> Ty
 
 partial def roll_recur (key : Nat) (τ : Ty) : Ty :=
   if Ty.occurs key τ then
-    [: (μ Z.0 . ⟨τ⟩) % [⟨key⟩ // Z.0] :]
+    [: (μ β[0] => ⟨τ⟩) % [⟨key⟩ // β[0]] :]
   else
     τ
 
 partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
   if Ty.occurs key τ then
-    [: (ν Z.0 . ⟨τ⟩) % [⟨key⟩ // Z.0] :]
+    [: (ν β[0] => ⟨τ⟩) % [⟨key⟩ // β[0]] :]
   else
     τ
 
@@ -629,7 +629,7 @@ def make_field_constraints (prev_ty : Ty) : Ty -> Ty -> List (Ty × Ty)
       [(ty1, ty2)]
   | .inter (.field l ty1) rem_ty, mu_ty => 
       let ty2 := 
-      [: ∃ 1 :: (⟨prev_ty⟩ ; (⟨l⟩^Z.0) ; ⟨rem_ty⟩) ≤ ⟨unroll mu_ty⟩ . Z.0 :]
+      [: ∃ 1 :: (⟨prev_ty⟩ ; (⟨l⟩ ^ β[0]) ; ⟨rem_ty⟩) ≤ ⟨unroll mu_ty⟩ => β[0] :]
 
       let rem := make_field_constraints (Ty.inter prev_ty (.field l ty1)) rem_ty mu_ty
       if rem.length = 0 then
@@ -753,8 +753,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     if Ty.equal env_ty ty' ty then
       [ (i, {}) ]
     else
-      let ty' := [: ⟨ty'⟩ ↑ 0 // [μ Z.0 . ⟨ty⟩]:]
-      let ty := [: ⟨ty⟩ ↑ 0 // [μ Z.0 . ⟨ty⟩]:]
+      let ty' := [: ⟨ty'⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
+      let ty := [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
       unify i env_ty ty' ty
 
   | .tag l ty', .recur ty =>
@@ -771,8 +771,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     if Ty.equal env_ty ty' ty then
       [ (i, {}) ]
     else
-      let ty' := [: ⟨ty'⟩ ↑ 0 // [μ Z.0 . ⟨ty'⟩] :]
-      let ty := [: ⟨ty⟩ ↑ 0 // [μ Z.0 . ⟨ty'⟩] :]
+      let ty' := [: ⟨ty'⟩ ↑ 0 // [μ β[0] => ⟨ty'⟩] :]
+      let ty := [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty'⟩] :]
       unify i env_ty ty' ty
 
 
@@ -1085,7 +1085,7 @@ match t with
 
 
 partial def infer_collapse (t : Tm) : List Ty :=
-  List.bind (infer 1 {} {} t [: X.0 :]) (fun (_, env_ty, ty) =>
+  List.bind (infer 1 {} {} t [: α[0] :]) (fun (_, env_ty, ty) =>
     [Ty.reduce env_ty ty]
   )
 
@@ -1096,47 +1096,51 @@ partial def infer_collapse (t : Tm) : List Ty :=
 -- TODO: factor out into separate file
 -- ν
 
-#eval [: Z.0 :]
-#eval [: Z.0 :]
+#eval [: β[0] :]
+#eval [: β[0] :]
 
---     ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ Z.3 .
---       l ~ succ^Z.0 ; r ~ cons^Z.1  |
---     (∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ Z.3 .
---       l ~ succ^Z.0 ; r ~ cons^Z.1)
-#eval [: 
-    ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ Z.3 .
-      l ~ succ^Z.0 ; r ~ cons^Z.1  |
-    (∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ Z.3 .
-      l ~ succ^Z.0 ; r ~ cons^Z.1)
-:]
+--     ∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β.3 .
+--       l ~ succ^β[0] ; r ~ cons^β[1]  |
+--     (∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β.3 .
+--       l ~ succ^β[0] ; r ~ cons^β[1])
+-- #eval [: 
+--     ∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[3] => 
+--       l ~ succ^β[0] ; r ~ cons^β[1]  |
+--     (∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β.3 => 
+--       l ~ succ^β[0] ; r ~ cons^β[1])
+-- :]
 
-#check [: Z.0 | X.0 :]
-#check [: Z.0 ; X.0 :]
-#check [: Z.0 × X.0 :]
-#check [: Z.0 + X.0 :]
+#check [: β[0] | α[0] :]
+#check [: β[0] ; α[0] :]
+#check [: β[0] × α[0] :]
+#check [: β[0] + α[0] :]
 def x := 0
-#check [: ∀ 1 :: Z.0 ≤ X.0 . Z.⟨x⟩ :]
-#check [: ∀ 1 :: Z.0 ≤ X.0 . Z.0 :]
-#check [: ∀ 2 :: X.0 ≤ X.0 . Z.0 :]
-#check [: ∀ 2 . Z.0 :]
+#check [: ∀ 1 :: β[0] ≤ α[0] => β[⟨x⟩] :]
+#check [: ∀ 1 :: β[0] ≤ α[0] => β[0] :]
+#check [: ∀ 2 :: α[0] ≤ α[0] => β[0] :]
+#check [: ∀ 2 => β[0] :]
 #check [: @ :]
-#check [: X.24 :]
-#check [: foo^@ | boo^@ :]
-#check [: μ Z.0 . foo^Z.0 :]
-#check [: μ Z.0 . foo^Z.0  ; X.0 | X.2 ; X.0:]
-#check [: Z.3 ; X.0 -> X.1 | X.2 :]
-#check [: μ Z.0 . foo^Z.0 ; X.0 | X.2 ; X.0 -> X.1 | X.2 :]
-#check [: μ Z.0 . foo^Z.0 ; X.0 | X.2 ; X.0 :]
-#check [: X.0 :]
+#check [: α[24] :]
+#check [: foo ^ @ :]
+#check [: foo ^ @ | (boo ^ @) :]
+#check [: μ β[0] => foo ^ @ :]
+#check [: foo ^ boo ^ @ :]
+#check [: μ β[0] => foo ^ boo ^ @ :]
+#check [: μ β[0] => foo ^ β[0] :]
+#check [: μ β[0] => foo ^ β[0]  ; α[0] | α[2] ; α[0]:]
+#check [: β[3] ; α[0] -> α[1] | α[2] :]
+#check [: μ β[0] => foo ^ β[0] ; α[0] | α[2] ; α[0] -> α[1] | α[2] :]
+#check [: μ β[0] => foo ^ β[0] ; α[0] | α[2] ; α[0] :]
+#check [: α[0] :]
 
-#eval [: ∀ 2 :: X.0 ≤ X.0 . Z.0 :]
-#eval [: μ Z.0 . foo^Z.0 ; X.0 | X.2 ; X.0 :]
+#eval [: ∀ 2 :: α[0] ≤ α[0] => β[0] :]
+#eval [: μ β[0] => foo ^ β[0] ; α[0] | α[2] ; α[0] :]
 
 
 #eval ({} : PHashMap Nat Ty)
 
 def zero_ := [: 
-    zero^@
+    zero ^ @
 :]
 
 #eval (unify 3 {} [:
@@ -1153,16 +1157,16 @@ def zero_ := [:
     succ^nat 
 -/
 def nat_ := [: 
-  μ Z.0 . 
+  μ β[0] => 
     zero^@ |
-    succ^Z.0
+    succ^β[0]
 :]
 #eval nat_
 
 def even := [: 
-  μ Z.0 . 
+  μ β[0] => 
     zero^@ |
-    succ^succ^Z.0
+    succ^succ^β[0]
 :]
 
 #eval unify 3 {} even nat_ 
@@ -1177,14 +1181,14 @@ def even := [:
 :] nat_ 
 
 #eval unify 3 {} [:
-    (succ^(X.0))
+    (succ^(α[0]))
 :] nat_ 
 
 def nat_list := [: 
-  μ Z.0 .
+  μ β[0] => 
     l ~ zero^@ ; r ~ nil^@ |
-    ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ Z.2 .
-      l ~ succ^Z.0 ; r ~ cons^Z.1
+    ∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[2] => 
+      l ~ succ^β[0] ; r ~ cons^β[1]
 :]
 
 #eval unify 3 {} 
@@ -1197,71 +1201,66 @@ def nat_list := [:
 
 -- this is record type is not wellformed 
 #eval unify 3 {} 
-  [: (l ~ X.0 ; r ~ X.1) :] 
+  [: (l ~ α[0] ; r ~ α[1]) :] 
   nat_list
 
 #eval unify 3 {} 
-  [: (l ~ zero^@ ; r ~ X.0) :] 
+  [: (l ~ zero^@ ; r ~ α[0]) :] 
   nat_list
 
--- #eval unify 3 [] 
---   [: (l ~ succ^zero^@ ; .r X.0 ; .g /scooby @) :] 
---   [: (l ~ succ^zero^@ ; .r /ooga @ ; .g /scooby @) | (l ~ zero^@ ; r ~ /booga @) :] 
-
-
--- expected X.0 → /nil
+-- expected α[0] → /nil
 #eval unify 3 {} 
-  [: (l ~ succ^zero^@ ; r ~ cons^X.0) :] 
+  [: (l ~ succ^zero^@ ; r ~ cons^α[0]) :] 
   nat_list
 
 #eval unify 3 {} 
-  [: (l ~ succ^succ^zero^@ ; r ~ cons^X.0) :] 
+  [: (l ~ succ^succ^zero^@ ; r ~ cons^α[0]) :] 
   nat_list
 
 
 def examp1 := unify 3 {} 
-  [: (l ~ succ^succ^zero^@ ; r ~ cons^X.0) :] 
+  [: (l ~ succ^succ^zero^@ ; r ~ cons^α[0]) :] 
   nat_list
 
-#eval Ty.collapse 10 {} examp1 [: X.0 :] 
+#eval Ty.collapse 10 {} examp1 [: α[0] :] 
 
 #eval unify_collapse 3 {} 
-  [: (l ~ succ^succ^zero^@ ; r ~ cons^X.0) :] 
+  [: (l ~ succ^succ^zero^@ ; r ~ cons^α[0]) :] 
   nat_list
-  [: X.0:]
+  [: α[0]:]
 
 -- #eval unify 3 {} 
---   [: (.l succ^zero^@ ; .r X.0) :] 
+--   [: (.l succ^zero^@ ; .r α[0]) :] 
 --   nat_list
 
 #eval unify 3 {} 
-  [: (l ~ succ^zero^@ ; r ~ cons^cons^X.0) :] 
+  [: (l ~ succ^zero^@ ; r ~ cons^cons^α[0]) :] 
   nat_list
 
 
 -- #eval unify 3 [] 
---   [: (l ~ succ^zero^@ ; r ~ cons^X.0) :] 
+--   [: (l ~ succ^zero^@ ; r ~ cons^α[0]) :] 
 --   [: 
---       ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ (μ Z.0 .
+--       ∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ (μ β[0] .
 --         l ~ zero^@ ; r ~ nil^@ |
---         ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ Z.2 .
---           l ~ succ^Z.0 ; r ~ cons^Z.1
+--         ∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[2] .
+--           l ~ succ^β[0] ; r ~ cons^β[1]
 --       ) .
---         l ~ succ^Z.0 ; r ~ cons^Z.1
+--         l ~ succ^β[0] ; r ~ cons^β[1]
 --   :]
 
 -- #eval unify_all 3 [
---   ([: (l ~ succ^zero^@ ; r ~ cons^X.0) :], [: l ~ succ^X.33 ; r ~ cons^X.44 :])
+--   ([: (l ~ succ^zero^@ ; r ~ cons^α[0]) :], [: l ~ succ^α.33 ; r ~ cons^α.44 :])
 -- ]
 
 -- #eval unify_all 3 [
---   ([: (l ~ succ^zero^@ ; r ~ cons^X.0) :], [: l ~ succ^X.33 ; r ~ cons^X.44 :]),
+--   ([: (l ~ succ^zero^@ ; r ~ cons^α[0]) :], [: l ~ succ^α.33 ; r ~ cons^α.44 :]),
 --   (
---     [: l ~ X.33 ; r ~ X.44  :], 
---     [:μ Z.0 .
+--     [: l ~ α.33 ; r ~ α.44  :], 
+--     [:μ β[0] .
 --         l ~ zero^@ ; r ~ nil^@ |
---         ∃ 2 :: l ~ Z.0 ; r ~ Z.1 ≤ Z.2 .
---           l ~ succ^Z.0 ; r ~ cons^Z.1
+--         ∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[2] .
+--           l ~ succ^β[0] ; r ~ cons^β[1]
 --     :]
 --   )
 -- ]
@@ -1275,12 +1274,12 @@ def examp1 := unify 3 {}
       succ^X × Y × succ^Z
 -/
 def plus := [: 
-  μ Z.0 . 
-    (∃ 1 . 
-      (x ~ zero^@ ; y ~ Z.0 ; z ~ Z.0)) |
+  μ β[0] => 
+    (∃ 1 => 
+      (x ~ zero^@ ; y ~ β[0] ; z ~ β[0])) |
 
-    (∃ 3 :: (x ~ Z.0 ; y ~ Z.1 ; z ~ Z.2) ≤ Z.3 .   
-      (x ~ succ^Z.0 ; y ~ Z.1 ; z ~ succ^Z.2))
+    (∃ 3 :: (x ~ β[0] ; y ~ β[1] ; z ~ β[2]) ≤ β[3] => 
+      (x ~ succ^β[0] ; y ~ β[1] ; z ~ succ^β[2]))
 :]
 
 -- /print plus
@@ -1291,7 +1290,7 @@ def plus := [:
 
 #eval unify 3 {} [:
     x ~ zero^@ ;
-    y ~ X.0 ;
+    y ~ α[0] ;
     z ~ zero^@
 :] plus
 
@@ -1300,7 +1299,7 @@ def plus := [:
   (
     x ~ (succ^zero^@) ;
     y ~ (succ^zero^@) ;
-    z ~ (X.0)
+    z ~ (α[0])
   )
 :] plus
 
@@ -1308,113 +1307,94 @@ def plus := [:
   (
     x ~ (succ^zero^@) ;
     y ~ (succ^zero^@) ;
-    z ~ (X.0)
+    z ~ (α[0])
   )
 :] plus 
-[: X.0 :]
+[: α[0] :]
 
 #eval unify_collapse 3 {} [:
   (
     x ~ (succ^succ^zero^@) ;
     y ~ (succ^zero^@) ;
-    z ~ (X.0)
+    z ~ (α[0])
   )
 :] plus
-[: X.0 :]
+[: α[0] :]
 
 #eval unify_collapse 3 {} [:
   (
     x ~ (succ^zero^@) ;
-    y ~ (X.0) ;
+    y ~ (α[0]) ;
     z ~ (succ^succ^zero^@)
   )
 :] plus
-[: X.0 :]
+[: α[0] :]
 
 -- #eval unify 3 [] [:
 --   (
 --     x ~ (succ^zero^@) ;
 --     y ~ (succ^succ^zero^@) ;
---     z ~ (X.0)
+--     z ~ (α[0])
 --   )
 -- :] plus
 
 #eval unify_collapse 3 {} [:
 (
-  x ~ X.0 ;
+  x ~ α[0] ;
   y ~ succ^zero^@ ;
   z ~ succ^succ^zero^@
 )
 :] plus
-[: X.0 :]
+[: α[0] :]
 
 #eval unify_collapse 3 {} [:
 (
   x ~ succ^zero^@ ;
-  y ~ X.0 ;
+  y ~ α[0] ;
   z ~ succ^succ^zero^@
 )
 :] plus
-[: X.0 :]
+[: α[0] :]
 
--- #eval unify 3 [] [:
---   (
---     x ~ (succ^zero^@) ;
---     y ~ (X.0) ;
---     z ~ (succ^(succ^succ^(zero^@)))
---   )
--- :] plus
 
 #eval unify_collapse 3 {} [:
 (
-  x ~ (X.0) ;
-  y ~ (X.1) ;
+  x ~ (α[0]) ;
+  y ~ (α[1]) ;
   z ~ (succ^zero^@)
 )
 :] plus
-[: x ~ X.0 ; y ~ X.1 :]
-
--- #eval unify 3 [] [:
---   (
---     x ~ (succ^zero^@) ;
---     y ~ (X.0) ;
---     z ~ (X.1)
---   )
--- :] plus
-
--- #eval unify 3 [] [:
---   (
---     x ~ (X.0) ; -- zero ; succ zero
---     y ~ (succ^zero^@) ;
---     z ~ (X.1) -- succ zero ; zero
---   )
--- :] plus
+[: x ~ α[0] ; y ~ α[1] :]
 
 
 -- term testing
 #eval [:
-  F[ 
-    for z.0 : X.0 => z.0,
-    for z.0 : X.0 => z.0 
+  λ [ 
+    for y[0] : α[0] => y[0],
+    for y[0] : α[0] => y[0] 
   ]
 :]
 
 #eval [:
-  R[ 
-    left := x.0,
-    right := x.0
+  χ [ 
+    left := x[0],
+    right := x[0]
   ]
 :]
 
 
 #eval [:
-  succ/zero/()
+  succ#zero#()
 :]
 
 #eval infer_collapse [:
-  succ/zero/()
+  succ#zero#()
 :]
 
 #eval [:
-  succ/zero/()
+  succ#zero#()
+:]
+
+#eval [:
+  x[0]/hello
 :]
