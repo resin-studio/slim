@@ -953,8 +953,8 @@ def Option.toList : Option T -> List T
 | .some x => [x]
 | .none => []
 
--- TODO: update to for (union/intersection) 
--- i.e. (widening/narrowing) or (expansion/contraction) 
+
+-- TODO: narrowing by adding intersection to _ (τ & ?)
 partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
@@ -1058,8 +1058,9 @@ match t with
   let (i, ty2) := (i + 1, Ty.fvar i)
   List.bind (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1') =>
   List.bind (infer i (env_ty ;; env_ty1) env_tm t2 ty2) (fun (i, env_ty2, ty2') =>
+  let (i, ty_x) := (i + 1, Ty.fvar i)
   let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) ty1' (Ty.case ty2' ty')) (fun (i, env_ty3) =>
+  List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) ty1' (Ty.case (Ty.union ty2' ty_x) ty')) (fun (i, env_ty3) =>
     [(i, env_ty1 ;; env_ty2 ;; env_ty3, ty')]
   )))
 

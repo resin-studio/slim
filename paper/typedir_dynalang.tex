@@ -828,7 +828,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[App]
   { 
-    \text{fresh}\ \alpha \\ \text{fresh}\ \beta
+    \text{fresh}\ \alpha\ \alpha'\ \beta
     \\
     \{\Omega_1;\Omega_2;\Omega_3.\beta\ |\ 
     \\\\
@@ -842,7 +842,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \ \wedge\ 
     \Omega_2.\tau_2' \in N_2
     \\\\
-    \Delta;\Omega_1;\Omega_2 \vdash \tau_1' \leq \tau_2' \rightarrow \beta
+    \Delta;\Omega_1;\Omega_2 \vdash \tau_1' \leq (\tau_2'\ |\ \alpha' \rightarrow \beta)
       \rightsquigarrow M_3
     \ \wedge\ 
     \Omega_3 \in M_3
@@ -1049,6 +1049,9 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 % Abstract interpretations' narrowing operator is embedded 
   % failure (bottom) when two type structures are incompatible
   % recursive types are only compatible with certain forms of compound types
+
+% widening in type inference: union to arg type of application (τ | ?)
+% TODO: narrowing in type inference:
 
 % TODO:
 % write paper 
