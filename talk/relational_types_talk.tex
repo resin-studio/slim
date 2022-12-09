@@ -154,7 +154,7 @@
   \frametitle{Expressivity: widening}
 
   \begin{lstlisting}
-  ($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
+  ($\lambda$ pair : $\forall$ $\alpha$ $\Rightarrow$ $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
   ($\lambda$ n : int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
     let p = pair n s
     $\hdots$
@@ -168,7 +168,7 @@
   \frametitle{Expressivity: widening}
 
   \begin{lstlisting}
-  ($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
+  ($\lambda$ pair : $\forall$ $\alpha$ $\Rightarrow$ $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
   ($\lambda$ n : int $\Rightarrow$ ($\lambda$ s : str $\Rightarrow$ 
     let p = pair n s
     $\hdots$
@@ -217,7 +217,7 @@
   \frametitle{Expressivity: relational record}
 
   \begin{lstlisting}[]
-  let measurement : $\mu$ (nat $\times$ list) .
+  let measurement : $\mu$ (nat $\times$ list) $\Rightarrow$ 
     zero.$\diamondsuit$ $\times$ nil.$\diamondsuit$ | 
     succ.nat $\times$ cons.(? $\times$ list)
   \end{lstlisting} 
@@ -228,10 +228,11 @@
   \frametitle{Expressivity: relational record expanded}
 
   \begin{lstlisting}[]
-  let measurement : $\exists$ $\alpha$ . $\mu$ nat_and_list .
+  let measurement : 
+  $\exists$ $\alpha$ $\Rightarrow$ $\mu$ nat_and_list $\Rightarrow$ 
     zero.$\diamondsuit$ $\times$ nil.$\diamondsuit$ | 
     $\exists$ nat list :: 
-      (nat $\times$ list) $\leq$ nat_and_list . 
+      (nat $\times$ list) $\leq$ nat_and_list $\Rightarrow$ 
       succ.nat.$\times$ cons.($\alpha$ $\times$ list)
   \end{lstlisting}
 
@@ -255,7 +256,7 @@
 
   \begin{lstlisting}[]
   let replicate : 
-  $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
+  $\forall$ $\alpha$ $\Rightarrow$ $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) $\Rightarrow$ 
     zero.$\diamondsuit$ $\rightarrow$ nil.$\diamondsuit$ ; 
     succ.nat $\rightarrow$ cons.($\alpha$ $\times$ list)
   \end{lstlisting}
@@ -269,10 +270,10 @@
 
   \begin{lstlisting}[]
   let replicate : 
-  $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
+  $\forall$ $\alpha$ $\Rightarrow$ $\alpha$ $\rightarrow$ $\nu$ nat_to_list $\Rightarrow$ 
     zero.$\diamondsuit$ $\rightarrow$ nil.$\diamondsuit$ ; 
     $\forall$ nat list :: 
-      nat_to_list $\leq$ (nat $\rightarrow$ list) .
+      nat_to_list $\leq$ (nat $\rightarrow$ list) $\Rightarrow$ 
       succ.nat $\rightarrow$ cons.($\alpha$ $\times$ list)
   \end{lstlisting}
 
@@ -301,7 +302,7 @@
   ])
 
   let replicate : 
-  $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
+  $\forall$ $\alpha$ $\Rightarrow$ $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) $\Rightarrow$ 
     zero.$\diamondsuit$ $\rightarrow$ nil.$\diamondsuit$ ; 
     succ.nat $\rightarrow$ cons.($\alpha$ $\times$ list)
   \end{lstlisting}
@@ -312,7 +313,7 @@
   \frametitle{Expressivity: unification with nat}
 
   \begin{lstlisting}[]
-  nat $\equiv$ $\mu$ nat .
+  nat $\equiv$ $\mu$ nat $\Rightarrow$ 
     zero.$\diamondsuit$ | 
     succ.nat
 
@@ -324,7 +325,7 @@
   < $\cdot$
 
   > succ.$\alpha$ $\leq$ nat 
-  < $\cdot$, $\alpha$ $\mapsto$ $\mu$ $\beta$ .  zero.$\diamondsuit$ | succ.$\beta$
+  < $\cdot$, $\alpha$ $\mapsto$ $\mu$ $\beta$ $\Rightarrow$ zero.$\diamondsuit$ | succ.$\beta$
   \end{lstlisting} 
 
 \end{frame}
@@ -333,11 +334,11 @@
   \frametitle{Expressivity: unification with nat and even}
 
   \begin{lstlisting}[]
-  nat $\equiv$ $\mu$ nat .
+  nat $\equiv$ $\mu$ nat $\Rightarrow$ 
     zero.$\diamondsuit$ | 
     succ.nat
 
-  even $\equiv$ $\mu$ even .
+  even $\equiv$ $\mu$ even $\Rightarrow$ 
     zero.$\diamondsuit$ | 
     succ.succ.even 
 
@@ -356,12 +357,12 @@
   \frametitle{Expressivity: unification with nat list relation}
 
   \begin{lstlisting}[]
-  nat_list $\equiv$ $\mu$ (nat $\times$ list) .
+  nat_list $\equiv$ $\mu$ (nat $\times$ list) $\Rightarrow$ 
     zero.$\diamondsuit$ $\times$ nil.$\diamondsuit$ | 
     succ.nat $\times$ cons.(? $\times$ list)
 
 
-  > succ.zero.$\diamondsuit$ $\times$ cons.(? $\times$ cons.(? $\times$ $\alpha$) 
+  > succ.zero.$\diamondsuit$ $\times$ cons.(? $\times$ cons.(? $\times$ $\alpha$))
     $\leq$ nat_list
   < $\emptyset$
 
@@ -376,11 +377,11 @@
   \frametitle{Expressivity: plus relation}
 
   \begin{lstlisting}[]
-  $\mu$ plus .
-    $\exists$ $\alpha$ . 
+  $\mu$ plus $\Rightarrow$ 
+    $\exists$ $\alpha$ $\Rightarrow$ 
       (x $\mapsto$ zero.$\diamondsuit$ ; y $\mapsto$ $\alpha$ ; z $\mapsto$ $\alpha$) |
     $\exists$ $\alpha$ $\beta$ $\gamma$ :: 
-      (x $\mapsto$ $\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ $\gamma$) $\leq$ plus . 
+      (x $\mapsto$ $\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ $\gamma$) $\leq$ plus $\Rightarrow$ 
       x $\mapsto$ succ.$\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ succ.$\gamma$
   \end{lstlisting}
 \end{frame}
@@ -390,10 +391,10 @@
 
   \begin{lstlisting}[]
   plus $\equiv$ $\mu$ plus .
-    $\exists$ $\alpha$ . 
+    $\exists$ $\alpha$ $\Rightarrow$ 
       (x $\mapsto$ zero.$\diamondsuit$ ; y $\mapsto$ $\alpha$ ; z $\mapsto$ $\alpha$) |
     $\exists$ $\alpha$ $\beta$ $\gamma$ :: 
-      (x $\mapsto$ $\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ $\gamma$) $\leq$ plus . 
+      (x $\mapsto$ $\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ $\gamma$) $\leq$ plus $\Rightarrow$ 
       x $\mapsto$ succ.$\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ succ.$\gamma$
 
   > (x $\mapsto$ succ.zero.$\diamondsuit$ ; y $\mapsto$ $\alpha$ ; 
@@ -416,10 +417,10 @@
 
 
   $\mu$ plus .
-    $\exists$ $\alpha$ . 
+    $\exists$ $\alpha$ $\Rightarrow$ 
       (x $\mapsto$ zero.$\diamondsuit$ ; y $\mapsto$ $\alpha$ ; z $\mapsto$ $\alpha$) |
     $\exists$ $\alpha$ $\beta$ $\gamma$ :: 
-      (x $\mapsto$ $\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ $\gamma$) $\leq$ plus . 
+      (x $\mapsto$ $\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ $\gamma$) $\leq$ plus $\Rightarrow$ 
       x $\mapsto$ succ.$\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ succ.$\gamma$
 
   \end{lstlisting}
