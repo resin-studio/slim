@@ -64,7 +64,7 @@
       Str of string
 
   fun foo(Int x) = x + 1
-    | foo(Str x) = x ^ "abc"
+    | foo(Str x) = x . "abc"
   \end{lstlisting}
 
 \end{frame}
@@ -128,7 +128,7 @@
   $\lambda$ upper : str $\rightarrow$ str $\Rightarrow$
   $\hdots$
   $\lambda$ x $\Rightarrow$ $\lambda$ y $\Rightarrow$
-    #cons(upper x,#cons(upper y,#nil()))
+    cons*(upper x, cons*(upper y,nil*()))
   \end{lstlisting}
 
 \end{frame}
@@ -141,11 +141,11 @@
   $\lambda$ upper : str $\rightarrow$ str $\Rightarrow$
   $\hdots$
   $\lambda$ x $\Rightarrow$ $\lambda$ y $\Rightarrow$
-    #cons(upper x,#cons(upper y,#nil()))
+    cons*(upper x,cons*(upper y,nil*()))
 
 
   str $\rightarrow$ str $\rightarrow$
-    #cons(str $\times$ #cons(str $\times$ #nil$\diamondsuit$))
+    cons.(str $\times$ cons.(str $\times$ nil.$\diamondsuit$))
   \end{lstlisting}
 
 \end{frame}
@@ -205,11 +205,11 @@
   ))
   
   x : $\alpha$
-  $\alpha$ $\mapsto$ (int & ?)
-  $\alpha$ $\mapsto$ (int & str & ?)
+  $\alpha$ $\mapsto$ (int ; ?)
+  $\alpha$ $\mapsto$ (int ; str ; ?)
   x : $\bot$
   $\lambda$ x $\Rightarrow$ (i2n x, s2n x) : 
-    (int & str) $\rightarrow$ (nat $\times$ nat) 
+    (int ; str) $\rightarrow$ (nat $\times$ nat) 
   \end{lstlisting}
 \end{frame}
 
@@ -218,8 +218,8 @@
 
   \begin{lstlisting}[]
   let measurement : $\mu$ (nat $\times$ list) .
-    #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
-    #succ nat $\times$ #cons (? $\times$ list)
+    zero.$\diamondsuit$ $\times$ nil.$\diamondsuit$ | 
+    succ.nat $\times$ cons.(? $\times$ list)
   \end{lstlisting} 
 
 \end{frame}
@@ -228,12 +228,11 @@
   \frametitle{Expressivity: relational record expanded}
 
   \begin{lstlisting}[]
-  let measurement : 
-  $\exists$ $\alpha$ . $\mu$ nat_and_list .
-    #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
+  let measurement : $\exists$ $\alpha$ . $\mu$ nat_and_list .
+    zero.$\diamondsuit$ $\times$ nil.$\diamondsuit$ | 
     $\exists$ nat list :: 
-      (nat $\times$ list) $\leq$ nat_and_list .
-      #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+      (nat $\times$ list) $\leq$ nat_and_list . 
+      succ.nat.$\times$ cons.($\alpha$ $\times$ list)
   \end{lstlisting}
 
 \end{frame}
@@ -257,8 +256,8 @@
   \begin{lstlisting}[]
   let replicate : 
   $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
-    #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
-    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+    zero.$\diamondsuit$ $\rightarrow$ nil.$\diamondsuit$ ; 
+    succ.nat $\rightarrow$ cons.($\alpha$ $\times$ list)
   \end{lstlisting}
 
 
@@ -271,10 +270,10 @@
   \begin{lstlisting}[]
   let replicate : 
   $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
-    #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
+    zero.$\diamondsuit$ $\rightarrow$ nil.$\diamondsuit$ ; 
     $\forall$ nat list :: 
       nat_to_list $\leq$ (nat $\rightarrow$ list) .
-      #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+      succ.nat $\rightarrow$ cons.($\alpha$ $\times$ list)
   \end{lstlisting}
 
 \end{frame}
@@ -296,16 +295,15 @@
   \frametitle{Expressivity: recursive pattern matching}
   \begin{lstlisting}[]
   let replicate = 
-  $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
-    $\lambda$ #zero () $\Rightarrow$ #nil () ;
-    $\lambda$ #succ n $\Rightarrow$ #cons (x, self n)
-  )
-
+  $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
+      zero*() $\Rightarrow$ nil*(),
+      succ*n $\Rightarrow$ cons*(x, self n)
+  ])
 
   let replicate : 
   $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
-    #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
-    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+    zero.$\diamondsuit$ $\rightarrow$ nil.$\diamondsuit$ ; 
+    succ.nat $\rightarrow$ cons.($\alpha$ $\times$ list)
   \end{lstlisting}
 \end{frame}
 
@@ -315,18 +313,18 @@
 
   \begin{lstlisting}[]
   nat $\equiv$ $\mu$ nat .
-    #zero $\diamondsuit$ | 
-    #succ nat
+    zero.$\diamondsuit$ | 
+    succ.nat
 
 
-  > #zero $\diamondsuit$ $\leq$ nat 
+  > zero.$\diamondsuit$ $\leq$ nat 
   < $\cdot$
 
-  > #succ #succ #zero $\diamondsuit$ $\leq$ nat 
+  > succ.succ.zero.$\diamondsuit$ $\leq$ nat 
   < $\cdot$
 
-  > #succ $\alpha$ $\leq$ nat 
-  < $\cdot$, $\alpha$ $\mapsto$ $\mu$ $\beta$ .  #zero $\diamondsuit$ | #succ $\beta$
+  > succ.$\alpha$ $\leq$ nat 
+  < $\cdot$, $\alpha$ $\mapsto$ $\mu$ $\beta$ .  zero.$\diamondsuit$ | succ.$\beta$
   \end{lstlisting} 
 
 \end{frame}
@@ -336,12 +334,12 @@
 
   \begin{lstlisting}[]
   nat $\equiv$ $\mu$ nat .
-    #zero $\diamondsuit$ | 
-    #succ nat
+    zero.$\diamondsuit$ | 
+    succ.nat
 
   even $\equiv$ $\mu$ even .
-    #zero $\diamondsuit$ | 
-    #succ #succ even 
+    zero.$\diamondsuit$ | 
+    succ.succ.even 
 
 
   > even $\leq$ nat 
@@ -359,17 +357,17 @@
 
   \begin{lstlisting}[]
   nat_list $\equiv$ $\mu$ (nat $\times$ list) .
-    #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
-    #succ nat $\times$ #cons (? $\times$ list)
+    zero.$\diamondsuit$ $\times$ nil.$\diamondsuit$ | 
+    succ.nat $\times$ cons.(? $\times$ list)
 
 
-  > #succ #zero $\diamondsuit$ $\times$ #cons(? $\times$ #cons(? $\times$ $\alpha$) 
+  > succ.zero.$\diamondsuit$ $\times$ cons.(? $\times$ cons.(? $\times$ $\alpha$) 
     $\leq$ nat_list
   < $\emptyset$
 
-  > #succ #succ #zero $\diamondsuit$ $\times$ #cons(? $\times$ $\alpha$) 
+  > succ.succ.zero.$\diamondsuit$ $\times$ cons.(? $\times$ $\alpha$) 
     $\leq$ nat_list
-  < $\cdot$, $\alpha$ $\mapsto$ #cons(? $\times$ #nil $\diamondsuit$)
+  < $\cdot$, $\alpha$ $\mapsto$ cons.(? $\times$ nil.$\diamondsuit$)
   \end{lstlisting} 
 \end{frame}
 
@@ -380,9 +378,10 @@
   \begin{lstlisting}[]
   $\mu$ plus .
     $\exists$ $\alpha$ . 
-      (.x #zero $\diamondsuit$ & .y $\alpha$ & .z $\alpha$) |
-    $\exists$ $\alpha$ $\beta$ $\gamma$ :: (.x $\alpha$ & .y $\beta$ & .z $\gamma$) $\leq$ plus . 
-      .x #succ $\alpha$ & .y $\beta$ & .z #succ $\gamma$
+      (x $\mapsto$ zero.$\diamondsuit$ ; y $\mapsto$ $\alpha$ ; z $\mapsto$ $\alpha$) |
+    $\exists$ $\alpha$ $\beta$ $\gamma$ :: 
+      (x $\mapsto$ $\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ $\gamma$) $\leq$ plus . 
+      x $\mapsto$ succ.$\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ succ.$\gamma$
   \end{lstlisting}
 \end{frame}
 
@@ -392,18 +391,18 @@
   \begin{lstlisting}[]
   plus $\equiv$ $\mu$ plus .
     $\exists$ $\alpha$ . 
-      (.x #zero $\diamondsuit$ & .y $\alpha$ & .z $\alpha$) |
-    $\exists$ $\alpha$ $\beta$ $\gamma$ :: (.x $\alpha$ & .y $\beta$ & .z $\gamma$) $\leq$ plus . 
-      .x #succ $\alpha$ & .y $\beta$ & .z #succ $\gamma$
+      (x $\mapsto$ zero.$\diamondsuit$ ; y $\mapsto$ $\alpha$ ; z $\mapsto$ $\alpha$) |
+    $\exists$ $\alpha$ $\beta$ $\gamma$ :: 
+      (x $\mapsto$ $\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ $\gamma$) $\leq$ plus . 
+      x $\mapsto$ succ.$\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ succ.$\gamma$
 
+  > (x $\mapsto$ succ.zero.$\diamondsuit$ ; y $\mapsto$ $\alpha$ ; 
+     z $\mapsto$ succ.succ.zero.$\diamondsuit$) $\leq$ plus
+  < $\cdot$, $\alpha$ $\mapsto$ succ.zero.$\diamondsuit$)
 
-  > (.x #succ #zero $\diamondsuit$ & .y $\alpha$ &
-     .z #succ #succ #zero $\diamondsuit$) $\leq$ plus
-  < $\cdot$, $\alpha$ $\mapsto$ #succ #zero $\diamondsuit$)
-
-  > (.x $\alpha$ & .y $\beta$ & .z #succ #zero $\diamondsuit$) $\leq$ plus
-  < $\cdot$, $\alpha$ $\mapsto$ #zero $\diamondsuit$, $\beta$ $\mapsto$ #succ #zero $\diamondsuit$
-  < $\cdot$, $\alpha$ $\mapsto$ #succ #zero $\diamondsuit$, $\beta$ $\mapsto$ #zero $\diamondsuit$
+  > (x $\mapsto$ $\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ succ.zero.$\diamondsuit$) $\leq$ plus
+  < $\cdot$, $\alpha$ $\mapsto$ zero.$\diamondsuit$, $\beta$ $\mapsto$ succ.zero.$\diamondsuit$
+  < $\cdot$, $\alpha$ $\mapsto$ succ.zero $\diamondsuit$, $\beta$ $\mapsto$ zero.$\diamondsuit$
   \end{lstlisting}
 
 
@@ -418,9 +417,11 @@
 
   $\mu$ plus .
     $\exists$ $\alpha$ . 
-      (.x #zero $\diamondsuit$ & .y $\alpha$ & .z $\alpha$) |
-    $\exists$ $\alpha$ $\beta$ $\gamma$ :: (.x $\alpha$ & .y $\beta$ & .z $\gamma$) $\leq$ plus . 
-      .x #succ $\alpha$ & .y $\beta$ & .z #succ $\gamma$
+      (x $\mapsto$ zero.$\diamondsuit$ ; y $\mapsto$ $\alpha$ ; z $\mapsto$ $\alpha$) |
+    $\exists$ $\alpha$ $\beta$ $\gamma$ :: 
+      (x $\mapsto$ $\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ $\gamma$) $\leq$ plus . 
+      x $\mapsto$ succ.$\alpha$ ; y $\mapsto$ $\beta$ ; z $\mapsto$ succ.$\gamma$
+
   \end{lstlisting}
 
 \end{frame}
