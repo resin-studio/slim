@@ -828,7 +828,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[App]
   { 
-    \text{fresh}\ \alpha\ \alpha'\ \beta
+    \text{fresh}\ \alpha\ \beta\ \gamma_1\ \gamma_2
     \\
     \{\Omega_1;\Omega_2;\Omega_3.\beta\ |\ 
     \\\\
@@ -837,12 +837,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \ \wedge\ 
     \Omega_1.\tau_1' \in N_1
     \\\\
-    \Delta;\Omega_1\ \Gamma \vdash t_2 : \alpha 
+    \Delta;\Omega_1\ \Gamma \vdash t_2 : (\alpha\ \&\ \gamma_1)
       \rightsquigarrow N_2
     \ \wedge\ 
     \Omega_2.\tau_2' \in N_2
     \\\\
-    \Delta;\Omega_1;\Omega_2 \vdash \tau_1' \leq (\tau_2'\ |\ \alpha' \rightarrow \beta)
+    \Delta;\Omega_1;\Omega_2 \vdash \tau_1' \leq (\tau_2'\ |\ \gamma_2 \rightarrow \beta)
       \rightsquigarrow M_3
     \ \wedge\ 
     \Omega_3 \in M_3
@@ -1051,7 +1051,7 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
   % recursive types are only compatible with certain forms of compound types
 
 % widening in type inference: union to arg type of application (τ | ?)
-% TODO: narrowing in type inference:
+% narrowing in type inference: intersection to param type of application (τ & ?)
 
 % TODO:
 % write paper 
