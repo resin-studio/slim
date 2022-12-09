@@ -666,16 +666,14 @@ result:
 empty list is failure
 non-empty list represents the solutions of unification
 
-
 -/
--- partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : 
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) : 
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
   | ty', .fvar id  => match env_ty.find? id with 
     | none => [ 
         (i + 1, PHashMap.from_list [
-          (id, Ty.union (roll_corec id ty') (Ty.fvar i))
+          (id, roll_corec id ty')
         ]) 
       ]
     | some ty => unify i env_ty ty' ty 
@@ -683,7 +681,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   | .fvar id, ty  => match env_ty.find? id with 
     | none => [ 
         (i + 1, PHashMap.from_list [
-          (id, Ty.inter (roll_recur id ty) (Ty.fvar i))
+          (id, roll_recur id ty)
         ]) 
       ]
     | some ty' => unify i env_ty ty' ty 
@@ -955,6 +953,8 @@ def Option.toList : Option T -> List T
 | .some x => [x]
 | .none => []
 
+-- TODO: update to for (union/intersection) 
+-- i.e. (widening/narrowing) or (expansion/contraction) 
 partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
@@ -1337,6 +1337,15 @@ def plus := [:
 --     z ~ (X.0)
 --   )
 -- :] plus
+
+#eval unify_collapse 3 {} [:
+(
+  x ~ X.0 ;
+  y ~ succ^zero^@ ;
+  z ~ succ^succ^zero^@
+)
+:] plus
+[: X.0 :]
 
 #eval unify_collapse 3 {} [:
 (

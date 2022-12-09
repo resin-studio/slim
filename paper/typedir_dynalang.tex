@@ -307,47 +307,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     (\Omega_1;\Omega_2),\alpha \mapsto \tau
   } 
 
-
-\inferrule[]
-  { } 
-  {
-    M_1 * M_2 =
-    \{ \Omega_1 ; \Omega_2 \ |\ 
-    \Omega_1 \in M_1
-    \ \wedge\ 
-    \Omega_2 \in M_2
-    \}
-  } 
-
-\inferrule[equiv]
-  {\Delta \vdash \tau' \equiv \tau}
-  {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \{ \cdot \} } 
-
-\\
-
-\inferrule[tag]
-  {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
-  {\Delta \vdash \#l\ \tau' \leq \#l\ \tau \rightsquigarrow M } 
-
-\inferrule[field]
-  {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
-  {\Delta \vdash .l\ \tau' \leq .l\ \tau \rightsquigarrow M } 
-
-
-\inferrule[case]
-  {
-    \Delta \vdash \tau_1' \leq \tau_1 \rightsquigarrow M_1 
-    \\
-    \Delta \vdash \tau_2' \leq \tau_2 \rightsquigarrow M_2 
-  } 
-  {\Delta \vdash 
-    \tau_1 \rightarrow \tau_2' \leq \tau_1' \rightarrow \tau_2 
-    \rightsquigarrow M_1 * M_2 
-  } 
-
 \end{mathpar}
-\caption{Unification subtyping: basic rules}
+\caption{environment rules}
 \end{figure}
+
 
 \begin{figure}[h]
 \begin{mathpar}
@@ -355,27 +318,27 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[var-left]
   {
-    \alpha \notin \text{dom}(\Delta) \\ \text{fresh}\ \beta  
-    \\\\
+    \alpha \notin \text{dom}(\Delta)  
+    \\
     (\text{occurs}\ \alpha\ \tau\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
     % Note: existential rule should execute before this rule to free the bound variables before writing. 
   }
   {\Delta \vdash \alpha \leq \tau	
     \rightsquigarrow  
-    \{ \cdot,\alpha \mapsto \tau_1 \ \&\ \beta \}
+    \{ \cdot,\alpha \mapsto \tau_1 \}
   } 
 
 \inferrule[var-rght]
   {  
-    \alpha \notin \text{dom}(\Delta) \\ \text{fresh}\ \beta  
-    \\\\
+    \alpha \notin \text{dom}(\Delta)  
+    \\
     (\text{occurs}\ \alpha\ \tau\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
     % Note: universal rule should execute before this rule to free the bound variables before writing. 
   }
   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  
-    \{ \cdot,\alpha \mapsto \tau_1 \ |\ \beta  \}
+    \{ \cdot,\alpha \mapsto \tau_1 \}
   } 
 
 \inferrule[exis-free]
@@ -437,10 +400,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \end{figure}
 
 
-
 \begin{figure}[h]
 \begin{mathpar}
-
 
 \inferrule[bottom]
   { }
@@ -458,25 +419,48 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \{ \cdot \}
   } 
 
-\inferrule[dynamic-left]
-  { }
+
+\inferrule[]
+  { } 
   {
-    \Delta \vdash\ ? \leq \tau	
-    \rightsquigarrow  
-    \{ \cdot \}
+    M_1 * M_2 =
+    \{ \Omega_1 ; \Omega_2 \ |\ 
+    \Omega_1 \in M_1
+    \ \wedge\ 
+    \Omega_2 \in M_2
+    \}
   } 
 
-\inferrule[dynamic-right]
-  { }
+\inferrule[equiv]
+  {\Delta \vdash \tau' \equiv \tau}
+  {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \{ \cdot \} } 
+
+\\
+
+\inferrule[tag]
+  {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
+  {\Delta \vdash \#l\ \tau' \leq \#l\ \tau \rightsquigarrow M } 
+
+\inferrule[field]
+  {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
+  {\Delta \vdash .l\ \tau' \leq .l\ \tau \rightsquigarrow M } 
+
+
+\inferrule[case]
   {
-    \Delta \vdash \tau \leq\ ?	
-    \rightsquigarrow  
-    \{ \cdot  \}
+    \Delta \vdash \tau_1' \leq \tau_1 \rightsquigarrow M_1 
+    \\
+    \Delta \vdash \tau_2' \leq \tau_2 \rightsquigarrow M_2 
+  } 
+  {\Delta \vdash 
+    \tau_1 \rightarrow \tau_2' \leq \tau_1' \rightarrow \tau_2 
+    \rightsquigarrow M_1 * M_2 
   } 
 
 \end{mathpar}
-\caption{Unification subtyping: leaf rules}
+\caption{Unification subtyping: basic rules}
 \end{figure}
+
 
 
 
