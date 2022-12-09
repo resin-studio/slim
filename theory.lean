@@ -8,6 +8,8 @@ inductive Ty : Type
   | bvar : Nat -> Ty  
   | fvar : Nat -> Ty
   | unit : Ty
+  | bot : Ty
+  | top : Ty
   | tag : String -> Ty -> Ty
   | field : String -> Ty -> Ty
   | union : Ty -> Ty -> Ty
@@ -21,33 +23,35 @@ inductive Ty : Type
 
 
 protected def Ty.repr (ty : Ty) (n : Nat) : Format :=
-match ty, n with
-| .bvar id, _ => 
+match ty with
+| .bvar id => 
   "Z." ++ repr id
-| .fvar id, _ =>
+| .fvar id =>
   "X." ++ repr id
-| .unit, _ => "@" 
-| .tag l ty1, _ => 
+| .unit => "@" 
+| .bot => "⊥" 
+| .top => "⊤" 
+| .tag l ty1 => 
   (l ++ "^" ++ (Ty.repr ty1 n))
-| .field l ty1, _ => 
+| .field l ty1 => 
   (l ++ "~" ++ (Ty.repr ty1 n))
-| .union ty1 ty2, _ =>
+| .union ty1 ty2 =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " |" ++ Format.line ++ (Ty.repr ty2 n)) ")"
-| .inter ty1 ty2, _ =>
+| .inter ty1 ty2 =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " ;" ++ Format.line ++ (Ty.repr ty2 n)) ")"
-| .case ty1 ty2, _ =>
+| .case ty1 ty2 =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
-| .univ n ty_c1 ty_c2 ty_pl, _ =>
+| .univ n ty_c1 ty_c2 ty_pl =>
   "∀ " ++ (repr n) ++ " :: " ++
   (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " ." ++ Format.line ++ 
   (Ty.repr ty_pl n)
-| .exis n ty_c1 ty_c2 ty_pl, _ =>
+| .exis n ty_c1 ty_c2 ty_pl =>
   "∃ " ++ (repr n) ++ " :: " ++
   (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " ." ++ Format.line ++ 
   (Ty.repr ty_pl n)
-| .recur ty1, _ =>
+| .recur ty1 =>
   "μ Z.0 . " ++ (Ty.repr ty1 n)
-| .corec ty1, _ =>
+| .corec ty1 =>
   "ν Z.0 . " ++ (Ty.repr ty1 n)
 
 instance : Repr Ty where
@@ -125,6 +129,8 @@ syntax "[" slm,+ "]" : slm
 syntax "Z."slm:90 : slm
 syntax "X."slm:90 : slm
 syntax "@" : slm
+syntax "⊥" : slm
+syntax "⊤" : slm
 syntax slm:90 "^" slm:90 : slm
 syntax slm:90 "~" slm:90 : slm
 syntax:50 slm:50 "->" slm:51 : slm
@@ -176,6 +182,8 @@ macro_rules
   | `([: Z.$n :]) => `(Ty.bvar [: $n :])
   | `([: X.$n:slm :]) => `(Ty.fvar [: $n :])
   | `([: @ :]) => `(Ty.unit)
+  | `([: ⊥ :]) => `(Ty.bot)
+  | `([: ⊤ :]) => `(Ty.top)
   | `([: $a ^ $b:slm :]) => `(Ty.tag [: $a :] [: $b :])
   | `([: $a ~ $b:slm :]) => `(Ty.field [: $a :] [: $b :])
   | `([: $a -> $b :]) => `(Ty.case [: $a :] [: $b :])
@@ -289,6 +297,8 @@ def Ty.occurs (key : Nat)  : Ty -> Bool
   | .bvar id => false 
   | .fvar id => key = id 
   | .unit => false 
+  | .bot => false 
+  | .top => false 
   | .tag l ty => (Ty.occurs key ty) 
   | .field l ty => (Ty.occurs key ty)
   | [: ⟨ty1⟩ | ⟨ty2⟩ :] => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
@@ -307,6 +317,8 @@ def Ty.free_subst (m : List (Nat × Ty)) : Ty -> Ty
     | none => .fvar id
   )
   | .unit => .unit
+  | .bot => .bot
+  | .top => .top
   | .tag l ty => .tag l (Ty.free_subst m ty) 
   | .field l ty => .field l (Ty.free_subst m ty)
   | .union ty1 ty2 => .union (Ty.free_subst m ty1) (Ty.free_subst m ty2)
@@ -359,6 +371,8 @@ def Ty.raise_binding (start : Nat) (args : List Ty) : Ty -> Ty
       .bvar id
 | .fvar id => .fvar id 
 | .unit => .unit
+| .bot => .bot
+| .top => .top
 | .tag l ty => .tag l (Ty.raise_binding start args ty) 
 | .field l ty => .field l (Ty.raise_binding start args ty)
 | .union ty1 ty2 => .union (Ty.raise_binding start args ty1) (Ty.raise_binding start args ty2)
@@ -493,6 +507,8 @@ partial def Ty.reduce (env_ty : PHashMap Nat Ty) : Ty -> Ty
     | some ty => Ty.reduce env_ty ty 
     | none => Ty.fvar id 
   | .unit => .unit 
+  | .bot => .bot 
+  | .top => .top 
   | .tag l ty => Ty.tag l (Ty.reduce env_ty ty) 
   | .field l ty => Ty.field l (Ty.reduce env_ty ty) 
   | .union ty1 ty2 => Ty.union (Ty.reduce env_ty ty1) (Ty.reduce env_ty ty2)
@@ -655,6 +671,23 @@ non-empty list represents the solutions of unification
 -- partial def unify (i : Nat) (env_ty : List (Nat × Ty)) : 
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) : 
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
+
+  | ty', .fvar id  => match env_ty.find? id with 
+    | none => [ 
+        (i + 1, PHashMap.from_list [
+          (id, Ty.union (roll_corec id ty') (Ty.fvar i))
+        ]) 
+      ]
+    | some ty => unify i env_ty ty' ty 
+
+  | .fvar id, ty  => match env_ty.find? id with 
+    | none => [ 
+        (i + 1, PHashMap.from_list [
+          (id, Ty.inter (roll_recur id ty) (Ty.fvar i))
+        ]) 
+      ]
+    | some ty' => unify i env_ty ty' ty 
+
   | .bvar id1, .bvar id2  =>
     if id1 = id2 then 
       [ (i, {}) ]
@@ -662,6 +695,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
       .nil
 
   | .unit, .unit => [ (i, {}) ] 
+  | .bot, _ => [ (i, {}) ] 
+  | _, .top => [ (i, {}) ] 
 
   | .tag l' ty', .tag l ty =>
     if l' = l then
@@ -680,22 +715,6 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     List.bind (unify i (env_ty ;; env_ty1) ty2' ty2) (fun (i, env_ty2) =>
       [ (i, env_ty1 ;; env_ty2) ]
     ))
-
-  | ty', .fvar id  => match env_ty.find? id with 
-    | none => [ 
-        (i + 1, PHashMap.from_list [
-          (id, Ty.union (roll_corec id ty') (Ty.fvar i))
-        ]) 
-      ]
-    | some ty => unify i env_ty ty' ty 
-
-  | .fvar id, ty  => match env_ty.find? id with 
-    | none => [ 
-        (i + 1, PHashMap.from_list [
-          (id, Ty.inter (roll_recur id ty) (Ty.fvar i))
-        ]) 
-      ]
-    | some ty' => unify i env_ty ty' ty 
 
 
   | ty', .exis n ty_c1 ty_c2 ty =>
@@ -800,6 +819,8 @@ def Ty.refresh (i : Nat) : Ty -> (Nat × Ty)
   | .bvar id => (i + 1, Ty.bvar id) 
   | .fvar _ => (i + 1, Ty.fvar i)
   | .unit => (i + 1, .unit) 
+  | .bot => (i + 1, .bot) 
+  | .top => (i + 1, .top) 
   | .tag l ty => 
     let (i, ty) := Ty.refresh i ty 
     (i, Ty.tag l ty) 
@@ -964,37 +985,30 @@ match t with
     (i + 1, (l, t1, (Ty.fvar i)) :: ty_acc)
   ) (i, []) fds
 
-  match trips with
-  | [] => .nil
-  | hd :: tl =>
+  let ty_init := Ty.field "" Ty.top
 
-    -- dummy type with dummy variable; could use ("" ~ ⊤) type instead
-    let (i, init_ty') := (i + 1, Ty.field "" (Ty.fvar (i + 1)))
+  let ty' := List.foldl (fun ty_acc => fun (l, _, ty1) => 
+    Ty.inter (Ty.field l ty1) ty_acc 
+  ) ty_init trips 
 
-    let ty' := List.foldl (fun ty_acc => fun (l, _, ty1) => 
-      Ty.inter (Ty.field l ty1) ty_acc 
-    ) init_ty' (hd::tl) 
+  let u_env_ty1 := unify i env_ty ty' ty 
 
-    let u_env_ty1 := unify i env_ty ty' ty 
+  let f_step := fun acc => (fun (l, t1, ty1) =>
+    List.bind acc (fun (i, env_ty_acc, ty_acc) =>
+    List.bind (infer i (env_ty ;; env_ty_acc) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
+      [(i, env_ty_acc ;; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
+    ))
+  )
 
-    let f_step := fun acc => (fun (l, t1, ty1) =>
-      List.bind acc (fun (i, env_ty_acc, ty_acc) =>
-      List.bind (infer i (env_ty ;; env_ty_acc) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
-        [(i, env_ty_acc ;; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
-      ))
-    )
-
-    -- dummy init with dummy variable; could use top type instead
-    let init := u_env_ty1.map fun (i, env_ty1) => (i + 1, env_ty1, Ty.fvar (i + 1))
-    List.foldl f_step init (hd::tl) 
+  let init := u_env_ty1.map fun (i, env_ty1) => (i, env_ty1, Ty.top)
+  List.foldl f_step init trips 
 
 | .func fs =>
   let (i, fs_typed) := List.foldl (fun (i, ty_acc) => fun (p, op_ty_p, b) =>
     (i + 1, (p, op_ty_p, b, (Ty.fvar i)) :: ty_acc)
   ) (i, []) fs
 
-  -- dummy type with dummy variables; could use bot -> top type instead
-  let (i, case_init) := (i + 2, Ty.case (Ty.fvar i) (Ty.fvar (i + 1)))
+  let case_init := Ty.case Ty.bot Ty.top
 
   let (i, ty') := List.foldl (fun (i, ty_acc) (p, op_ty_p, b, ty_b) => 
     let (i, ty_p) := match op_ty_p with
@@ -1030,8 +1044,7 @@ match t with
     ))))
   )
 
-  -- dummy init with dummy variable; could use top type instead
-  let init := u_env_ty1.map fun (i, env_ty1) => (i + 1, env_ty1, Ty.fvar i)
+  let init := u_env_ty1.map fun (i, env_ty1) => (i, env_ty1, Ty.top)
   List.foldl f_step init fs_typed 
 
 | .proj t1 l =>
