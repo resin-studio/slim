@@ -968,7 +968,7 @@ match t with
   | [] => .nil
   | hd :: tl =>
 
-    -- dummy type with dummy variable; could use bottom type instead
+    -- dummy type with dummy variable; could use ("" ~ ⊤) type instead
     let (i, init_ty') := (i + 1, Ty.field "" (Ty.fvar (i + 1)))
 
     let ty' := List.foldl (fun ty_acc => fun (l, _, ty1) => 
@@ -984,7 +984,7 @@ match t with
       ))
     )
 
-    -- dummy init with dummy variable; could use bottom type instead
+    -- dummy init with dummy variable; could use top type instead
     let init := u_env_ty1.map fun (i, env_ty1) => (i + 1, env_ty1, Ty.fvar (i + 1))
     List.foldl f_step init (hd::tl) 
 
@@ -993,7 +993,7 @@ match t with
     (i + 1, (p, op_ty_p, b, (Ty.fvar i)) :: ty_acc)
   ) (i, []) fs
 
-  -- dummy type with dummy variables; could use bottom type instead
+  -- dummy type with dummy variables; could use bot -> top type instead
   let (i, case_init) := (i + 2, Ty.case (Ty.fvar i) (Ty.fvar (i + 1)))
 
   let (i, ty') := List.foldl (fun (i, ty_acc) (p, op_ty_p, b, ty_b) => 
@@ -1030,7 +1030,7 @@ match t with
     ))))
   )
 
-  -- dummy init with dummy variable; could use bottom type instead
+  -- dummy init with dummy variable; could use top type instead
   let init := u_env_ty1.map fun (i, env_ty1) => (i + 1, env_ty1, Ty.fvar i)
   List.foldl f_step init fs_typed 
 
