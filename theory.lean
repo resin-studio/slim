@@ -35,8 +35,12 @@ match ty with
   (l ++ "^" ++ (Ty.repr ty1 n))
 | .field l ty1 => 
   (l ++ " ~ " ++ (Ty.repr ty1 n))
+| .union (Ty.tag "inl" inl) (Ty.tag "inr" inr) =>
+  Format.bracket "(" ((Ty.repr inl n) ++ " +" ++ Format.line ++ (Ty.repr inr n)) ")"
 | .union ty1 ty2 =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " |" ++ Format.line ++ (Ty.repr ty2 n)) ")"
+| .inter (Ty.field "l" l) (Ty.field "r" r) =>
+  Format.bracket "(" ((Ty.repr l n) ++ " ×" ++ Format.line ++ (Ty.repr r n)) ")"
 | .inter ty1 ty2 =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " ;" ++ Format.line ++ (Ty.repr ty2 n)) ")"
 | .case ty1 ty2 =>
@@ -87,6 +91,9 @@ match t with
   "x[" ++ repr id ++ "]"
 | .tag l t1 =>
   l ++ "#" ++ (Tm.repr t1 n)
+| record [("l", l), ("r", r)] =>
+  let _ : ToFormat Tm := ⟨fun t1 => Tm.repr t1 n ⟩
+  Format.bracket "(" (Format.joinSep [l, r] ("," ++ Format.line)) ")"
 | record fds =>
   let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
     l ++ " := " ++ Tm.repr t1 n ⟩
@@ -104,7 +111,7 @@ match t with
 | .proj t1 l =>
   Tm.repr t1 n ++ "/" ++ l
 | .app t1 t2 =>
-  Format.bracket "(" (Tm.repr t1 n) ")" ++ Tm.repr t2 n
+  Format.bracket "(" (Tm.repr t1 n) ") " ++ "(" ++ Tm.repr t2 n ++ ")"
 | .letb op_ty1 t1 t2 =>
   match op_ty1 with
   | .some ty1 =>
@@ -152,6 +159,7 @@ syntax:30 "y[" slm:90 "]": slm
 syntax:30 "x[" slm:90 "]" : slm
 syntax:30 slm:100 "#" slm:30 : slm
 syntax:30 slm:100 ":=" slm:30 : slm
+syntax:30 "(" slm "," slm ")" : slm
 syntax:30 "χ" slm : slm
 syntax:20 "for" slm:30 ":" slm "=>" slm:20 : slm 
 syntax:20 "for" slm:30 "=>" slm:20 : slm 
@@ -188,9 +196,9 @@ macro_rules
   | `([: $a ~ $b:slm :]) => `(Ty.field [: $a :] [: $b :])
   | `([: $a -> $b :]) => `(Ty.case [: $a :] [: $b :])
   | `([: $a | $b :]) => `(Ty.union [: $a :] [: $b :])
-  | `([: $a + $b :]) => `(Ty.union [: inl ^ $a :] [: inr ^ $b :])
+  | `([: $a + $b :]) => `(Ty.union (Ty.tag "inl" [: $a :]) (Ty.tag "inr" [: $b :]))
   | `([: $a ; $b :]) => `(Ty.inter [: $a :] [: $b :])
-  | `([: $a × $b :]) => `(Ty.inter [: left ~ $a :] [: right ~ $b :])
+  | `([: $a × $b :]) => `(Ty.inter (Ty.field "l" [: $a :]) (Ty.field "r" [: $b :]))
   | `([: ∀ $a :: $b ≤ $c => $d :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
   | `([: ∀ $a:slm => $b:slm :]) => `(Ty.univ [: $a :] [: β[0] :] [: β[0] :] [: $b :] )
   | `([: ∃ $a :: $b ≤ $c => $d  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
@@ -207,6 +215,7 @@ macro_rules
   | `([: for $b : $c => $d :]) => `(([: $b :], Option.some [: $c :], [: $d :]))
   | `([: for $b => $d :]) => `(([: $b :], Option.none, [: $d :]))
   | `([: χ $a :]) => `(Tm.record [: $a :])
+  | `([: ( $a , $b ) :]) => `(Tm.record [("l", [: $a :]), ("r", [:$b :])])
   | `([: λ $a :]) => `(Tm.func [: $a :])
   | `([: $a / $b :]) => `(Tm.proj [: $a :] [: $b :])
   | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
@@ -958,7 +967,7 @@ partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
 match t with
-| Tm.hole => .nil
+| Tm.hole => [(i + 1, {}, Ty.fvar i)] 
 | Tm.unit => 
   List.bind (unify i env_ty Ty.unit ty) (fun (i, env_ty_x) => 
     [(i, env_ty_x, Ty.unit)]
@@ -1397,4 +1406,39 @@ def plus := [:
 
 #eval [:
   x[0]/hello
+:]
+
+#eval infer_collapse [:
+  _ 
+:]
+
+
+#eval [:
+  α[0] + α[1]
+:]
+
+#eval [:
+  α[0] × α[1]
+:]
+
+#eval [:
+  (x[0], x[1])
+:]
+
+
+-- #eval infer_collapse [:
+#eval [:
+  λ [
+      for x[0] : inp^@ -> out^@ => (
+
+        λ [
+            for x[0] => (
+              cons # ((x[1] x[0]), nil # ())
+            ) 
+        ]
+         
+
+
+      ) 
+  ]
 :]
