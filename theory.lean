@@ -143,15 +143,15 @@ syntax:90 "⊥" : slm
 syntax:90 "⊤" : slm
 syntax:90 slm:100 "^" slm:90 : slm
 syntax:90 slm:100 "~" slm:90 : slm
-syntax:50 slm:50 "->" slm:51 : slm
+syntax:50 slm:51 "->" slm:50 : slm
 syntax:60 slm:60 "|" slm:61 : slm
 syntax:60 slm:60 "+" slm:61 : slm
-syntax:64 "∃" slm "::" slm "≤" slm "=>" slm:65 : slm 
-syntax:64 "∃" slm "=>" slm:65 : slm 
 syntax:70 slm:70 ";" slm:71 : slm
 syntax:70 slm:70 "×" slm:71 : slm
-syntax:74 "∀" slm "::" slm "≤" slm "=>" slm:75 : slm 
-syntax:74 "∀" slm "=>" slm:75 : slm 
+syntax:40 "∃" slm "::" slm "≤" slm "=>" slm:40 : slm 
+syntax:40 "∃" slm "=>" slm:40 : slm 
+syntax:40 "∀" slm "::" slm "≤" slm "=>" slm:40 : slm 
+syntax:40 "∀" slm "=>" slm:40 : slm 
 syntax:80 "μ β[0] =>" slm : slm 
 syntax:80 "ν β[0] =>" slm : slm 
 
@@ -513,20 +513,20 @@ partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
   else
     τ
 
-partial def Ty.reduce (env_ty : PHashMap Nat Ty) (f : Nat -> Ty) : Ty -> Ty
+partial def Ty.reduce (env_ty : PHashMap Nat Ty) : Ty -> Ty
   | .bvar id => Ty.bvar id  
   | .fvar id => match env_ty.find? id with
-    | some ty => Ty.reduce env_ty f ty 
-    | none => f id
+    | some ty => Ty.reduce env_ty ty 
+    | none => Ty.fvar id
   | .unit => .unit 
   | .bot => .bot 
   | .top => .top 
-  | .tag l ty => Ty.tag l (Ty.reduce env_ty f ty) 
-  | .field l ty => Ty.field l (Ty.reduce env_ty f ty) 
+  | .tag l ty => Ty.tag l (Ty.reduce env_ty ty) 
+  | .field l ty => Ty.field l (Ty.reduce env_ty ty) 
 
   | .union ty1 ty2 =>
-    let ty1' := Ty.reduce env_ty f ty1
-    let ty2' := Ty.reduce env_ty f ty2
+    let ty1' := Ty.reduce env_ty ty1
+    let ty2' := Ty.reduce env_ty ty2
     if ty1' == ty2' || ty2' == Ty.bot then 
       ty1'
     else if ty1' == Ty.bot then 
@@ -535,8 +535,8 @@ partial def Ty.reduce (env_ty : PHashMap Nat Ty) (f : Nat -> Ty) : Ty -> Ty
       Ty.union ty1' ty2'
 
   | .inter ty1 ty2 =>
-    let ty1' := Ty.reduce env_ty f ty1
-    let ty2' := Ty.reduce env_ty f ty2
+    let ty1' := Ty.reduce env_ty ty1
+    let ty2' := Ty.reduce env_ty ty2
     if ty1' == ty2' || ty2' == Ty.top then 
       ty1'
     else if ty1' == Ty.top then 
@@ -544,17 +544,17 @@ partial def Ty.reduce (env_ty : PHashMap Nat Ty) (f : Nat -> Ty) : Ty -> Ty
     else
       Ty.inter ty1' ty2'
 
-  | .case ty1 ty2 => Ty.case (Ty.reduce env_ty f ty1) (Ty.reduce env_ty f ty2)
+  | .case ty1 ty2 => Ty.case (Ty.reduce env_ty ty1) (Ty.reduce env_ty ty2)
   | .univ n cty1 cty2 ty => 
       Ty.univ n  
-        (Ty.reduce env_ty f cty1) (Ty.reduce env_ty f cty2)
-        (Ty.reduce env_ty f ty)
+        (Ty.reduce env_ty cty1) (Ty.reduce env_ty cty2)
+        (Ty.reduce env_ty ty)
   | .exis n cty1 cty2 ty => 
       Ty.exis n  
-        (Ty.reduce env_ty f cty1) (Ty.reduce env_ty f cty2)
-        (Ty.reduce env_ty f ty)
-  | .recur ty => Ty.recur (Ty.reduce env_ty f ty)
-  | .corec ty => Ty.corec (Ty.reduce env_ty f ty)
+        (Ty.reduce env_ty cty1) (Ty.reduce env_ty cty2)
+        (Ty.reduce env_ty ty)
+  | .recur ty => Ty.recur (Ty.reduce env_ty ty)
+  | .corec ty => Ty.corec (Ty.reduce env_ty ty)
 
 
 partial def Ty.equal_syntax : Ty -> Ty -> Bool
@@ -602,8 +602,8 @@ partial def Ty.equal_syntax : Ty -> Ty -> Bool
   | _, _ => false
 
 partial def Ty.equal (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
-  let ty1 := Ty.reduce env_ty (fun id => Ty.fvar id) ty1 
-  let ty2 := Ty.reduce env_ty (fun id => Ty.fvar id) ty2 
+  let ty1 := Ty.reduce env_ty ty1 
+  let ty2 := Ty.reduce env_ty ty2 
   Ty.equal_syntax ty1 ty2 
 
 def linearize_record : Ty -> Option Ty
@@ -635,7 +635,7 @@ def linearize_fields : Ty -> Option (List (String × Ty))
 #check List.any
 
 def wellformed_record_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
-  match linearize_fields (Ty.reduce env_ty (fun id => Ty.fvar id) ty) with
+  match linearize_fields (Ty.reduce env_ty ty) with
     | .some fields => 
       List.any fields (fun (k_fd, ty_fd) =>
         match ty_fd with
@@ -902,7 +902,7 @@ partial def Ty.collapse
 List Ty :=
   List.map 
     (fun (_, env_ty_ext) =>
-      Ty.reduce (env_ty ;; env_ty_ext) (fun _ => Ty.top) ty
+      Ty.reduce (env_ty ;; env_ty_ext) ty
     ) u_env_ty_x 
 
 partial def unify_collapse (i : Nat) (env_ty) (ty1) (ty2) (ty_result) :=
@@ -1114,8 +1114,8 @@ match t with
 
 
 partial def infer_collapse (t : Tm) : Ty :=
-  (infer 1 {} {} t [: α[0] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
-    (Ty.reduce env_ty (fun _ => Ty.top) (Ty.union acc ty))
+  (infer 30 {} {} t [: α[0] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
+    (Ty.reduce env_ty (Ty.union acc ty))
   ) (Ty.bot)
 
 -- #eval infer_collapse [: :] 
@@ -1215,8 +1215,8 @@ def even := [:
 def nat_list := [: 
   μ β[0] => 
     l ~ zero^@ ; r ~ nil^@ |
-    ∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[2] => 
-      l ~ succ^β[0] ; r ~ cons^β[1]
+    (∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[2] => 
+      l ~ succ^β[0] ; r ~ cons^β[1])
 :]
 
 #eval unify 3 {} 
@@ -1474,7 +1474,7 @@ def plus := [:
   ((), nil # ())
 :]
 
-#eval Ty.reduce {} (fun _ => Ty.top) [:
+#eval Ty.reduce {} [:
   (II^@ ; II^@)
   
 :]
@@ -1540,12 +1540,50 @@ def plus := [:
   ]]
 :]
 
--- TODO: fix application with universal
 #eval infer_collapse [:
-  λ[for y[0] : ∀ 1 => β[0] -> β[0] => 
+  λ[for y[0] : ∀ 1 => (β[0] -> β[0]) => 
   λ[for y[0] : int^@  =>
     (y[1] y[0])
   ]]
+:]
+
+#eval unify 3 {} 
+  [:  α[0] -> α[0] :]
+  [: int^@ -> int^@ :]
+
+#eval unify 3 {} 
+  [: ∀ 1 => β[0] -> β[0] :]
+  [: int^@ -> int^@ :]
+
+#eval infer_collapse [:
+  λ[for y[0] : (int^@ | str^@) -> hello^@ => 
+  λ[for y[0] : str^@ => 
+     (y[1] y[0]) 
+  ]]
+:]
+
+#eval unify 3 {} 
+  [: str^@ :]
+  [: int^@ | α[0] :]
+
+#eval unify 3 {} 
+  [: str^@ :]
+  [: (int^@ | α[0]) ; α[1] :]
+
+#eval infer_collapse [:
+  λ[for y[0] : (int^@ | α[1]) -> α[1] => 
+  λ[for y[0] : str^@ => 
+     (y[1] y[0]) 
+  ]]
+:]
+
+-- TODO: why doesn't union of fresh variable show up? 
+#eval infer_collapse [:
+  λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
+  λ[for y[0] : int^@  =>
+  λ[for y[0] : str^@  =>
+    (y[2] y[1])
+  ]]]
 :]
 
 -- Widening 
