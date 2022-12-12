@@ -34,7 +34,7 @@ match ty with
 | .tag l ty1 => 
   (l ++ "^" ++ (Ty.repr ty1 n))
 | .field l ty1 => 
-  (l ++ " ~ " ++ (Ty.repr ty1 n))
+  Format.bracket "(" (l ++ " ~ " ++ (Ty.repr ty1 n)) ")"
 
 | .union (Ty.tag "inl" inl) (Ty.tag "inr" inr) =>
   Format.bracket "(" ((Ty.repr inl n) ++ " +" ++ Format.line ++ (Ty.repr inr n)) ")"
@@ -513,30 +513,30 @@ partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
   else
     τ
 
-partial def Ty.reduce (env_ty : PHashMap Nat Ty) : Ty -> Ty
+partial def Ty.reduce (env_ty : PHashMap Nat Ty) (f : Nat -> Ty) : Ty -> Ty
   | .bvar id => Ty.bvar id  
   | .fvar id => match env_ty.find? id with
-    | some ty => Ty.reduce env_ty ty 
-    | none => Ty.fvar id
+    | some ty => Ty.reduce env_ty f ty 
+    | none => f id
   | .unit => .unit 
   | .bot => .bot 
   | .top => .top 
-  | .tag l ty => Ty.tag l (Ty.reduce env_ty ty) 
-  | .field l ty => Ty.field l (Ty.reduce env_ty ty) 
+  | .tag l ty => Ty.tag l (Ty.reduce env_ty f ty) 
+  | .field l ty => Ty.field l (Ty.reduce env_ty f ty) 
 
   | .union ty1 ty2 =>
-    let ty1' := Ty.reduce env_ty ty1
-    let ty2' := Ty.reduce env_ty ty2
-    if ty1' == ty2' || ty2' == Ty.top then 
+    let ty1' := Ty.reduce env_ty f ty1
+    let ty2' := Ty.reduce env_ty f ty2
+    if ty1' == ty2' || ty2' == Ty.bot then 
       ty1'
-    else if ty1' == Ty.top then 
+    else if ty1' == Ty.bot then 
       ty2'
     else
       Ty.union ty1' ty2'
 
   | .inter ty1 ty2 =>
-    let ty1' := Ty.reduce env_ty ty1
-    let ty2' := Ty.reduce env_ty ty2
+    let ty1' := Ty.reduce env_ty f ty1
+    let ty2' := Ty.reduce env_ty f ty2
     if ty1' == ty2' || ty2' == Ty.top then 
       ty1'
     else if ty1' == Ty.top then 
@@ -544,17 +544,17 @@ partial def Ty.reduce (env_ty : PHashMap Nat Ty) : Ty -> Ty
     else
       Ty.inter ty1' ty2'
 
-  | .case ty1 ty2 => Ty.case (Ty.reduce env_ty ty1) (Ty.reduce env_ty ty2)
+  | .case ty1 ty2 => Ty.case (Ty.reduce env_ty f ty1) (Ty.reduce env_ty f ty2)
   | .univ n cty1 cty2 ty => 
       Ty.univ n  
-        (Ty.reduce env_ty cty1) (Ty.reduce env_ty cty2)
-        (Ty.reduce env_ty ty)
+        (Ty.reduce env_ty f cty1) (Ty.reduce env_ty f cty2)
+        (Ty.reduce env_ty f ty)
   | .exis n cty1 cty2 ty => 
       Ty.exis n  
-        (Ty.reduce env_ty cty1) (Ty.reduce env_ty cty2)
-        (Ty.reduce env_ty ty)
-  | .recur ty => Ty.recur (Ty.reduce env_ty ty)
-  | .corec ty => Ty.corec (Ty.reduce env_ty ty)
+        (Ty.reduce env_ty f cty1) (Ty.reduce env_ty f cty2)
+        (Ty.reduce env_ty f ty)
+  | .recur ty => Ty.recur (Ty.reduce env_ty f ty)
+  | .corec ty => Ty.corec (Ty.reduce env_ty f ty)
 
 
 partial def Ty.equal_syntax : Ty -> Ty -> Bool
@@ -602,8 +602,8 @@ partial def Ty.equal_syntax : Ty -> Ty -> Bool
   | _, _ => false
 
 partial def Ty.equal (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
-  let ty1 := Ty.reduce env_ty ty1 
-  let ty2 := Ty.reduce env_ty ty2 
+  let ty1 := Ty.reduce env_ty (fun id => Ty.fvar id) ty1 
+  let ty2 := Ty.reduce env_ty (fun id => Ty.fvar id) ty2 
   Ty.equal_syntax ty1 ty2 
 
 def linearize_record : Ty -> Option Ty
@@ -635,7 +635,7 @@ def linearize_fields : Ty -> Option (List (String × Ty))
 #check List.any
 
 def wellformed_record_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
-  match linearize_fields (Ty.reduce env_ty ty) with
+  match linearize_fields (Ty.reduce env_ty (fun id => Ty.fvar id) ty) with
     | .some fields => 
       List.any fields (fun (k_fd, ty_fd) =>
         match ty_fd with
@@ -902,7 +902,7 @@ partial def Ty.collapse
 List Ty :=
   List.map 
     (fun (_, env_ty_ext) =>
-      Ty.reduce (env_ty ;; env_ty_ext) ty
+      Ty.reduce (env_ty ;; env_ty_ext) (fun _ => Ty.top) ty
     ) u_env_ty_x 
 
 partial def unify_collapse (i : Nat) (env_ty) (ty1) (ty2) (ty_result) :=
@@ -1113,10 +1113,10 @@ match t with
   ))
 
 
-partial def infer_collapse (t : Tm) : List Ty :=
-  List.bind (infer 1 {} {} t [: α[0] :]) (fun (_, env_ty, ty) =>
-    [Ty.reduce env_ty ty]
-  )
+partial def infer_collapse (t : Tm) : Ty :=
+  (infer 1 {} {} t [: α[0] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
+    (Ty.reduce env_ty (fun _ => Ty.top) (Ty.union acc ty))
+  ) (Ty.bot)
 
 -- #eval infer_collapse [: :] 
 
@@ -1474,14 +1474,19 @@ def plus := [:
   ((), nil # ())
 :]
 
-#eval Ty.reduce {} [:
+#eval Ty.reduce {} (fun _ => Ty.top) [:
   (II^@ ; II^@)
+  
+:]
+
+#eval [:
+  hello^thing~@
   
 :]
 
 #eval infer_collapse [:
   λ [
-      for y[0] : II^@ -> OO^@ => (
+      for y[0] : hello^@ -> world^@ => (
 
         λ [
             for y[0] => (
