@@ -121,7 +121,7 @@ match t with
     "let y[0] : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
     Format.line  ++ (Tm.repr t2 n) 
   | .none =>
-    "let y[0] " ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
+    "let y[0] = " ++  (Tm.repr t1 n) ++ " =>" ++
     Format.line  ++ (Tm.repr t2 n) 
 | .fix t1 =>
   Format.bracket "(" ("fix " ++ (Tm.repr t1 n)) ")"
@@ -203,9 +203,9 @@ macro_rules
   | `([: $a ; $b :]) => `(Ty.inter [: $a :] [: $b :])
   | `([: $a × $b :]) => `(Ty.inter (Ty.field "l" [: $a :]) (Ty.field "r" [: $b :]))
   | `([: ∀ $a :: $b ≤ $c => $d :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
-  | `([: ∀ $a:slm => $b:slm :]) => `(Ty.univ [: $a :] [: β[0] :] [: β[0] :] [: $b :] )
+  | `([: ∀ $a:slm => $b:slm :]) => `(Ty.univ [: $a :] [: ⊥ :] [: ⊤ :] [: $b :] )
   | `([: ∃ $a :: $b ≤ $c => $d  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
-  | `([: ∃ $a:slm => $b:slm :]) => `(Ty.exis [: $a :] [: β[0] :] [: β[0] :] [: $b :] )
+  | `([: ∃ $a:slm => $b:slm :]) => `(Ty.exis [: $a :] [: ⊥ :] [: ⊤ :] [: $b :] )
   | `([: μ β[0] => $a :]) => `(Ty.recur [: $a :])
   | `([: ν β[0] => $a :]) => `(Ty.corec [: $a :])
 --Tm
@@ -1484,6 +1484,31 @@ def plus := [:
   
 :]
 
+-- Propagation: Down 
+#eval infer_collapse [:
+  λ[for y[0] : nat^@ =>
+    let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
+    (y[0] (str#(), str#()))
+  ]
+:]
+
+-- Propagation: Down 
+#eval infer_collapse [:
+  λ[for y[0] : nat^@ =>
+    let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
+    (y[0] (_, str#()))
+  ]
+:]
+
+-- Propagation: Down 
+#eval infer_collapse [:
+  λ[for y[0] : nat^@ =>
+    let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
+    (y[0] (y[1], _))
+  ]
+:]
+
+-- Propagation: Up
 #eval infer_collapse [:
   λ [
       for y[0] : hello^@ -> world^@ => (
@@ -1495,4 +1520,40 @@ def plus := [:
         ]
       ) 
   ]
+:]
+
+
+
+#eval [:
+  ∀ 1 => β[0] -> β[0] -> (β[0] × β[0])
+:]
+
+#eval infer_collapse [:
+  let y[0] = (hello # ()) =>
+  y[0]
+:]
+
+#eval infer_collapse [:
+  λ[for y[0] : int^@ -> str^@ => 
+  λ[for y[0] : int^@  =>
+    (y[1] y[0])
+  ]]
+:]
+
+-- TODO: fix application with universal
+#eval infer_collapse [:
+  λ[for y[0] : ∀ 1 => β[0] -> β[0] => 
+  λ[for y[0] : int^@  =>
+    (y[1] y[0])
+  ]]
+:]
+
+-- Widening 
+#eval infer_collapse [:
+  λ[for y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
+  λ[for y[0] : int^@  =>
+  λ[for y[0] : str^@  =>
+  let y[0] = ((y[2] y[1]) y[0]) =>
+    y[0]
+  ]]]
 :]
