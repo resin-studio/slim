@@ -20,7 +20,7 @@ inductive Ty : Type
   | recur : Ty -> Ty
   | corec : Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
-
+#check List.repr
 
 protected def Ty.repr (ty : Ty) (n : Nat) : Format :=
 match ty with
@@ -34,18 +34,19 @@ match ty with
 | .tag l ty1 => 
   (l ++ "^" ++ (Ty.repr ty1 n))
 | .field l ty1 => 
-  Format.bracket "(" (l ++ " ~ " ++ (Ty.repr ty1 n)) ")"
+  (l ++ " ~ " ++ (Ty.repr ty1 n))
 
 | .union (Ty.tag "inl" inl) (Ty.tag "inr" inr) =>
   Format.bracket "(" ((Ty.repr inl n) ++ " +" ++ Format.line ++ (Ty.repr inr n)) ")"
 | .union ty1 ty2 =>
-  Format.bracket "(" ((Ty.repr ty1 n) ++ " |" ++ Format.line ++ (Ty.repr ty2 n)) ")"
+  let _ : ToFormat Ty := ⟨fun ty' => Ty.repr ty' n ⟩
+  let tys := [ty1, ty2] 
+  Format.joinSep tys (" |" ++ Format.line)
 
 | .inter (Ty.field "l" l) (Ty.field "r" r) =>
   Format.bracket "(" ((Ty.repr l n) ++ " ×" ++ Format.line ++ (Ty.repr r n)) ")"
 | .inter ty1 ty2 =>
-  Format.bracket "(" ((Ty.repr ty1 n) ++ " ;" ++ Format.line ++ (Ty.repr ty2 n)) ")"
-
+  ((Ty.repr ty1 n) ++ " ; " ++ (Ty.repr ty2 n))
 | .case ty1 ty2 =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
 | .univ n ty_c1 ty_c2 ty_pl =>
@@ -744,14 +745,6 @@ non-empty list represents the solutions of unification
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) : 
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
-  | ty', .fvar id  => match env_ty.find? id with 
-    | none => [ 
-        (i + 1, PHashMap.from_list [
-          (id, Ty.union (roll_corec id ty') (Ty.fvar i))
-        ]) 
-      ]
-    | some ty => unify i env_ty ty' ty 
-
   | .fvar id, ty  => match env_ty.find? id with 
     | none => [ 
         (i, PHashMap.from_list [
@@ -759,6 +752,17 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
         ]) 
       ]
     | some ty' => unify i env_ty ty' ty 
+
+  | ty', .fvar id  => match env_ty.find? id with 
+    | none => [ 
+        -- (i + 1, PHashMap.from_list [
+        --   (id, Ty.union (roll_corec id ty') (Ty.fvar i))
+        -- ]) 
+        (i, PHashMap.from_list [
+          (id, roll_corec id ty')
+        ]) 
+      ]
+    | some ty => unify i env_ty ty' ty 
 
   | .bvar id1, .bvar id2  =>
     if id1 = id2 then 
@@ -948,10 +952,11 @@ List Ty :=
       Ty.reduce (env_ty ;; env_ty_ext) ty
     ) u_env_ty_x 
 
-partial def unify_collapse (i : Nat) (env_ty) (ty1) (ty2) (ty_result) :=
-  Ty.collapse i env_ty (
-    unify i env_ty ty1 ty2
-  ) ty_result
+partial def unify_collapse (ty1) (ty2) (ty_result) :=
+  (Ty.reduce_final True ((unify 31 {} ty1 ty2).foldl (fun acc => fun  (_, env_ty) =>
+    (Ty.reduce env_ty (Ty.union acc ty_result))
+  ) (Ty.bot)))
+
 
 
 -- -- notation convetion:
@@ -1307,7 +1312,7 @@ def examp1 := unify 3 {}
 
 #eval Ty.collapse 10 {} examp1 [: α[0] :] 
 
-#eval unify_collapse 3 {} 
+#eval unify_collapse 
   [: (l ~ succ^succ^zero^@ ; r ~ cons^α[0]) :] 
   nat_list
   [: α[0]:]
@@ -1386,7 +1391,7 @@ def plus := [:
   )
 :] plus
 
-#eval unify_collapse 3 {} [:
+#eval unify_collapse [:
   (
     x ~ (succ^zero^@) ;
     y ~ (succ^zero^@) ;
@@ -1395,7 +1400,7 @@ def plus := [:
 :] plus 
 [: α[0] :]
 
-#eval unify_collapse 3 {} [:
+#eval unify_collapse [:
   (
     x ~ (succ^succ^zero^@) ;
     y ~ (succ^zero^@) ;
@@ -1404,7 +1409,7 @@ def plus := [:
 :] plus
 [: α[0] :]
 
-#eval unify_collapse 3 {} [:
+#eval unify_collapse [:
   (
     x ~ (succ^zero^@) ;
     y ~ (α[0]) ;
@@ -1421,7 +1426,7 @@ def plus := [:
 --   )
 -- :] plus
 
-#eval unify_collapse 3 {} [:
+#eval unify_collapse [:
 (
   x ~ α[0] ;
   y ~ succ^zero^@ ;
@@ -1430,7 +1435,7 @@ def plus := [:
 :] plus
 [: α[0] :]
 
-#eval unify_collapse 3 {} [:
+#eval unify_collapse [:
 (
   x ~ succ^zero^@ ;
   y ~ α[0] ;
@@ -1440,7 +1445,7 @@ def plus := [:
 [: α[0] :]
 
 
-#eval unify_collapse 3 {} [:
+#eval unify_collapse [:
 (
   x ~ (α[0]) ;
   y ~ (α[1]) ;
