@@ -1114,7 +1114,7 @@ match t with
 
 
 partial def infer_collapse (t : Tm) : Ty :=
-  (infer 30 {} {} t [: α[0] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
+  (infer 31 {} {} t [: α[30] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
     (Ty.reduce env_ty (Ty.union acc ty))
   ) (Ty.bot)
 
@@ -1484,7 +1484,6 @@ def plus := [:
   
 :]
 
--- Propagation: Down 
 #eval infer_collapse [:
   λ[for y[0] : nat^@ =>
     let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
@@ -1492,7 +1491,6 @@ def plus := [:
   ]
 :]
 
--- Propagation: Down 
 #eval infer_collapse [:
   λ[for y[0] : nat^@ =>
     let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
@@ -1500,10 +1498,20 @@ def plus := [:
   ]
 :]
 
--- Propagation: Down 
 #eval infer_collapse [:
   λ[for y[0] : nat^@ =>
     let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
+    (y[0] (y[1], _))
+  ]
+:]
+
+-- Propagation: Down 
+-- even though, there is a hole in the program,
+-- the type of α[0] can be inferred to be uno^@  
+-- due to the application and downward propagation
+#eval infer_collapse [:
+  λ[for y[0] : α[0] =>
+    let y[0] = λ[for (y[0], y[1]) : (uno^@ × dos^@) => y[1]] =>
     (y[0] (y[1], _))
   ]
 :]
