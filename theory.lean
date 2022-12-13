@@ -44,7 +44,9 @@ match ty with
   Format.joinSep tys (" |" ++ Format.line)
 
 | .inter (Ty.field "l" l) (Ty.field "r" r) =>
-  Format.bracket "(" ((Ty.repr l n) ++ " ×" ++ Format.line ++ (Ty.repr r n)) ")"
+  (Format.bracket "(" (Ty.repr l n) ")") ++ 
+  " × " ++ 
+  (Format.bracket "("  (Ty.repr r n) ")")
 | .inter ty1 ty2 =>
   ((Ty.repr ty1 n) ++ " ; " ++ (Ty.repr ty2 n))
 | .case ty1 ty2 =>
@@ -753,25 +755,20 @@ non-empty list represents the solutions of unification
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (strict : Bool): 
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
-  -- | (.fvar id1), (.fvar id2) => match (env_ty.find? id1, env_ty.find? id2) with 
-  --   | (.none, .none) => [
-  --       (i, PHashMap.from_list [
-  --         (id1, Ty.fvar id2)
-  --       ])
-  --     ]
-  --   | (_, .some ty) => unify i env_ty strict (.fvar id1) ty 
-  --   | (.some ty', _) => unify i env_ty strict ty' (.fvar id2) 
+  | (.fvar id1), (.fvar id2) => match (env_ty.find? id1, env_ty.find? id2) with 
+    | (.none, .none) => [
+        (i, PHashMap.from_list [
+          (id1, Ty.fvar id2)
+        ])
+      ]
+    | (_, .some ty) => unify i env_ty strict (.fvar id1) ty 
+    | (.some ty', _) => unify i env_ty strict ty' (.fvar id2) 
 
   | .fvar id, ty  => match env_ty.find? id with 
     | none => [ 
-        if strict then
-          (i, PHashMap.from_list [
-            (id, roll_recur id ty)
-          ]) 
-        else
-          (i + 1, PHashMap.from_list [
-            (id, Ty.inter (roll_recur id ty) (Ty.fvar i))
-          ]) 
+        (i, PHashMap.from_list [
+          (id, roll_recur id ty)
+        ]) 
       ]
     | some ty' => unify i env_ty strict ty' ty 
 
@@ -1668,25 +1665,14 @@ def plus := [:
 
 -----
 
-#eval unify 3 {} False
-  [: (int^@ | α[4]) :]
-  [: α[1] :]
-
--- TODO: why does union variable get wrapped by mu binding 
-#eval infer_collapse [:
-  λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
-  λ[for y[0] : (int^@ | α[4])  =>
-    (y[1] y[0])
-  ]
-  ]
-:]
--- TODO: why doesn't union of fresh variable show up? 
+-- Widening
 #eval infer_collapse [:
   λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
     OUTPUT # (y[0] hello#())
   ]
 :]
 
+-- Widening
 #eval infer_collapse [:
   λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
     OUTPUT # ((y[0] hello#()) world#())
@@ -1694,34 +1680,37 @@ def plus := [:
 :]
 
 
--- TODO
+-- Widening
 #eval infer_collapse [:
   λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
-  λ[for y[0] : int^@ =>
-  λ[for y[0] : str^@ =>
+  λ[for y[0] : hello^@ =>
+  λ[for y[0] : world^@ =>
     OUTPUT # ((y[2] y[1]) y[0])
   ]
   ]
   ]
 :]
 
--- TODO: why doesn't union of fresh variable show up? 
+-- Widening
 #eval infer_collapse [:
   λ[for y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
-  λ[for y[0] : int^@ =>
-  λ[for y[0] : str^@ =>
+  λ[for y[0] : hello^@ =>
+  λ[for y[0] : world^@ =>
     OUTPUT # ((y[2] y[1]) y[0])
   ]
   ]
   ]
 :]
 
--- Widening 
+-- Widening ; TODO
 #eval infer_collapse [:
   λ[for y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
   λ[for y[0] : int^@  =>
   λ[for y[0] : str^@  =>
-  let y[0] = ((y[2] y[1]) y[0]) =>
-    OUTPUT # y[0]
+  (let y[0] = ((y[2] y[1]) y[0]) =>
+    OUTPUT # y[0])
   ]]]
 :]
+
+
+-- Narrowing ; TODO
