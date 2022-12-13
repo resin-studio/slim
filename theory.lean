@@ -557,6 +557,49 @@ partial def Ty.reduce (env_ty : PHashMap Nat Ty) : Ty -> Ty
   | .corec ty => Ty.corec (Ty.reduce env_ty ty)
 
 
+
+partial def Ty.reduce_final (sign : Bool) : Ty -> Ty
+  | .bvar id => Ty.bvar id  
+  | .fvar _ => if sign then Ty.bot else Ty.top
+  | .unit => .unit 
+  | .bot => .bot 
+  | .top => .top 
+  | .tag l ty => Ty.tag l (Ty.reduce_final sign ty) 
+  | .field l ty => Ty.field l (Ty.reduce_final sign ty) 
+
+  | .union ty1 ty2 =>
+    let ty1' := Ty.reduce_final sign ty1
+    let ty2' := Ty.reduce_final sign ty2
+    if ty1' == ty2' || ty2' == Ty.bot then 
+      ty1'
+    else if ty1' == Ty.bot then 
+      ty2'
+    else
+      Ty.union ty1' ty2'
+
+  | .inter ty1 ty2 =>
+    let ty1' := Ty.reduce_final sign ty1
+    let ty2' := Ty.reduce_final sign ty2
+    if ty1' == ty2' || ty2' == Ty.top then 
+      ty1'
+    else if ty1' == Ty.top then 
+      ty2'
+    else
+      Ty.inter ty1' ty2'
+
+  | .case ty1 ty2 => Ty.case (Ty.reduce_final (!sign) ty1) (Ty.reduce_final sign ty2)
+  | .univ n cty1 cty2 ty => 
+      Ty.univ n  
+        (Ty.reduce_final sign cty1) (Ty.reduce_final (!sign) cty2)
+        (Ty.reduce_final sign ty)
+  | .exis n cty1 cty2 ty => 
+      Ty.exis n  
+        (Ty.reduce_final sign cty1) (Ty.reduce_final (!sign) cty2)
+        (Ty.reduce_final sign ty)
+  | .recur ty => Ty.recur (Ty.reduce_final sign ty)
+  | .corec ty => Ty.corec (Ty.reduce_final sign ty)
+
+
 partial def Ty.equal_syntax : Ty -> Ty -> Bool
   | .bvar id1, .bvar id2 => if id1 = id2 then true else false 
   | .fvar id1, .fvar id2 => if id1 = id2 then true else false 
@@ -704,14 +747,14 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   | ty', .fvar id  => match env_ty.find? id with 
     | none => [ 
         (i + 1, PHashMap.from_list [
-          (id, roll_corec id ty')
+          (id, Ty.union (roll_corec id ty') (Ty.fvar i))
         ]) 
       ]
     | some ty => unify i env_ty ty' ty 
 
   | .fvar id, ty  => match env_ty.find? id with 
     | none => [ 
-        (i + 1, PHashMap.from_list [
+        (i, PHashMap.from_list [
           (id, roll_recur id ty)
         ]) 
       ]
@@ -1085,13 +1128,25 @@ match t with
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
   List.bind (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1') =>
-  let (i, ty_x) := (i + 1, Ty.fvar i)
-  List.bind (infer i (env_ty ;; env_ty1) env_tm t2 (Ty.inter ty2 ty_x)) (fun (i, env_ty2, ty2') =>
-  let (i, ty_y) := (i + 1, Ty.fvar i)
-  let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) ty1' (Ty.case (Ty.union ty2' ty_y) ty')) (fun (i, env_ty3) =>
-    [(i, env_ty1 ;; env_ty2 ;; env_ty3, ty')]
-  )))
+  List.bind (infer i (env_ty ;; env_ty1) env_tm t2 ty2) (fun (i, env_ty2, ty2') =>
+  -- let (i, ty_x) := (i + 1, Ty.fvar i)
+  -- List.bind (infer i (env_ty ;; env_ty1) env_tm t2 (Ty.inter ty2 ty_x)) (fun (i, env_ty2, ty2') =>
+  --<
+
+     [(i, env_ty1 ;; env_ty2, ty)]
+  ))
+  -->
+
+
+
+  -- let (i, ty') := (i + 1, Ty.fvar i)
+  -- let (i, ty_y) := (i + 1, Ty.fvar i)
+  -- List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) ty1' (Ty.case ty2' ty')) (fun (i, env_ty3) =>
+  -- -- List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) ty1' (Ty.case (Ty.union ty2' ty_y) ty')) (fun (i, env_ty3) =>
+  --   [(i, env_ty1 ;; env_ty2 ;; env_ty3, ty')]
+  -- )
+  -- )
+  -- )
 
 
 | .letb op_ty1 t1 t => 
@@ -1114,9 +1169,9 @@ match t with
 
 
 partial def infer_collapse (t : Tm) : Ty :=
-  (infer 31 {} {} t [: α[30] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
+  (Ty.reduce_final True ((infer 31 {} {} t [: α[30] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
     (Ty.reduce env_ty (Ty.union acc ty))
-  ) (Ty.bot)
+  ) (Ty.bot)))
 
 -- #eval infer_collapse [: :] 
 
@@ -1585,13 +1640,40 @@ def plus := [:
   ]]
 :]
 
+-----
+
+#eval unify 3 {} 
+  [: (int^@ | α[4]) :]
+  [: α[1] :]
+
+-- TODO: why does union variable get wrapped by mu binding 
+#eval infer_collapse [:
+  λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
+  λ[for y[0] : (int^@ | α[4])  =>
+    (y[1] y[0])
+  ]
+  ]
+:]
 -- TODO: why doesn't union of fresh variable show up? 
 #eval infer_collapse [:
   λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
-  λ[for y[0] : int^@  =>
-  λ[for y[0] : str^@  =>
-    (y[2] y[1])
-  ]]]
+  λ[for y[0] : int^@ =>
+  λ[for y[0] : str^@ =>
+    OUTPUT # ((y[2] y[1]) y[0])
+  ]
+  ]
+  ]
+:]
+
+-- TODO: why doesn't union of fresh variable show up? 
+#eval infer_collapse [:
+  λ[for y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
+  λ[for y[0] : int^@ =>
+  λ[for y[0] : str^@ =>
+    OUTPUT # ((y[2] y[1]) y[0])
+  ]
+  ]
+  ]
 :]
 
 -- Widening 
@@ -1600,6 +1682,6 @@ def plus := [:
   λ[for y[0] : int^@  =>
   λ[for y[0] : str^@  =>
   let y[0] = ((y[2] y[1]) y[0]) =>
-    y[0]
+    OUTPUT # y[0]
   ]]]
 :]
