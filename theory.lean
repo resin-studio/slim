@@ -1158,27 +1158,10 @@ match t with
 
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
-  List.bind (infer i env_ty env_tm exact t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1') =>
-  List.bind (infer i (env_ty ;; env_ty1) env_tm exact t2 ty2) (fun (i, env_ty2, ty2') =>
-  -- let (i, ty_x) := (i + 1, Ty.fvar i)
-  -- List.bind (infer i (env_ty ;; env_ty1) env_tm t2 (Ty.inter ty2 ty_x)) (fun (i, env_ty2, ty2') =>
-  --<
-
+  List.bind (infer i env_ty env_tm exact t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
+  List.bind (infer i (env_ty ;; env_ty1) env_tm exact t2 ty2) (fun (i, env_ty2, _) =>
      [(i, env_ty1 ;; env_ty2, ty)]
   ))
-  -->
-
-
-
-  -- let (i, ty') := (i + 1, Ty.fvar i)
-  -- let (i, ty_y) := (i + 1, Ty.fvar i)
-  -- List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) ty1' (Ty.case ty2' ty')) (fun (i, env_ty3) =>
-  -- -- List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) ty1' (Ty.case (Ty.union ty2' ty_y) ty')) (fun (i, env_ty3) =>
-  --   [(i, env_ty1 ;; env_ty2 ;; env_ty3, ty')]
-  -- )
-  -- )
-  -- )
-
 
 | .letb op_ty1 t1 t => 
   let (i, ty1) := match op_ty1 with

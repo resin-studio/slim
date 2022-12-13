@@ -828,24 +828,19 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[App]
   { 
-    \text{fresh}\ \alpha\ \beta\ \gamma_1\ \gamma_2
+    \text{fresh}\ \alpha\ 
     \\
-    \{\Omega_1;\Omega_2;\Omega_3.\beta\ |\ 
+    \{\Omega_1;\Omega_2.\tau\ |\ 
     \\\\
     \Delta\ \Gamma \vdash t_1 : (\alpha \rightarrow \tau) 
       \rightsquigarrow N_1
     \ \wedge\ 
     \Omega_1.\tau_1' \in N_1
     \\\\
-    \Delta;\Omega_1\ \Gamma \vdash t_2 : (\alpha\ \&\ \gamma_1)
+    \Delta;\Omega_1\ \Gamma \vdash t_2 : \alpha
       \rightsquigarrow N_2
     \ \wedge\ 
     \Omega_2.\tau_2' \in N_2
-    \\\\
-    \Delta;\Omega_1;\Omega_2 \vdash \tau_1' \leq (\tau_2'\ |\ \gamma_2 \rightarrow \beta)
-      \rightsquigarrow M_3
-    \ \wedge\ 
-    \Omega_3 \in M_3
     \\\\
     \} = N
   }
