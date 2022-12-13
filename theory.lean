@@ -766,9 +766,14 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
   | .fvar id, ty  => match env_ty.find? id with 
     | none => [ 
-        (i, PHashMap.from_list [
-          (id, roll_recur id ty)
-        ]) 
+        if strict then
+          (i, PHashMap.from_list [
+            (id, roll_recur id ty)
+          ]) 
+        else
+          (i + 1, PHashMap.from_list [
+            (id, Ty.inter (roll_recur id ty) (Ty.fvar i))
+          ]) 
       ]
     | some ty' => unify i env_ty strict ty' ty 
 
@@ -1053,27 +1058,27 @@ def Option.toList : Option T -> List T
 
 
 partial def infer (i : Nat)
-(env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
+(env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (strict : Bool) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
 match t with
 | Tm.hole => [(i + 1, {}, Ty.fvar i)] 
 | Tm.unit => 
-  List.bind (unify i env_ty False Ty.unit ty) (fun (i, env_ty_x) => 
+  List.bind (unify i env_ty strict Ty.unit ty) (fun (i, env_ty_x) => 
     [(i, env_ty_x, Ty.unit)]
   )
 | Tm.bvar _ => .nil 
 | Tm.fvar id =>
   match (env_tm.find? id) with 
     | .some ty' => 
-      List.bind (unify i env_ty False ty' ty) (fun (i, env_ty_x) =>
+      List.bind (unify i env_ty strict ty' ty) (fun (i, env_ty_x) =>
         [(i, env_ty_x, ty')]
       )
     | .none => .nil 
 
 | .tag l t1 =>   
   let (i, ty1) := (i + 1, .fvar i)
-  List.bind (unify i env_ty False (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
-  List.bind (infer i (env_ty ;; env_ty1) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
+  List.bind (unify i env_ty strict (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
+  List.bind (infer i (env_ty ;; env_ty1) env_tm strict t1 ty1) (fun (i, env_ty_x, ty1') =>
     [ (i, env_ty1 ;; env_ty_x, Ty.tag l ty1') ]
   ))
 
@@ -1088,11 +1093,11 @@ match t with
     Ty.inter (Ty.field l ty1) ty_acc 
   ) ty_init trips 
 
-  let u_env_ty1 := unify i env_ty False ty' ty 
+  let u_env_ty1 := unify i env_ty strict ty' ty 
 
   let f_step := fun acc => (fun (l, t1, ty1) =>
     List.bind acc (fun (i, env_ty_acc, ty_acc) =>
-    List.bind (infer i (env_ty ;; env_ty_acc) env_tm t1 ty1) (fun (i, env_ty_x, ty1') =>
+    List.bind (infer i (env_ty ;; env_ty_acc) env_tm strict t1 ty1) (fun (i, env_ty_x, ty1') =>
       [(i, env_ty_acc ;; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
     ))
   )
@@ -1114,7 +1119,7 @@ match t with
     (i, Ty.inter (Ty.case ty_p ty_b) ty_acc) 
   ) (i, case_init) fs_typed 
 
-  let u_env_ty1 := unify i env_ty False ty' ty 
+  let u_env_ty1 := unify i env_ty strict ty' ty 
 
   let f_step := (fun acc (p, op_ty_p, b, ty_b) =>
     List.bind acc (fun (i, env_ty_acc, ty_acc) =>
@@ -1135,8 +1140,8 @@ match t with
       | .none => (i + 1, Ty.fvar i)
 
     let b := Tm.raise_binding 0 list_tm_x b  
-    List.bind (infer i (env_ty ;; env_ty_acc) (env_tm ;; env_pat) p ty_p) (fun (i, env_ty_p, _) =>
-    List.bind (infer i (env_ty ;; env_ty_acc ;; env_ty_p) (env_tm ;; env_pat) b ty_b) (fun (i, env_ty_b, ty_b') =>
+    List.bind (infer i (env_ty ;; env_ty_acc) (env_tm ;; env_pat) True p ty_p) (fun (i, env_ty_p, _) =>
+    List.bind (infer i (env_ty ;; env_ty_acc ;; env_ty_p) (env_tm ;; env_pat) strict b ty_b) (fun (i, env_ty_b, ty_b') =>
       [(i, env_ty_acc ;; env_ty_p ;; env_ty_b, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
     ))))
   )
@@ -1145,16 +1150,16 @@ match t with
   List.foldl f_step init fs_typed 
 
 | .proj t1 l =>
-  List.bind (infer i env_ty env_tm t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i env_ty env_tm strict t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
   let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (unify i (env_ty ;; env_ty1) False ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
+  List.bind (unify i (env_ty ;; env_ty1) strict ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
     [(i, env_ty1 ;; env_ty2, ty')]
   ))
 
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
-  List.bind (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1') =>
-  List.bind (infer i (env_ty ;; env_ty1) env_tm t2 ty2) (fun (i, env_ty2, ty2') =>
+  List.bind (infer i env_ty env_tm strict t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i (env_ty ;; env_ty1) env_tm strict t2 ty2) (fun (i, env_ty2, ty2') =>
   -- let (i, ty_x) := (i + 1, Ty.fvar i)
   -- List.bind (infer i (env_ty ;; env_ty1) env_tm t2 (Ty.inter ty2 ty_x)) (fun (i, env_ty2, ty2') =>
   --<
@@ -1179,23 +1184,23 @@ match t with
   let (i, ty1) := match op_ty1 with
     | .some ty1 => (i, ty1) 
     | .none => (i + 1, Ty.fvar i)
-  List.bind (infer i (env_ty) env_tm t1 ty1) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i (env_ty) env_tm True t1 ty1) (fun (i, env_ty1, ty1') =>
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, Ty.univ 1 (Ty.bvar 0) ty1' (Ty.bvar 0))]) 
   let t := Tm.raise_binding 0 [x] t 
-  List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tmx) t ty) (fun (i, env_ty2, ty') =>
+  List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tmx) False t ty) (fun (i, env_ty2, ty') =>
     [ (i, env_ty1 ;; env_ty2, ty') ]
   ))
 
 | .fix t1 =>
-  List.bind (infer i env_ty env_tm t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i env_ty env_tm strict t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
   let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (unify i (env_ty ;; env_ty1) False ty1' (.case ty' ty')) (fun (i, env_ty2) =>
+  List.bind (unify i (env_ty ;; env_ty1) strict ty1' (.case ty' ty')) (fun (i, env_ty2) =>
     [ (i, env_ty1 ;; env_ty2, ty') ]
   ))
 
 
 partial def infer_collapse (t : Tm) : Ty :=
-  (infer 31 {} {} t [: α[30] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
+  (infer 31 {} {} False t [: α[30] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
     Ty.reduce_final True (Ty.reduce env_ty (Ty.union acc ty))
   ) (Ty.bot)
 
@@ -1714,3 +1719,4 @@ def plus := [:
 
 
 -- Narrowing ; TODO
+-- HOW can we isolate the effects of intersection and union?

@@ -1050,8 +1050,11 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
   % failure (bottom) when two type structures are incompatible
   % recursive types are only compatible with certain forms of compound types
 
-% widening in type inference: union to arg type of application (τ | ?)
-% narrowing in type inference: intersection to param type of application (τ & ?)
+% widening and narrowing in type inference
+  % strictness param chosen during inference 
+  % annotations are strict
+  % everything else is non-strict;
+    % allowing union and intersection with fresh variables
 
 % TODO:
 % write paper 
