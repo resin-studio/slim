@@ -1510,31 +1510,22 @@ def plus := [:
   (x[0], x[1])
 :]
 
-#eval [:
-  λ [
-      for y[0] : inp^@ -> out^@ => (
 
-        λ [
-            for y[0] => (
-              cons # ((y[1] y[0]), nil # ())
-            ) 
-        ]
-      ) 
-  ]
+#eval infer_reduce [:
+  λ [for y[0] => y[0]]
 :]
 
 #eval infer_reduce [:
-  λ [
-      for y[0] => y[0] 
-  ]
+  λ [for y[0] : abc^@ => y[0]]
 :]
 
 #eval infer_reduce [:
-  λ [
-      for y[0] : abc^@ => y[0] 
+  λ [for y[0] : inp^@ -> out^@ =>
+  Out # λ [for y[0] => 
+      cons # ((y[1] y[0]), nil # ())
+  ]
   ]
 :]
-
 
 #eval infer_reduce [:
   ((), nil # ())
