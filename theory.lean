@@ -1277,9 +1277,14 @@ def even := [:
     (succ^(zero^@))
 :] nat_ 
 
-#eval unify 3 {} False [:
+#eval unify 3 {} False 
+[: (succ^(α[0])) :] 
+nat_ 
+
+#eval unify_reduce [:
     (succ^(α[0]))
 :] nat_ 
+[: α[0] :]
 
 def nat_list := [: 
   μ β[0] => 
@@ -1453,7 +1458,7 @@ def plus := [:
 (
   x ~ (α[0]) ;
   y ~ (α[1]) ;
-  z ~ (succ^zero^@)
+  z ~ (succ^succ^zero^@)
 )
 :] plus
 [: x ~ α[0] ; y ~ α[1] :]
@@ -1598,7 +1603,7 @@ def plus := [:
 #eval infer_reduce [:
   λ[for y[0] : str^@ -> @ => 
   λ[for y[0] : str^@ => 
-     (y[1] y[0]) 
+     OUTPUT # (y[1] y[0]) 
   ]]
 :]
 
