@@ -978,7 +978,7 @@ List Ty :=
       Ty.reduce (env_ty ;; env_ty_ext) ty
     ) u_env_ty_x 
 
-partial def unify_collapse (ty1) (ty2) (ty_result) :=
+partial def unify_reduce (ty1) (ty2) (ty_result) :=
   (unify 31 {} True ty1 ty2).foldl (fun acc => fun  (_, env_ty) =>
     (Ty.reduce env_ty (Ty.union acc ty_result))
   ) (Ty.bot)
@@ -1182,12 +1182,12 @@ match t with
   ))
 
 
-partial def infer_collapse (t : Tm) : Ty :=
+partial def infer_reduce (t : Tm) : Ty :=
   (infer 31 {} {} False t [: α[30] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
     Ty.reduce_final True (Ty.reduce env_ty (Ty.union acc ty))
   ) (Ty.bot)
 
--- #eval infer_collapse [: :] 
+-- #eval infer_reduce [: :] 
 
 
 -- testing below
@@ -1321,7 +1321,7 @@ def examp1 := unify 3 {} False
 
 #eval Ty.collapse 10 {} examp1 [: α[0] :] 
 
-#eval unify_collapse 
+#eval unify_reduce 
   [: (l ~ succ^succ^zero^@ ; r ~ cons^α[0]) :] 
   nat_list
   [: α[0]:]
@@ -1385,14 +1385,14 @@ def plus := [:
 -- #eval [: succ^succ^zero^@ :]  
 
 
-#eval unify_collapse [:
+#eval unify_reduce [:
     x ~ zero^@ ;
     y ~ α[0] ;
     z ~ zero^@
 :] plus [: α[0] :]
 
 
-#eval unify_collapse [:
+#eval unify_reduce [:
   (
     x ~ (succ^zero^@) ;
     y ~ (succ^zero^@) ;
@@ -1401,7 +1401,7 @@ def plus := [:
 :] plus [: α[0] :]
 
 
-#eval unify_collapse [:
+#eval unify_reduce [:
   (
     x ~ (succ^succ^zero^@) ;
     y ~ (succ^zero^@) ;
@@ -1410,7 +1410,7 @@ def plus := [:
 :] plus
 [: α[0] :]
 
-#eval unify_collapse [:
+#eval unify_reduce [:
   (
     x ~ (succ^zero^@) ;
     y ~ (α[0]) ;
@@ -1419,7 +1419,7 @@ def plus := [:
 :] plus
 [: α[0] :]
 
-#eval unify_collapse [:
+#eval unify_reduce [:
   (
     x ~ (succ^zero^@) ;
     y ~ (succ^succ^zero^@) ;
@@ -1429,7 +1429,7 @@ def plus := [:
 
 
 -- expected: α[0] ↦ succ^zero^@
-#eval unify_collapse [:
+#eval unify_reduce [:
 (
   x ~ α[0] ;
   y ~ succ^zero^@ ;
@@ -1439,7 +1439,7 @@ def plus := [:
 [: α[0] :]
 
 
-#eval unify_collapse [:
+#eval unify_reduce [:
 (
   x ~ succ^zero^@ ;
   y ~ α[0] ;
@@ -1449,7 +1449,7 @@ def plus := [:
 [: α[0] :]
 
 
-#eval unify_collapse [:
+#eval unify_reduce [:
 (
   x ~ (α[0]) ;
   y ~ (α[1]) ;
@@ -1481,7 +1481,7 @@ def plus := [:
 
 
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   succ#zero#()
 :]
 
@@ -1493,7 +1493,7 @@ def plus := [:
   x[0]/hello
 :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   _ 
 :]
 
@@ -1523,20 +1523,20 @@ def plus := [:
   ]
 :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ [
       for y[0] => y[0] 
   ]
 :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ [
       for y[0] : abc^@ => y[0] 
   ]
 :]
 
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   ((), nil # ())
 :]
 
@@ -1550,21 +1550,21 @@ def plus := [:
   
 :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : nat^@ =>
     let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
     (y[0] (str#(), str#()))
   ]
 :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : nat^@ =>
     let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
     (y[0] (_, str#()))
   ]
 :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : nat^@ =>
     let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
     (y[0] (y[1], _))
@@ -1575,7 +1575,7 @@ def plus := [:
 -- even though, there is a hole in the program,
 -- the type of α[0] can be inferred to be uno^@  
 -- due to the application and downward propagation
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : α[0] =>
     let y[0] = λ[for (y[0], y[1]) : (uno^@ × dos^@) => y[1]] =>
     (y[0] (y[1], _))
@@ -1583,7 +1583,7 @@ def plus := [:
 :]
 
 -- Propagation: Up
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ [
       for y[0] : hello^@ -> world^@ => (
 
@@ -1602,19 +1602,19 @@ def plus := [:
   ∀ 1 => β[0] -> β[0] -> (β[0] × β[0])
 :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   let y[0] = (hello # ()) =>
   y[0]
 :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : int^@ -> str^@ => 
   λ[for y[0] : int^@  =>
     (y[1] y[0])
   ]]
 :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : ∀ 1 => (β[0] -> β[0]) => 
   λ[for y[0] : int^@  =>
     (y[1] y[0])
@@ -1629,7 +1629,7 @@ def plus := [:
   [: ∀ 1 => β[0] -> β[0] :]
   [: int^@ -> int^@ :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : (int^@ | str^@) -> hello^@ => 
   λ[for y[0] : str^@ => 
      (y[1] y[0]) 
@@ -1644,7 +1644,7 @@ def plus := [:
   [: str^@ :]
   [: (int^@ | α[0]) ; α[1] :]
 
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : (int^@ | α[1]) -> α[1] => 
   λ[for y[0] : str^@ => 
      (y[1] y[0]) 
@@ -1654,14 +1654,14 @@ def plus := [:
 -----
 
 -- Widening
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
     OUTPUT # (y[0] hello#())
   ]
 :]
 
 -- Widening
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
     OUTPUT # ((y[0] hello#()) world#())
   ]
@@ -1669,7 +1669,7 @@ def plus := [:
 
 
 -- Widening
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
   λ[for y[0] : hello^@ =>
   λ[for y[0] : world^@ =>
@@ -1680,7 +1680,7 @@ def plus := [:
 :]
 
 -- Widening
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
   λ[for y[0] : hello^@ =>
   λ[for y[0] : world^@ =>
@@ -1691,7 +1691,7 @@ def plus := [:
 :]
 
 -- Widening ; TODO
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
   λ[for y[0] : int^@  =>
   λ[for y[0] : str^@  =>
@@ -1702,7 +1702,7 @@ def plus := [:
 
 
 -- Narrowing
-#eval infer_collapse [:
+#eval infer_reduce [:
   λ[for y[0] : uno^@ -> @ => 
   λ[for y[0] : dos^@ -> @ =>
   OUTPUT #
