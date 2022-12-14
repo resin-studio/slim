@@ -1047,6 +1047,9 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 
 % widening and narrowing in type inference
   % exactness param chosen during inference 
+    % exactness flag is justified by dual purpose of type system
+      % 1. catch errors (exactly according to spec)
+      % 2. describe behavior of program abstractly
   % annotations are exact 
   % everything else is non-exact;
     % allowing union and intersection with fresh variables
@@ -1081,7 +1084,3 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 % implement proof of soundness
 % implement translation from surface syntax to nameless syntax 
 % implement pretty printer 
-
-
-% POPL
-% talk to Megan about RTA form 
