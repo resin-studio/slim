@@ -1596,21 +1596,39 @@ def plus := [:
   ]
 :]
 
-
-
-#eval [:
-  ∀ 1 => β[0] -> β[0] -> (β[0] × β[0])
-:]
-
-#eval infer_reduce [:
-  let y[0] = (hello # ()) =>
-  y[0]
-:]
-
 #eval infer_reduce [:
   λ[for y[0] : int^@ -> str^@ => 
   λ[for y[0] : int^@  =>
     (y[1] y[0])
+  ]]
+:]
+
+
+#eval infer_reduce [:
+  λ[for y[0] : str^@ -> @ => 
+  λ[for y[0] : str^@ => 
+     (y[1] y[0]) 
+  ]]
+:]
+
+#eval infer_reduce [:
+  λ[for y[0] : int^@ -> @ => 
+  λ[for y[0] : str^@ => 
+     (y[1] y[0]) 
+  ]]
+:]
+
+#eval infer_reduce [:
+  λ[for y[0] : (int^@ | str^@) -> @ => 
+  λ[for y[0] : str^@ => 
+     (y[1] y[0]) 
+  ]]
+:]
+
+#eval infer_reduce [:
+  λ[for y[0] : (int^@ | α[1]) -> α[1] => 
+  λ[for y[0] : str^@ => 
+     (y[1] y[0]) 
   ]]
 :]
 
@@ -1621,35 +1639,7 @@ def plus := [:
   ]]
 :]
 
-#eval unify 3 {} False
-  [:  α[0] -> α[0] :]
-  [: int^@ -> int^@ :]
 
-#eval unify 3 {} False 
-  [: ∀ 1 => β[0] -> β[0] :]
-  [: int^@ -> int^@ :]
-
-#eval infer_reduce [:
-  λ[for y[0] : (int^@ | str^@) -> hello^@ => 
-  λ[for y[0] : str^@ => 
-     (y[1] y[0]) 
-  ]]
-:]
-
-#eval unify 3 {} False
-  [: str^@ :]
-  [: int^@ | α[0] :]
-
-#eval unify 3 {} False
-  [: str^@ :]
-  [: (int^@ | α[0]) ; α[1] :]
-
-#eval infer_reduce [:
-  λ[for y[0] : (int^@ | α[1]) -> α[1] => 
-  λ[for y[0] : str^@ => 
-     (y[1] y[0]) 
-  ]]
-:]
 
 -----
 
@@ -1690,7 +1680,7 @@ def plus := [:
   ]
 :]
 
--- Widening ; TODO
+-- Widening ; TODO: figure debug LET binding semantics
 #eval infer_reduce [:
   λ[for y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
   λ[for y[0] : int^@  =>
@@ -1700,6 +1690,10 @@ def plus := [:
   ]]]
 :]
 
+#eval infer_reduce [:
+  let y[0] = (hello # ()) =>
+  y[0]
+:]
 
 -- Narrowing
 #eval infer_reduce [:
