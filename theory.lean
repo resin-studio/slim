@@ -1701,5 +1701,18 @@ def plus := [:
 :]
 
 
--- Narrowing ; TODO
--- HOW can we isolate the effects of intersection and union?
+-- Narrowing
+#eval infer_collapse [:
+  λ[for y[0] : uno^@ -> @ => 
+  λ[for y[0] : dos^@ -> @ =>
+  OUTPUT #
+  λ[for y[0] =>
+    ((y[2] y[0]), (y[1] y[0]))
+  ]
+  ]]
+:]
+
+
+
+
+
