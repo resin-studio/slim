@@ -1222,8 +1222,8 @@ match t with
   let ty1' := [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
-  List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tmx) exact t ty) (fun (i, env_ty2, ty') =>
-    [ (i, env_ty1 ;; env_ty2, ty') ]
+  List.bind (infer i env_ty (env_tm ;; env_tmx) exact t ty) (fun (i, env_ty2, ty') =>
+    [ (i, env_ty2, ty') ]
   ))
 
 | .fix t1 =>
