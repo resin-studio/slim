@@ -1218,7 +1218,7 @@ match t with
     | .none => (i + 1, Ty.fvar i)
   List.bind (infer i env_ty env_tm exact t1 ty1) (fun (i, env_ty1, ty1') =>
   let ty1' := (Ty.reduce env_ty ty1')
-  let fvs := (Ty.free_vars ty1').toList.bind (fun (k, _) => [k])
+  let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
   let ty1' := [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
@@ -1763,13 +1763,28 @@ def plus := [:
 
 
 -- let-polymorphism
--- TODO: fix generalization
+#eval (
+  let ty1' := (Ty.reduce {} [: hello^@ | α[0] ; α[1] | (∀ 1 => β[0] | α[0]):])
+  (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
+)
+
+#eval (
+  let ty1' := (Ty.reduce {} [: hello^@ ; α[18] ; α[23] ; (∀ 1 => β[0] | α[23]):])
+  let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
+  [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
+)
 
 #eval infer_reduce [:
   let y[0] = λ[for y[0] => hello # y[0]] =>
   (
     y[0]
   )
+:]
+
+-- TODO: fix application of universally typed function
+#eval infer_reduce [:
+  let y[0] = λ[for y[0] => hello # y[0]] =>
+  (y[0] uno#())
 :]
 
 
