@@ -573,7 +573,6 @@ partial def Ty.reduce_final (sign : Bool) : Ty -> Ty
   | .top => .top 
   | .tag l ty => Ty.tag l (Ty.reduce_final sign ty) 
   | .field l ty => Ty.field l (Ty.reduce_final sign ty) 
-
   | .union ty1 ty2 =>
     let ty1' := Ty.reduce_final sign ty1
     let ty2' := Ty.reduce_final sign ty2
@@ -585,7 +584,6 @@ partial def Ty.reduce_final (sign : Bool) : Ty -> Ty
       ty2'
     else
       Ty.union ty1' ty2'
-
   | .inter ty1 ty2 =>
     let ty1' := Ty.reduce_final sign ty1
     let ty2' := Ty.reduce_final sign ty2
@@ -597,15 +595,14 @@ partial def Ty.reduce_final (sign : Bool) : Ty -> Ty
       ty2'
     else
       Ty.inter ty1' ty2'
-
   | .case ty1 ty2 => Ty.case (Ty.reduce_final (!sign) ty1) (Ty.reduce_final sign ty2)
   | .univ n cty1 cty2 ty => 
       Ty.univ n  
-        (Ty.reduce_final sign cty1) (Ty.reduce_final (!sign) cty2)
+        (Ty.reduce_final sign cty1) (Ty.reduce_final (sign) cty2)
         (Ty.reduce_final sign ty)
   | .exis n cty1 cty2 ty => 
       Ty.exis n  
-        (Ty.reduce_final sign cty1) (Ty.reduce_final (!sign) cty2)
+        (Ty.reduce_final sign cty1) (Ty.reduce_final (sign) cty2)
         (Ty.reduce_final sign ty)
   | .recur ty => Ty.recur (Ty.reduce_final sign ty)
   | .corec ty => Ty.corec (Ty.reduce_final sign ty)
@@ -1167,10 +1164,10 @@ match t with
   let (i, ty1) := match op_ty1 with
     | .some ty1 => (i, ty1) 
     | .none => (i + 1, Ty.fvar i)
-  List.bind (infer i (env_ty) env_tm True t1 ty1) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i env_ty env_tm exact t1 ty1) (fun (i, env_ty1, ty1') =>
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, Ty.univ 1 (Ty.bvar 0) ty1' (Ty.bvar 0))]) 
   let t := Tm.raise_binding 0 [x] t 
-  List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tmx) False t ty) (fun (i, env_ty2, ty') =>
+  List.bind (infer i (env_ty ;; env_ty1) (env_tm ;; env_tmx) exact t ty) (fun (i, env_ty2, ty') =>
     [ (i, env_ty1 ;; env_ty2, ty') ]
   ))
 
@@ -1676,7 +1673,14 @@ def plus := [:
   ]
 :]
 
--- Widening ; TODO: figure debug LET binding semantics
+#eval infer_reduce [:
+  λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
+  let y[0] = ((y[0] hello#()) world#()) =>
+    OUTPUT # y[0]
+  ]
+:]
+
+
 #eval infer_reduce [:
   λ[for y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
   λ[for y[0] : int^@  =>
@@ -1702,6 +1706,25 @@ def plus := [:
   ]]
 :]
 
+
+-- let-polymorphism
+-- TODO: fix generalization
+
+#eval infer_reduce [:
+  let y[0] = λ[for y[0] => hello # y[0]] =>
+  (
+    y[0]
+  )
+:]
+
+
+#eval infer_reduce [:
+  let y[0] = λ[for y[0] => hello # y[0]] =>
+  (
+    (y[0] uno#()),
+    (y[0] dos#())
+  )
+:]
 
 
 
