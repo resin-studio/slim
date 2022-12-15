@@ -858,7 +858,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \Omega_1\ .\ \tau_1' \in N_1
     \ \wedge\ 
     \\\\
-    \Delta;\Omega_1\ \Gamma,x \mapsto (\forall \beta :: \beta \leq \tau_1\ .\ \beta) 
+    \Delta;\Omega_1 \vdash_{simp}  \tau_1' \rightsquigarrow \tau_1''
+    \ \wedge\ 
+    \text{freevars}\ \tau_1'' = \widebar{\alpha}
+    \ \wedge\ 
+    \\\\
+    % NOTE: Remy doesn't need to simply, since their universal holds constraints 
+    \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1''
       \vdash t : \tau \rightsquigarrow N_2
     \ \wedge\ 
     \\\\
