@@ -129,11 +129,18 @@ match t with
   let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
     l ++ " := " ++ Tm.repr t1 n ⟩
   "χ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
+| func [(pat, op_ty_pat, tb)] =>
+  match op_ty_pat with
+  | .some ty_pat =>
+    "λ " ++ (Tm.repr pat n) ++ " : " ++ (Ty.repr ty_pat n) ++ 
+    " => " ++ (Tm.repr tb (n))
+  | .none =>
+    "λ " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
 | func fs =>
   let _ : ToFormat (Tm × Option Ty × Tm) := ⟨fun (pat, op_ty_pat, tb) =>
     match op_ty_pat with
     | .some ty_pat =>
-      (Tm.repr pat n) ++ " : " ++ (Ty.repr ty_pat n) ++ 
+      "for " ++ (Tm.repr pat n) ++ " : " ++ (Ty.repr ty_pat n) ++ 
       " => " ++ (Tm.repr tb (n))
     | .none =>
       (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
@@ -194,6 +201,8 @@ syntax:30 "(" slm "," slm ")" : slm
 syntax:30 "χ" slm : slm
 syntax:20 "for" slm:30 ":" slm "=>" slm:20 : slm 
 syntax:20 "for" slm:30 "=>" slm:20 : slm 
+syntax:20 "λ" slm:30 ":" slm "=>" slm:20 : slm 
+syntax:20 "λ" slm:30 "=>" slm:20 : slm 
 syntax:30 "λ" slm : slm 
 syntax:30 slm:30 "/" slm:100 : slm 
 syntax:30 "(" slm:30 slm:30 ")" : slm 
@@ -247,6 +256,8 @@ macro_rules
   | `([: for $b => $d :]) => `(([: $b :], Option.none, [: $d :]))
   | `([: χ $a :]) => `(Tm.record [: $a :])
   | `([: ( $a , $b ) :]) => `(Tm.record [("l", [: $a :]), ("r", [:$b :])])
+  | `([: λ $b : $c => $d :]) => `(Tm.func [([: $b :], Option.some [: $c :], [: $d :])])
+  | `([: λ $b => $d :]) => `(Tm.func [([: $b :], Option.none, [: $d :])])
   | `([: λ $a :]) => `(Tm.func [: $a :])
   | `([: $a / $b :]) => `(Tm.proj [: $a :] [: $b :])
   | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
@@ -1599,24 +1610,21 @@ def plus := [:
 :]
 
 #eval infer_reduce [:
-  λ[for y[0] : nat^@ =>
-    let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
+  λ y[0] : nat^@ =>
+    let y[0] = (λ (y[0], y[1]) : (str^@ × str^@) => y[0]) =>
     (y[0] (str#(), str#()))
-  ]
 :]
 
 #eval infer_reduce [:
-  λ[for y[0] : nat^@ =>
-    let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
+  λ y[0] : nat^@ =>
+    let y[0] = (λ (y[0], y[1]) : (str^@ × str^@) => y[0]) =>
     (y[0] (_, str#()))
-  ]
 :]
 
 #eval infer_reduce [:
-  λ[for y[0] : nat^@ =>
+  λ y[0] : nat^@ =>
     let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
     (y[0] (y[1], _))
-  ]
 :]
 
 -- Propagation: Down 
@@ -1624,67 +1632,53 @@ def plus := [:
 -- the type of α[0] can be inferred to be uno^@  
 -- due to the application and downward propagation
 #eval infer_reduce [:
-  λ[for y[0] : α[0] =>
-    let y[0] = λ[for (y[0], y[1]) : (uno^@ × dos^@) => y[1]] =>
+  λ y[0] : α[0] =>
+    let y[0] = (λ (y[0], y[1]) : (uno^@ × dos^@) => y[1]) =>
     (y[0] (y[1], _))
-  ]
 :]
 
 -- Propagation: Up
 #eval infer_reduce [:
-  λ [
-      for y[0] : hello^@ -> world^@ => (
-
-        λ [
-            for y[0] => (
-              cons # ((y[1] y[0]), nil # ())
-            ) 
-        ]
-      ) 
-  ]
+  λ y[0] : hello^@ -> world^@ =>
+  λ y[0] => 
+    (cons # ((y[1] y[0]), nil # ()))
 :]
 
 #eval infer_reduce [:
-  λ[for y[0] : int^@ -> str^@ => 
-  λ[for y[0] : int^@  =>
+  λ y[0] : int^@ -> str^@ => 
+  λ y[0] : int^@  =>
     (y[1] y[0])
-  ]]
 :]
 
 
 #eval infer_reduce [:
-  λ[for y[0] : str^@ -> @ => 
-  λ[for y[0] : str^@ => 
-     OUTPUT # (y[1] y[0]) 
-  ]]
+  λ y[0] : str^@ -> @ => 
+  λ y[0] : str^@ => 
+     (OUTPUT # (y[1] y[0]))
 :]
 
 #eval infer_reduce [:
-  λ[for y[0] : int^@ -> @ => 
-  λ[for y[0] : str^@ => 
+  λ y[0] : int^@ -> @ => 
+  λ y[0] : str^@ => 
      (y[1] y[0]) 
-  ]]
 :]
 
 #eval infer_reduce [:
-  λ[for y[0] : (int^@ | str^@) -> @ => 
-  λ[for y[0] : str^@ => 
+  λ y[0] : (int^@ | str^@) -> @ => 
+  λ y[0] : str^@ => 
      (y[1] y[0]) 
-  ]]
 :]
 
 #eval infer_reduce [:
-  λ[for y[0] : (int^@ | α[1]) -> α[1] => 
-  λ[for y[0] : str^@ => 
+  λ y[0] : (int^@ | α[1]) -> α[1] => 
+  λ y[0] : str^@ => 
      (y[1] y[0]) 
-  ]]
 :]
 
 #eval infer_reduce [:
-  λ[for y[0] : ∀ 1 => (β[0] -> β[0]) => 
-  λ[for y[0] : int^@  =>
+  λ y[0] : ∀ 1 => (β[0] -> β[0]) => 
+  λ y[0] : int^@  =>
     (y[1] y[0])
-  ]]
 :]
 
 
@@ -1693,56 +1687,46 @@ def plus := [:
 
 -- Widening
 #eval infer_reduce [:
-  λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
-    OUTPUT # (y[0] hello#())
-  ]
+  λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
+    (OUTPUT # (y[0] hello#()))
 :]
 
 -- Widening
 #eval infer_reduce [:
-  λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
-    OUTPUT # ((y[0] hello#()) world#())
-  ]
+  λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
+    (OUTPUT # ((y[0] hello#()) world#()))
 :]
 
 
 -- Widening
 #eval infer_reduce [:
-  λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
-  λ[for y[0] : hello^@ =>
-  λ[for y[0] : world^@ =>
+  λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
+  λ y[0] : hello^@ =>
+  λ y[0] : world^@ =>
     OUTPUT # ((y[2] y[1]) y[0])
-  ]
-  ]
-  ]
 :]
 
 -- Widening
 #eval infer_reduce [:
-  λ[for y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
-  λ[for y[0] : hello^@ =>
-  λ[for y[0] : world^@ =>
+  λ y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
+  λ y[0] : hello^@ =>
+  λ y[0] : world^@ =>
     OUTPUT # ((y[2] y[1]) y[0])
-  ]
-  ]
-  ]
 :]
 
 #eval infer_reduce [:
-  λ[for y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
+  λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
   let y[0] = ((y[0] hello#()) world#()) =>
     OUTPUT # y[0]
-  ]
 :]
 
 
 #eval infer_reduce [:
-  λ[for y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
-  λ[for y[0] : int^@  =>
-  λ[for y[0] : str^@  =>
-  (let y[0] = ((y[2] y[1]) y[0]) =>
-    OUTPUT # y[0])
-  ]]]
+  λ y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
+  λ y[0] : int^@  =>
+  λ y[0] : str^@  =>
+  let y[0] = ((y[2] y[1]) y[0]) =>
+  OUTPUT # y[0]
 :]
 
 #eval infer_reduce [:
@@ -1751,14 +1735,29 @@ def plus := [:
 :]
 
 -- Narrowing
-#eval infer_reduce [:
-  λ[for y[0] : uno^@ -> @ => 
-  λ[for y[0] : dos^@ -> @ =>
-  OUTPUT #
-  λ[for y[0] =>
+
+#eval [:
+  λ y[0] : uno^@ -> @ => y[0]
+:]
+#eval [:
+  λ y[0] : uno^@ -> @ => 
+  λ y[0] : dos^@ -> @ =>
+  λ y[0] =>
     ((y[2] y[0]), (y[1] y[0]))
-  ]
-  ]]
+:]
+#eval infer_reduce [:
+  λ y[0] : uno^@ -> @ => 
+  λ y[0] : dos^@ -> @ =>
+  OUTPUT # (
+    λ y[0] => ((y[2] y[0]), (y[1] y[0]))
+  )
+:]
+#eval infer_reduce [:
+  λ y[0] : uno^@ -> @ => 
+  λ y[0] : dos^@ -> @ =>
+  OUTPUT # (λ y[0] =>
+    ((y[2] y[0]), (y[1] y[0]))
+  )
 :]
 
 
@@ -1775,27 +1774,25 @@ def plus := [:
 )
 
 #eval infer_reduce [:
-  let y[0] = λ[for y[0] : str^@ => hello # y[0]] =>
-  (
-    (y[0] str#())
-  )
+  let y[0] = (λ y[0] : str^@ => hello # y[0]) =>
+  (y[0] str#())
 :]
 
 #eval infer_reduce [:
-  let y[0] = λ[for y[0] => hello # y[0]] =>
+  let y[0] = (λ y[0] => hello # y[0]) =>
   (
     y[0]
   )
 :]
 
 #eval infer_reduce [:
-  let y[0] = λ[for y[0] => hello # y[0]] =>
+  let y[0] = (λ y[0] => hello # y[0]) =>
   (y[0] uno#())
 :]
 
 
 #eval infer_reduce [:
-  let y[0] = λ[for y[0] => hello # y[0]] =>
+  let y[0] = (λ y[0] => hello # y[0]) =>
   (
     (y[0] uno#()),
     (y[0] dos#())
@@ -1816,11 +1813,10 @@ def repli := [:
 
 #eval repli
 
--- TODO: fix divergence
--- #eval infer_reduce [:
+-- TODO: fix divergence in infer_reduce
 #eval [:
-  λ[for y[0] => fix (λ[for y[0] => λ[
-    (for zero#() => nil#()),
-    (for succ#y[0] => cons#(y[2], (y[1] y[0]))) 
-  ]])] 
+  λ y[0] => fix (λ y[0] => λ[
+    for zero#() => nil#(),
+    for succ#y[0] => cons#(y[2], (y[1] y[0])) 
+  ]) 
 :]
