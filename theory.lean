@@ -672,11 +672,11 @@ partial def Ty.reduce_final (sign : Bool) : Ty -> Ty
   | .case ty1 ty2 => Ty.case (Ty.reduce_final (!sign) ty1) (Ty.reduce_final sign ty2)
   | .univ n cty1 cty2 ty => 
       Ty.univ n  
-        (Ty.reduce_final sign cty1) (Ty.reduce_final (sign) cty2)
+        (Ty.reduce_final True cty1) (Ty.reduce_final False cty2)
         (Ty.reduce_final sign ty)
   | .exis n cty1 cty2 ty => 
       Ty.exis n  
-        (Ty.reduce_final sign cty1) (Ty.reduce_final (sign) cty2)
+        (Ty.reduce_final True cty1) (Ty.reduce_final False cty2)
         (Ty.reduce_final sign ty)
   | .recur ty => Ty.recur (Ty.reduce_final sign ty)
   | .corec ty => Ty.corec (Ty.reduce_final sign ty)
