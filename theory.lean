@@ -128,7 +128,7 @@ match t with
 | record fds =>
   let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
     l ++ " := " ++ Tm.repr t1 n ⟩
-  "χ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
+  "ω" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
 | func [(pat, op_ty_pat, tb)] =>
   match op_ty_pat with
   | .some ty_pat =>
@@ -198,7 +198,7 @@ syntax:30 "x[" slm:90 "]" : slm
 syntax:30 slm:100 "#" slm:30 : slm
 syntax:30 slm:100 ":=" slm:30 : slm
 syntax:30 "(" slm "," slm ")" : slm
-syntax:30 "χ" slm : slm
+syntax:30 "ω" slm : slm
 syntax:20 "for" slm:30 ":" slm "=>" slm:20 : slm 
 syntax:20 "for" slm:30 "=>" slm:20 : slm 
 syntax:20 "λ" slm:30 ":" slm "=>" slm:20 : slm 
@@ -254,7 +254,7 @@ macro_rules
   | `([: $a := $b :]) => `(([: $a :], [: $b :]))
   | `([: for $b : $c => $d :]) => `(([: $b :], Option.some [: $c :], [: $d :]))
   | `([: for $b => $d :]) => `(([: $b :], Option.none, [: $d :]))
-  | `([: χ $a :]) => `(Tm.record [: $a :])
+  | `([: ω $a :]) => `(Tm.record [: $a :])
   | `([: ( $a , $b ) :]) => `(Tm.record [("l", [: $a :]), ("r", [:$b :])])
   | `([: λ $b : $c => $d :]) => `(Tm.func [([: $b :], Option.some [: $c :], [: $d :])])
   | `([: λ $b => $d :]) => `(Tm.func [([: $b :], Option.none, [: $d :])])
@@ -1529,14 +1529,14 @@ def plus := [:
 
 -- term testing
 #eval [:
-  λ [ 
+  λ[ 
     for y[0] : α[0] => y[0],
     for y[0] : α[0] => y[0] 
   ]
 :]
 
 #eval [:
-  χ [ 
+  ω[ 
     left := x[0],
     right := x[0]
   ]
@@ -1813,7 +1813,8 @@ def repli := [:
 
 #eval repli
 
--- TODO: fix divergence in infer_reduce
+-- TODO: fix divergence
+-- #eval infer_reduce [:
 #eval [:
   λ y[0] => fix (λ y[0] => λ[
     for zero#() => nil#(),
