@@ -1805,3 +1805,22 @@ def plus := [:
 
 
 
+def repli := [:
+  ∀ 1 => β[0] -> (ν β[0] =>
+    zero^@ -> nil^@ ;
+    (∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
+      succ^β[0] -> cons^(β[3] × β[1])
+    )
+  )
+:]
+
+#eval repli
+
+-- TODO: fix divergence
+-- #eval infer_reduce [:
+#eval [:
+  λ[for y[0] => fix (λ[for y[0] => λ[
+    (for zero#() => nil#()),
+    (for succ#y[0] => cons#(y[2], (y[1] y[0]))) 
+  ]])] 
+:]
