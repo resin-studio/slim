@@ -1050,7 +1050,6 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 % Abstract interpretations' narrowing operator is embedded 
   % failure (bottom) when two type structures are incompatible
   % recursive types are only compatible with certain forms of compound types
-
 % widening and narrowing in type inference
   % exactness param chosen during inference 
     % exactness flag is justified by dual purpose of type system
@@ -1059,6 +1058,17 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
   % annotations are exact 
   % everything else is non-exact;
     % allowing union and intersection with fresh variables
+% correspondence to dependent types
+  % let len := λ [nil#() => 0#(), cons#l => 1#(len l)] 
+  % P ≡ Σ {n:Nat} . {v | len v = n}
+  %
+  % F ≡ (nil^@ -> 0^@) ; (∀ L N :: F ≤ L -> N => cons^L -> 1^N) 
+  % P ≡ ∃ N L :: F ≤ L -> N => (N × L) 
+  % 
+  % P ≡ (0^@ × nil^@) | (∃ N L :: N × L ≤ P => 1^N × cons^L) 
+  % concepts from dependents types may be mimicked by 
+  % basic compound types and subtyping constraints 
+  % sigma performs both the internal introduction and external projection 
 
 % TODO:
 % write paper 

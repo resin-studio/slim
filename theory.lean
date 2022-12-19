@@ -1076,25 +1076,11 @@ partial def infer_reduce (t : Tm) : Ty :=
     Ty.reduce_final True (Ty.reduce env_ty (Ty.union acc ty))
   ) (Ty.bot)
 
--- #eval infer_reduce [: :] 
-
 
 -- testing below
--- TODO: factor out into separate file
 
 #eval [: β[0] :]
 #eval [: β[0] :]
-
---     ∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β.3 .
---       l ~ succ^β[0] ; r ~ cons^β[1]  |
---     (∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β.3 .
---       l ~ succ^β[0] ; r ~ cons^β[1])
--- #eval [: 
---     ∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[3] => 
---       l ~ succ^β[0] ; r ~ cons^β[1]  |
---     (∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β.3 => 
---       l ~ succ^β[0] ; r ~ cons^β[1])
--- :]
 
 #check [: β[0] | α[0] :]
 #check [: β[0] ; α[0] :]
@@ -1257,8 +1243,6 @@ def nat_to_list := [:
   nat_to_list
   [: (succ^zero^@ -> cons^cons^α[0]) :] 
   [: α[0] :]
-
-
 
 
 /-
@@ -1652,3 +1636,11 @@ def repli := [:
     for succ#y[0] => cons#(y[2], (y[1] y[0])) 
   ]) 
 :]
+
+-- TODO: can sigma-style types be interpereted?
+-- That is, can we construct a pair type from a function type?
+-- let len := λ [nil#() => 0#(), cons#l => 1#(len l)] 
+-- P ≡ Σ {n:Nat} . {v | len v = n}
+-- 
+-- F ≡ (nil^@ -> 0^@) ; (∀ L N :: F ≤ L -> N => cons^L -> 1^N) 
+-- P ≡ ∃ N L :: F ≤ L -> N => (N × L) 
