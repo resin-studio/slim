@@ -1035,12 +1035,15 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
 \end{document}
 
 % Observations:
-% the subtyping constraint offers three interpretations of types
-  % 1. a type is a set of objects
-  % 2. a type is a proposition proved by a non-empty subtype
-  % 3. a type is a proof satisfying a proposition 
-  % e.g. Proof <: Prop
-% A fully assigned subtyping constraint is a verifiable statement
+% language of types
+  % a type is a set of objects
+  % a type may be viewed as proposition that may be undecidable 
+    % proved by a term
+% language of constraints
+  % A constraint may be viewed as a decidable proposition 
+  % A constraint is simply a subtyping relation over types
+    % allowing economical reuse of types 
+  % A fully assigned subtyping constraint is a verifiable statement
 % Freeing variables happens in subtyping/unification due to subtyping asymmetry  
   % free variable in subtyping connects to free variable associated with term 
   % if expected type has free variable.
@@ -1059,16 +1062,27 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
   % everything else is non-exact;
     % allowing union and intersection with fresh variables
 % correspondence to dependent types
-  % let len := λ [nil#() => 0#(), cons#l => 1#(len l)] 
-  % P ≡ Σ {n:Nat} . {v | len v = n}
-  %
-  % F ≡ (nil^@ -> 0^@) ; (∀ L N :: F ≤ L -> N => cons^L -> 1^N) 
-  % P ≡ ∃ N L :: F ≤ L -> N => (N × L) 
-  % 
-  % P ≡ (0^@ × nil^@) | (∃ N L :: N × L ≤ P => 1^N × cons^L) 
-  % concepts from dependents types may be mimicked by 
-  % basic compound types and subtyping constraints 
-  % sigma performs both the internal introduction and external projection 
+  % dependent types
+    % List n where
+    % nil : List 0
+    % cons : List n ->  List (n + 1) 
+    %
+    % P ≡ Σ (n:Nat) . List n 
+  % relational types
+    % P ≡ 
+    % (0^@ × nil^@) | 
+    % (∃ N L :: N × L ≤ P => 1^N × cons^L) 
+    %
+    % -- OR -- 
+    %
+    % F ≡ 
+    % (nil^@ -> 0^@) ; 
+    % (∀ L N :: F ≤ L -> N => cons^L -> 1^N) 
+    %
+    % P ≡ ∃ N L :: F ≤ L -> N => (N × L) 
+  % in DT, sigma ads the necessary term to satisfy constraints 
+  % since a term may be a dependency for a type without actually being in that type.
+  % in RT, a term can only be a dependency of a type if it is in that type 
 
 % TODO:
 % write paper 

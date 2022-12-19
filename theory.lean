@@ -143,9 +143,9 @@ match t with
       "for " ++ (Tm.repr pat n) ++ " : " ++ (Ty.repr ty_pat n) ++ 
       " => " ++ (Tm.repr tb (n))
     | .none =>
-      (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
+      "for " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
   ⟩
-  "λ" ++ Format.bracket "[" (Format.joinSep fs (",\n")) "]"
+  "λ" ++ Format.bracket "[" (Format.joinSep fs ("," ++ Format.line)) "]"
 | .proj t1 l =>
   Tm.repr t1 n ++ "/" ++ l
 | .app t1 t2 =>
@@ -1619,7 +1619,7 @@ def plus := [:
 
 def repli := [:
   ∀ 1 => β[0] -> (ν β[0] =>
-    zero^@ -> nil^@ ;
+    (zero^@ -> nil^@) ;
     (∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
       succ^β[0] -> cons^(β[3] × β[1])
     )
@@ -1632,15 +1632,19 @@ def repli := [:
 -- #eval infer_reduce [:
 #eval [:
   λ y[0] => fix (λ y[0] => λ[
-    for zero#() => nil#(),
-    for succ#y[0] => cons#(y[2], (y[1] y[0])) 
+  for zero#() => nil#(),
+  for succ#y[0] => cons#(y[2], (y[1] y[0])) 
   ]) 
 :]
 
--- TODO: can sigma-style types be interpereted?
--- That is, can we construct a pair type from a function type?
--- let len := λ [nil#() => 0#(), cons#l => 1#(len l)] 
--- P ≡ Σ {n:Nat} . {v | len v = n}
+-- #eval infer_reduce [:
+--   λ y[0] => fix (λ y[0] => λ[
+--   for zero#() => nil#(),
+--   for succ#y[0] => cons#(y[2], (y[1] y[0])) 
+--   ]) 
+-- :]
+
+-- TODO: can function types be converted to pair types?
 -- 
 -- F ≡ (nil^@ -> 0^@) ; (∀ L N :: F ≤ L -> N => cons^L -> 1^N) 
 -- P ≡ ∃ N L :: F ≤ L -> N => (N × L) 
