@@ -1430,6 +1430,34 @@ def examp1 := unify 3 {} False
 --   )
 -- ]
 
+
+def nat_to_list := [: 
+  ν β[0] => 
+    zero^@ -> nil^@ |
+    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
+      succ^β[0] -> cons^β[1])
+:]
+
+#eval unify 3 {} False 
+  nat_to_list
+  [: (succ^zero^@) -> (cons^nil^@) :] 
+
+#eval unify 3 {} False 
+  nat_to_list
+  [: (succ^zero^@ -> cons^nil^@) :] 
+
+#eval unify_reduce
+  nat_to_list
+  [: (succ^zero^@ -> cons^α[0]) :] 
+  [: α[0] :]
+
+#eval unify 3 {} False
+  nat_to_list
+  [: (succ^zero^@ -> cons^cons^α[0]) :] 
+
+
+
+
 /-
   μ plus .
     ∃ N .  
