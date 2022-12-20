@@ -1061,27 +1061,54 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
   % annotations are exact 
   % everything else is non-exact;
     % allowing union and intersection with fresh variables
-% correspondence to dependent types
+% comparison of relational types with dependent types
+
   % dependent types
-    % List n where
-    % nil : List 0
-    % cons : List n ->  List (n + 1) 
-    %
-    % P ≡ Σ (n:Nat) . List n 
-  % relational types
+    % inductive LL : Nat -> Type where
+    % | nil : LL 0 
+    % | cons : {n : Nat} -> LL n -> LL (n + 1) 
+
+    % F ≡ Π (n : Nat) -> LL n
+    % P ≡ Σ (n : Nat) × LL n
+
+    % variable introduction is coupled with type construction/compounding
+    % this is convenient since a type may dependent on a term that's not included in itself
+
+
+  % relational types 
     % P ≡ 
     % (0^@ × nil^@) | 
     % (∃ N L :: N × L ≤ P => 1^N × cons^L) 
-    %
+
+    % translating from dependent to relational
+    % Σ {n : Nat} × LL n × LL (n + 1) 
+    % Σ {n : Nat} {l: List} :: (l : LL n) × {(n + 1, cons l)}  
+    % (∃ N L :: N × L ≤ P => 1^N × cons^L) 
+
     % -- OR -- 
-    %
+
     % F ≡ 
     % (nil^@ -> 0^@) ; 
     % (∀ L N :: F ≤ L -> N => cons^L -> 1^N) 
-    %
-    % P ≡ ∃ N L :: F ≤ L -> N => (N × L) 
-    % P ≡ ∃ N ≤ Nat => ∃ L :: F ≤ L -> N => (N × L) 
-    % P ≡ Σ N ≤ Nat => ∃ L :: F ≤ L -> N => L 
+
+    % translating from dependent to relational
+    % Π {n : Nat} -> LL n -> LL (n + 1) 
+    % Π {n : Nat} {l: List} :: (l : LL n) -> {for cons l => n + 1}  
+    % (∀ L N :: F ≤ L -> N => cons^L -> 1^N) 
+
+
+    % variable introduction is decoupled from type construction 
+    % the use of a variable in a type is separate from introducing the variable
+    % this is convenient since any term that a type depends on exists as a subpart
+    % of a term in that type
+    % Thus, dependencies may be inferred from terms.
+
+    % My intuition is that the symmetrical relations 
+    % and the decoupling of binder introduction from type combination 
+    % and consistent treatment of type dependency and type membership 
+    % provides an easier mental model to work with
+
+
 
 % TODO:
 % write paper 
