@@ -1080,9 +1080,8 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
     % (∀ L N :: F ≤ L -> N => cons^L -> 1^N) 
     %
     % P ≡ ∃ N L :: F ≤ L -> N => (N × L) 
-  % in DT, sigma ads the necessary term to satisfy constraints 
-  % since a term may be a dependency for a type without actually being in that type.
-  % in RT, a term can only be a dependency of a type if it is in that type 
+    % P ≡ ∃ N ≤ Nat => ∃ L :: F ≤ L -> N => (N × L) 
+    % P ≡ Σ N ≤ Nat => ∃ L :: F ≤ L -> N => L 
 
 % TODO:
 % write paper 
