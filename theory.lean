@@ -1644,7 +1644,3 @@ def repli := [:
 --   ]) 
 -- :]
 
--- TODO: can function types be converted to pair types?
--- 
--- F ≡ (nil^@ -> 0^@) ; (∀ L N :: F ≤ L -> N => cons^L -> 1^N) 
--- P ≡ ∃ N L :: F ≤ L -> N => (N × L) 
