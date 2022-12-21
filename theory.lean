@@ -69,11 +69,9 @@ match ty with
   Format.joinSep tys (" |" ++ Format.line)
 
 | .inter (Ty.field "l" l) (Ty.field "r" r) =>
-  (Format.bracket "(" (Ty.repr l n) ")") ++ 
-  " × " ++ 
-  (Format.bracket "("  (Ty.repr r n) ")")
+  Format.bracket "(" ((Ty.repr l n) ++ " × " ++ (Ty.repr r n)) ")"
 | .inter ty1 ty2 =>
-  ((Ty.repr ty1 n) ++ " ; " ++ (Ty.repr ty2 n))
+  Format.bracket "(" ((Ty.repr ty1 n) ++ " ; " ++ (Ty.repr ty2 n)) ")"
 | .case ty1 ty2 =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
 | .univ n ty_c1 ty_c2 ty_pl =>
@@ -1064,20 +1062,22 @@ match t with
   ))
 
 | .fix t1 =>
- 
-  List.bind (infer i (env_ty) env_tm exact t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
-  --   [ (i, env_ty1, ty1') ]
-  -- )
-  let (i, ty_x) := (i + 1, Ty.fvar i) 
-  let (i, ty_y) := (i + 1, Ty.fvar i) 
-  List.bind (unify i (env_ty ;; env_ty1) True (.case ty_x ty_y) ty1') (fun (i, env_ty2) =>
-    [ (i, env_ty1 ;; env_ty2, ty_y) ]
-  ))
+  List.bind (infer i (env_ty) env_tm True t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
+    let (i, ty') := (i + 1, Ty.fvar i) 
+    -- indicates that unify converges
+    let _ := (unify i (env_ty ;; env_ty1) True ty1' (.case ty' ty'))
+    -- therefore divergence could be in reduce
+    [ (i, env_ty1, ty1') ]
+  )
+  -- let (i, ty') := (i + 1, Ty.fvar i) 
+  -- List.bind (unify i (env_ty ;; env_ty1) True ty1' (.case ty' ty')) (fun (i, env_ty2) =>
+  --   [ (i, env_ty1 ;; env_ty2, ty') ]
+  -- ))
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
   (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
-    -- (Ty.reduce env_ty (Ty.union acc ty))
-    Ty.reduce_final True (Ty.reduce env_ty (Ty.union acc ty))
+    (Ty.reduce env_ty (Ty.union acc ty))
+    -- Ty.reduce_final True (Ty.reduce env_ty (Ty.union acc ty))
   ) (Ty.bot)
 
 
@@ -1665,11 +1665,31 @@ def repli := [:
 :]
 [: α[20] -> α[20] :]
 
+
+#eval [:
+  ∀ 1 => β[0] -> (ν β[0] =>
+    (zero^@ -> nil^@) ;
+    (∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
+      succ^β[0] -> cons^(β[3] × β[1])
+    )
+  )
+:]
+
+#eval unify_reduce
+[:
+  (α[0] -> α[1]) -> ((zero^@ -> nil^@) ; (succ^α[0] -> cons^(@ × α[1])))
+:]
+[:
+  α[20] -> α[20]
+:]
+[: α[20] :]
+
+
 -- TODO: fix fix
 -- generate nu binder without divergence 
-#eval infer_reduce [:
-  fix (λ y[0] => λ[
-  for zero#() => nil#(),
-  for succ#y[0] => cons#((), (y[1] y[0])) 
-  ]) 
-:]
+-- #eval infer_reduce [:
+--   fix (λ y[0] => λ[
+--   for zero#() => nil#(),
+--   for succ#y[0] => cons#((), (y[1] y[0])) 
+--   ]) 
+-- :]
