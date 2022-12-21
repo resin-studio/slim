@@ -973,7 +973,7 @@ match t with
     (i + 1, (l, t1, (Ty.fvar i)) :: ty_acc)
   ) (i, []) fds
 
-  let ty_init := Ty.field "" Ty.top
+  let ty_init := Ty.top
 
   let ty' := List.foldl (fun ty_acc => fun (l, _, ty1) => 
     Ty.inter (Ty.field l ty1) ty_acc 
@@ -996,7 +996,7 @@ match t with
     (i + 1, (p, op_ty_p, b, (Ty.fvar i)) :: ty_acc)
   ) (i, []) fs
 
-  let case_init := Ty.case Ty.bot Ty.top
+  let case_init := Ty.top
 
   let (i, ty') := List.foldl (fun (i, ty_acc) (p, op_ty_p, b, ty_b) => 
     let (i, ty_p) := match op_ty_p with
@@ -1064,18 +1064,24 @@ match t with
   ))
 
 | .fix t1 =>
-  List.bind (infer i env_ty env_tm exact t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
-  let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (unify i (env_ty ;; env_ty1) exact ty1' (.case ty' ty')) (fun (i, env_ty2) =>
-    [ (i, env_ty1 ;; env_ty2, ty') ]
+ 
+  List.bind (infer i (env_ty) env_tm exact t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
+  --   [ (i, env_ty1, ty1') ]
+  -- )
+  let (i, ty_x) := (i + 1, Ty.fvar i) 
+  let (i, ty_y) := (i + 1, Ty.fvar i) 
+  List.bind (unify i (env_ty ;; env_ty1) True (.case ty_x ty_y) ty1') (fun (i, env_ty2) =>
+    [ (i, env_ty1 ;; env_ty2, ty_y) ]
   ))
 
-
-partial def infer_reduce (t : Tm) : Ty :=
-  (infer 31 {} {} False t [: α[30] :]).foldl (fun acc => fun  (_, env_ty, ty) =>
+partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
+  (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
+    -- (Ty.reduce env_ty (Ty.union acc ty))
     Ty.reduce_final True (Ty.reduce env_ty (Ty.union acc ty))
   ) (Ty.bot)
 
+
+partial def infer_reduce (t : Tm) : Ty := infer_reduce_wt t [: α[30] :]
 
 -- testing below
 
@@ -1628,8 +1634,6 @@ def repli := [:
 
 #eval repli
 
--- TODO: fix divergence
--- #eval infer_reduce [:
 #eval [:
   λ y[0] => fix (λ y[0] => λ[
   for zero#() => nil#(),
@@ -1637,10 +1641,35 @@ def repli := [:
   ]) 
 :]
 
--- #eval infer_reduce [:
---   λ y[0] => fix (λ y[0] => λ[
---   for zero#() => nil#(),
---   for succ#y[0] => cons#(y[2], (y[1] y[0])) 
---   ]) 
--- :]
+#eval infer_reduce [:
+  λ[
+  for zero#() => nil#(),
+  for succ#y[0] => cons#((), ()) 
+  ] 
+:]
 
+
+#eval [: (zero^@ -> nil^@) ; (succ^⊤ -> cons^(@ × ⊥)) :]
+
+#eval unify_reduce
+[: α[2] -> ((zero^@ -> nil^@) ; (succ^⊤ -> cons^(@ × @))) :]
+[: α[0] -> α[0] :]
+[: α[0] :]
+
+#eval infer_reduce_wt 
+[:
+  (λ y[0] => λ[
+  for zero#() => nil#(),
+  for succ#y[0] => cons#((), (y[1] y[0])) 
+  ]) 
+:]
+[: α[20] -> α[20] :]
+
+-- TODO: fix fix
+-- generate nu binder without divergence 
+#eval infer_reduce [:
+  fix (λ y[0] => λ[
+  for zero#() => nil#(),
+  for succ#y[0] => cons#((), (y[1] y[0])) 
+  ]) 
+:]
