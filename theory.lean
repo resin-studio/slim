@@ -6,6 +6,12 @@ import Lean.Data.PersistentHashMap
 open Lean PersistentHashMap
 open Std
 
+partial def multi_step {T : Type} [BEq T] (step : T -> T) (source : T): T :=
+  let sink := step source 
+  if sink == source then
+    sink
+  else 
+    multi_step step sink
 
 
 def PHashMap.insert_all [BEq α] [Hashable α] 
@@ -295,30 +301,74 @@ def Ty.occurs (key : Nat)  : Ty -> Bool
 | .recur ty => (Ty.occurs key ty)
 | .corec ty => (Ty.occurs key ty)
 
-def Ty.free_subst (m : PHashMap Nat Ty) : Ty -> Ty
+partial def Ty.subst (m : PHashMap Nat Ty) : Ty -> Ty
 | .bvar id => .bvar id 
 | .fvar id => (match m.find? id with
-  | some ty => ty 
+  | some ty => Ty.subst m ty 
   | none => .fvar id
 )
 | .unit => .unit
 | .bot => .bot
 | .top => .top
-| .tag l ty => .tag l (Ty.free_subst m ty) 
-| .field l ty => .field l (Ty.free_subst m ty)
-| .union ty1 ty2 => .union (Ty.free_subst m ty1) (Ty.free_subst m ty2)
-| .inter ty1 ty2 => .inter (Ty.free_subst m ty1) (Ty.free_subst m ty2)
-| .case ty1 ty2 => .case (Ty.free_subst m ty1) (Ty.free_subst m ty2)
+| .tag l ty => .tag l (Ty.subst m ty) 
+| .field l ty => .field l (Ty.subst m ty)
+| .union ty1 ty2 => .union (Ty.subst m ty1) (Ty.subst m ty2)
+| .inter ty1 ty2 => .inter (Ty.subst m ty1) (Ty.subst m ty2)
+| .case ty1 ty2 => .case (Ty.subst m ty1) (Ty.subst m ty2)
 | .univ n ty_c1 ty_c2 ty => (.univ n 
-  (Ty.free_subst m ty_c1) (Ty.free_subst m ty_c2)
-  (Ty.free_subst m ty)
+  (Ty.subst m ty_c1) (Ty.subst m ty_c2)
+  (Ty.subst m ty)
 )
 | .exis n ty_c1 ty_c2 ty => (.exis n
-  (Ty.free_subst m ty_c1) (Ty.free_subst m ty_c2) 
-  (Ty.free_subst m ty)
+  (Ty.subst m ty_c1) (Ty.subst m ty_c2) 
+  (Ty.subst m ty)
 )
-| .recur ty => .recur (Ty.free_subst m ty)
-| .corec ty => .corec (Ty.free_subst m ty)
+| .recur ty => .recur (Ty.subst m ty)
+| .corec ty => .corec (Ty.subst m ty)
+
+partial def Ty.simplify : Ty -> Ty
+| .bvar id => Ty.bvar id  
+| .fvar id => Ty.fvar id 
+| .unit => .unit 
+| .bot => .bot 
+| .top => .top 
+| .tag l ty => Ty.tag l (Ty.simplify ty) 
+| .field l ty => Ty.field l (Ty.simplify ty) 
+| .union ty1 ty2 =>
+  let ty1' := Ty.simplify ty1
+  let ty2' := Ty.simplify ty2
+  if ty1' == Ty.top || ty2' == Ty.top then 
+    Ty.top 
+  else if ty1' == ty2' || ty2' == Ty.bot then 
+    ty1'
+  else if ty1' == Ty.bot then 
+    ty2'
+  else
+    Ty.union ty1' ty2'
+
+| .inter ty1 ty2 =>
+  let ty1' := Ty.simplify ty1
+  let ty2' := Ty.simplify ty2
+  if ty1' == Ty.bot || ty2' == Ty.bot then 
+    Ty.bot 
+  else if ty1' == ty2' || ty2' == Ty.top then 
+    ty1'
+  else if ty1' == Ty.top then 
+    ty2'
+  else
+    Ty.inter ty1' ty2'
+
+| .case ty1 ty2 => Ty.case (Ty.simplify ty1) (Ty.simplify ty2)
+| .univ n cty1 cty2 ty => 
+    Ty.univ n  
+      (Ty.simplify cty1) (Ty.simplify cty2)
+      (Ty.simplify ty)
+| .exis n cty1 cty2 ty => 
+    Ty.exis n  
+      (Ty.simplify cty1) (Ty.simplify cty2)
+      (Ty.simplify ty)
+| .recur ty => Ty.recur (Ty.simplify ty)
+| .corec ty => Ty.corec (Ty.simplify ty)
 
 
 
@@ -335,13 +385,13 @@ macro_rules
   | `([sub: [$x,$xs:sub,*] :]) => `([sub: $x :] :: [sub: [$xs,*] :])
 
 
-syntax slm "%" sub : slm 
-macro_rules
-  | `([: $a % $b:sub :]) => `(Ty.free_subst (PHashMap.from_list [sub: $b :]) [: $a :])
+-- syntax slm "%" sub : slm 
+-- macro_rules
+--   | `([: $a % $b:sub :]) => `(Ty.subst (PHashMap.from_list [sub: $b :]) [: $a :])
 
 
 -- #check [: (β[1]) % [1 // α[0]] :]
-#check [: (β[1]) % [1//α[0]] :]
+-- #check [: (β[1]) % [1//α[0]] :]
 
 
 
@@ -439,164 +489,55 @@ partial def unroll : Ty -> Ty
   -- Ty.instantiate 0 [Ty.recur τ] τ 
   [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
 | .corec ty => 
-  -- Ty.instantiate 0 [Ty.recur τ] τ 
+  -- Ty.instantiate 0 [Ty.corec τ] τ 
   [: ⟨ty⟩ ↑ 0 // [ν β[0] => ⟨ty⟩]:]
 | ty => ty
 
 
-partial def roll_recur (key : Nat) (τ : Ty) : Ty :=
-  if Ty.occurs key τ then
-    [: (μ β[0] => ⟨τ⟩) % [⟨key⟩ // β[0]] :]
+partial def roll_recur (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
+  let ty := Ty.subst m ty  
+  if Ty.occurs key ty then
+    Ty.subst (PHashMap.from_list [(key, [: β[0] :])]) [: (μ β[0] => ⟨ty⟩) :] 
   else
-    τ
+    ty 
 
-partial def roll_corec (key : Nat) (τ : Ty) : Ty :=
-  if Ty.occurs key τ then
-    [: (ν β[0] => ⟨τ⟩) % [⟨key⟩ // β[0]] :]
+partial def roll_corec (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
+  let ty := Ty.subst m ty
+  if Ty.occurs key ty then
+    Ty.subst (PHashMap.from_list [(key, [: β[0] :])]) [: (ν β[0] => ⟨ty⟩) :] 
   else
-    τ
-
-partial def Ty.reduce (env_ty : PHashMap Nat Ty) : Ty -> Ty
-| .bvar id => Ty.bvar id  
-| .fvar id => match env_ty.find? id with
-  | some ty => Ty.reduce env_ty ty 
-  | none => Ty.fvar id
-| .unit => .unit 
-| .bot => .bot 
-| .top => .top 
-| .tag l ty => Ty.tag l (Ty.reduce env_ty ty) 
-| .field l ty => Ty.field l (Ty.reduce env_ty ty) 
-
-| .union ty1 ty2 =>
-  let ty1' := Ty.reduce env_ty ty1
-  let ty2' := Ty.reduce env_ty ty2
-  if ty1' == Ty.top || ty2' == Ty.top then 
-    Ty.top 
-  else if ty1' == ty2' || ty2' == Ty.bot then 
-    ty1'
-  else if ty1' == Ty.bot then 
-    ty2'
-  else
-    Ty.union ty1' ty2'
-
-| .inter ty1 ty2 =>
-  let ty1' := Ty.reduce env_ty ty1
-  let ty2' := Ty.reduce env_ty ty2
-  if ty1' == Ty.bot || ty2' == Ty.bot then 
-    Ty.bot 
-  else if ty1' == ty2' || ty2' == Ty.top then 
-    ty1'
-  else if ty1' == Ty.top then 
-    ty2'
-  else
-    Ty.inter ty1' ty2'
-
-| .case ty1 ty2 => Ty.case (Ty.reduce env_ty ty1) (Ty.reduce env_ty ty2)
-| .univ n cty1 cty2 ty => 
-    Ty.univ n  
-      (Ty.reduce env_ty cty1) (Ty.reduce env_ty cty2)
-      (Ty.reduce env_ty ty)
-| .exis n cty1 cty2 ty => 
-    Ty.exis n  
-      (Ty.reduce env_ty cty1) (Ty.reduce env_ty cty2)
-      (Ty.reduce env_ty ty)
-| .recur ty => Ty.recur (Ty.reduce env_ty ty)
-| .corec ty => Ty.corec (Ty.reduce env_ty ty)
+    ty
 
 
-
-partial def Ty.reduce_final (sign : Bool) : Ty -> Ty
+partial def Ty.subst_default (sign : Bool) : Ty -> Ty
 | .bvar id => Ty.bvar id  
 | .fvar _ => if sign then Ty.bot else Ty.top
 | .unit => .unit 
 | .bot => .bot 
 | .top => .top 
-| .tag l ty => Ty.tag l (Ty.reduce_final sign ty) 
-| .field l ty => Ty.field l (Ty.reduce_final sign ty) 
+| .tag l ty => Ty.tag l (Ty.subst_default sign ty) 
+| .field l ty => Ty.field l (Ty.subst_default sign ty) 
 | .union ty1 ty2 =>
-  let ty1' := Ty.reduce_final sign ty1
-  let ty2' := Ty.reduce_final sign ty2
-  if ty1' == Ty.top || ty2' == Ty.top then 
-    Ty.top
-  else if ty1' == ty2' || ty2' == Ty.bot then 
-    ty1'
-  else if ty1' == Ty.bot then 
-    ty2'
-  else
-    Ty.union ty1' ty2'
-
+  Ty.union (Ty.subst_default sign ty1) (Ty.subst_default sign ty2)
 | .inter ty1 ty2 =>
-  let ty1' := Ty.reduce_final sign ty1
-  let ty2' := Ty.reduce_final sign ty2
-  if (ty1' == Ty.bot) || (ty2' == Ty.bot) then 
-    Ty.bot
-  else if ty1' == ty2' || ty2' == Ty.top then 
-    ty1'
-  else if ty1' == Ty.top then 
-    ty2'
-  else
-    Ty.inter ty1' ty2'
-| .case ty1 ty2 => Ty.case (Ty.reduce_final (!sign) ty1) (Ty.reduce_final sign ty2)
+  Ty.inter (Ty.subst_default sign ty1) (Ty.subst_default sign ty2)
+| .case ty1 ty2 => Ty.case (Ty.subst_default (!sign) ty1) (Ty.subst_default sign ty2)
 | .univ n cty1 cty2 ty => 
     Ty.univ n  
-      (Ty.reduce_final True cty1) (Ty.reduce_final False cty2)
-      (Ty.reduce_final sign ty)
+      (Ty.subst_default True cty1) (Ty.subst_default False cty2)
+      (Ty.subst_default sign ty)
 | .exis n cty1 cty2 ty => 
     Ty.exis n  
-      (Ty.reduce_final True cty1) (Ty.reduce_final False cty2)
-      (Ty.reduce_final sign ty)
-| .recur ty => Ty.recur (Ty.reduce_final sign ty)
-| .corec ty => Ty.corec (Ty.reduce_final sign ty)
+      (Ty.subst_default True cty1) (Ty.subst_default False cty2)
+      (Ty.subst_default sign ty)
+| .recur ty => Ty.recur (Ty.subst_default sign ty)
+| .corec ty => Ty.corec (Ty.subst_default sign ty)
 
-
-partial def Ty.equal_syntax : Ty -> Ty -> Bool
-| .bvar id1, .bvar id2 => if id1 = id2 then true else false 
-| .fvar id1, .fvar id2 => if id1 = id2 then true else false 
-| .unit, .unit => true
-| .tag l1 ty1, .tag l2 ty2 =>
-  l1 = l2 ∧ (
-    Ty.equal_syntax ty1 ty2 
-  )
-| .field l1 ty1, .field l2 ty2 =>
-  l1 = l2 ∧ (
-    Ty.equal_syntax ty1 ty2 
-  )
-
-| .union ty1 ty2, .union ty3 ty4 =>
-  Ty.equal_syntax ty1 ty3 ∧
-  Ty.equal_syntax ty2 ty4
-
-| .inter ty1 ty2, .inter ty3 ty4 =>
-  Ty.equal_syntax ty1 ty3 ∧
-  Ty.equal_syntax ty2 ty4
-
-| .case ty1 ty2, .case ty3 ty4 =>
-  Ty.equal_syntax ty1 ty3 ∧
-  Ty.equal_syntax ty2 ty4
-
-| .univ n1 tyc1 tyc2 ty1, .univ n2 tyc3 tyc4 ty2 =>
-  n1 = n2 ∧
-  Ty.equal_syntax tyc1 tyc3 ∧
-  Ty.equal_syntax tyc2 tyc4 ∧
-  Ty.equal_syntax ty1 ty2
-
-| .exis n1 tyc1 tyc2 ty1, .exis n2 tyc3 tyc4 ty2 =>
-  n1 = n2 ∧
-  Ty.equal_syntax tyc1 tyc3 ∧
-  Ty.equal_syntax tyc2 tyc4 ∧
-  Ty.equal_syntax ty1 ty2
-
-| .recur ty1, .recur ty2 =>
-  Ty.equal_syntax ty1 ty2
-
-| .corec ty1, .corec ty2 =>
-  Ty.equal_syntax ty1 ty2
-| _, _ => false
 
 partial def Ty.equal (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
-  let ty1 := Ty.reduce env_ty ty1 
-  let ty2 := Ty.reduce env_ty ty2 
-  Ty.equal_syntax ty1 ty2 
+  let ty1 := Ty.simplify (Ty.subst env_ty ty1)
+  let ty2 := Ty.simplify (Ty.subst env_ty ty2)
+  ty1 == ty2
 
 def linearize_record : Ty -> Option Ty
 | .field l ty => 
@@ -626,7 +567,7 @@ def linearize_fields : Ty -> Option (List (String × Ty))
 
 
 def wellformed_record_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
-  match linearize_fields (Ty.reduce env_ty ty) with
+  match linearize_fields (Ty.simplify (Ty.subst env_ty ty)) with
   | .some fields => 
     List.any fields (fun (k_fd, ty_fd) =>
       match ty_fd with
@@ -655,11 +596,11 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     [ 
       if exact then
         (i, PHashMap.from_list [
-          (id, roll_recur id ty)
+          (id, roll_recur id env_ty ty)
         ]) 
       else
         (i + 1, PHashMap.from_list [
-          (id, Ty.inter (roll_recur id ty) (Ty.fvar i))
+          (id, Ty.inter (roll_recur id env_ty ty) (Ty.fvar i))
         ]) 
     ]
   | some ty' => unify i env_ty exact ty' ty 
@@ -669,11 +610,11 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     [ 
       if exact then
         (i, PHashMap.from_list [
-          (id, roll_corec id ty')
+          (id, roll_corec id env_ty ty')
         ]) 
       else
         (i + 1, PHashMap.from_list [
-          (id, Ty.union (roll_corec id ty') (Ty.fvar i))
+          (id, Ty.union (roll_corec id env_ty ty') (Ty.fvar i))
         ]) 
     ]
   | some ty => unify i env_ty exact ty' ty 
@@ -846,25 +787,16 @@ partial def Ty.union_all : (List Ty) -> Option Ty
   | [] => none
   | t::ts =>
     let ts := List.filter
-      (fun t' => not (Ty.equal_syntax t t'))
+      (fun t' => not (t == t'))
       ts
     match Ty.union_all ts with
       | .none => .some t
       | .some t' => Ty.union t t'
 
 
-partial def Ty.collapse 
-  (i : Nat) (env_ty : PHashMap Nat Ty) 
-  (u_env_ty_x: List (Nat × PHashMap Nat Ty)) (ty : Ty): 
-List Ty :=
-  List.map 
-    (fun (_, env_ty_ext) =>
-      Ty.reduce (env_ty ;; env_ty_ext) ty
-    ) u_env_ty_x 
-
 partial def unify_reduce (ty1) (ty2) (ty_result) :=
   (unify 31 {} True ty1 ty2).foldl (fun acc => fun  (_, env_ty) =>
-    (Ty.reduce env_ty (Ty.union acc ty_result))
+    Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty_result)))
   ) (Ty.bot)
 
 
@@ -1052,7 +984,7 @@ match t with
     | .some ty1 => (i, ty1) 
     | .none => (i + 1, Ty.fvar i)
   List.bind (infer i env_ty env_tm exact t1 ty1) (fun (i, env_ty1, ty1') =>
-  let ty1' := (Ty.reduce (env_ty;;env_ty1) ty1')
+  let ty1' := (Ty.subst (env_ty;;env_ty1) ty1')
   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
   let ty1' := [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
@@ -1063,23 +995,21 @@ match t with
 
 | .fix t1 =>
   List.bind (infer i (env_ty) env_tm True t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
-    let (i, ty') := (i + 1, Ty.fvar i) 
-    -- indicates that unify converges
-    let _ := (unify i (env_ty ;; env_ty1) True ty1' (.case ty' ty'))
-    -- therefore divergence could be in reduce
-    [ (i, env_ty1, ty1') ]
-  )
-  -- let (i, ty') := (i + 1, Ty.fvar i) 
-  -- List.bind (unify i (env_ty ;; env_ty1) True ty1' (.case ty' ty')) (fun (i, env_ty2) =>
-  --   [ (i, env_ty1 ;; env_ty2, ty') ]
-  -- ))
+  --   let (i, ty') := (i + 1, Ty.fvar i) 
+  --   -- indicates that unify converges
+  --   let _ := (unify i (env_ty ;; env_ty1) True ty1' (.case ty' ty'))
+  --   -- therefore divergence could be in reduce
+  --   [ (i, env_ty1, ty1') ]
+  -- )
+  let (i, ty') := (i + 1, Ty.fvar i) 
+  List.bind (unify i (env_ty ;; env_ty1) True ty1' (.case ty' ty')) (fun (i, env_ty2) =>
+    [ (i, env_ty1 ;; env_ty2, ty') ]
+  ))
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
   (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
-    (Ty.reduce env_ty (Ty.union acc ty))
-    -- Ty.reduce_final True (Ty.reduce env_ty (Ty.union acc ty))
+    Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
   ) (Ty.bot)
-
 
 partial def infer_reduce (t : Tm) : Ty := infer_reduce_wt t [: α[30] :]
 
@@ -1162,9 +1092,9 @@ def even := [:
 [: (succ^(α[0])) :] 
 nat_ 
 
-#eval unify_reduce [:
-    (succ^(α[0]))
-:] nat_ 
+#eval unify_reduce 
+[: (succ^(α[0])) :] 
+nat_ 
 [: α[0] :]
 
 def nat_list := [: 
@@ -1209,8 +1139,6 @@ def nat_list := [:
 def examp1 := unify 3 {} False
   [: (l ~ succ^succ^zero^@ ; r ~ cons^α[0]) :] 
   nat_list
-
-#eval Ty.collapse 10 {} examp1 [: α[0] :] 
 
 #eval unify_reduce 
   [: (l ~ succ^succ^zero^@ ; r ~ cons^α[0]) :] 
@@ -1420,11 +1348,7 @@ def plus := [:
   ((), nil # ())
 :]
 
-#eval Ty.reduce {} [:
-  (II^@ ; II^@)
   
-:]
-
 #eval [:
   hello^thing~@
   
@@ -1583,16 +1507,6 @@ def plus := [:
 
 
 -- let-polymorphism
-#eval (
-  let ty1' := (Ty.reduce {} [: hello^@ | α[0] ; α[1] | (∀ 1 => β[0] | α[0]):])
-  (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
-)
-
-#eval (
-  let ty1' := (Ty.reduce {} [: hello^@ ; α[18] ; α[23] ; (∀ 1 => β[0] | α[23]):])
-  let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
-  [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
-)
 
 #eval infer_reduce [:
   let y[0] = (λ y[0] : str^@ => hello # y[0]) =>
@@ -1685,11 +1599,10 @@ def repli := [:
 [: α[20] :]
 
 
--- TODO: fix fix
--- generate nu binder without divergence 
--- #eval infer_reduce [:
---   fix (λ y[0] => λ[
---   for zero#() => nil#(),
---   for succ#y[0] => cons#((), (y[1] y[0])) 
---   ]) 
--- :]
+-- TODO: fix fix: reconsider how recursive binders are introduced
+#eval infer_reduce [:
+  fix (λ y[0] => λ[
+  for zero#() => nil#(),
+  for succ#y[0] => cons#((), (y[1] y[0])) 
+  ]) 
+:]
