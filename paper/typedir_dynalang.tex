@@ -316,11 +316,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \begin{mathpar}
 
 
-\inferrule[var-left]
+\inferrule[var-left-write]
   {
     \alpha \notin \text{dom}(\Delta)  
     \\
-    (\text{occurs}\ \alpha\ \tau\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
+    (\text{occurs}\ \alpha\ \tau[\Delta]\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
     % Note: existential rule should execute before this rule to free the bound variables before writing. 
   }
@@ -329,16 +329,42 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     (\cdot,\alpha \mapsto \tau_1)
   } 
 
-\inferrule[var-rght]
+\inferrule[var-left-read]
+  {
+    \alpha \in \text{dom}(\Delta)  
+    \\
+    \Delta \vdash \Delta(\alpha) \leq \tau	
+    \rightsquigarrow  
+    N
+  }
+  {
+    \Delta \vdash \alpha \leq \tau	
+    \rightsquigarrow  
+    N
+  } 
+
+\inferrule[var-rght-write]
   {  
     \alpha \notin \text{dom}(\Delta)  
     \\
-    (\text{occurs}\ \alpha\ \tau\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
+    (\text{occurs}\ \alpha\ \tau[\Delta]\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
     % Note: universal rule should execute before this rule to free the bound variables before writing. 
   }
   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  
     (\cdot,\alpha \mapsto \tau_1)
+  } 
+
+\inferrule[var-rght-read]
+  {  
+    \alpha \in \text{dom}(\Delta)  
+    \\
+    \Delta \vdash \tau \leq \Delta(\alpha)
+    \rightsquigarrow  
+    N
+  }
+  {
+    \Delta \vdash \tau \leq \alpha \rightsquigarrow N 
   } 
 
 \inferrule[exis-free]
