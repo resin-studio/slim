@@ -873,7 +873,6 @@ def Option.toList : Option T -> List T
 | .none => []
 
 
--- TODO: consider removing type environment from infer 
 partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (exact : Bool) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
@@ -1016,8 +1015,7 @@ match t with
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
   (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
-    -- Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
-    Ty.simplify ((Ty.subst env_ty (Ty.union acc ty)))
+    Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
   ) (Ty.bot)
 
 partial def infer_reduce (t : Tm) : Ty := infer_reduce_wt t [: α[30] :]
@@ -1126,6 +1124,7 @@ def nat_list := [:
   [: (l ~ α[0] ; r ~ α[1]) :] 
   nat_list
 
+-- this is record type is not wellformed 
 #eval unify_reduce
   [: (l ~ α[0] ; r ~ α[1]) :] 
   nat_list
