@@ -998,10 +998,10 @@ match t with
   let (i, ty_prem) := (i + 1, Ty.fvar i) 
   let (i, ty_conc) := (i + 1, Ty.fvar i) 
   List.bind (unify i (env_ty ;; env_ty1) True ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
-    let ty_prem := Ty.subst (env_ty1 ;; env_ty2) ty_prem 
-    let ty_conc := Ty.subst (env_ty1 ;; env_ty2) ty_conc
+    let ty_prem := Ty.subst (env_ty ;; env_ty1 ;; env_ty2) ty_prem 
+    let ty_conc := Ty.subst (env_ty ;; env_ty1 ;; env_ty2) ty_conc
 
-    let fvs := (Ty.free_vars (Ty.case ty_prem ty_conc)).toList.bind (fun (k, _) => [k])
+    let fvs := (Ty.free_vars ty_prem).toList.bind (fun (k, _) => [k])
 
     let ty' := [: ν β[0] => 
       (∀ ⟨fvs.length⟩ :: 
