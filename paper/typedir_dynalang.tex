@@ -320,7 +320,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   {
     \alpha \notin \text{dom}(\Delta)  
     \\
-    (\text{occurs}\ \alpha\ \tau[\Delta]\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
+    (\alpha \in \text{freevars}\ \tau[\Delta]\ \wedge\ \mu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
     % Note: existential rule should execute before this rule to free the bound variables before writing. 
   }
@@ -347,7 +347,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   {  
     \alpha \notin \text{dom}(\Delta)  
     \\
-    (\text{occurs}\ \alpha\ \tau[\Delta]\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
+    (\alpha \in \text{freevars}\ \tau[\Delta]\ \wedge\ \nu \alpha.\tau = \tau_1)\ \vee\   
     \tau = \tau_1
     % Note: universal rule should execute before this rule to free the bound variables before writing. 
   }

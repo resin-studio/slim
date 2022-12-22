@@ -284,23 +284,6 @@ def lookup_record (key : String) : List (String × T) -> Option T
 | [] => none
 
 
-def Ty.occurs (key : Nat)  : Ty -> Bool 
-| .bvar id => false 
-| .fvar id => key = id 
-| .unit => false 
-| .bot => false 
-| .top => false 
-| .tag l ty => (Ty.occurs key ty) 
-| .field l ty => (Ty.occurs key ty)
-| [: ⟨ty1⟩ | ⟨ty2⟩ :] => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
--- | .union ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
-| .inter ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
-| .case ty1 ty2 => (Ty.occurs key ty1) ∨ (Ty.occurs key ty2)
-| .univ n ty_c1 ty_c2 ty => (Ty.occurs key ty_c1) ∨ (Ty.occurs key ty_c2) ∨ (Ty.occurs key ty)
-| .exis n ty_c1 ty_c2 ty => (Ty.occurs key ty_c1) ∨ (Ty.occurs key ty_c2) ∨ (Ty.occurs key ty)
-| .recur ty => (Ty.occurs key ty)
-| .corec ty => (Ty.occurs key ty)
-
 partial def Ty.subst (m : PHashMap Nat Ty) : Ty -> Ty
 | .bvar id => .bvar id 
 | .fvar id => (match m.find? id with
@@ -369,6 +352,7 @@ partial def Ty.simplify : Ty -> Ty
       (Ty.simplify ty)
 | .recur ty => Ty.recur (Ty.simplify ty)
 | .corec ty => Ty.corec (Ty.simplify ty)
+
 
 
 
@@ -496,14 +480,14 @@ partial def unroll : Ty -> Ty
 
 partial def roll_recur (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
   let ty := Ty.subst m ty  
-  if Ty.occurs key ty then
+  if (Ty.free_vars ty).contains key then
     Ty.subst (PHashMap.from_list [(key, [: β[0] :])]) [: (μ β[0] => ⟨ty⟩) :] 
   else
     ty 
 
 partial def roll_corec (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
   let ty := Ty.subst m ty
-  if Ty.occurs key ty then
+  if (Ty.free_vars ty).contains key then
     Ty.subst (PHashMap.from_list [(key, [: β[0] :])]) [: (ν β[0] => ⟨ty⟩) :] 
   else
     ty
