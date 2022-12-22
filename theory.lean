@@ -873,6 +873,7 @@ def Option.toList : Option T -> List T
 | .none => []
 
 
+-- TODO: consider removing type environment from infer 
 partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (exact : Bool) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
@@ -995,20 +996,28 @@ match t with
 
 | .fix t1 =>
   List.bind (infer i (env_ty) env_tm True t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
-  --   let (i, ty') := (i + 1, Ty.fvar i) 
-  --   -- indicates that unify converges
-  --   let _ := (unify i (env_ty ;; env_ty1) True ty1' (.case ty' ty'))
-  --   -- therefore divergence could be in reduce
-  --   [ (i, env_ty1, ty1') ]
-  -- )
-  let (i, ty') := (i + 1, Ty.fvar i) 
-  List.bind (unify i (env_ty ;; env_ty1) True ty1' (.case ty' ty')) (fun (i, env_ty2) =>
+  let (i, ty_prem) := (i + 1, Ty.fvar i) 
+  let (i, ty_conc) := (i + 1, Ty.fvar i) 
+  List.bind (unify i (env_ty ;; env_ty1) True ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
+    let ty_prem := Ty.subst (env_ty1 ;; env_ty2) ty_prem 
+    let ty_conc := Ty.subst (env_ty1 ;; env_ty2) ty_conc
+
+    let fvs := (Ty.free_vars (Ty.case ty_prem ty_conc)).toList.bind (fun (k, _) => [k])
+
+    let ty' := [: ν β[0] => 
+      (∀ ⟨fvs.length⟩ :: 
+        β[⟨fvs.length⟩] ≤ ⟨Ty.generalize fvs 0 ty_prem⟩ => 
+        ⟨Ty.generalize fvs 0 ty_conc⟩ 
+      )
+    :]
+
     [ (i, env_ty1 ;; env_ty2, ty') ]
   ))
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
   (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
-    Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
+    -- Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
+    Ty.simplify ((Ty.subst env_ty (Ty.union acc ty)))
   ) (Ty.bot)
 
 partial def infer_reduce (t : Tm) : Ty := infer_reduce_wt t [: α[30] :]
@@ -1590,16 +1599,11 @@ def repli := [:
 :]
 
 #eval unify_reduce
-[:
-  (α[0] -> α[1]) -> ((zero^@ -> nil^@) ; (succ^α[0] -> cons^(@ × α[1])))
-:]
-[:
-  α[20] -> α[20]
-:]
+[: (α[0] -> α[1]) -> ((zero^@ -> nil^@) ; (succ^α[0] -> cons^(@ × α[1]))) :]
+[: α[20] -> α[20] :]
 [: α[20] :]
 
 
--- TODO: fix fix: reconsider how recursive binders are introduced
 #eval infer_reduce [:
   fix (λ y[0] => λ[
   for zero#() => nil#(),
