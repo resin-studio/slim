@@ -561,7 +561,7 @@ def wellformed_record_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
   | .none => false
 
 
-partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (exact : Bool): 
+partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (prescribed : Bool): 
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 | (.fvar id1), (.fvar id2) => 
   match (env_ty.find? id1, env_ty.find? id2) with 
@@ -571,14 +571,14 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
         (id1, Ty.fvar id2)
       ])
     ]
-  | (_, .some ty) => unify i env_ty exact (.fvar id1) ty 
-  | (.some ty', _) => unify i env_ty exact ty' (.fvar id2) 
+  | (_, .some ty) => unify i env_ty prescribed (.fvar id1) ty 
+  | (.some ty', _) => unify i env_ty prescribed ty' (.fvar id2) 
 
 | .fvar id, ty  => 
   match env_ty.find? id with 
   | none => 
     [ 
-      if exact then
+      if prescribed then
         (i, PHashMap.from_list [
           (id, roll_recur id env_ty ty)
         ]) 
@@ -587,12 +587,12 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
           (id, Ty.inter (roll_recur id env_ty ty) (Ty.fvar i))
         ]) 
     ]
-  | some ty' => unify i env_ty exact ty' ty 
+  | some ty' => unify i env_ty prescribed ty' ty 
 
 | ty', .fvar id  => match env_ty.find? id with 
   | none => 
     [ 
-      if exact then
+      if prescribed then
         (i, PHashMap.from_list [
           (id, roll_corec id env_ty ty')
         ]) 
@@ -601,7 +601,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
           (id, Ty.union (roll_corec id env_ty ty') (Ty.fvar i))
         ]) 
     ]
-  | some ty => unify i env_ty exact ty' ty 
+  | some ty => unify i env_ty prescribed ty' ty 
 
 | .bvar id1, .bvar id2  =>
   if id1 = id2 then 
@@ -615,19 +615,19 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
 | .tag l' ty', .tag l ty =>
   if l' = l then
-    unify i env_ty exact ty' ty
+    unify i env_ty prescribed ty' ty
   else
     .nil 
 
 | .field l' ty', .field l ty =>
   if l' = l then
-    unify i env_ty exact ty' ty
+    unify i env_ty prescribed ty' ty
   else
     .nil
 
 | .case ty1 ty2', .case ty1' ty2 =>
-  List.bind (unify i env_ty exact ty1' ty1) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ;; env_ty1) exact ty2' ty2) (fun (i, env_ty2) =>
+  List.bind (unify i env_ty prescribed ty1' ty1) (fun (i, env_ty1) => 
+  List.bind (unify i (env_ty ;; env_ty1) prescribed ty2' ty2) (fun (i, env_ty2) =>
     [ (i, env_ty1 ;; env_ty2) ]
   ))
 
@@ -638,7 +638,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   let ty_c1 := Ty.instantiate 0 args ty_c1
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty := Ty.instantiate 0 args ty
-  List.bind (unify i env_ty exact ty' ty) (fun (i, env_ty1) =>
+  List.bind (unify i env_ty prescribed ty' ty) (fun (i, env_ty1) =>
   List.bind (unify i (env_ty ;; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
     [ (i, env_ty1 ;; env_ty2) ]
   ))
@@ -649,7 +649,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   let ty_c1 := Ty.instantiate 0 args ty_c1
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty' := Ty.instantiate 0 args ty'
-  List.bind (unify i env_ty exact ty' ty) (fun (i, env_ty1) =>
+  List.bind (unify i env_ty prescribed ty' ty) (fun (i, env_ty1) =>
   List.bind (unify i (env_ty ;; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
     [ (i, env_ty1 ;; env_ty2) ]
   ))
@@ -672,15 +672,15 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   else
     let ty' := [: ⟨ty'⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
     let ty := [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
-    unify i env_ty exact ty' ty
+    unify i env_ty prescribed ty' ty
 
 | .tag l ty', .recur ty =>
-  unify i env_ty exact (.tag l ty') (unroll (.recur ty))
+  unify i env_ty prescribed (.tag l ty') (unroll (.recur ty))
 
 
 | ty', .recur ty =>
   if wellformed_record_type env_ty ty' then 
-    unify i env_ty exact ty' (unroll (Ty.recur ty))
+    unify i env_ty prescribed ty' (unroll (Ty.recur ty))
   else
     .nil
 
@@ -690,30 +690,30 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   else
     let ty' := [: ⟨ty'⟩ ↑ 0 // [μ β[0] => ⟨ty'⟩] :]
     let ty := [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty'⟩] :]
-    unify i env_ty exact ty' ty
+    unify i env_ty prescribed ty' ty
 
 
 | .corec ty_corec, Ty.case ty1 ty2 =>
-  unify i env_ty exact (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
+  unify i env_ty prescribed (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
 
 | .union ty1 ty2, ty => 
-  List.bind (unify i env_ty exact ty1 ty) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ;; env_ty1) exact ty2 ty) (fun (i, env_ty2) =>
+  List.bind (unify i env_ty prescribed ty1 ty) (fun (i, env_ty1) => 
+  List.bind (unify i (env_ty ;; env_ty1) prescribed ty2 ty) (fun (i, env_ty2) =>
     [ (i, env_ty1 ;; env_ty2) ]
   ))
 
 | ty, .union ty1 ty2 => 
-  (unify i env_ty exact ty ty1) ++ (unify i env_ty exact ty ty2)
+  (unify i env_ty prescribed ty ty1) ++ (unify i env_ty prescribed ty ty2)
 
 
 | ty, .inter ty1 ty2 => 
-  List.bind (unify i env_ty exact ty ty1) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ;; env_ty1) exact ty ty2) (fun (i, env_ty2) =>
+  List.bind (unify i env_ty prescribed ty ty1) (fun (i, env_ty1) => 
+  List.bind (unify i (env_ty ;; env_ty1) prescribed ty ty2) (fun (i, env_ty2) =>
     [ (i, env_ty1 ;; env_ty2) ]
   ))
 
 | .inter ty1 ty2, ty => 
-  (unify i env_ty exact ty1 ty) ++ (unify i env_ty exact ty2 ty)
+  (unify i env_ty prescribed ty1 ty) ++ (unify i env_ty prescribed ty2 ty)
 
 | _, _ => .nil 
 
@@ -857,30 +857,28 @@ def Option.toList : Option T -> List T
 | .none => []
 
 
--- consider changing "exact" param to "prescribed" param
--- annotations set prescribed := True 
 partial def infer (i : Nat)
-(env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (exact : Bool) (t : Tm) (ty : Ty) : 
+(env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (prescribed : Bool) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
 match t with
 | Tm.hole => [(i + 1, {}, Ty.fvar i)] 
 | Tm.unit => 
-  List.bind (unify i env_ty exact Ty.unit ty) (fun (i, env_ty_x) => 
+  List.bind (unify i env_ty prescribed Ty.unit ty) (fun (i, env_ty_x) => 
     [(i, env_ty_x, Ty.unit)]
   )
 | Tm.bvar _ => .nil 
 | Tm.fvar id =>
   match (env_tm.find? id) with 
     | .some ty' => 
-      List.bind (unify i env_ty exact ty' ty) (fun (i, env_ty_x) =>
+      List.bind (unify i env_ty prescribed ty' ty) (fun (i, env_ty_x) =>
         [(i, env_ty_x, ty')]
       )
     | .none => .nil 
 
 | .tag l t1 =>   
   let (i, ty1) := (i + 1, .fvar i)
-  List.bind (unify i env_ty exact (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
-  List.bind (infer i (env_ty ;; env_ty1) env_tm exact t1 ty1) (fun (i, env_ty_x, ty1') =>
+  List.bind (unify i env_ty prescribed (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
+  List.bind (infer i (env_ty ;; env_ty1) env_tm prescribed t1 ty1) (fun (i, env_ty_x, ty1') =>
     [ (i, env_ty1 ;; env_ty_x, Ty.tag l ty1') ]
   ))
 
@@ -895,11 +893,11 @@ match t with
     Ty.inter (Ty.field l ty1) ty_acc 
   ) ty_init trips 
 
-  let u_env_ty1 := unify i env_ty exact ty' ty 
+  let u_env_ty1 := unify i env_ty prescribed ty' ty 
 
   let f_step := fun acc => (fun (l, t1, ty1) =>
     List.bind acc (fun (i, env_ty_acc, ty_acc) =>
-    List.bind (infer i (env_ty ;; env_ty_acc) env_tm exact t1 ty1) (fun (i, env_ty_x, ty1') =>
+    List.bind (infer i (env_ty ;; env_ty_acc) env_tm prescribed t1 ty1) (fun (i, env_ty_x, ty1') =>
       [(i, env_ty_acc ;; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
     ))
   )
@@ -921,7 +919,7 @@ match t with
     (i, Ty.inter (Ty.case ty_p ty_b) ty_acc) 
   ) (i, case_init) fs_typed 
 
-  let u_env_ty1 := unify i env_ty exact ty' ty 
+  let u_env_ty1 := unify i env_ty prescribed ty' ty 
 
   let f_step := (fun acc (p, op_ty_p, b, ty_b) =>
     List.bind acc (fun (i, env_ty_acc, ty_acc) =>
@@ -943,7 +941,7 @@ match t with
 
     let b := Tm.instantiate 0 list_tm_x b  
     List.bind (infer i (env_ty ;; env_ty_acc) (env_tm ;; env_pat) True p ty_p) (fun (i, env_ty_p, _) =>
-    List.bind (infer i (env_ty ;; env_ty_acc ;; env_ty_p) (env_tm ;; env_pat) exact b ty_b) (fun (i, env_ty_b, ty_b') =>
+    List.bind (infer i (env_ty ;; env_ty_acc ;; env_ty_p) (env_tm ;; env_pat) prescribed b ty_b) (fun (i, env_ty_b, ty_b') =>
       [(i, env_ty_acc ;; env_ty_p ;; env_ty_b, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
     ))))
   )
@@ -952,16 +950,16 @@ match t with
   List.foldl f_step init fs_typed 
 
 | .proj t1 l =>
-  List.bind (infer i env_ty env_tm exact t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i env_ty env_tm prescribed t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
   let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (unify i (env_ty ;; env_ty1) exact ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
+  List.bind (unify i (env_ty ;; env_ty1) prescribed ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
     [(i, env_ty1 ;; env_ty2, ty')]
   ))
 
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
-  List.bind (infer i env_ty env_tm exact t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
-  List.bind (infer i (env_ty ;; env_ty1) env_tm exact t2 ty2) (fun (i, env_ty2, _) =>
+  List.bind (infer i env_ty env_tm prescribed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
+  List.bind (infer i (env_ty ;; env_ty1) env_tm prescribed t2 ty2) (fun (i, env_ty2, _) =>
      [(i, env_ty1 ;; env_ty2, ty)]
   ))
 
@@ -969,13 +967,13 @@ match t with
   let (i, ty1) := match op_ty1 with
     | .some ty1 => (i, ty1) 
     | .none => (i + 1, Ty.fvar i)
-  List.bind (infer i env_ty env_tm exact t1 ty1) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i env_ty env_tm prescribed t1 ty1) (fun (i, env_ty1, ty1') =>
   let ty1' := (Ty.subst (env_ty;;env_ty1) ty1')
   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
   let ty1' := [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
-  List.bind (infer i env_ty (env_tm ;; env_tmx) exact t ty) (fun (i, env_ty2, ty') =>
+  List.bind (infer i env_ty (env_tm ;; env_tmx) prescribed t ty) (fun (i, env_ty2, ty') =>
     [ (i, env_ty2, ty') ]
   ))
 
