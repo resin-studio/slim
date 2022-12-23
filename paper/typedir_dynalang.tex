@@ -5,6 +5,7 @@
 \usepackage{mathpartir}
 \usepackage{hyperref}
 \usepackage{mathtools}
+\usepackage{stmaryrd}
 \usepackage{listings}
 \lstset{
     identifierstyle=\color{violet},
@@ -298,18 +299,18 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \inferrule[]
   { } 
   {
-    \Omega\ ;\ \cdot = \Omega 
+    \Omega\ ;;\ \cdot = \Omega 
   } 
 
 \inferrule[]
   { } 
   {
-    \Omega_1\ ;\ (\Omega_2,\alpha \mapsto \tau) =
-    (\Omega_1;\Omega_2),\alpha \mapsto \tau
+    \Omega_1\ ;;\ (\Omega_2,\alpha \mapsto \tau) =
+    (\Omega_1;;\Omega_2),\alpha \mapsto \tau
   } 
 
 \end{mathpar}
-\caption{environment rules}
+\caption{Environment rules}
 \end{figure*}
 
 
@@ -396,13 +397,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[exis-free]
   { 
-    \{ \Omega_1;\Omega_2 \ |\ 
+    \{ \Omega_1;;\Omega_2 \ |\ 
     \\\\
     \ \ \ \ \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
     \\
     \Omega_1 \in M_1
     \\\\
-    \ \ \ \ \Delta;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
+    \ \ \ \ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
     \\
     \Omega_2 \in M_2
     \\\\
@@ -421,13 +422,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[univ-free]
   { 
-    \{ \Omega_1;\Omega_2 \ |\ 
+    \{ \Omega_1;;\Omega_2 \ |\ 
     \\\\
     \ \ \ \ \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
     \\
     \Omega_1 \in M_1
     \\\\
-    \ \ \ \ \Delta;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
+    \ \ \ \ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
     \\
     \Omega_2 \in M_2
     \\\\
@@ -446,8 +447,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[recur-symm]
   { 
-     \Delta \vdash \tau' \equiv \tau\ \wedge \{ \cdot \} = M\ \vee\ 
-     \\\\
      \Delta \vdash \tau'[\alpha\mapsto\mu\alpha.\tau] \leq \tau[\alpha\mapsto\mu\alpha.\tau] \rightsquigarrow M 
   }
   {\Delta \vdash \mu \alpha . \tau' \leq \mu \alpha . \tau	\rightsquigarrow M}
@@ -475,8 +474,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[corec-symm]
   { 
-     \Delta \vdash \tau' \equiv \tau\ \wedge \{ \cdot \} = M\ \vee\ 
-     \\\\
      \Delta \vdash \tau'[\alpha\mapsto\nu\alpha.\tau'] \leq \tau[\alpha\mapsto\nu\alpha.\tau'] \rightsquigarrow M 
   }
   { \Delta \vdash 
@@ -516,7 +513,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   {
     \Delta \vdash \bot \leq \tau	
     \rightsquigarrow  
-    \cdot
+    \{ \cdot \}
   }
 
 \inferrule[top]
@@ -524,20 +521,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   {
     \Delta \vdash \tau \leq \top	
     \rightsquigarrow  
-    \cdot
+    \{ \cdot \}
   } 
 
-
-\inferrule[]
-  { } 
-  {
-    M_1 * M_2 =
-    \{ \Omega_1 ; \Omega_2 \ |\ 
-    \Omega_1 \in M_1
-    \ \wedge\ 
-    \Omega_2 \in M_2
-    \}
-  } 
 
 \inferrule[equiv]
   {\Delta \vdash \tau' \equiv \tau}
@@ -646,29 +632,48 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \begin{mathpar}
 \mprset{flushleft}
 
+
+\inferrule[]
+  { } 
+  {
+    M_1 * M_2 =
+    \{ \Omega_1 ;; \Omega_2 \ |\ 
+    \Omega_1 \in M_1
+    \ \wedge\ 
+    \Omega_2 \in M_2
+    \}
+  } 
+
+
 \inferrule
   { }
-  {\text{intersect}\ \{ \tau \} = \tau} 
-
-\inferrule
-  { \tau\ \&\ \text{intersect}\ T = \tau'}
-  {\text{intersect}\ \{ \tau \} \cup T = \tau'} 
+  {\rhd\ ;\ \{ \} = \top} 
 
 \inferrule
   { }
-  {\text{intersect}\ \{ N \} = N} 
+  {
+    \rhd\ ;\ (\{ \tau \} \cup T) = 
+    \tau\ ;\ (\rhd\ ;\ T)
+  } 
+
+\inferrule[]
+  { } 
+  {
+    N_1 * N_2 =
+    \{ \Omega_1 ;; \Omega_2 . \tau_1;\tau_2 \ |\ 
+    \Omega_1.\tau_1 \in N_1
+    \ \wedge\ 
+    \Omega_2.\tau_2 \in N_2
+    \}
+  } 
 
 \inferrule
-  { 
-    \{ \Omega_1;\Omega_2\ .\ \tau_1;\tau_2 \ |\ 
-    \\\\
-    \ \ \ \ \Omega_1.\tau_1 \in N_1
-    \\
-    \Omega_2.\tau_2 \in (\text{intersect}\ Ns)
-    \\\\
-    \} = N'
-  }
-  {\text{intersect}\ \{ N_1 \} \cup Ns = N'} 
+  { }
+  {\rhd * \{ N \} = N} 
+
+\inferrule
+  { }
+  {\rhd * (\{ N_1 \} \cup Ns) = N_1 * (\rhd * Ns)} 
 
 \end{mathpar}
 \caption{Helper rules}
@@ -711,7 +716,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \inferrule[Tag]
   { 
-    \{\Omega_1;\Omega_2\ .\ \#l\ \tau' \ |\ 
+    \{\Omega_1;;\Omega_2\ .\ \#l\ \tau' \ |\ 
     \\\\
     \ \ \ \ \text{fresh}\ \alpha
     \\\\
@@ -719,7 +724,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \\
     \Omega_1 \in M_1
     \\\\
-    \ \ \ \ \Delta;\Omega_1\ \Gamma \vdash t : \alpha 
+    \ \ \ \ \Delta;;\Omega_1\ \Gamma \vdash t : \alpha 
       \rightsquigarrow N_2
     \\
     \Omega_2\ .\ \tau' \in N_2
@@ -735,15 +740,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   { 
     \text{fresh\_fields}\ t = fields 
     \\\\
-    \text{intersect}\ \{.l\ \tau_1\ |\ (.l\ t_1, \tau_1) \in fields \} = \tau'
+    \rhd\ ;\ \{.l\ \tau_1\ |\ (.l\ t_1, \tau_1) \in fields \} = \tau'
     \\\\
     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
     \\\\
-    \text{intersect}\ \{N_1\ |\ 
+    \rhd * \{N_1\ |\ 
     \\\\
     \ \ \ \ (.l\ t_1, \tau_1) \in fields \\ \Omega \in M
     \\\\
-    \ \ \ \ \Delta;\Omega\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
+    \ \ \ \ \Delta;;\Omega\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
     \\\\
     \} = N
   }
@@ -755,23 +760,23 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   {
     \text{fresh\_cases}\ t = cases 
     \\\\
-    \text{intersect}\ \{\tau_1 \rightarrow \tau_2\ |\ 
+    \rhd\ ;\ \{\tau_1 \rightarrow \tau_2\ |\ 
     (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
     \} = \tau'
     \\\\
     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
     \\\\
-    \text{intersect}\ \{N_2\ |\ 
+    \rhd * \{N_2\ |\ 
     \\\\
     \ \ \ \ (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
     \\\\
     \ \ \ \ \text{pat\_wf}\ t_1 \\ \text{fresh\_env}\ t_1 = \Gamma_x \\ \Omega \in M
     \\\\
-    \ \ \ \ \Delta;\Omega\ \Gamma;\Gamma_x \vdash t_1 : \tau_1 \rightsquigarrow N_1
+    \ \ \ \ \Delta;;\Omega\ \Gamma;;\Gamma_x \vdash t_1 : \tau_1 \rightsquigarrow N_1
     \\
     \Omega_1\ .\ \tau_1' \in N_1
     \\\\
-    \ \ \ \ \Delta;\Omega;\Omega_1\ \Gamma;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
+    \ \ \ \ \Delta;;\Omega;;\Omega_1\ \Gamma;;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
     \\\\
     \} = N
   }
