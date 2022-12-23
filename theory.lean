@@ -857,6 +857,8 @@ def Option.toList : Option T -> List T
 | .none => []
 
 
+-- consider changing "exact" param to "prescribed" param
+-- annotations set prescribed := True 
 partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (exact : Bool) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
