@@ -780,7 +780,7 @@ partial def Ty.union_all : (List Ty) -> Option Ty
 
 partial def unify_reduce (ty1) (ty2) (ty_result) :=
   (unify 31 {} True ty1 ty2).foldl (fun acc => fun  (_, env_ty) =>
-    Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty_result)))
+    Ty.simplify ((Ty.subst env_ty (Ty.union acc ty_result)))
   ) (Ty.bot)
 
 
@@ -1266,6 +1266,15 @@ def plus := [:
 )
 :] plus
 [: x ~ α[0] ; y ~ α[1] :]
+
+#eval unify_reduce [:
+(
+  x ~ (succ^succ^zero^@) ;
+  y ~ (α[1]) ;
+  z ~ (α[0])
+)
+:] plus
+[: y ~ α[1] ; z ~ α[0] :]
 
 
 -- term testing

@@ -293,66 +293,78 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \section{Technical Details}
 
 \begin{figure}[h]
-\begin{mathpar}
-\mprset{flushleft}
+  \[
+    \begin{array}{l @{}l @{}l}
+    \Omega &;;\ \cdot
+    & {}= \Omega 
+    \\
+    \Omega_1 &;;\ (\Omega_2,\alpha \mapsto \tau) 
+    & {}= (\Omega_1;;\Omega_2),\alpha \mapsto \tau
+    \end{array}
+  \]
 
-\inferrule[]
-  { } 
-  {
-    \Omega\ ;;\ \cdot = \Omega 
-  } 
+  \caption{Appending of environments}
+\end{figure}
 
-\inferrule[]
-  { } 
-  {
-    \Omega_1\ ;;\ (\Omega_2,\alpha \mapsto \tau) =
-    (\Omega_1;;\Omega_2),\alpha \mapsto \tau
-  } 
-
-\inferrule[]
-  { } 
-  {
-    M_1 * M_2 =
+\begin{figure}[h]
+  \[
+    \begin{array}{l @{}l}
+    M_1 * M_2 
+    & {}= 
     \{ \Omega_1 ;; \Omega_2 \ |\ 
-    \Omega_1 \in M_1
-    \ \wedge\ 
-    \Omega_2 \in M_2
+      \Omega_1 \in M_1
+      \ \wedge\ 
+      \Omega_2 \in M_2
     \}
-  } 
+    \end{array}
+  \]
 
+  \caption{Appending of environments}
+\end{figure}
 
-\inferrule
-  { }
-  {\rhd\ ;\ \{ \} = \top} 
+\begin{figure}[h]
+  \[
+    \begin{array}{l @{}l}
+    \rhd\ ;\ \{ \} 
+    & {}= \top
+    \\
+    \rhd\ ;\ T
+    & {}= \tau\ ;\ (\rhd\ ;\ T \setminus \tau)
+    \end{array}
+  \]
 
-\inferrule
-  { }
-  {
-    \rhd\ ;\ (\{ \tau \} \cup T) = 
-    \tau\ ;\ (\rhd\ ;\ T)
-  } 
+  \caption{multi-intersection}
+\end{figure}
 
-\inferrule[]
-  { } 
-  {
-    N_1 * N_2 =
+\begin{figure}[h]
+  \[
+    \begin{array}{l @{}l}
+    N_1 * N_2
+    & {}= 
     \{ \Omega_1 ;; \Omega_2 . \tau_1;\tau_2 \ |\ 
-    \Omega_1.\tau_1 \in N_1
-    \ \wedge\ 
-    \Omega_2.\tau_2 \in N_2
+      \\
+      & {} \Omega_1.\tau_1 \in N_1
+      \ \wedge\ 
+      \Omega_2.\tau_2 \in N_2
     \}
-  } 
+    \end{array}
+  \]
 
-\inferrule
-  { }
-  {\rhd * \{ N \} = N} 
+  \caption{Intersection of sets of contextual types}
+\end{figure}
 
-\inferrule
-  { }
-  {\rhd * (\{ N_1 \} \cup Ns) = N_1 * (\rhd * Ns)} 
+\begin{figure}[h]
+  \[
+    \begin{array}{l @{}l}
+    \rhd * \{ N \}
+    & {}= N
+    \\
+    \rhd * Ns
+    & {}= N * (\rhd * Ns \setminus N)
+    \end{array}
+  \]
 
-\end{mathpar}
-\caption{Environment rules}
+  \caption{Intersection of sets of sets of contextual types}
 \end{figure}
 
 
@@ -1094,10 +1106,10 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
     % includes propagation of types
   % - 4. unification / subtyping / relational typing
     % including recursion over intersection and functions
-% write "calculating rules" as functions
+% write "calculating definitions" as functions
   % must be algorithmic
   % more details; function is more compact
-% write "verification rules" as inference rules
+% write "verification definitions" as inference rules
   % may be undecidable 
 % find decision procedure for relational types (subtyping over induction on compound types)
   % terminate if one side is compound with all variables and other is recursive? 
