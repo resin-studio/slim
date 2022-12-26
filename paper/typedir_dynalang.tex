@@ -450,8 +450,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \begin{figure*}[h]
   \[
     \begin{array}{l @{} l @{} l @{} l }
-    \text{unify } \blacksquare\ \Delta &{} \vdash \alpha \leq \tau	
-    &{}=\ &{} 
+      \text{unify } \blacksquare\ \Delta &{} \vdash \alpha \leq \tau	
+      &{}=\ &{} 
       \begin{cases}  
         \{ \cdot,\alpha \mapsto \mu\alpha.\tau \}
         & \text{if } 
@@ -467,18 +467,18 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
           \alpha \notin \text{freevars}(\tau[\Delta])
         \end{array}
         \\
-        \text{unify } \blacksquare\ \Delta \vdash \tau' \leq \tau
+        \text{unify } \blacksquare\ \Delta \vdash \tau_1 \leq \tau
         &\text{if }
         \begin{array}{l}
-          \Delta(\alpha) = \text{some } \tau'
+          \Delta(\alpha) = \text{some } \tau_1
         \end{array}
         \\
         \{\}
         &\text{otherwise}
       \end{cases}
-    \\
-    \text{unify } \square\ \Delta &{} \vdash \alpha \leq \tau	
-    &{}=\ &{} 
+      \\
+      \text{unify } \square\ \Delta &{} \vdash \alpha \leq \tau	
+      &{}=\ &{} 
       \begin{cases}  
         \{ \cdot,\alpha \mapsto (\mu\alpha.\tau);\beta \}
         & \text{if } 
@@ -496,7 +496,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
           \text{fresh } \beta
         \end{array}
         \\
-        \text{unify } \square\ \Delta \vdash \tau' \leq \tau
+        \text{unify } \square\ \Delta \vdash \tau_1 \leq \tau
         &\text{if }
         \begin{array}{l}
           \Delta(\alpha) = \text{some } \tau
@@ -505,6 +505,34 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \{\}
         &\text{otherwise}
       \end{cases}
+      \\
+      \text{unify } \ \iota\hfill \Delta &{} \vdash \bot \leq \_	
+      &{}=\ &{} 
+      \begin{array}[t]{l}
+        \{\cdot\}
+      \end{array}
+      \\
+      \text{unify } \ \iota\hfill \Delta &{} \vdash \_ \leq \top	
+      &{}=\ &{} 
+      \begin{array}[t]{l}
+        \{\cdot\}
+      \end{array}
+      \\
+      \text{unify } \ \iota\hfill \Delta &{} \vdash \diamondsuit \leq \diamondsuit	
+      &{}=\ &{} 
+      \begin{array}[t]{l}
+        \{\cdot\}
+      \end{array}
+      \\
+      \text{unify } \ \iota\hfill \Delta &{} \vdash l \# \tau_1 \leq l \# \tau_2	
+      &{}=\ &{} 
+      \begin{array}[t]{l}
+        \text{let } x = \text{foo}() \Rightarrow
+        \\
+        \text{let } x = \text{foo}() \Rightarrow 
+        \\
+        \lambda [\text{for } x \Rightarrow \text{foo}(x)]
+      \end{array}
     \end{array}
   \]
 

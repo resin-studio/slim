@@ -609,9 +609,9 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   else
     .nil
 
-| .unit, .unit => [ (i, {}) ] 
 | .bot, _ => [ (i, {}) ] 
 | _, .top => [ (i, {}) ] 
+| .unit, .unit => [ (i, {}) ] 
 
 | .tag l' ty', .tag l ty =>
   if l' = l then
