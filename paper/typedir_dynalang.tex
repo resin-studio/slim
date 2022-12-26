@@ -369,7 +369,85 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \end{figure}
 
 
-\begin{figure}[h]
+
+% \begin{figure*}[h]
+% \begin{mathpar}
+% \mprset{flushleft}
+
+% \inferrule[var-left-recur]
+%   {
+%     \alpha \notin \text{dom}(\Delta)  
+%     \\
+%     \alpha \in \text{freevars}(\tau[\Delta])
+%   }
+%   {\Delta \vdash \alpha \leq \tau	
+%     \rightsquigarrow  
+%     \{ \cdot,\alpha \mapsto \mu\alpha.\tau \}
+%   } 
+
+% \inferrule[var-left-write]
+%   {
+%     \alpha \notin \text{dom}(\Delta)  
+%     \\
+%     \alpha \notin \text{freevars}(\tau[\Delta])
+%   }
+%   {\Delta \vdash \alpha \leq \tau	
+%     \rightsquigarrow  
+%     \{ \cdot,\alpha \mapsto \tau \}
+%   } 
+
+% \inferrule[var-left-read]
+%   {
+%     \alpha \in \text{dom}(\Delta)  
+%     \\
+%     \Delta \vdash \Delta(\alpha) \leq \tau	
+%     \rightsquigarrow  
+%     N
+%   }
+%   {
+%     \Delta \vdash \alpha \leq \tau	
+%     \rightsquigarrow  
+%     N
+%   } 
+
+% \inferrule[var-rght-corec]
+%   {  
+%     \alpha \notin \text{dom}(\Delta)  
+%     \\
+%     \alpha \in \text{freevars}(\tau[\Delta])
+%   }
+%   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  
+%     \{ \cdot,\alpha \mapsto \nu\alpha.\tau \}
+%   } 
+
+% \inferrule[var-rght-write]
+%   {  
+%     \alpha \notin \text{dom}(\Delta)  
+%     \\
+%     \alpha \notin \text{freevars}(\tau[\Delta])
+%   }
+%   {\Delta \vdash \tau \leq \alpha \rightsquigarrow  
+%     \{ \cdot,\alpha \mapsto \tau \}
+%   } 
+
+% \inferrule[var-rght-read]
+%   {  
+%     \alpha \in \text{dom}(\Delta)  
+%     \\
+%     \Delta \vdash \tau \leq \Delta(\alpha)
+%     \rightsquigarrow  
+%     N
+%   }
+%   {
+%     \Delta \vdash \tau \leq \alpha \rightsquigarrow N 
+%   } 
+
+% \end{mathpar}
+% \caption{Unification subtyping: variable rules}
+% \end{figure*}
+
+
+\begin{figure*}[h]
   \[
     \begin{array}{l @{} l @{} l @{} l }
     \text{unify } \blacksquare\ \Delta &{} \vdash \alpha \leq \tau	
@@ -378,24 +456,26 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \{ \cdot,\alpha \mapsto \mu\alpha.\tau \}
         & \text{if } 
         \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge \\
+          \Delta(\alpha) = \text{none} \ \wedge\
           \alpha \in \text{freevars}(\tau[\Delta])
         \end{array}
         \\
         \{ \cdot,\alpha \mapsto \tau \}
         & \text{if } 
         \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge \\
+          \Delta(\alpha) = \text{none} \ \wedge\ 
           \alpha \notin \text{freevars}(\tau[\Delta])
         \end{array}
         \\
         \text{unify } \blacksquare\ \Delta \vdash \tau' \leq \tau
-        &\text{if } \Delta(\alpha) = \text{some } \tau'
+        &\text{if }
+        \begin{array}{l}
+          \Delta(\alpha) = \text{some } \tau'
+        \end{array}
         \\
         \{\}
         &\text{otherwise}
       \end{cases}
-    \\
     \\
     \text{unify } \square\ \Delta &{} \vdash \alpha \leq \tau	
     &{}=\ &{} 
@@ -403,21 +483,24 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \{ \cdot,\alpha \mapsto (\mu\alpha.\tau);\beta \}
         & \text{if } 
         \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge \\
-          \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge \\
+          \Delta(\alpha) = \text{none} \ \wedge\ 
+          \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
           \text{fresh } \beta
         \end{array}
         \\
         \{ \cdot,\alpha \mapsto \tau;\beta \}
         & \text{if } 
         \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge \\
-          \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge \\
+          \Delta(\alpha) = \text{none} \ \wedge\ 
+          \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
           \text{fresh } \beta
         \end{array}
         \\
         \text{unify } \square\ \Delta \vdash \tau' \leq \tau
-        &\text{if } \Delta(\alpha) = \text{some } \tau
+        &\text{if }
+        \begin{array}{l}
+          \Delta(\alpha) = \text{some } \tau
+        \end{array}
         \\
         \{\}
         &\text{otherwise}
@@ -426,83 +509,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   \]
 
   \caption{Subtyping unification}
-\end{figure}
-
-
-\begin{figure*}[h]
-\begin{mathpar}
-\mprset{flushleft}
-
-\inferrule[var-left-recur]
-  {
-    \alpha \notin \text{dom}(\Delta)  
-    \\
-    \alpha \in \text{freevars}(\tau[\Delta])
-  }
-  {\Delta \vdash \alpha \leq \tau	
-    \rightsquigarrow  
-    \{ \cdot,\alpha \mapsto \mu\alpha.\tau \}
-  } 
-
-\inferrule[var-left-write]
-  {
-    \alpha \notin \text{dom}(\Delta)  
-    \\
-    \alpha \notin \text{freevars}(\tau[\Delta])
-  }
-  {\Delta \vdash \alpha \leq \tau	
-    \rightsquigarrow  
-    \{ \cdot,\alpha \mapsto \tau \}
-  } 
-
-\inferrule[var-left-read]
-  {
-    \alpha \in \text{dom}(\Delta)  
-    \\
-    \Delta \vdash \Delta(\alpha) \leq \tau	
-    \rightsquigarrow  
-    N
-  }
-  {
-    \Delta \vdash \alpha \leq \tau	
-    \rightsquigarrow  
-    N
-  } 
-
-\inferrule[var-rght-corec]
-  {  
-    \alpha \notin \text{dom}(\Delta)  
-    \\
-    \alpha \in \text{freevars}(\tau[\Delta])
-  }
-  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  
-    \{ \cdot,\alpha \mapsto \nu\alpha.\tau \}
-  } 
-
-\inferrule[var-rght-write]
-  {  
-    \alpha \notin \text{dom}(\Delta)  
-    \\
-    \alpha \notin \text{freevars}(\tau[\Delta])
-  }
-  {\Delta \vdash \tau \leq \alpha \rightsquigarrow  
-    \{ \cdot,\alpha \mapsto \tau \}
-  } 
-
-\inferrule[var-rght-read]
-  {  
-    \alpha \in \text{dom}(\Delta)  
-    \\
-    \Delta \vdash \tau \leq \Delta(\alpha)
-    \rightsquigarrow  
-    N
-  }
-  {
-    \Delta \vdash \tau \leq \alpha \rightsquigarrow N 
-  } 
-
-\end{mathpar}
-\caption{Unification subtyping: variable rules}
 \end{figure*}
 
 
