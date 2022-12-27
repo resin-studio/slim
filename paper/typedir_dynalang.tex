@@ -295,12 +295,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \begin{figure}[h]
   \[
-    \begin{array}{l @{}l @{}l}
-    \Omega &;;\ \cdot
-    & {}= \Omega 
+    \begin{array}{l @{} l}
+    \Omega\ ;;\ \cdot
+    &\ = \Omega 
     \\
-    \Omega_1 &;;\ (\Omega_2,\alpha \mapsto \tau) 
-    & {}= (\Omega_1;;\Omega_2),\alpha \mapsto \tau
+    \Omega_1;;(\Omega_2,\alpha \mapsto \tau) 
+    &\ = (\Omega_1;;\Omega_2),\alpha \mapsto \tau
     \end{array}
   \]
 
@@ -309,9 +309,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \begin{figure}[h]
   \[
-    \begin{array}{l @{}l}
+    \begin{array}{l @{} l}
     M_1 * M_2 
-    & {}= 
+    &\ = 
     \{ \Omega_1 ;; \Omega_2 \ |\ 
       \Omega_1 \in M_1
       \ \wedge\ 
@@ -325,12 +325,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \begin{figure}[h]
   \[
-    \begin{array}{l @{}l}
+    \begin{array}{l @{} l}
     \rhd\ ;\ \{ \} 
-    & {}= \top
+    &\ = \top
     \\
     \rhd\ ;\ T
-    & {}= \tau\ ;\ (\rhd\ ;\ T \setminus \tau)
+    &\ = \tau\ ;\ (\rhd\ ;\ T \setminus \tau)
     \end{array}
   \]
 
@@ -339,15 +339,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \begin{figure}[h]
   \[
-    \begin{array}{l @{}l}
-    N_1 * N_2
-    & {}= 
-    \{ \Omega_1 ;; \Omega_2 . \tau_1;\tau_2 \ |\ 
-      \\
-      & {} \Omega_1.\tau_1 \in N_1
-      \ \wedge\ 
-      \Omega_2.\tau_2 \in N_2
-    \}
+    \begin{array}{l @{} l}
+      N_1 * N_2
+      &\ = 
+      \begin{array}[t]{l}
+        \{ \Omega_1 ;; \Omega_2 . \tau_1;\tau_2 \ |\ 
+          \\
+          \ \ \ \ \Omega_1.\tau_1 \in N_1
+          \ \wedge\ 
+          \Omega_2.\tau_2 \in N_2
+        \}
+      \end{array}
     \end{array}
   \]
 
@@ -449,9 +451,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \begin{figure*}[h]
   \[
-    \begin{array}{l @{} l @{} l @{} l }
-      \text{unify } \blacksquare\ \Delta &{} \vdash \alpha \leq \tau	
-      &{}=\ &{} 
+    \begin{array}{l @{} l}
+      \text{unify } \blacksquare\ \Delta \vdash \alpha \leq \tau	
+      &\ \ \ =
       \begin{cases}  
         \{ \cdot,\alpha \mapsto \mu\alpha.\tau \}
         & \text{if } 
@@ -477,8 +479,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         &\text{otherwise}
       \end{cases}
       \\
-      \text{unify } \square\ \Delta &{} \vdash \alpha \leq \tau	
-      &{}=\ &{} 
+      \text{unify } \square\ \Delta \vdash \alpha \leq \tau	
+      &\ \ \ =
       \begin{cases}  
         \{ \cdot,\alpha \mapsto (\mu\alpha.\tau);\beta \}
         & \text{if } 
@@ -506,37 +508,86 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         &\text{otherwise}
       \end{cases}
       \\
-      \text{unify } \ \iota\hfill \Delta &{} \vdash \bot \leq \_	
-      &{}=\ &{} 
+      \text{unify } \iota\ \Delta \vdash \bot \leq \_	
+      &\ \ \ =
       \begin{array}[t]{l}
         \{\cdot\}
       \end{array}
       \\
-      \text{unify } \ \iota\hfill \Delta &{} \vdash \_ \leq \top	
-      &{}=\ &{} 
+      \text{unify } \iota\ \Delta \vdash \_ \leq \top	
+      &\ \ \ =
       \begin{array}[t]{l}
         \{\cdot\}
       \end{array}
       \\
-      \text{unify } \ \iota\hfill \Delta &{} \vdash \diamondsuit \leq \diamondsuit	
-      &{}=\ &{} 
+      \text{unify } \iota\ \Delta \vdash \diamondsuit \leq \diamondsuit	
+      &\ \ \ =
       \begin{array}[t]{l}
         \{\cdot\}
       \end{array}
       \\
-      \text{unify } \ \iota\hfill \Delta &{} \vdash l \# \tau_1 \leq l \# \tau_2	
-      &{}=\ &{} 
+      \text{unify } \iota\ \Delta \vdash l*\tau_1 \leq l*\tau_2	
+      &\ \ \ =
       \begin{array}[t]{l}
-        \text{let } x = \text{foo}() \Rightarrow
-        \\
-        \text{let } x = \text{foo}() \Rightarrow 
-        \\
-        \lambda [\text{for } x \Rightarrow \text{foo}(x)]
+        \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
       \end{array}
     \end{array}
   \]
 
   \caption{Subtyping unification}
+\end{figure*}
+
+
+
+\begin{figure*}[h]
+\begin{mathpar}
+\mprset{flushleft}
+
+\inferrule[bottom]
+  { }
+  {
+    \Delta \vdash \bot \leq \tau	
+    \rightsquigarrow  
+    \{ \cdot \}
+  }
+
+\inferrule[top]
+  { }
+  {
+    \Delta \vdash \tau \leq \top	
+    \rightsquigarrow  
+    \{ \cdot \}
+  } 
+
+
+\inferrule[equiv]
+  {\Delta \vdash \tau' \equiv \tau}
+  {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \cdot } 
+
+\\
+
+\inferrule[tag]
+  {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
+  {\Delta \vdash \#l\ \tau' \leq \#l\ \tau \rightsquigarrow M } 
+
+\inferrule[field]
+  {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
+  {\Delta \vdash .l\ \tau' \leq .l\ \tau \rightsquigarrow M } 
+
+
+\inferrule[case]
+  {
+    \Delta \vdash \tau_1' \leq \tau_1 \rightsquigarrow M_1 
+    \\
+    \Delta \vdash \tau_2' \leq \tau_2 \rightsquigarrow M_2 
+  } 
+  {\Delta \vdash 
+    \tau_1 \rightarrow \tau_2' \leq \tau_1' \rightarrow \tau_2 
+    \rightsquigarrow M_1 * M_2 
+  } 
+
+\end{mathpar}
+\caption{Unification subtyping: basic rules}
 \end{figure*}
 
 
@@ -650,58 +701,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \end{mathpar}
 \caption{Unification subtyping: binding rules}
-\end{figure*}
-
-
-\begin{figure*}[h]
-\begin{mathpar}
-\mprset{flushleft}
-
-\inferrule[bottom]
-  { }
-  {
-    \Delta \vdash \bot \leq \tau	
-    \rightsquigarrow  
-    \{ \cdot \}
-  }
-
-\inferrule[top]
-  { }
-  {
-    \Delta \vdash \tau \leq \top	
-    \rightsquigarrow  
-    \{ \cdot \}
-  } 
-
-
-\inferrule[equiv]
-  {\Delta \vdash \tau' \equiv \tau}
-  {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \cdot } 
-
-\\
-
-\inferrule[tag]
-  {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
-  {\Delta \vdash \#l\ \tau' \leq \#l\ \tau \rightsquigarrow M } 
-
-\inferrule[field]
-  {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
-  {\Delta \vdash .l\ \tau' \leq .l\ \tau \rightsquigarrow M } 
-
-
-\inferrule[case]
-  {
-    \Delta \vdash \tau_1' \leq \tau_1 \rightsquigarrow M_1 
-    \\
-    \Delta \vdash \tau_2' \leq \tau_2 \rightsquigarrow M_2 
-  } 
-  {\Delta \vdash 
-    \tau_1 \rightarrow \tau_2' \leq \tau_1' \rightarrow \tau_2 
-    \rightsquigarrow M_1 * M_2 
-  } 
-
-\end{mathpar}
-\caption{Unification subtyping: basic rules}
 \end{figure*}
 
 
