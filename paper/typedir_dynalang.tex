@@ -510,23 +510,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \begin{cases}  
         \{ \cdot,\alpha \mapsto \mu\alpha.\tau \}
         & \text{if } 
-        \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge\
-          \alpha \in \text{freevars}(\tau[\Delta])
-        \end{array}
+        \Delta(\alpha) = \text{none} \ \wedge\
+        \alpha \in \text{freevars}(\tau[\Delta])
         \\
         \{ \cdot,\alpha \mapsto \tau \}
         & \text{if } 
-        \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge\ 
-          \alpha \notin \text{freevars}(\tau[\Delta])
-        \end{array}
+        \Delta(\alpha) = \text{none} \ \wedge\ 
+        \alpha \notin \text{freevars}(\tau[\Delta])
         \\
         \text{unify } \blacksquare\ \Delta \vdash \tau_1 \leq \tau
         &\text{if }
-        \begin{array}{l}
-          \Delta(\alpha) = \text{some } \tau_1
-        \end{array}
+        \Delta(\alpha) = \text{some } \tau_1
         \\
         \{\}
         &\text{otherwise}
@@ -537,25 +531,19 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \begin{cases}  
         \{ \cdot,\alpha \mapsto (\mu\alpha.\tau);\beta \}
         & \text{if } 
-        \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge\ 
-          \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
-          \text{fresh } \beta
-        \end{array}
+        \Delta(\alpha) = \text{none} \ \wedge\ 
+        \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
+        \text{fresh } \beta
         \\
         \{ \cdot,\alpha \mapsto \tau;\beta \}
         & \text{if } 
-        \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge\ 
-          \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
-          \text{fresh } \beta
-        \end{array}
+        \Delta(\alpha) = \text{none} \ \wedge\ 
+        \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
+        \text{fresh } \beta
         \\
         \text{unify } \square\ \Delta \vdash \tau_1 \leq \tau
         &\text{if }
-        \begin{array}{l}
-          \Delta(\alpha) = \text{some } \tau
-        \end{array}
+        \Delta(\alpha) = \text{some } \tau
         \\
         \{\}
         &\text{otherwise}
@@ -566,23 +554,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \begin{cases}  
         \{ \cdot,\alpha \mapsto \nu\alpha.\tau \}
         & \text{if } 
-        \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge\
-          \alpha \in \text{freevars}(\tau[\Delta])
-        \end{array}
+        \Delta(\alpha) = \text{none} \ \wedge\
+        \alpha \in \text{freevars}(\tau[\Delta])
         \\
         \{ \cdot,\alpha \mapsto \tau \}
         & \text{if } 
-        \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge\ 
-          \alpha \notin \text{freevars}(\tau[\Delta])
-        \end{array}
+        \Delta(\alpha) = \text{none} \ \wedge\ 
+        \alpha \notin \text{freevars}(\tau[\Delta])
         \\
         \text{unify } \blacksquare\ \Delta \vdash \tau \leq \tau_1
         &\text{if }
-        \begin{array}{l}
-          \Delta(\alpha) = \text{some } \tau_1
-        \end{array}
+        \Delta(\alpha) = \text{some } \tau_1
         \\
         \{\}
         &\text{otherwise}
@@ -593,25 +575,19 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \begin{cases}  
         \{ \cdot,\alpha \mapsto (\nu\alpha.\tau)|\beta \}
         & \text{if } 
-        \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge\ 
-          \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
-          \text{fresh } \beta
-        \end{array}
+        \Delta(\alpha) = \text{none} \ \wedge\ 
+        \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
+        \text{fresh } \beta
         \\
         \{ \cdot,\alpha \mapsto \tau|\beta \}
         & \text{if } 
-        \begin{array}{l}
-          \Delta(\alpha) = \text{none} \ \wedge\ 
-          \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
-          \text{fresh } \beta
-        \end{array}
+        \Delta(\alpha) = \text{none} \ \wedge\ 
+        \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
+        \text{fresh } \beta
         \\
         \text{unify } \square\ \Delta \vdash \tau \leq \tau_1
         &\text{if }
-        \begin{array}{l}
-          \Delta(\alpha) = \text{some } \tau
-        \end{array}
+        \Delta(\alpha) = \text{some } \tau
         \\
         \{\}
         &\text{otherwise}
