@@ -448,12 +448,65 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 % \caption{Unification subtyping: variable rules}
 % \end{figure*}
 
+% \begin{figure*}[h]
+% \begin{mathpar}
+% \mprset{flushleft}
+
+% \inferrule[bottom]
+%   { }
+%   {
+%     \Delta \vdash \bot \leq \tau	
+%     \rightsquigarrow  
+%     \{ \cdot \}
+%   }
+
+% \inferrule[top]
+%   { }
+%   {
+%     \Delta \vdash \tau \leq \top	
+%     \rightsquigarrow  
+%     \{ \cdot \}
+%   } 
+
+
+% \inferrule[equiv]
+%   {\Delta \vdash \tau' \equiv \tau}
+%   {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \cdot } 
+
+% \\
+
+% \inferrule[tag]
+%   {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
+%   {\Delta \vdash \#l\ \tau' \leq \#l\ \tau \rightsquigarrow M } 
+
+% \inferrule[field]
+%   {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
+%   {\Delta \vdash .l\ \tau' \leq .l\ \tau \rightsquigarrow M } 
+
+
+% \inferrule[case]
+%   {
+%     \Delta \vdash \tau_1' \leq \tau_1 \rightsquigarrow M_1 
+%     \\
+%     \Delta \vdash \tau_2' \leq \tau_2 \rightsquigarrow M_2 
+%   } 
+%   {\Delta \vdash 
+%     \tau_1 \rightarrow \tau_2' \leq \tau_1' \rightarrow \tau_2 
+%     \rightsquigarrow \_ 
+%   } 
+
+% \end{mathpar}
+% \caption{Unification subtyping: basic rules}
+% \end{figure*}
+
+
+
 
 \begin{figure*}[h]
   \[
     \begin{array}{l @{} l}
       \text{unify } \blacksquare\ \Delta \vdash \alpha \leq \tau	
-      &\ \ \ =
+      &{} =
       \begin{cases}  
         \{ \cdot,\alpha \mapsto \mu\alpha.\tau \}
         & \text{if } 
@@ -480,7 +533,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \end{cases}
       \\
       \text{unify } \square\ \Delta \vdash \alpha \leq \tau	
-      &\ \ \ =
+      &{} =
       \begin{cases}  
         \{ \cdot,\alpha \mapsto (\mu\alpha.\tau);\beta \}
         & \text{if } 
@@ -508,28 +561,103 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         &\text{otherwise}
       \end{cases}
       \\
+      \text{unify } \blacksquare\ \Delta \vdash \tau \leq \alpha 	
+      &{} =
+      \begin{cases}  
+        \{ \cdot,\alpha \mapsto \nu\alpha.\tau \}
+        & \text{if } 
+        \begin{array}{l}
+          \Delta(\alpha) = \text{none} \ \wedge\
+          \alpha \in \text{freevars}(\tau[\Delta])
+        \end{array}
+        \\
+        \{ \cdot,\alpha \mapsto \tau \}
+        & \text{if } 
+        \begin{array}{l}
+          \Delta(\alpha) = \text{none} \ \wedge\ 
+          \alpha \notin \text{freevars}(\tau[\Delta])
+        \end{array}
+        \\
+        \text{unify } \blacksquare\ \Delta \vdash \tau \leq \tau_1
+        &\text{if }
+        \begin{array}{l}
+          \Delta(\alpha) = \text{some } \tau_1
+        \end{array}
+        \\
+        \{\}
+        &\text{otherwise}
+      \end{cases}
+      \\
+      \text{unify } \square\ \Delta \vdash \tau \leq \alpha	
+      &{} =
+      \begin{cases}  
+        \{ \cdot,\alpha \mapsto (\nu\alpha.\tau)|\beta \}
+        & \text{if } 
+        \begin{array}{l}
+          \Delta(\alpha) = \text{none} \ \wedge\ 
+          \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
+          \text{fresh } \beta
+        \end{array}
+        \\
+        \{ \cdot,\alpha \mapsto \tau|\beta \}
+        & \text{if } 
+        \begin{array}{l}
+          \Delta(\alpha) = \text{none} \ \wedge\ 
+          \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
+          \text{fresh } \beta
+        \end{array}
+        \\
+        \text{unify } \square\ \Delta \vdash \tau \leq \tau_1
+        &\text{if }
+        \begin{array}{l}
+          \Delta(\alpha) = \text{some } \tau
+        \end{array}
+        \\
+        \{\}
+        &\text{otherwise}
+      \end{cases}
+      \\
       \text{unify } \iota\ \Delta \vdash \bot \leq \_	
-      &\ \ \ =
-      \begin{array}[t]{l}
-        \{\cdot\}
-      \end{array}
+      &{} = 
+      \{\cdot\}
       \\
       \text{unify } \iota\ \Delta \vdash \_ \leq \top	
-      &\ \ \ =
-      \begin{array}[t]{l}
-        \{\cdot\}
-      \end{array}
+      &{} = 
+      \{\cdot\}
       \\
       \text{unify } \iota\ \Delta \vdash \diamondsuit \leq \diamondsuit	
-      &\ \ \ =
-      \begin{array}[t]{l}
-        \{\cdot\}
-      \end{array}
+      &{} = 
+      \{\cdot\}
       \\
       \text{unify } \iota\ \Delta \vdash l*\tau_1 \leq l*\tau_2	
-      &\ \ \ =
-      \begin{array}[t]{l}
-        \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+      &{} = 
+      \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+      \\
+      \text{unify } \iota\ \Delta \vdash l\sim\tau_1 \leq l\sim\tau_2	
+      &{} = 
+      \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+      \\
+      \text{unify } \iota\ \Delta \vdash \tau_1\rightarrow\tau_2 \leq \tau_3\rightarrow\tau_4	
+      &{} = 
+      \begin{array}[t]{@{} l}
+        \{\Omega_1;;\Omega_2 |
+        \\ 
+        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_1
+        \\
+        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_4 \leq \tau_2
+        \\
+        \}
+      \end{array}
+      \\
+      \\
+      \text{unify } \iota\ \Delta \vdash l*\tau_1 \leq l*\tau_2	
+      &{} = 
+      \begin{array}[t]{@{} l}
+        aaaaaaaa
+        \\
+        bbbbbbbb
+        \\
+        cccccccc
       \end{array}
     \end{array}
   \]
@@ -537,58 +665,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   \caption{Subtyping unification}
 \end{figure*}
 
-
-
-\begin{figure*}[h]
-\begin{mathpar}
-\mprset{flushleft}
-
-\inferrule[bottom]
-  { }
-  {
-    \Delta \vdash \bot \leq \tau	
-    \rightsquigarrow  
-    \{ \cdot \}
-  }
-
-\inferrule[top]
-  { }
-  {
-    \Delta \vdash \tau \leq \top	
-    \rightsquigarrow  
-    \{ \cdot \}
-  } 
-
-
-\inferrule[equiv]
-  {\Delta \vdash \tau' \equiv \tau}
-  {\Delta \vdash \tau' \leq \tau	\rightsquigarrow  \cdot } 
-
-\\
-
-\inferrule[tag]
-  {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
-  {\Delta \vdash \#l\ \tau' \leq \#l\ \tau \rightsquigarrow M } 
-
-\inferrule[field]
-  {\Delta \vdash \tau' \leq \tau \rightsquigarrow M } 
-  {\Delta \vdash .l\ \tau' \leq .l\ \tau \rightsquigarrow M } 
-
-
-\inferrule[case]
-  {
-    \Delta \vdash \tau_1' \leq \tau_1 \rightsquigarrow M_1 
-    \\
-    \Delta \vdash \tau_2' \leq \tau_2 \rightsquigarrow M_2 
-  } 
-  {\Delta \vdash 
-    \tau_1 \rightarrow \tau_2' \leq \tau_1' \rightarrow \tau_2 
-    \rightsquigarrow M_1 * M_2 
-  } 
-
-\end{mathpar}
-\caption{Unification subtyping: basic rules}
-\end{figure*}
 
 
 \begin{figure*}[h]
