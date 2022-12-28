@@ -663,7 +663,6 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     [ (i, env_ty1 ;; env_ty2) ]
   ))
 
-
 | .univ n1 ty_c1 ty_c2 ty1, .univ n2 ty_c3 ty_c4 ty2 =>
   if n1 == n2 then
     let (i, args1) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
@@ -692,8 +691,6 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   List.bind (unify i (env_ty ;; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
     [ (i, env_ty1 ;; env_ty2) ]
   ))
-
-
 
 | .recur ty', .recur ty =>
   if Ty.equal env_ty ty' ty then
@@ -1114,24 +1111,6 @@ def even := [:
 #eval unify 3 {} False 
 [: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
 [: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
-
------
-
-#eval unify 3 {} False 
-[: ∀ 2 :: β[0] ≤ ⟨even⟩ => β[0]:] 
-[: ∀ 2 :: β[0] ≤ ⟨nat_⟩ => β[0]:] 
-
-#eval unify 3 {} False 
-[: ∀ 2 :: β[0] ≤ ⟨nat_⟩ => β[0]:] 
-[: ∀ 2 :: β[0] ≤ ⟨even⟩ => β[0]:] 
-
-#eval unify 3 {} False 
-[: ∀ 2 :: ⟨nat_⟩ ≤ β[0] => β[0]:] 
-[: ∀ 2 :: ⟨even⟩ ≤ β[0] => β[0]:] 
-
-#eval unify 3 {} False 
-[: ∀ 2 :: ⟨even⟩ ≤ β[0] => β[0]:] 
-[: ∀ 2 :: ⟨nat_⟩ ≤ β[0] => β[0]:] 
 
 #eval unify 3 {} False even nat_ 
 #eval unify 3 {} False nat_ even
@@ -1611,6 +1590,89 @@ def repli := [:
     )
   )
 :]
+
+
+-----
+
+def even_to_list := [: 
+  ν β[0] => 
+    (zero^@ -> nil^@) ; 
+    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
+      succ^succ^β[0] -> cons^cons^β[1])
+:]
+
+def nat_to_unit := [: 
+  ν β[0] => 
+    (zero^@ -> @) ; 
+    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
+      succ^β[0] -> @) 
+:]
+
+def even_to_unit := [: 
+  ν β[0] => 
+    (zero^@ -> @) ; 
+    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
+      succ^succ^β[0] -> @)
+:]
+
+
+#eval unify 3 {} True 
+[: uno ~ @ ; dos ~ @ ; tres ~ @:]
+[: uno ~ @ ; tres ~ @:]
+
+#eval unify 3 {} True 
+[: uno ~ @ ; dos ~ @ ; tres ~ @:]
+[: ∀ 1 :: β[0] ≤ uno ~ @ | dos ~ @ | tres ~ @ => β[0]:]
+
+#eval unify 3 {} True 
+[: ∀ 1 :: β[0] ≤ uno ~ @ | dos ~ @ | tres ~ @ => β[0]:]
+[: uno ~ @ ; dos ~ @ ; tres ~ @:]
+
+
+#eval unify 3 {} True 
+[: uno ~ @ | dos ~ @ | tres ~ @ :]
+[:dos ~ @ ; tres ~ @ :]
+
+#eval unify 3 {} True 
+[:dos ~ @ ; tres ~ @ ; four ~ @:]
+[: uno ~ @ | dos ~ @ | tres ~ @ :]
+
+#eval unify 3 {} True 
+[: ∀ 1 :: β[0] ≤ uno ~ @ | dos ~ @ | tres ~ @ => β[0]:]
+[:dos ~ @ ; tres ~ @ ; four ~ @:]
+
+#eval unify 3 {} True 
+[: ∀ 1 :: uno ~ @ ; dos ~ @ ; tres ~ @ ≤ β[0] => β[0]:]
+[:dos ~ @ ; tres ~ @ :]
+
+#eval unify 3 {} True 
+[: ∀ 1 :: uno ~ @ ; dos ~ @ ; tres ~ @ ≤ β[0] => β[0]:]
+[: ∀ 1 :: uno ~ @ ; dos ~ @ ≤ β[0] => β[0]:]
+
+#eval unify 3 {} True 
+[: ∀ 1 :: uno ~ @ ; dos ~ @ ; tres ~ @ ≤ β[0] => β[0]:]
+[: ∀ 1 :: uno ~ @ ; dos ~ @ ; four ~ @ ≤ β[0] => β[0]:]
+
+#eval unify 3 {} True 
+[: ∀ 1 :: β[0] ≤ uno ~ @ => β[0]:]
+[:uno ~ @ ; four ~ @:]
+
+#eval unify 3 {} True 
+[: ∀ 1 :: uno ~ @ ≤ β[0] => β[0]:]
+[:uno ~ @ ; four ~ @:]
+
+#eval unify 3 {} False 
+nat_to_unit
+[: (zero^@ -> @) :]
+
+#eval unify 3 {} False 
+nat_to_unit
+even_to_unit
+
+#eval unify 3 {} False 
+even_to_unit
+nat_to_unit
+
 
 #eval repli
 
