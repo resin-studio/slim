@@ -650,6 +650,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     List.bind (unify i (env_ty) True ty_c1 ty_c2) (fun (i, env_ty1) =>
     -- these bindings are different from System F.
     -- unlike system F, the bound variables don't have to match
+    -- Instead, we unify the target types first to align bound variables.
     List.bind (unify i (env_ty;;env_ty1) prescribed ty1 ty2) (fun (i, env_ty2) =>
     List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c3 ty_c4) (fun (i, env_ty3) =>
       [ (i, env_ty1;;env_ty2;;env_ty3)  ]
@@ -686,6 +687,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     List.bind (unify i (env_ty) True ty_c3 ty_c4) (fun (i, env_ty1) =>
     -- these bindings are different from System F.
     -- unlike system F, the bound variables don't have to match
+    -- Instead, we unify the target types first to align bound variables.
     List.bind (unify i (env_ty;;env_ty1) prescribed ty1 ty2) (fun (i, env_ty2) =>
     List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c1 ty_c2) (fun (i, env_ty3) =>
       [ (i, env_ty1;;env_ty2;;env_ty3)  ]
