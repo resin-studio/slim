@@ -58,8 +58,9 @@ def foo(x):
 Much of the work on synthesizing specifications from programs has been based on \textbf{ML type inference}.
 In contrast to dynamically typed languages, \textbf{ML languages} require static bounds are prescribed 
 in its programs via its \textbf{datatype} mechanism. The design of ML's datatype mechanism is clever, 
-such these static bound prescriptions are only needed at the definitions of types and can be 
-inferred when the data of types are used.
+such that these static bound prescriptions are only needed at the definitions of types and can be 
+inferred when the data of types are used. When a piece of data is seen an upper static bound 
+may be inferred, \text{propagated upward}, and combined with other inferred types.
 
 \begin{lstlisting}[language=ML]
 datatype int_or_str = 
@@ -89,7 +90,9 @@ enable stating and proving propositions that relate objects to each other,
 including ACL2, Twelf, Coq, Lean, HOL, Isabelle, Liquid Haskell, and Synquid.  
 Some of these use dependent types to encompass both simple types and propositions, 
 and some rely on new syntactic categories for propositions. 
-Whatever the case, these systems are complex and require extensive study to become proficient in.
+
+Liquid Haskell and the related Synquid both provide a way to define relations
+along with subtyping, by extending ML datatypes with predicate clauses. 
 
 \begin{lstlisting}[keywords={termination, measure, data, where}]
 termination measure len :: List $\beta$ $\rightarrow$ Nat 
@@ -99,6 +102,15 @@ data List $\beta$ where
     {v: List $\beta$ | len v = len xs + 1}
 
 \end{lstlisting}
+
+However, as discussed above, the ML datatype mechanism breaks our definition of dynamically typed,
+as it demands prescribing static bounds with data, so this would not work for our problem wholesale.
+Other systems, like Lean or Isabelle, have similar problems with the additional issue of lacking subtyping.
+Finally, all of these are rather complex, either by requiring syntactic classes of propositions predicates, 
+in addition to types, or complicating the static semantics of types by allowing them 
+to be dependent on programs.
+
+
 
 % motivation: Programming 
 With expressive types, using types to guide the user's programming or automatic program synthesis 
