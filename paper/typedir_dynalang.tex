@@ -22,14 +22,103 @@
 % \usepackage[T1]{fontenc}
 
 
-\title{Type-guided synthesis for dynamically typed languages}
+\title{Type and program synthesis with relational types}
 \author{Thomas Logan}
 \date{October 2022}
 
 \begin{document}
 
 \maketitle
+
 \section{Introduction}
+% context
+Some of Today's most popular languages such as JavaScript and Python are considered to be \textbf{dynamically typed}.
+One of the hallmarks of such languages, is that they do not require specifications 
+that can be verified statically. By not requiring static bounds, dynamically typed languages
+enable vast combinations of terms and high reusability of code. 
+Although it's not required, many programmers find that
+static checks, such as \textbf{linters} and more advanced \textbf{static analysis} tools, 
+enable them to find bugs, understand code, and write code more efficiently and reliably. 
+
+In addition to writing programs, programmers can also annotate programs with specifications to
+aid static verification. Writing specifications and programs can be tedious and burdensome.  
+It addition to verifying correction, static tools can aid programmers by automatically synthesizes
+parts of programs or specification implied by the context. Thus, the programmer can simply write
+either a partial specification or partial program and allow the synthesis tool to fill in the rest.   
+
+% motivation: Specification 
+Much of the work on synthesizing specifications from programs has been based on \textbf{ML type inference}.
+In contrast to dynamically typed languages, \textbf{ML languages} require static bounds are prescribed 
+in its programs via its \textbf{datatype} mechanism. The design of ML's datatype mechanism is clever, 
+such these static bound prescriptions are only needed at the definitions of types and can be 
+inferred when the data of types are used.
+
+\begin{lstlisting}[language=ML]
+datatype int_or_str = 
+    Int of int | 
+    Str of string
+
+fun foo(Int x) = x + 1
+  | foo(Str x) = x ^ "abc"
+\end{lstlisting}
+
+% motivation: subtyping 
+Since dynamically typed languages do not require prescribed static bounds, 
+type inference (or specification synthesis, in more general terms) must balance 
+restricting the permissible combinations and reusability in programs with 
+catching errors that could result in crashes at runtime.
+The flexibility of combinations implies that for the same data, 
+the tightest static bounds may differ depending on the context.
+Thus, \textbf{subtyping} or a similarly flexible 
+static notion is necessary to avoid overly restricting combinations.
+
+% motivation: expressive types 
+Mainstream type systems typically merely allow constructing simple types 
+by grouping objects together based on their structures or names.
+However, to have genuine confidence in the correctness of programs, specifications
+need to express relations between data. There are a number of rather esoteric systems that
+enable stating and proving propositions that relate objects to each other, 
+including ACL2, Twelf, Coq, Lean, Liquid Haskell, HOL, and Isabelle.  
+Some of these use dependent types to encompass both simple types and propositions, 
+and some rely on new syntactic categories for propositions. 
+Whatever the case, these systems are complex and require extensive study to become proficient in. 
+Tor the typical Python or JavaScript programmer, 
+the cost of their extreme expressivity would likely be too burdensome.
+
+% motivation: Programming 
+With expressive types, using types to guide the user's programming or automatic program synthesis 
+becomes a more realistic endeavor, as there may be enough information in the specification to narrow the field
+and guide the generation useful programs. Lean and Synquid\cite{} (Based on Liquid Haskell) 
+are two examples of systems that decompose and propagate type specifications 
+to incomplete sections or holes in programs. 
+In the case of Lean, users can use this local type specification to help them construct programs and proofs,
+while in Synquid this local information is leveraged to efficiently synthesize programs. 
+
+% solution 
+This paper introduces the \textbf{relational type system} to provide expressive specifications 
+and synthesis capabilities for dynamically typed languages. 
+The contributions of the relational type system include:
+\begin{enumerate}
+  \item A type level language capable of expressing inductive relations without the complexity of dependent types or propositional syntax.  
+  \item A synthesis algorithm capable of generating local constraints for incomplete programs. 
+  \item A unification algorithm capable of preserving the flexibility of dynamically typed programming. 
+\end{enumerate}
+
+% summary 
+
+In section 2, we illustrate the problem and our solution with examples.
+In section 3, we define the problem and define the syntax, dynamic semantics, and syntax of our language.
+In section 4, we present the synthesis and unification algorithms.
+In section 5, we evaluate the problem and its solution. 
+In section 6, we discuss related work of the past and possible future directions. 
+
+\section{Old Introduction/Overview}
+
+\begin{enumerate}
+  \item example-driven context 
+  \item example-driven motivation
+  \item example-driven solution  
+\end{enumerate}
 
 
 \textbf{Dynamically typed} languages can make writing programs quick and easy 
@@ -289,9 +378,41 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 
 
-\section{Overview}
+\section{Problem and Language}
+\begin{enumerate}
+  \item english statement 
+\end{enumerate}
+\subsection{Syntax}
+\begin{enumerate}
+  \item rules 
+\end{enumerate}
 
-\section{Technical Details}
+\subsection{Dynamic semantics}
+\begin{enumerate}
+  \item rules 
+\end{enumerate}
+
+\subsection{Static semantics}
+\begin{enumerate}
+  \item typing and subtyping rules 
+  \item soundness proof 
+\end{enumerate}
+
+\section{Solution and Algorithms}
+\begin{enumerate}
+  \item english statement 
+\end{enumerate}
+\subsection{Type and program synthesis}
+\begin{enumerate}
+  \item definition 
+  \item lemmas and proofs 
+\end{enumerate}
+
+\subsection{Subtype unification}
+\begin{enumerate}
+  \item definition 
+  \item lemmas and proofs 
+\end{enumerate}
 
 \begin{figure}[h]
   \[
@@ -1031,8 +1152,25 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 
 \section{Evaluation}
+\begin{enumerate}
+  \item experiments 
+  \item adequacy of problem 
+  \item adequacy of solution 
+\end{enumerate}
 
 \section{Related work}
+\begin{enumerate}
+  \item past work 
+  \item future work 
+\end{enumerate}
+
+\section{Conclusion}
+\begin{enumerate}
+  \item restate context with technical terms 
+  \item restate problem with technical terms 
+  \item restate solution with technical terms 
+  \item restate results 
+\end{enumerate}
 
 \section*{Notes}
 
