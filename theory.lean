@@ -298,12 +298,12 @@ partial def Ty.subst (m : PHashMap Nat Ty) : Ty -> Ty
 | .union ty1 ty2 => .union (Ty.subst m ty1) (Ty.subst m ty2)
 | .inter ty1 ty2 => .inter (Ty.subst m ty1) (Ty.subst m ty2)
 | .case ty1 ty2 => .case (Ty.subst m ty1) (Ty.subst m ty2)
-| .univ n ty_c1 ty_c2 ty => (.univ n 
-  (Ty.subst m ty_c1) (Ty.subst m ty_c2)
-  (Ty.subst m ty)
-)
 | .exis n ty_c1 ty_c2 ty => (.exis n
   (Ty.subst m ty_c1) (Ty.subst m ty_c2) 
+  (Ty.subst m ty)
+)
+| .univ n ty_c1 ty_c2 ty => (.univ n 
+  (Ty.subst m ty_c1) (Ty.subst m ty_c2)
   (Ty.subst m ty)
 )
 | .recur ty => .recur (Ty.subst m ty)
@@ -342,12 +342,12 @@ partial def Ty.simplify : Ty -> Ty
     Ty.inter ty1' ty2'
 
 | .case ty1 ty2 => Ty.case (Ty.simplify ty1) (Ty.simplify ty2)
-| .univ n cty1 cty2 ty => 
-    Ty.univ n  
-      (Ty.simplify cty1) (Ty.simplify cty2)
-      (Ty.simplify ty)
 | .exis n cty1 cty2 ty => 
     Ty.exis n  
+      (Ty.simplify cty1) (Ty.simplify cty2)
+      (Ty.simplify ty)
+| .univ n cty1 cty2 ty => 
+    Ty.univ n  
       (Ty.simplify cty1) (Ty.simplify cty2)
       (Ty.simplify ty)
 | .recur ty => Ty.recur (Ty.simplify ty)
@@ -632,6 +632,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   ))
 
 
+-- TODO: fix subtyping for relational types 
+-- figure out how to match existential on the lhs
 | .exis n1 ty_c1 ty_c2 ty1, .exis n2 ty_c3 ty_c4 ty2 =>
   if n1 == n2 then
     let (i, args1) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
@@ -644,8 +646,11 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     let ty_c4 := Ty.instantiate 0 args2 ty_c4
     let ty2 := Ty.instantiate 0 args2 ty2
 
-    List.bind (unify i env_ty prescribed ty1 ty2) (fun (i, env_ty1) =>
-    List.bind (unify i (env_ty;;env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) =>
+    -- solve constraint on LHS first
+    List.bind (unify i (env_ty) True ty_c1 ty_c2) (fun (i, env_ty1) =>
+    -- these bindings are different from System F.
+    -- unlike system F, the bound variables don't have to match
+    List.bind (unify i (env_ty;;env_ty1) prescribed ty1 ty2) (fun (i, env_ty2) =>
     List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c3 ty_c4) (fun (i, env_ty3) =>
       [ (i, env_ty1;;env_ty2;;env_ty3)  ]
     )))
@@ -663,6 +668,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     [ (i, env_ty1 ;; env_ty2) ]
   ))
 
+-- TODO: fix divergence with recursive constraints 
+-- figure out how to match universal on the rhs
 | .univ n1 ty_c1 ty_c2 ty1, .univ n2 ty_c3 ty_c4 ty2 =>
   if n1 == n2 then
     let (i, args1) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
@@ -674,8 +681,12 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     let ty_c3 := Ty.instantiate 0 args2 ty_c3
     let ty_c4 := Ty.instantiate 0 args2 ty_c4
     let ty2 := Ty.instantiate 0 args2 ty2
-    List.bind (unify i env_ty prescribed ty1 ty2) (fun (i, env_ty1) =>
-    List.bind (unify i (env_ty;;env_ty1) True ty_c3 ty_c4) (fun (i, env_ty2) =>
+
+    -- solve constraint on RHS first
+    List.bind (unify i (env_ty) True ty_c3 ty_c4) (fun (i, env_ty1) =>
+    -- these bindings are different from System F.
+    -- unlike system F, the bound variables don't have to match
+    List.bind (unify i (env_ty;;env_ty1) prescribed ty1 ty2) (fun (i, env_ty2) =>
     List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c1 ty_c2) (fun (i, env_ty3) =>
       [ (i, env_ty1;;env_ty2;;env_ty3)  ]
     )))
@@ -714,8 +725,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   if Ty.equal env_ty ty' ty then
     [ (i, {}) ]
   else
-    let ty' := [: ⟨ty'⟩ ↑ 0 // [μ β[0] => ⟨ty'⟩] :]
-    let ty := [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty'⟩] :]
+    let ty' := [: ⟨ty'⟩ ↑ 0 // [ν β[0] => ⟨ty'⟩] :]
+    let ty := [: ⟨ty⟩ ↑ 0 // [ν β[0] => ⟨ty'⟩] :]
     unify i env_ty prescribed ty' ty
 
 
@@ -1095,12 +1106,22 @@ def even := [:
 :]
 
 
+def weven := [: 
+  μ β[0] => 
+    zero^@ |
+    succ^dumb^β[0]
+:]
 
-#eval unify 3 {} False 
+#eval unify 3 {} True weven nat_ 
+#eval unify 3 {} True even nat_ 
+#eval unify 3 {} True nat_ even
+
+
+#eval unify 3 {} True 
 [: ∃ 2 :: β[0] ≤ ⟨even⟩ => β[0] × β[1]:] 
 [: ∃ 2 :: β[0] ≤ ⟨nat_⟩ => β[0] × β[1]:] 
 
-#eval unify 3 {} False 
+#eval unify 3 {} True 
 [: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
 [: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
 
@@ -1111,9 +1132,6 @@ def even := [:
 #eval unify 3 {} False 
 [: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
 [: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
-
-#eval unify 3 {} False even nat_ 
-#eval unify 3 {} False nat_ even
 
 #eval unify 3 {} False [:
     (zero^@)
@@ -1133,11 +1151,37 @@ nat_
 [: α[0] :]
 
 def nat_list := [: 
-  μ β[0] => 
-    l ~ zero^@ ; r ~ nil^@ |
+  μ β[0] => (
+    (l ~ zero^@ ; r ~ nil^@) |
     (∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[2] => 
-      l ~ succ^β[0] ; r ~ cons^β[1])
+      (l ~ succ^β[0] ; r ~ cons^β[1]))
+  )
 :]
+
+def even_list := [: 
+  μ β[0] => (
+    (l ~ zero^@ ; r ~ nil^@) |
+    (∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[2] => 
+      (l ~ succ^succ^β[0] ; r ~ cons^cons^β[1]))
+  )
+:]
+
+-- TODO
+#eval unify 3 {} False
+  nat_list
+  even_list
+
+#eval unify 3 {} False
+  even_list
+  nat_list
+
+#eval unify 3 {} True 
+[: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello ^ β[0] :]
+[: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello ^ β[0] :]
+
+#eval unify 3 {} True 
+[: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello ^ β[0] :]
+[: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello ^ β[0] :]
 
 #eval unify 3 {} False
   [: (l ~ zero^@ ; r ~ nil^@) :] 
@@ -1594,28 +1638,6 @@ def repli := [:
 
 -----
 
-def even_to_list := [: 
-  ν β[0] => 
-    (zero^@ -> nil^@) ; 
-    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
-      succ^succ^β[0] -> cons^cons^β[1])
-:]
-
-def nat_to_unit := [: 
-  ν β[0] => 
-    (zero^@ -> @) ; 
-    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
-      succ^β[0] -> @) 
-:]
-
-def even_to_unit := [: 
-  ν β[0] => 
-    (zero^@ -> @) ; 
-    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
-      succ^succ^β[0] -> @)
-:]
-
-
 #eval unify 3 {} True 
 [: uno ~ @ ; dos ~ @ ; tres ~ @:]
 [: uno ~ @ ; tres ~ @:]
@@ -1650,6 +1672,18 @@ def even_to_unit := [:
 [: ∀ 1 :: uno ~ @ ; dos ~ @ ≤ β[0] => β[0]:]
 
 #eval unify 3 {} True 
+[: ∀ 1 :: uno ~ @ ; dos ~ @ ≤ β[0] => β[0]:]
+[: ∀ 1 :: uno ~ @ ; dos ~ @ ; tres ~ @ ≤ β[0] => β[0]:]
+
+#eval unify 3 {} True 
+[: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello ^ β[0] :]
+[: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello ^ β[0] :]
+
+#eval unify 3 {} True 
+[: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello ^ β[0] :]
+[: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello ^ β[0] :]
+
+#eval unify 3 {} True 
 [: ∀ 1 :: uno ~ @ ; dos ~ @ ; tres ~ @ ≤ β[0] => β[0]:]
 [: ∀ 1 :: uno ~ @ ; dos ~ @ ; four ~ @ ≤ β[0] => β[0]:]
 
@@ -1661,17 +1695,66 @@ def even_to_unit := [:
 [: ∀ 1 :: uno ~ @ ≤ β[0] => β[0]:]
 [:uno ~ @ ; four ~ @:]
 
+
+----- 
+
+def nat_to_unit := [: 
+  ν β[0] => 
+    (zero^@ -> @) ; 
+    (∀ 1 :: β[1] ≤ β[0] -> @ => 
+      (succ^β[0]) -> @) 
+:]
+
+def even_to_unit := [: 
+  ν β[0] => 
+    (zero^@ -> @) ; 
+    (∀ 1 :: β[1] ≤ β[0] -> @ => 
+      (succ^succ^β[0]) -> @)
+:]
+
 #eval unify 3 {} False 
 nat_to_unit
 [: (zero^@ -> @) :]
 
-#eval unify 3 {} False 
+#eval unify 3 {} True 
 nat_to_unit
-even_to_unit
+nat_to_unit
 
-#eval unify 3 {} False 
-even_to_unit
+#eval unify 3 {} True 
 nat_to_unit
+[: (succ^zero^@ -> @) :]
+
+#eval unify 3 {} True 
+even_to_unit
+[: (succ^succ^zero^@ -> @) :]
+
+#eval unify 3 {} True 
+even_to_unit
+[: (succ^zero^@ -> @) :]
+
+-- #eval unify 3 {} True 
+-- [: 
+--     (zero^@ -> @) ; 
+--     (∀ 1 :: ⟨nat_to_unit⟩ ≤ β[0] -> @ => 
+--       (succ^β[0]) -> @) 
+-- :]
+-- [: 
+--     (zero^@ -> @) ; 
+--     (∀ 1 :: ⟨nat_to_unit⟩ ≤ β[0] -> @ => 
+--       (succ^succ^β[0]) -> @)
+-- :]
+
+-- #eval unify 3 {} True 
+-- nat_to_unit
+-- even_to_unit
+
+-- #eval unify 3 {} True 
+-- even_to_unit
+-- nat_to_unit
+
+-- #eval unify 3 {} True 
+-- nat_
+-- even
 
 
 #eval repli
