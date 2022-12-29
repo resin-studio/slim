@@ -31,7 +31,7 @@
 \maketitle
 
 \section{Introduction}
-% context
+% context: dynamically typed languages   
 Some of Today's most popular languages such as JavaScript and Python are considered to be \textbf{dynamically typed}.
 One of the hallmarks of such languages, is that they do not require specifications 
 that can be verified statically. By not requiring static bounds, dynamically typed languages
@@ -45,6 +45,14 @@ aid static verification. Writing specifications and programs can be tedious and 
 It addition to verifying correction, static tools can aid programmers by automatically synthesizes
 parts of programs or specification implied by the context. Thus, the programmer can simply write
 either a partial specification or partial program and allow the synthesis tool to fill in the rest.   
+
+\begin{lstlisting}[language=Python]
+def foo(x):
+    if isinstance(x, int):
+        return x + 1 
+    elif isinstance(x, str): 
+        return x + "abc"
+\end{lstlisting}
 
 % motivation: Specification 
 Much of the work on synthesizing specifications from programs has been based on \textbf{ML type inference}.
@@ -78,12 +86,19 @@ by grouping objects together based on their structures or names.
 However, to have genuine confidence in the correctness of programs, specifications
 need to express relations between data. There are a number of rather esoteric systems that
 enable stating and proving propositions that relate objects to each other, 
-including ACL2, Twelf, Coq, Lean, Liquid Haskell, HOL, and Isabelle.  
+including ACL2, Twelf, Coq, Lean, HOL, Isabelle, Liquid Haskell, and Synquid.  
 Some of these use dependent types to encompass both simple types and propositions, 
 and some rely on new syntactic categories for propositions. 
-Whatever the case, these systems are complex and require extensive study to become proficient in. 
-Tor the typical Python or JavaScript programmer, 
-the cost of their extreme expressivity would likely be too burdensome.
+Whatever the case, these systems are complex and require extensive study to become proficient in.
+
+\begin{lstlisting}[keywords={termination, measure, data, where}]
+termination measure len :: List $\beta$ $\rightarrow$ Nat 
+data List $\beta$ where
+  Nil :: {v: List $\beta$ | len v = 0}
+  Cons :: $\beta$ $\rightarrow$ xs: List $\beta$ $\rightarrow$ 
+    {v: List $\beta$ | len v = len xs + 1}
+
+\end{lstlisting}
 
 % motivation: Programming 
 With expressive types, using types to guide the user's programming or automatic program synthesis 
