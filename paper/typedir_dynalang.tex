@@ -647,7 +647,185 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 % \caption{Unification subtyping: basic rules}
 % \end{figure*}
 
+% \begin{figure*}[h]
+% \begin{mathpar}
+% \mprset{flushleft}
 
+% \inferrule[exis-free]
+%   { 
+%     \{ \Omega_1;;\Omega_2 \ |\ 
+%     \\\\
+%     \ \ \ \ \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
+%     \\
+%     \Omega_1 \in M_1
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
+%     \\
+%     \Omega_2 \in M_2
+%     \\\\
+%     \} = M
+%     \\
+%     \text{fresh}\ \widebar{\alpha}
+%   }
+%   { 
+%     \Delta \vdash 
+%       \tau'
+%       \leq 
+%       (\exists \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau)
+%       \rightsquigarrow
+%       M 
+%   }
+
+% \inferrule[univ-free]
+%   { 
+%     \{ \Omega_1;;\Omega_2 \ |\ 
+%     \\\\
+%     \ \ \ \ \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
+%     \\
+%     \Omega_1 \in M_1
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
+%     \\
+%     \Omega_2 \in M_2
+%     \\\\
+%     \} = M
+%     \\
+%     \text{fresh}\ \widebar{\alpha}
+%   }
+%   { 
+%     \Delta \vdash 
+%       (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau')
+%       \leq 
+%       \tau
+%       \rightsquigarrow
+%       M
+%   }
+
+% \inferrule[recur-symm]
+%   { 
+%      \Delta \vdash \tau'[\alpha\mapsto\mu\alpha.\tau] \leq \tau[\alpha\mapsto\mu\alpha.\tau] \rightsquigarrow M 
+%   }
+%   {\Delta \vdash \mu \alpha . \tau' \leq \mu \alpha . \tau	\rightsquigarrow M}
+
+% \inferrule[recur-tag]
+%   {\Delta \vdash  \#l\ \tau_1 \leq \tau[\alpha\mapsto\mu \alpha . \tau] \rightsquigarrow M}
+%   {\Delta \vdash \#l\ \tau_1 \leq \mu \alpha . \tau	\rightsquigarrow  M }
+
+% \inferrule[recur-record]
+%   {  
+%     \Delta \vdash_{R} \tau'
+%     \\
+%     \Delta \vdash 
+%       \tau' 
+%       \leq 
+%       \tau[\alpha\mapsto\mu\alpha.\tau]	
+%     \rightsquigarrow M 
+%   }
+%   {
+%     \Delta \vdash 
+%       \tau'  
+%       \leq 
+%       \mu \alpha . \tau	\rightsquigarrow M 
+%   }
+
+% \inferrule[corec-symm]
+%   { 
+%      \Delta \vdash \tau'[\alpha\mapsto\nu\alpha.\tau'] \leq \tau[\alpha\mapsto\nu\alpha.\tau'] \rightsquigarrow M 
+%   }
+%   { \Delta \vdash 
+%     \nu \alpha . \tau' 
+%     \leq 
+%     \nu \alpha . \tau	
+%     \rightsquigarrow M 
+%   }
+
+% \inferrule[corec-case]
+%   { 
+%     \Delta \vdash 
+%     \tau[\alpha\mapsto\nu\alpha.\tau]
+%     \leq 
+%     \tau_1 \rightarrow \tau_2	
+%     \rightsquigarrow M 
+%   }
+%   { 
+%     \Delta \vdash 
+%     \nu \alpha . \tau 
+%     \leq 
+%     \tau_1 \rightarrow \tau_2	
+%     \rightsquigarrow M
+%   }
+
+% \end{mathpar}
+% \caption{Unification subtyping: binding rules}
+% \end{figure*}
+
+% \begin{figure*}[h]
+% \begin{mathpar}
+% \mprset{flushleft}
+
+% \inferrule[union-left]
+%   {
+%     \{ \Omega_1;;\Omega_2 \ |\ 
+%     \\\\
+%     \ \ \ \ \Delta \vdash \tau_1 \leq \tau \rightsquigarrow M_1  
+%     \\
+%     \Omega_1 \in M_1
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega_1 \vdash \tau_2 \leq \tau \rightsquigarrow M_2  
+%     \\
+%     \Omega_2 \in M_2
+%     \\\\
+%     \} = M
+%   }
+%   {
+%     \Delta \vdash \tau_1\ |\ \tau_2 \leq \tau
+%     \rightsquigarrow M 
+%   }
+
+% \inferrule[union-right]
+%   {
+%     \Delta \vdash \tau \leq \tau_1 \rightsquigarrow M_1
+%     \\
+%     \Delta \vdash \tau \leq \tau_2 \rightsquigarrow M_2 
+%   }
+%   {
+%     \Delta \vdash \tau \leq \tau_1\ |\ \tau_2
+%     \rightsquigarrow M_1 \cup M_2 
+%   }
+
+% \inferrule[inter-right]
+%   {
+%     \{ \Omega_1;;\Omega_2 \ |\ 
+%     \\\\
+%     \ \ \ \ \Delta \vdash \tau \leq \tau_1 \rightsquigarrow M_1 
+%     \\
+%     \Omega_1 \in M_1
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega_1 \vdash \tau \leq \tau_2 \rightsquigarrow M_2  
+%     \\
+%     \Omega_2 \in M_2
+%     \\\\
+%     \} = M
+%   }
+%   {
+%     \Delta \vdash \tau \leq \tau_1\ ;\ \tau_2
+%     \rightsquigarrow M 
+%   }
+
+% \inferrule[inter-left]
+%   {
+%     \Delta \vdash \tau_1 \leq \tau \rightsquigarrow M_1
+%     \\
+%     \Delta \vdash \tau_2 \leq \tau \rightsquigarrow M_2  
+%   }
+%   {
+%     \Delta \vdash \tau_1\ ;\ \tau_2 \leq \tau
+%     \rightsquigarrow M_1 \cup M_2 
+%   }
+
+% \end{mathpar}
+% \caption{Unification subtyping: connective rules}
+% \end{figure*}
 
 
 \begin{figure*}[h]
@@ -764,7 +942,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \text{unify } \iota\ \Delta \vdash \tau_1\rightarrow\tau_2 \leq \tau_3\rightarrow\tau_4	
       &{} = 
       \begin{array}[t]{@{} l}
-        \{\Omega_1;;\Omega_2 |
+        \{\Omega_1;;\Omega_2\ |
         \\ 
         \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_1
         \\
@@ -772,135 +950,203 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \\
         \}
       \end{array}
-      \\
-      \\
-      \text{unify } \iota\ \Delta \vdash l*\tau_1 \leq l*\tau_2	
-      &{} = 
-      \begin{array}[t]{@{} l}
-        aaaaaaaa
-        \\
-        bbbbbbbb
-        \\
-        cccccccc
-      \end{array}
+
     \end{array}
   \]
-
-  \caption{Subtyping unification}
+  \caption{Subtyping unification: part 1}
 \end{figure*}
-
-
 
 \begin{figure*}[h]
-\begin{mathpar}
-\mprset{flushleft}
-
-\inferrule[exis-free]
-  { 
-    \{ \Omega_1;;\Omega_2 \ |\ 
-    \\\\
-    \ \ \ \ \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
-    \\
-    \Omega_1 \in M_1
-    \\\\
-    \ \ \ \ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
-    \\
-    \Omega_2 \in M_2
-    \\\\
-    \} = M
-    \\
-    \text{fresh}\ \widebar{\alpha}
-  }
-  { 
-    \Delta \vdash 
-      \tau'
+  \[
+    \begin{array}{l @{} l}
+      \text{unify } \iota\ \Delta \vdash
+      (\exists \widebar{\alpha_1} :: \tau_1 \leq \tau_2\ .\ \tau_3)
       \leq 
-      (\exists \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau)
-      \rightsquigarrow
-      M 
-  }
-
-\inferrule[univ-free]
-  { 
-    \{ \Omega_1;;\Omega_2 \ |\ 
-    \\\\
-    \ \ \ \ \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
-    \\
-    \Omega_1 \in M_1
-    \\\\
-    \ \ \ \ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
-    \\
-    \Omega_2 \in M_2
-    \\\\
-    \} = M
-    \\
-    \text{fresh}\ \widebar{\alpha}
-  }
-  { 
-    \Delta \vdash 
-      (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau')
+      (\exists \widebar{\alpha_2} :: \tau_4 \leq \tau_5\ .\ \tau_6)
+      &{} = 
+      \begin{array}[t]{@{} l}
+        \text{let } \tau_1, \tau_2, \tau_3 = 
+        \text{refresh } \widebar{\alpha_1}\ \tau_1,\ 
+        \text{refresh } \widebar{\alpha_1}\ \tau_2,\ 
+        \text{refresh } \widebar{\alpha_1}\ \tau_3
+        \\
+        \text{let } \tau_4, \tau_5, \tau_6 = 
+        \text{refresh } \widebar{\alpha_2}\ \tau_4,\ 
+        \text{refresh } \widebar{\alpha_2}\ \tau_5,\ 
+        \text{refresh } \widebar{\alpha_2}\ \tau_6
+        \\
+        \{\Omega_1;;\Omega_2;;\Omega_3\ |
+        \\ 
+        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+        \\ 
+        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_3 \leq \tau_6
+        \\
+        \ \ \ \ \Omega_3 \in \text{unify } \iota\ \Delta;;\Omega_1;;\Omega_2 \vdash \tau_4 \leq \tau_5
+        \\
+        \}
+      \end{array}
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      \tau_1
       \leq 
-      \tau
-      \rightsquigarrow
-      M
-  }
-
-\inferrule[recur-symm]
-  { 
-     \Delta \vdash \tau'[\alpha\mapsto\mu\alpha.\tau] \leq \tau[\alpha\mapsto\mu\alpha.\tau] \rightsquigarrow M 
-  }
-  {\Delta \vdash \mu \alpha . \tau' \leq \mu \alpha . \tau	\rightsquigarrow M}
-
-\inferrule[recur-tag]
-  {\Delta \vdash  \#l\ \tau_1 \leq \tau[\alpha\mapsto\mu \alpha . \tau] \rightsquigarrow M}
-  {\Delta \vdash \#l\ \tau_1 \leq \mu \alpha . \tau	\rightsquigarrow  M }
-
-\inferrule[recur-record]
-  {  
-    \Delta \vdash_{R} \tau'
-    \\
-    \Delta \vdash 
-      \tau' 
+      (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+      &{} = 
+      \begin{array}[t]{@{} l}
+        \text{let } \tau_2, \tau_3, \tau_4 = 
+        \text{refresh } \widebar{\alpha}\ \tau_2,\ 
+        \text{refresh } \widebar{\alpha}\ \tau_3,\ 
+        \text{refresh } \widebar{\alpha}\ \tau_4
+        \\
+        \{\Omega_1;;\Omega_2\ |
+        \\ 
+        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_4
+        \\
+        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_2 \leq \tau_3
+        \\
+        \}
+      \end{array}
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      (\forall \widebar{\alpha_1} :: \tau_1 \leq \tau_2\ .\ \tau_3)
       \leq 
-      \tau[\alpha\mapsto\mu\alpha.\tau]	
-    \rightsquigarrow M 
-  }
-  {
-    \Delta \vdash 
-      \tau'  
+      (\forall \widebar{\alpha_2} :: \tau_4 \leq \tau_5\ .\ \tau_6)
+      &{} = 
+      \begin{array}[t]{@{} l}
+        \text{let } \tau_1, \tau_2, \tau_3 = 
+        \text{refresh } \widebar{\alpha_1}\ \tau_1,\ 
+        \text{refresh } \widebar{\alpha_1}\ \tau_2,\ 
+        \text{refresh } \widebar{\alpha_1}\ \tau_3
+        \\
+        \text{let } \tau_4, \tau_5, \tau_6 = 
+        \text{refresh } \widebar{\alpha_2}\ \tau_4,\ 
+        \text{refresh } \widebar{\alpha_2}\ \tau_5,\ 
+        \text{refresh } \widebar{\alpha_2}\ \tau_6
+        \\
+        \{\Omega_1;;\Omega_2;;\Omega_3\ |
+        \\ 
+        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_4 \leq \tau_5
+        \\ 
+        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_3 \leq \tau_6
+        \\
+        \ \ \ \ \Omega_3 \in \text{unify } \iota\ \Delta;;\Omega_1;;\Omega_2 \vdash \tau_1 \leq \tau_2
+        \\
+        \}
+      \end{array}
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
       \leq 
-      \mu \alpha . \tau	\rightsquigarrow M 
-  }
+      \tau_4
+      &{} = 
+      \begin{array}[t]{@{} l}
+        \text{let } \tau_1, \tau_2, \tau_3 = 
+        \text{refresh } \widebar{\alpha}\ \tau_1,\ 
+        \text{refresh } \widebar{\alpha}\ \tau_2,\ 
+        \text{refresh } \widebar{\alpha}\ \tau_3
+        \\
+        \{\Omega_1;;\Omega_2\ |
+        \\ 
+        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_4
+        \\
+        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_2
+        \\
+        \}
+      \end{array}
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      \mu \alpha . \tau_1 \leq \mu \alpha . \tau_2
+      &{} = 
+      \Delta \vdash 
+      \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] \leq 
+      \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
 
-\inferrule[corec-symm]
-  { 
-     \Delta \vdash \tau'[\alpha\mapsto\nu\alpha.\tau'] \leq \tau[\alpha\mapsto\nu\alpha.\tau'] \rightsquigarrow M 
-  }
-  { \Delta \vdash 
-    \nu \alpha . \tau' 
-    \leq 
-    \nu \alpha . \tau	
-    \rightsquigarrow M 
-  }
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      l * \tau_1 \leq \mu \alpha . \tau_2
+      &{} = 
+      \Delta \vdash  
+      l * \tau_1 \leq\tau_2[\alpha\mapsto\mu\alpha.\tau_2]
 
-\inferrule[corec-case]
-  { 
-    \Delta \vdash 
-    \tau[\alpha\mapsto\nu\alpha.\tau]
-    \leq 
-    \tau_1 \rightarrow \tau_2	
-    \rightsquigarrow M 
-  }
-  { 
-    \Delta \vdash 
-    \nu \alpha . \tau 
-    \leq 
-    \tau_1 \rightarrow \tau_2	
-    \rightsquigarrow M
-  }
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      \tau_1 \leq \mu \alpha . \tau_2
+      &{} = 
+      \begin{cases}  
+        \text{unify } \iota\ \Delta \vdash 
+        \tau_1 \leq \tau_2[\alpha\mapsto\mu\alpha.\tau_2]	
+        &\text{if }
+        \text{recordform } \Delta \vdash \tau_1
+        \\
+        \{\}
+        &\text{otherwise}
+      \end{cases}
 
-\end{mathpar}
-\caption{Unification subtyping: binding rules}
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      \nu \alpha_1 . \tau_1 \leq 
+      \nu \alpha_2 . \tau_2	
+      &{} = 
+      \text{unify } \iota\ \Delta \vdash 
+      \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] \leq 
+      \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      \nu \alpha . \tau_1 \leq 
+      \tau_2 \rightarrow \tau_3
+      &{} = 
+      \text{unify } \iota\ \Delta \vdash
+      \tau_1[\alpha\mapsto\nu\alpha.\tau_1]
+      \leq 
+      \tau_2 \rightarrow \tau_3
+
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      \tau_1\ |\ \tau_2 \leq \tau_3
+      &{} = 
+      \begin{array}[t]{@{} l}
+        \{\Omega_1;;\Omega_2\ |
+        \\ 
+        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3
+        \\
+        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_2 \leq \tau_3
+        \\
+        \}
+      \end{array}
+
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      \tau_1 \leq \tau_2 \ |\ \tau_3
+      &{} = 
+      (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2)
+      \cup
+      (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3)
+
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      \tau_1 \leq \tau_2\ ;\ \tau_3
+      &{} = 
+      \begin{array}[t]{@{} l}
+        \{\Omega_1;;\Omega_2\ |
+        \\ 
+        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+        \\
+        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_3
+        \\
+        \}
+      \end{array}
+
+      \\
+      \text{unify } \iota\ \Delta \vdash
+      \tau_1\ ;\ \tau_2 \leq \tau_3
+      &{} = 
+      (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3)
+      \cup
+      (\text{unify } \iota\ \Delta \vdash \tau_2 \leq \tau_3)
+
+    \end{array}
+  \]
+  \caption{Subtyping unification: part 2}
 \end{figure*}
 
 
@@ -908,73 +1154,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 
 
-\begin{figure*}[h]
-\begin{mathpar}
-\mprset{flushleft}
 
-\inferrule[union-left]
-  {
-    \{ \Omega_1;;\Omega_2 \ |\ 
-    \\\\
-    \ \ \ \ \Delta \vdash \tau_1 \leq \tau \rightsquigarrow M_1  
-    \\
-    \Omega_1 \in M_1
-    \\\\
-    \ \ \ \ \Delta;;\Omega_1 \vdash \tau_2 \leq \tau \rightsquigarrow M_2  
-    \\
-    \Omega_2 \in M_2
-    \\\\
-    \} = M
-  }
-  {
-    \Delta \vdash \tau_1\ |\ \tau_2 \leq \tau
-    \rightsquigarrow M 
-  }
 
-\inferrule[union-right]
-  {
-    \Delta \vdash \tau \leq \tau_1 \rightsquigarrow M_1
-    \\
-    \Delta \vdash \tau \leq \tau_2 \rightsquigarrow M_2 
-  }
-  {
-    \Delta \vdash \tau \leq \tau_1\ |\ \tau_2
-    \rightsquigarrow M_1 \cup M_2 
-  }
 
-\inferrule[inter-right]
-  {
-    \{ \Omega_1;;\Omega_2 \ |\ 
-    \\\\
-    \ \ \ \ \Delta \vdash \tau \leq \tau_1 \rightsquigarrow M_1 
-    \\
-    \Omega_1 \in M_1
-    \\\\
-    \ \ \ \ \Delta;;\Omega_1 \vdash \tau \leq \tau_2 \rightsquigarrow M_2  
-    \\
-    \Omega_2 \in M_2
-    \\\\
-    \} = M
-  }
-  {
-    \Delta \vdash \tau \leq \tau_1\ ;\ \tau_2
-    \rightsquigarrow M 
-  }
-
-\inferrule[inter-left]
-  {
-    \Delta \vdash \tau_1 \leq \tau \rightsquigarrow M_1
-    \\
-    \Delta \vdash \tau_2 \leq \tau \rightsquigarrow M_2  
-  }
-  {
-    \Delta \vdash \tau_1\ ;\ \tau_2 \leq \tau
-    \rightsquigarrow M_1 \cup M_2 
-  }
-
-\end{mathpar}
-\caption{Unification subtyping: connective rules}
-\end{figure*}
 
 
 

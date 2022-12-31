@@ -732,6 +732,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     unify i env_ty prescribed ty' ty
 
 
+-- TODO: determine if wellformed check is needed to always converge
 | .corec ty_corec, Ty.case ty1 ty2 =>
   unify i env_ty prescribed (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
 
