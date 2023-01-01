@@ -420,202 +420,202 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 \subsection{Typing semantics}
 
-% \begin{figure*}[h]
-% \begin{mathpar}
-% \mprset{flushleft}
+\begin{figure*}[h]
+\begin{mathpar}
+\mprset{flushleft}
 
-% \inferrule[Hole]
-%   { }
-%   {\Delta\ \Gamma \vdash \_ : \tau  \rightsquigarrow \{\} } 
+\inferrule[Hole]
+  { }
+  {\Delta\ \Gamma \vdash \_ : \tau  \rightsquigarrow \{\} } 
 
-% \inferrule[Unit]
-%   { 
-%     \{\Omega\ .\ \diamondsuit \ |\ 
-%     \\\\
-%     \ \ \ \ \Delta \vdash \diamondsuit \leq \tau \rightsquigarrow M
-%     \\
-%     \Omega \in M
-%     \\\\
-%     \} = N 
-%   }
-%   {\Delta\ \Gamma \vdash () : \tau  \rightsquigarrow N } 
+\inferrule[Unit]
+  { 
+    \{\Delta\ .\ \diamondsuit \ |\ 
+    \\\\
+    \ \ \ \ \Delta \vdash \diamondsuit \leq \tau \rightsquigarrow M
+    \\
+    \Delta \in M
+    \\\\
+    \} = N 
+  }
+  {\Delta\ \Gamma \vdash () : \tau  \rightsquigarrow N } 
 
-% \inferrule[Var]
-%   { 
-%     \{\Omega\ .\ \tau' \ |\ 
-%     \\\\
-%     \ \ \ \ \Delta \vdash \Gamma(x) \leq \tau \rightsquigarrow M 
-%     \\
-%     \Omega \in M
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash x : \tau  
-%     \rightsquigarrow N } 
+\inferrule[Var]
+  { 
+    \{\Delta\ .\ \tau' \ |\ 
+    \\\\
+    \ \ \ \ \Delta \vdash \Gamma(x) \leq \tau \rightsquigarrow M 
+    \\
+    \Delta \in M
+    \\\\
+    \} = N
+  }
+  {\Delta\ \Gamma \vdash x : \tau  
+    \rightsquigarrow N } 
 
-% \inferrule[Tag]
-%   { 
-%     \{\Omega_1;;\Omega_2\ .\ \#l\ \tau' \ |\ 
-%     \\\\
-%     \ \ \ \ \text{fresh}\ \alpha
-%     \\\\
-%     \ \ \ \ \Delta \vdash \#l\ \alpha \leq \tau \rightsquigarrow M_1 
-%     \\
-%     \Omega_1 \in M_1
-%     \\\\
-%     \ \ \ \ \Delta;;\Omega_1\ \Gamma \vdash t : \alpha 
-%       \rightsquigarrow N_2
-%     \\
-%     \Omega_2\ .\ \tau' \in N_2
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash \#l\ t : \tau  
-%     \rightsquigarrow N} 
+\inferrule[Tag]
+  { 
+    \{\Delta_1;;\Delta_2\ .\ \#l\ \tau' \ |\ 
+    \\\\
+    \ \ \ \ \text{fresh}\ \alpha
+    \\\\
+    \ \ \ \ \Delta \vdash \#l\ \alpha \leq \tau \rightsquigarrow M_1 
+    \\
+    \Delta_1 \in M_1
+    \\\\
+    \ \ \ \ \Delta;;\Delta_1\ \Gamma \vdash t : \alpha 
+      \rightsquigarrow N_2
+    \\
+    \Delta_2\ .\ \tau' \in N_2
+    \\\\
+    \} = N
+  }
+  {\Delta\ \Gamma \vdash \#l\ t : \tau  
+    \rightsquigarrow N} 
 
-% \\\\
+\\\\
 
-% \inferrule[Record]
-%   { 
-%     \text{fresh\_fields}\ t = fields 
-%     \\\\
-%     \{reduce}\ ;\ \{.l\ \tau_1\ |\ (.l\ t_1, \tau_1) \in fields \} = \tau'
-%     \\\\
-%     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
-%     \\\\
-%     \{reduce} * \{N_1\ |\ 
-%     \\\\
-%     \ \ \ \ (.l\ t_1, \tau_1) \in fields \\ \Omega \in M
-%     \\\\
-%     \ \ \ \ \Delta;;\Omega\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash t : \tau  
-%     \rightsquigarrow N} 
-
-
-% \inferrule[Function]
-%   {
-%     \text{fresh\_cases}\ t = cases 
-%     \\\\
-%     \{reduce}\ ;\ \{\tau_1 \rightarrow \tau_2\ |\ 
-%     (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
-%     \} = \tau'
-%     \\\\
-%     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
-%     \\\\
-%     \{reduce} * \{N_2\ |\ 
-%     \\\\
-%     \ \ \ \ (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
-%     \\\\
-%     \ \ \ \ \text{pat\_wf}\ t_1 \\ \text{fresh\_env}\ t_1 = \Gamma_x \\ \Omega \in M
-%     \\\\
-%     \ \ \ \ \Delta;;\Omega\ \Gamma;;\Gamma_x \vdash t_1 : \tau_1 \rightsquigarrow N_1
-%     \\
-%     \Omega_1\ .\ \tau_1' \in N_1
-%     \\\\
-%     \ \ \ \ \Delta;;\Omega;;\Omega_1\ \Gamma;;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash t : \tau  
-%     \rightsquigarrow 
-%     N } 
-
-% \end{mathpar}
-% \caption{Inference typing: part 1}
-% \end{figure*}
-
-% \begin{figure*}[h]
-% \begin{mathpar}
-% \mprset{flushleft}
-
-% \inferrule[Proj]
-%   {
-%     \{\Omega_1;;\Omega_2\ .\ \alpha \ |\ 
-%     \\\\
-%     \\ \text{fresh}\ \alpha
-%     \\\\
-%     \\ \Delta\ \Gamma \vdash t_1 : .l\ \tau \rightsquigarrow N_1
-%     \\ \Omega_1.\tau_1 \in N_1
-%     \\\\
-%     \\ \Delta;;\Omega_1 \vdash \tau_1 \leq .l\ \alpha \rightsquigarrow M_2
-%     \\ \Omega_2 \in M_2
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash t_1.l : \tau 
-%     \rightsquigarrow N} 
-
-% \inferrule[App]
-%   { 
-%     \{\Omega_1;;\Omega_2.\tau\ |\ 
-%     \\\\
-%     \\ \text{fresh}\ \alpha\ 
-%     \\ \Delta\ \Gamma \vdash t_1 : (\alpha \rightarrow \tau) 
-%       \rightsquigarrow N_1
-%     \\ \Omega_1.\tau_1' \in N_1
-%     \\\\
-%     \\\Delta;;\Omega_1\ \Gamma \vdash t_2 : \alpha
-%       \rightsquigarrow N_2
-%     \\ \Omega_2.\tau_2' \in N_2
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash t_1\ t_2 : \tau 
-%     \rightsquigarrow  N
-%     } 
-
-% \inferrule[Let]
-%   { 
-%     \{ \Omega_1;;\Omega_2\ .\ \tau' \ |\ 
-%     \\\\
-%     \\ \Delta\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
-%     \\ \Omega_1\ .\ \tau_1' \in N_1
-%     \\\\
-%     \\ \tau_1'[\Delta;;\Omega_1] = \tau_1''
-%     \\ \text{freevars}\ \tau_1'' = \widebar{\alpha}
-%     \\\\
-%     % NOTE: Remy doesn't need to substitute, since their universal holds constraints 
-%     \\ \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1''
-%       \vdash t : \tau \rightsquigarrow N_2
-%     \\\\
-%     \\ \Omega_2.\tau' \in N_2
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash (\text{let}\ x : \tau_1 = t_1\ .\ t) : \tau 
-%   \rightsquigarrow N} 
-
-% \inferrule[Fix]
-%   { 
-%     \{ \Omega_1;;\Omega_2\ .\ \nu\ \gamma \ . \forall\ \widebar{\omega} :: 
-%       \gamma \leq \tau_\alpha\ .  \tau_\beta 
-%       \ |\ 
-%     \\\\
-%     \\ \text{fresh}\ \alpha\ \beta\
-%     \\ \Delta\ \Gamma \vdash t_1 : \tau \rightarrow \tau \rightsquigarrow N_1
-%     \\ \Omega_1.\tau_1' \in N_1
-%     \\\\
-%     \\ \Delta;;\Omega_1 \vdash \tau_1' \leq \alpha \rightarrow \beta 
-%     \rightsquigarrow M_2
-%     \\ \Omega_2 \in M_2
-%     \\\\
-%     \\ \alpha[\Delta;;\Omega_1;;\Omega_2] = \tau_\alpha
-%     \\ \beta[\Delta;;\Omega_1;;\Omega_2] = \tau_\beta
-%     \\\\
-%     \\ \text{freevars}\ \tau_\alpha = \widebar{\omega}
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash \text{fix}\ t_1 : \tau 
-%   \rightsquigarrow N} 
+\inferrule[Record]
+  { 
+    \text{fresh\_fields}\ t = fields 
+    \\\\
+    \text{reduce}\ ;\ \{.l\ \tau_1\ |\ (.l\ t_1, \tau_1) \in fields \} = \tau'
+    \\\\
+    \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
+    \\\\
+    \text{reduce} * \{N_1\ |\ 
+    \\\\
+    \ \ \ \ (.l\ t_1, \tau_1) \in fields \\ \Delta_1 \in M
+    \\\\
+    \ \ \ \ \Delta;;\Delta_1\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
+    \\\\
+    \} = N
+  }
+  {\Delta\ \Gamma \vdash t : \tau  
+    \rightsquigarrow N} 
 
 
-% \end{mathpar}
-% \caption{Inference typing: part 2}
-% \end{figure*}
+\inferrule[Function]
+  {
+    \text{fresh\_cases}\ t = cases 
+    \\\\
+    \text{reduce}\ ;\ \{\tau_1 \rightarrow \tau_2\ |\ 
+    (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
+    \} = \tau'
+    \\\\
+    \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
+    \\\\
+    \text{reduce} * \{N_2\ |\ 
+    \\\\
+    \ \ \ \ (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
+    \\\\
+    \ \ \ \ \text{pat\_wf}\ t_1 \\ \text{fresh\_env}\ t_1 = \Gamma_x \\ \Delta_1 \in M
+    \\\\
+    \ \ \ \ \Delta;;\Delta_1\ \Gamma;;\Gamma_x \vdash t_1 : \tau_1 \rightsquigarrow N_1
+    \\
+    \Delta_2\ .\ \tau_1' \in N_1
+    \\\\
+    \ \ \ \ \Delta;;\Delta_1;;\Delta_2\ \Gamma;;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
+    \\\\
+    \} = N
+  }
+  {\Delta\ \Gamma \vdash t : \tau  
+    \rightsquigarrow 
+    N } 
+
+\end{mathpar}
+\caption{Inference typing: part 1}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{mathpar}
+\mprset{flushleft}
+
+\inferrule[Proj]
+  {
+    \{\Delta_1;;\Delta_2\ .\ \alpha \ |\ 
+    \\\\
+    \\ \text{fresh}\ \alpha
+    \\\\
+    \\ \Delta\ \Gamma \vdash t_1 : .l\ \tau \rightsquigarrow N_1
+    \\ \Delta_1.\tau_1 \in N_1
+    \\\\
+    \\ \Delta;;\Delta_1 \vdash \tau_1 \leq .l\ \alpha \rightsquigarrow M_2
+    \\ \Delta_2 \in M_2
+    \\\\
+    \} = N
+  }
+  {\Delta\ \Gamma \vdash t_1.l : \tau 
+    \rightsquigarrow N} 
+
+\inferrule[App]
+  { 
+    \{\Delta_1;;\Delta_2.\tau\ |\ 
+    \\\\
+    \\ \text{fresh}\ \alpha\ 
+    \\ \Delta\ \Gamma \vdash t_1 : (\alpha \rightarrow \tau) 
+      \rightsquigarrow N_1
+    \\ \Delta_1.\tau_1' \in N_1
+    \\\\
+    \\\Delta;;\Delta_1\ \Gamma \vdash t_2 : \alpha
+      \rightsquigarrow N_2
+    \\ \Delta_2.\tau_2' \in N_2
+    \\\\
+    \} = N
+  }
+  {\Delta\ \Gamma \vdash t_1\ t_2 : \tau 
+    \rightsquigarrow  N
+    } 
+
+\inferrule[Let]
+  { 
+    \{ \Delta_1;;\Delta_2\ .\ \tau' \ |\ 
+    \\\\
+    \\ \Delta\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
+    \\ \Delta_1\ .\ \tau_1' \in N_1
+    \\\\
+    \\ \tau_1'[\Delta;;\Delta_1] = \tau_1''
+    \\ \text{freevars}\ \tau_1'' = \widebar{\alpha}
+    \\\\
+    % NOTE: Remy doesn't need to substitute, since their universal holds constraints 
+    \\ \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1''
+      \vdash t : \tau \rightsquigarrow N_2
+    \\\\
+    \\ \Delta_2.\tau' \in N_2
+    \\\\
+    \} = N
+  }
+  {\Delta\ \Gamma \vdash (\text{let}\ x : \tau_1 = t_1\ .\ t) : \tau 
+  \rightsquigarrow N} 
+
+\inferrule[Fix]
+  { 
+    \{ \Delta_1;;\Delta_2\ .\ \nu\ \gamma \ . \forall\ \widebar{\omega} :: 
+      \gamma \leq \tau_\alpha\ .  \tau_\beta 
+      \ |\ 
+    \\\\
+    \\ \text{fresh}\ \alpha\ \beta\
+    \\ \Delta\ \Gamma \vdash t_1 : \tau \rightarrow \tau \rightsquigarrow N_1
+    \\ \Delta_1.\tau_1' \in N_1
+    \\\\
+    \\ \Delta;;\Delta_1 \vdash \tau_1' \leq \alpha \rightarrow \beta 
+    \rightsquigarrow M_2
+    \\ \Delta_2 \in M_2
+    \\\\
+    \\ \alpha[\Delta;;\Delta_1;;\Delta_2] = \tau_\alpha
+    \\ \beta[\Delta;;\Delta_1;;\Delta_2] = \tau_\beta
+    \\\\
+    \\ \text{freevars}\ \tau_\alpha = \widebar{\omega}
+    \\\\
+    \} = N
+  }
+  {\Delta\ \Gamma \vdash \text{fix}\ t_1 : \tau 
+  \rightsquigarrow N} 
+
+
+\end{mathpar}
+\caption{Inference typing: part 2}
+\end{figure*}
 
 
 \subsection{Subtyping semantics}
@@ -753,15 +753,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 % \inferrule[exis-free]
 %   { 
-%     \{ \Omega_1;;\Omega_2 \ |\ 
+%     \{ \Delta_1;;\Delta_2 \ |\ 
 %     \\\\
 %     \ \ \ \ \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
 %     \\
-%     \Omega_1 \in M_1
+%     \Delta_1 \in M_1
 %     \\\\
-%     \ \ \ \ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
+%     \ \ \ \ \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
 %     \\
-%     \Omega_2 \in M_2
+%     \Delta_2 \in M_2
 %     \\\\
 %     \} = M
 %     \\
@@ -778,15 +778,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 % \inferrule[univ-free]
 %   { 
-%     \{ \Omega_1;;\Omega_2 \ |\ 
+%     \{ \Delta_1;;\Delta_2 \ |\ 
 %     \\\\
 %     \ \ \ \ \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
 %     \\
-%     \Omega_1 \in M_1
+%     \Delta_1 \in M_1
 %     \\\\
-%     \ \ \ \ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
+%     \ \ \ \ \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
 %     \\
-%     \Omega_2 \in M_2
+%     \Delta_2 \in M_2
 %     \\\\
 %     \} = M
 %     \\
@@ -865,15 +865,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 % \inferrule[union-left]
 %   {
-%     \{ \Omega_1;;\Omega_2 \ |\ 
+%     \{ \Delta_1;;\Delta_2 \ |\ 
 %     \\\\
 %     \ \ \ \ \Delta \vdash \tau_1 \leq \tau \rightsquigarrow M_1  
 %     \\
-%     \Omega_1 \in M_1
+%     \Delta_1 \in M_1
 %     \\\\
-%     \ \ \ \ \Delta;;\Omega_1 \vdash \tau_2 \leq \tau \rightsquigarrow M_2  
+%     \ \ \ \ \Delta;;\Delta_1 \vdash \tau_2 \leq \tau \rightsquigarrow M_2  
 %     \\
-%     \Omega_2 \in M_2
+%     \Delta_2 \in M_2
 %     \\\\
 %     \} = M
 %   }
@@ -895,15 +895,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 % \inferrule[inter-right]
 %   {
-%     \{ \Omega_1;;\Omega_2 \ |\ 
+%     \{ \Delta_1;;\Delta_2 \ |\ 
 %     \\\\
 %     \ \ \ \ \Delta \vdash \tau \leq \tau_1 \rightsquigarrow M_1 
 %     \\
-%     \Omega_1 \in M_1
+%     \Delta_1 \in M_1
 %     \\\\
-%     \ \ \ \ \Delta;;\Omega_1 \vdash \tau \leq \tau_2 \rightsquigarrow M_2  
+%     \ \ \ \ \Delta;;\Delta_1 \vdash \tau \leq \tau_2 \rightsquigarrow M_2  
 %     \\
-%     \Omega_2 \in M_2
+%     \Delta_2 \in M_2
 %     \\\\
 %     \} = M
 %   }
@@ -952,8 +952,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       () : \tau
       &{} =
       \begin{array}[t]{@{} l}
-        \{\Omega.\diamondsuit\ |
-        \ \Omega \in \text{unify } \iota\ \Delta \vdash \diamondsuit \leq \tau
+        \{\Delta_1.\diamondsuit\ |
+        \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \diamondsuit \leq \tau
         \}
       \end{array}
       \\
@@ -962,8 +962,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       x : \tau
       &{} =
       \begin{cases}  
-        \{\Omega.\tau_1\ |
-        \ \Omega \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau
+        \{\Delta_1.\tau_1\ |
+        \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau
         \}
         &\text{if } \Gamma(x) = \text{some } \tau_1
         \\
@@ -978,11 +978,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \begin{array}[t]{@{} l}
         \text{let } \alpha = \text{typevar}() 
         \\
-        \{\Omega_1;;\Omega_2\ .\ l \# \tau_1 \ |
+        \{\Delta_1;;\Delta_2\ .\ l \# \tau_1 \ |
         \\
-        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash l \# \alpha \leq \tau
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash l \# \alpha \leq \tau
         \\
-        \ \ \ \ (\Omega_2.\tau_1) \in \text{infer } \iota\ \Delta;;\Omega_1\ \Gamma \vdash t : \alpha
+        \ \ \ \ (\Delta_2.\tau_1) \in \text{infer } \iota\ \Delta;;\Delta_1\ \Gamma \vdash t : \alpha
         \\
         \}
       \end{array}
@@ -999,14 +999,56 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 
         \text{reduce} * \{
-        \text{infer } \iota\ \Delta;;\Omega\ \Gamma \vdash t : \alpha\ |\ 
+        \text{infer } \iota\ \Delta;;\Delta_1\ \Gamma \vdash t : \alpha\ |\ 
         \\
-        \ \ \ \ \Omega \in \text{unify } \iota\ \Delta\ \vdash \tau_1 \leq \tau
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau_1 \leq \tau
         \\
-        \ \ \ \ (l := t, \alpha) \in fields
+        \ \ \ \ (l := t, \alpha) \in fields'
         \\
         \}
         \\
+      \end{array}
+      \\
+
+      \text{infer } \iota\ \Delta\ \Gamma \vdash 
+      \lambda[ cases ] : \tau
+      &{} =
+      \begin{array}[t]{@{} l}
+        \text{let } cases' = \{(t_1 : \tau_1 \Rightarrow t_2, \text{typevar}())\ |\ (t_1 : \tau_1 \Rightarrow t_2) \in cases \}
+        \\
+        \text{let } \tau_3 = \text{reduce } ;\ \{\tau_1 \rightarrow \alpha\ |\ (t_1 : \tau_1 \Rightarrow t_2, \alpha) \in cases' \}
+        \\
+
+
+        \text{reduce} * \{
+        \text{infer } \iota\ \Delta;;\Delta_1;;\Delta_2\ \Gamma;;\Gamma_1 \vdash t_2 : \alpha\ |\ 
+        \\
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau_3 \leq \tau
+        \\
+        \ \ \ \ (t_1 : \tau_1 \Rightarrow t_2, \alpha) \in cases'
+        \\
+        \ \ \ \ \Gamma_1 \in \text{patenv } t_1 
+        \\
+        \ \ \ \ \Delta_2.\tau_1' \in \text{infer } \iota\ \Delta;;\Delta_1\ \Gamma;;\Gamma_1\ \vdash t_1 : \tau_1
+        \\
+        \}
+        \\
+      \end{array}
+      \\
+
+      \text{infer } \iota\ \Delta\ \Gamma \vdash 
+      t/l : \tau
+      &{} =
+      \begin{array}[t]{@{} l}
+        \text{let } \alpha = \text{typevar}()
+        \\
+        \{ \Delta_1;;\Delta_2\ .\ \alpha \ |\
+        \\
+        \ \ \ \ \Delta_1.\tau_1 \in \text{infer } \iota\ \Delta\ \Gamma \vdash t : l \sim \tau 
+        \\
+        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;;\Delta_1 \vdash \tau_1 \leq l \sim \alpha
+        \\
+        \}
       \end{array}
       \\
     \end{array}
@@ -1015,93 +1057,18 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \end{figure*}
 
 
-% \\\\
-
-% \inferrule[Record]
-%   { 
-%     \text{fresh\_fields}\ t = fields 
-%     \\\\
-%     \{reduce}\ ;\ \{.l\ \tau_1\ |\ (.l\ t_1, \tau_1) \in fields \} = \tau'
-%     \\\\
-%     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
-%     \\\\
-%     \{reduce} * \{N_1\ |\ 
-%     \\\\
-%     \ \ \ \ (.l\ t_1, \tau_1) \in fields \\ \Omega \in M
-%     \\\\
-%     \ \ \ \ \Delta;;\Omega\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash t : \tau  
-%     \rightsquigarrow N} 
-
-
-% \inferrule[Function]
-%   {
-%     \text{fresh\_cases}\ t = cases 
-%     \\\\
-%     \{reduce}\ ;\ \{\tau_1 \rightarrow \tau_2\ |\ 
-%     (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
-%     \} = \tau'
-%     \\\\
-%     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
-%     \\\\
-%     \{reduce} * \{N_2\ |\ 
-%     \\\\
-%     \ \ \ \ (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
-%     \\\\
-%     \ \ \ \ \text{pat\_wf}\ t_1 \\ \text{fresh\_env}\ t_1 = \Gamma_x \\ \Omega \in M
-%     \\\\
-%     \ \ \ \ \Delta;;\Omega\ \Gamma;;\Gamma_x \vdash t_1 : \tau_1 \rightsquigarrow N_1
-%     \\
-%     \Omega_1\ .\ \tau_1' \in N_1
-%     \\\\
-%     \ \ \ \ \Delta;;\Omega;;\Omega_1\ \Gamma;;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash t : \tau  
-%     \rightsquigarrow 
-%     N } 
-
-% \end{mathpar}
-% \caption{Inference typing: part 1}
-% \end{figure*}
-
-% \begin{figure*}[h]
-% \begin{mathpar}
-% \mprset{flushleft}
-
-% \inferrule[Proj]
-%   {
-%     \{\Omega_1;;\Omega_2\ .\ \alpha \ |\ 
-%     \\\\
-%     \\ \text{fresh}\ \alpha
-%     \\\\
-%     \\ \Delta\ \Gamma \vdash t_1 : .l\ \tau \rightsquigarrow N_1
-%     \\ \Omega_1.\tau_1 \in N_1
-%     \\\\
-%     \\ \Delta;;\Omega_1 \vdash \tau_1 \leq .l\ \alpha \rightsquigarrow M_2
-%     \\ \Omega_2 \in M_2
-%     \\\\
-%     \} = N
-%   }
-%   {\Delta\ \Gamma \vdash t_1.l : \tau 
-%     \rightsquigarrow N} 
-
 % \inferrule[App]
 %   { 
-%     \{\Omega_1;;\Omega_2.\tau\ |\ 
+%     \{\Delta_1;;\Delta_2.\tau\ |\ 
 %     \\\\
 %     \\ \text{fresh}\ \alpha\ 
 %     \\ \Delta\ \Gamma \vdash t_1 : (\alpha \rightarrow \tau) 
 %       \rightsquigarrow N_1
-%     \\ \Omega_1.\tau_1' \in N_1
+%     \\ \Delta_1.\tau_1' \in N_1
 %     \\\\
-%     \\\Delta;;\Omega_1\ \Gamma \vdash t_2 : \alpha
+%     \\\Delta;;\Delta_1\ \Gamma \vdash t_2 : \alpha
 %       \rightsquigarrow N_2
-%     \\ \Omega_2.\tau_2' \in N_2
+%     \\ \Delta_2.\tau_2' \in N_2
 %     \\\\
 %     \} = N
 %   }
@@ -1111,19 +1078,19 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 % \inferrule[Let]
 %   { 
-%     \{ \Omega_1;;\Omega_2\ .\ \tau' \ |\ 
+%     \{ \Delta_1;;\Delta_2\ .\ \tau' \ |\ 
 %     \\\\
 %     \\ \Delta\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
-%     \\ \Omega_1\ .\ \tau_1' \in N_1
+%     \\ \Delta_1\ .\ \tau_1' \in N_1
 %     \\\\
-%     \\ \tau_1'[\Delta;;\Omega_1] = \tau_1''
+%     \\ \tau_1'[\Delta;;\Delta_1] = \tau_1''
 %     \\ \text{freevars}\ \tau_1'' = \widebar{\alpha}
 %     \\\\
 %     % NOTE: Remy doesn't need to substitute, since their universal holds constraints 
 %     \\ \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1''
 %       \vdash t : \tau \rightsquigarrow N_2
 %     \\\\
-%     \\ \Omega_2.\tau' \in N_2
+%     \\ \Delta_2.\tau' \in N_2
 %     \\\\
 %     \} = N
 %   }
@@ -1132,20 +1099,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
 % \inferrule[Fix]
 %   { 
-%     \{ \Omega_1;;\Omega_2\ .\ \nu\ \gamma \ . \forall\ \widebar{\omega} :: 
+%     \{ \Delta_1;;\Delta_2\ .\ \nu\ \gamma \ . \forall\ \widebar{\omega} :: 
 %       \gamma \leq \tau_\alpha\ .  \tau_\beta 
 %       \ |\ 
 %     \\\\
 %     \\ \text{fresh}\ \alpha\ \beta\
 %     \\ \Delta\ \Gamma \vdash t_1 : \tau \rightarrow \tau \rightsquigarrow N_1
-%     \\ \Omega_1.\tau_1' \in N_1
+%     \\ \Delta_1.\tau_1' \in N_1
 %     \\\\
-%     \\ \Delta;;\Omega_1 \vdash \tau_1' \leq \alpha \rightarrow \beta 
+%     \\ \Delta;;\Delta_1 \vdash \tau_1' \leq \alpha \rightarrow \beta 
 %     \rightsquigarrow M_2
-%     \\ \Omega_2 \in M_2
+%     \\ \Delta_2 \in M_2
 %     \\\\
-%     \\ \alpha[\Delta;;\Omega_1;;\Omega_2] = \tau_\alpha
-%     \\ \beta[\Delta;;\Omega_1;;\Omega_2] = \tau_\beta
+%     \\ \alpha[\Delta;;\Delta_1;;\Delta_2] = \tau_\alpha
+%     \\ \beta[\Delta;;\Delta_1;;\Delta_2] = \tau_\beta
 %     \\\\
 %     \\ \text{freevars}\ \tau_\alpha = \widebar{\omega}
 %     \\\\
@@ -1281,11 +1248,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \text{unify } \iota\ \Delta \vdash \tau_1\rightarrow\tau_2 \leq \tau_3\rightarrow\tau_4	
       &{} = 
       \begin{array}[t]{@{} l}
-        \{\Omega_1;;\Omega_2\ |
+        \{\Delta_1;;\Delta_2\ |
         \\ 
-        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_1
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_1
         \\
-        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_4 \leq \tau_2
+        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;;\Delta_1 \vdash \tau_4 \leq \tau_2
         \\
         \}
       \end{array}
@@ -1314,13 +1281,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \text{refresh } \widebar{\alpha_2}\ \tau_5,\ 
         \text{refresh } \widebar{\alpha_2}\ \tau_6
         \\
-        \{\Omega_1;;\Omega_2;;\Omega_3\ |
+        \{\Delta_1;;\Delta_2;;\Delta_3\ |
         \\ 
-        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
         \\ 
-        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_3 \leq \tau_6
+        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;;\Delta_1 \vdash \tau_3 \leq \tau_6
         \\
-        \ \ \ \ \Omega_3 \in \text{unify } \iota\ \Delta;;\Omega_1;;\Omega_2 \vdash \tau_4 \leq \tau_5
+        \ \ \ \ \Delta_3 \in \text{unify } \iota\ \Delta;;\Delta_1;;\Delta_2 \vdash \tau_4 \leq \tau_5
         \\
         \}
       \end{array}
@@ -1336,11 +1303,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \text{refresh } \widebar{\alpha}\ \tau_3,\ 
         \text{refresh } \widebar{\alpha}\ \tau_4
         \\
-        \{\Omega_1;;\Omega_2\ |
+        \{\Delta_1;;\Delta_2\ |
         \\ 
-        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_4
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_4
         \\
-        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_2 \leq \tau_3
+        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;;\Delta_1 \vdash \tau_2 \leq \tau_3
         \\
         \}
       \end{array}
@@ -1361,13 +1328,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \text{refresh } \widebar{\alpha_2}\ \tau_5,\ 
         \text{refresh } \widebar{\alpha_2}\ \tau_6
         \\
-        \{\Omega_1;;\Omega_2;;\Omega_3\ |
+        \{\Delta_1;;\Delta_2;;\Delta_3\ |
         \\ 
-        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_4 \leq \tau_5
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_4 \leq \tau_5
         \\ 
-        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_3 \leq \tau_6
+        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;;\Delta_1 \vdash \tau_3 \leq \tau_6
         \\
-        \ \ \ \ \Omega_3 \in \text{unify } \iota\ \Delta;;\Omega_1;;\Omega_2 \vdash \tau_1 \leq \tau_2
+        \ \ \ \ \Delta_3 \in \text{unify } \iota\ \Delta;;\Delta_1;;\Delta_2 \vdash \tau_1 \leq \tau_2
         \\
         \}
       \end{array}
@@ -1383,11 +1350,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \text{refresh } \widebar{\alpha}\ \tau_2,\ 
         \text{refresh } \widebar{\alpha}\ \tau_3
         \\
-        \{\Omega_1;;\Omega_2\ |
+        \{\Delta_1;;\Delta_2\ |
         \\ 
-        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_4
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_4
         \\
-        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_2
+        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2
         \\
         \}
       \end{array}
@@ -1444,11 +1411,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \tau_1\ |\ \tau_2 \leq \tau_3
       &{} = 
       \begin{array}[t]{@{} l}
-        \{\Omega_1;;\Omega_2\ |
+        \{\Delta_1;;\Delta_2\ |
         \\ 
-        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3
         \\
-        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_2 \leq \tau_3
+        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;;\Delta_1 \vdash \tau_2 \leq \tau_3
         \\
         \}
       \end{array}
@@ -1466,11 +1433,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \tau_1 \leq \tau_2\ ;\ \tau_3
       &{} = 
       \begin{array}[t]{@{} l}
-        \{\Omega_1;;\Omega_2\ |
+        \{\Delta_1;;\Delta_2\ |
         \\ 
-        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
         \\
-        \ \ \ \ \Omega_2 \in \text{unify } \iota\ \Delta;;\Omega_1 \vdash \tau_1 \leq \tau_3
+        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_3
         \\
         \}
       \end{array}
@@ -1495,11 +1462,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \begin{figure}[h]
   \[
     \begin{array}{l @{} l}
-    \Omega\ ;;\ \cdot
-    &\ = \Omega 
+    \Delta\ ;;\ \cdot
+    &\ = \Delta 
     \\
-    \Omega_1;;(\Omega_2,\alpha \mapsto \tau) 
-    &\ = (\Omega_1;;\Omega_2),\alpha \mapsto \tau
+    \Delta_1;;(\Delta_2,\alpha \mapsto \tau) 
+    &\ = (\Delta_1;;\Delta_2),\alpha \mapsto \tau
     \end{array}
   \]
 
@@ -1511,10 +1478,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \begin{array}{l @{} l}
     M_1 * M_2 
     &\ = 
-    \{ \Omega_1 ;; \Omega_2 \ |\ 
-      \Omega_1 \in M_1
+    \{ \Delta_1 ;; \Delta_2 \ |\ 
+      \Delta_1 \in M_1
       \ \wedge\ 
-      \Omega_2 \in M_2
+      \Delta_2 \in M_2
     \}
     \end{array}
   \]
@@ -1542,11 +1509,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       N_1 * N_2
       &\ = 
       \begin{array}[t]{l}
-        \{ \Omega_1 ;; \Omega_2 . \tau_1;\tau_2 \ |\ 
+        \{ \Delta_1 ;; \Delta_2 . \tau_1;\tau_2 \ |\ 
           \\
-          \ \ \ \ \Omega_1.\tau_1 \in N_1
+          \ \ \ \ \Delta_1.\tau_1 \in N_1
           \ \wedge\ 
-          \Omega_2.\tau_2 \in N_2
+          \Delta_2.\tau_2 \in N_2
         \}
       \end{array}
     \end{array}
