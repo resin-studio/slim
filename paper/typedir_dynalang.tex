@@ -404,8 +404,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \end{lstlisting}
 
 
-
-\section{Problem and Language}
+\section{Language specification}
 \begin{enumerate}
   \item english statement 
 \end{enumerate}
@@ -414,111 +413,212 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   \item rules 
 \end{enumerate}
 
-\subsection{Dynamic semantics}
+\subsection{Operational semantics}
 \begin{enumerate}
   \item rules 
 \end{enumerate}
 
-\subsection{Static semantics}
-\begin{enumerate}
-  \item typing and subtyping rules 
-  \item soundness proof 
-\end{enumerate}
+\subsection{Typing semantics}
 
-\section{Solution and Algorithms}
-\begin{enumerate}
-  \item english statement 
-\end{enumerate}
-\subsection{Type and program synthesis}
-\begin{enumerate}
-  \item definition 
-  \item lemmas and proofs 
-\end{enumerate}
+% \begin{figure*}[h]
+% \begin{mathpar}
+% \mprset{flushleft}
 
-\subsection{Subtype unification}
-\begin{enumerate}
-  \item definition 
-  \item lemmas and proofs 
-\end{enumerate}
+% \inferrule[Hole]
+%   { }
+%   {\Delta\ \Gamma \vdash \_ : \tau  \rightsquigarrow \{\} } 
 
-\begin{figure}[h]
-  \[
-    \begin{array}{l @{} l}
-    \Omega\ ;;\ \cdot
-    &\ = \Omega 
-    \\
-    \Omega_1;;(\Omega_2,\alpha \mapsto \tau) 
-    &\ = (\Omega_1;;\Omega_2),\alpha \mapsto \tau
-    \end{array}
-  \]
+% \inferrule[Unit]
+%   { 
+%     \{\Omega\ .\ \diamondsuit \ |\ 
+%     \\\\
+%     \ \ \ \ \Delta \vdash \diamondsuit \leq \tau \rightsquigarrow M
+%     \\
+%     \Omega \in M
+%     \\\\
+%     \} = N 
+%   }
+%   {\Delta\ \Gamma \vdash () : \tau  \rightsquigarrow N } 
 
-  \caption{Appending of environments}
-\end{figure}
+% \inferrule[Var]
+%   { 
+%     \{\Omega\ .\ \tau' \ |\ 
+%     \\\\
+%     \ \ \ \ \Delta \vdash \Gamma(x) \leq \tau \rightsquigarrow M 
+%     \\
+%     \Omega \in M
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash x : \tau  
+%     \rightsquigarrow N } 
 
-\begin{figure}[h]
-  \[
-    \begin{array}{l @{} l}
-    M_1 * M_2 
-    &\ = 
-    \{ \Omega_1 ;; \Omega_2 \ |\ 
-      \Omega_1 \in M_1
-      \ \wedge\ 
-      \Omega_2 \in M_2
-    \}
-    \end{array}
-  \]
+% \inferrule[Tag]
+%   { 
+%     \{\Omega_1;;\Omega_2\ .\ \#l\ \tau' \ |\ 
+%     \\\\
+%     \ \ \ \ \text{fresh}\ \alpha
+%     \\\\
+%     \ \ \ \ \Delta \vdash \#l\ \alpha \leq \tau \rightsquigarrow M_1 
+%     \\
+%     \Omega_1 \in M_1
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega_1\ \Gamma \vdash t : \alpha 
+%       \rightsquigarrow N_2
+%     \\
+%     \Omega_2\ .\ \tau' \in N_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash \#l\ t : \tau  
+%     \rightsquigarrow N} 
 
-  \caption{Appending of environments}
-\end{figure}
+% \\\\
 
-\begin{figure}[h]
-  \[
-    \begin{array}{l @{} l}
-    \rhd\ ;\ \{ \} 
-    &\ = \top
-    \\
-    \rhd\ ;\ T
-    &\ = \tau\ ;\ (\rhd\ ;\ T \setminus \tau)
-    \end{array}
-  \]
-
-  \caption{multi-intersection}
-\end{figure}
-
-\begin{figure}[h]
-  \[
-    \begin{array}{l @{} l}
-      N_1 * N_2
-      &\ = 
-      \begin{array}[t]{l}
-        \{ \Omega_1 ;; \Omega_2 . \tau_1;\tau_2 \ |\ 
-          \\
-          \ \ \ \ \Omega_1.\tau_1 \in N_1
-          \ \wedge\ 
-          \Omega_2.\tau_2 \in N_2
-        \}
-      \end{array}
-    \end{array}
-  \]
-
-  \caption{Intersection of sets of contextual types}
-\end{figure}
-
-\begin{figure}[h]
-  \[
-    \begin{array}{l @{}l}
-    \rhd * \{ N \}
-    & {}= N
-    \\
-    \rhd * Ns
-    & {}= N * (\rhd * Ns \setminus N)
-    \end{array}
-  \]
-
-  \caption{Intersection of sets of sets of contextual types}
-\end{figure}
+% \inferrule[Record]
+%   { 
+%     \text{fresh\_fields}\ t = fields 
+%     \\\\
+%     \{reduce}\ ;\ \{.l\ \tau_1\ |\ (.l\ t_1, \tau_1) \in fields \} = \tau'
+%     \\\\
+%     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
+%     \\\\
+%     \{reduce} * \{N_1\ |\ 
+%     \\\\
+%     \ \ \ \ (.l\ t_1, \tau_1) \in fields \\ \Omega \in M
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash t : \tau  
+%     \rightsquigarrow N} 
 
 
+% \inferrule[Function]
+%   {
+%     \text{fresh\_cases}\ t = cases 
+%     \\\\
+%     \{reduce}\ ;\ \{\tau_1 \rightarrow \tau_2\ |\ 
+%     (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
+%     \} = \tau'
+%     \\\\
+%     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
+%     \\\\
+%     \{reduce} * \{N_2\ |\ 
+%     \\\\
+%     \ \ \ \ (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
+%     \\\\
+%     \ \ \ \ \text{pat\_wf}\ t_1 \\ \text{fresh\_env}\ t_1 = \Gamma_x \\ \Omega \in M
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega\ \Gamma;;\Gamma_x \vdash t_1 : \tau_1 \rightsquigarrow N_1
+%     \\
+%     \Omega_1\ .\ \tau_1' \in N_1
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega;;\Omega_1\ \Gamma;;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash t : \tau  
+%     \rightsquigarrow 
+%     N } 
+
+% \end{mathpar}
+% \caption{Inference typing: part 1}
+% \end{figure*}
+
+% \begin{figure*}[h]
+% \begin{mathpar}
+% \mprset{flushleft}
+
+% \inferrule[Proj]
+%   {
+%     \{\Omega_1;;\Omega_2\ .\ \alpha \ |\ 
+%     \\\\
+%     \\ \text{fresh}\ \alpha
+%     \\\\
+%     \\ \Delta\ \Gamma \vdash t_1 : .l\ \tau \rightsquigarrow N_1
+%     \\ \Omega_1.\tau_1 \in N_1
+%     \\\\
+%     \\ \Delta;;\Omega_1 \vdash \tau_1 \leq .l\ \alpha \rightsquigarrow M_2
+%     \\ \Omega_2 \in M_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash t_1.l : \tau 
+%     \rightsquigarrow N} 
+
+% \inferrule[App]
+%   { 
+%     \{\Omega_1;;\Omega_2.\tau\ |\ 
+%     \\\\
+%     \\ \text{fresh}\ \alpha\ 
+%     \\ \Delta\ \Gamma \vdash t_1 : (\alpha \rightarrow \tau) 
+%       \rightsquigarrow N_1
+%     \\ \Omega_1.\tau_1' \in N_1
+%     \\\\
+%     \\\Delta;;\Omega_1\ \Gamma \vdash t_2 : \alpha
+%       \rightsquigarrow N_2
+%     \\ \Omega_2.\tau_2' \in N_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash t_1\ t_2 : \tau 
+%     \rightsquigarrow  N
+%     } 
+
+% \inferrule[Let]
+%   { 
+%     \{ \Omega_1;;\Omega_2\ .\ \tau' \ |\ 
+%     \\\\
+%     \\ \Delta\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
+%     \\ \Omega_1\ .\ \tau_1' \in N_1
+%     \\\\
+%     \\ \tau_1'[\Delta;;\Omega_1] = \tau_1''
+%     \\ \text{freevars}\ \tau_1'' = \widebar{\alpha}
+%     \\\\
+%     % NOTE: Remy doesn't need to substitute, since their universal holds constraints 
+%     \\ \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1''
+%       \vdash t : \tau \rightsquigarrow N_2
+%     \\\\
+%     \\ \Omega_2.\tau' \in N_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash (\text{let}\ x : \tau_1 = t_1\ .\ t) : \tau 
+%   \rightsquigarrow N} 
+
+% \inferrule[Fix]
+%   { 
+%     \{ \Omega_1;;\Omega_2\ .\ \nu\ \gamma \ . \forall\ \widebar{\omega} :: 
+%       \gamma \leq \tau_\alpha\ .  \tau_\beta 
+%       \ |\ 
+%     \\\\
+%     \\ \text{fresh}\ \alpha\ \beta\
+%     \\ \Delta\ \Gamma \vdash t_1 : \tau \rightarrow \tau \rightsquigarrow N_1
+%     \\ \Omega_1.\tau_1' \in N_1
+%     \\\\
+%     \\ \Delta;;\Omega_1 \vdash \tau_1' \leq \alpha \rightarrow \beta 
+%     \rightsquigarrow M_2
+%     \\ \Omega_2 \in M_2
+%     \\\\
+%     \\ \alpha[\Delta;;\Omega_1;;\Omega_2] = \tau_\alpha
+%     \\ \beta[\Delta;;\Omega_1;;\Omega_2] = \tau_\beta
+%     \\\\
+%     \\ \text{freevars}\ \tau_\alpha = \widebar{\omega}
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash \text{fix}\ t_1 : \tau 
+%   \rightsquigarrow N} 
+
+
+% \end{mathpar}
+% \caption{Inference typing: part 2}
+% \end{figure*}
+
+
+\subsection{Subtyping semantics}
 
 % \begin{figure*}[h]
 % \begin{mathpar}
@@ -827,6 +927,245 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 % \caption{Unification subtyping: connective rules}
 % \end{figure*}
 
+\begin{enumerate}
+  \item typing and subtyping rules 
+  \item soundness proof 
+\end{enumerate}
+
+\section{Language algorithms}
+\begin{enumerate}
+  \item english statement 
+\end{enumerate}
+\subsection{Program synthesis}
+\subsection{Type inference}
+
+\begin{figure*}[h]
+  \[
+    \begin{array}{l @{} l}
+      \text{infer } \iota\ \Delta\ \Gamma \vdash 
+      \_ : \tau
+      &{} =
+      \{\cdot.\tau\}
+      \\
+
+      \text{infer } \iota\ \Delta\ \Gamma \vdash 
+      () : \tau
+      &{} =
+      \begin{array}[t]{@{} l}
+        \{\Omega.\diamondsuit\ |
+        \ \Omega \in \text{unify } \iota\ \Delta \vdash \diamondsuit \leq \tau
+        \}
+      \end{array}
+      \\
+
+      \text{infer } \iota\ \Delta\ \Gamma \vdash 
+      x : \tau
+      &{} =
+      \begin{cases}  
+        \{\Omega.\tau_1\ |
+        \ \Omega \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau
+        \}
+        &\text{if } \Gamma(x) = \text{some } \tau_1
+        \\
+        \{\}
+        &\text{if } \Gamma(x) = \text{none}
+      \end{cases}
+      \\
+
+      \text{infer } \iota\ \Delta\ \Gamma \vdash 
+      l \# t : \tau
+      &{} =
+      \begin{array}[t]{@{} l}
+        \text{let } \alpha = \text{typevar}() 
+        \\
+        \{\Omega_1;;\Omega_2\ .\ l \# \tau_1 \ |
+        \\
+        \ \ \ \ \Omega_1 \in \text{unify } \iota\ \Delta \vdash l \# \alpha \leq \tau
+        \\
+        \ \ \ \ (\Omega_2.\tau_1) \in \text{infer } \iota\ \Delta;;\Omega_1\ \Gamma \vdash t : \alpha
+        \\
+        \}
+      \end{array}
+      \\
+
+      \text{infer } \iota\ \Delta\ \Gamma \vdash 
+      \omega[ fields ] : \tau
+      &{} =
+      \begin{array}[t]{@{} l}
+        \text{let } fields' = \{(l:=t, \text{typevar}())\ |\ (l:=t) \in fields \}
+        \\
+        \text{let } \tau_1 = \text{reduce } ;\ \{l \sim \alpha\ |\ (l := t, \alpha) \in fields' \}
+        \\
+
+
+        \text{reduce} * \{
+        \text{infer } \iota\ \Delta;;\Omega\ \Gamma \vdash t : \alpha\ |\ 
+        \\
+        \ \ \ \ \Omega \in \text{unify } \iota\ \Delta\ \vdash \tau_1 \leq \tau
+        \\
+        \ \ \ \ (l := t, \alpha) \in fields
+        \\
+        \}
+        \\
+      \end{array}
+      \\
+    \end{array}
+  \]
+  \caption{Type inference}
+\end{figure*}
+
+
+% \\\\
+
+% \inferrule[Record]
+%   { 
+%     \text{fresh\_fields}\ t = fields 
+%     \\\\
+%     \{reduce}\ ;\ \{.l\ \tau_1\ |\ (.l\ t_1, \tau_1) \in fields \} = \tau'
+%     \\\\
+%     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
+%     \\\\
+%     \{reduce} * \{N_1\ |\ 
+%     \\\\
+%     \ \ \ \ (.l\ t_1, \tau_1) \in fields \\ \Omega \in M
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash t : \tau  
+%     \rightsquigarrow N} 
+
+
+% \inferrule[Function]
+%   {
+%     \text{fresh\_cases}\ t = cases 
+%     \\\\
+%     \{reduce}\ ;\ \{\tau_1 \rightarrow \tau_2\ |\ 
+%     (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
+%     \} = \tau'
+%     \\\\
+%     \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
+%     \\\\
+%     \{reduce} * \{N_2\ |\ 
+%     \\\\
+%     \ \ \ \ (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
+%     \\\\
+%     \ \ \ \ \text{pat\_wf}\ t_1 \\ \text{fresh\_env}\ t_1 = \Gamma_x \\ \Omega \in M
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega\ \Gamma;;\Gamma_x \vdash t_1 : \tau_1 \rightsquigarrow N_1
+%     \\
+%     \Omega_1\ .\ \tau_1' \in N_1
+%     \\\\
+%     \ \ \ \ \Delta;;\Omega;;\Omega_1\ \Gamma;;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash t : \tau  
+%     \rightsquigarrow 
+%     N } 
+
+% \end{mathpar}
+% \caption{Inference typing: part 1}
+% \end{figure*}
+
+% \begin{figure*}[h]
+% \begin{mathpar}
+% \mprset{flushleft}
+
+% \inferrule[Proj]
+%   {
+%     \{\Omega_1;;\Omega_2\ .\ \alpha \ |\ 
+%     \\\\
+%     \\ \text{fresh}\ \alpha
+%     \\\\
+%     \\ \Delta\ \Gamma \vdash t_1 : .l\ \tau \rightsquigarrow N_1
+%     \\ \Omega_1.\tau_1 \in N_1
+%     \\\\
+%     \\ \Delta;;\Omega_1 \vdash \tau_1 \leq .l\ \alpha \rightsquigarrow M_2
+%     \\ \Omega_2 \in M_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash t_1.l : \tau 
+%     \rightsquigarrow N} 
+
+% \inferrule[App]
+%   { 
+%     \{\Omega_1;;\Omega_2.\tau\ |\ 
+%     \\\\
+%     \\ \text{fresh}\ \alpha\ 
+%     \\ \Delta\ \Gamma \vdash t_1 : (\alpha \rightarrow \tau) 
+%       \rightsquigarrow N_1
+%     \\ \Omega_1.\tau_1' \in N_1
+%     \\\\
+%     \\\Delta;;\Omega_1\ \Gamma \vdash t_2 : \alpha
+%       \rightsquigarrow N_2
+%     \\ \Omega_2.\tau_2' \in N_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash t_1\ t_2 : \tau 
+%     \rightsquigarrow  N
+%     } 
+
+% \inferrule[Let]
+%   { 
+%     \{ \Omega_1;;\Omega_2\ .\ \tau' \ |\ 
+%     \\\\
+%     \\ \Delta\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
+%     \\ \Omega_1\ .\ \tau_1' \in N_1
+%     \\\\
+%     \\ \tau_1'[\Delta;;\Omega_1] = \tau_1''
+%     \\ \text{freevars}\ \tau_1'' = \widebar{\alpha}
+%     \\\\
+%     % NOTE: Remy doesn't need to substitute, since their universal holds constraints 
+%     \\ \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1''
+%       \vdash t : \tau \rightsquigarrow N_2
+%     \\\\
+%     \\ \Omega_2.\tau' \in N_2
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash (\text{let}\ x : \tau_1 = t_1\ .\ t) : \tau 
+%   \rightsquigarrow N} 
+
+% \inferrule[Fix]
+%   { 
+%     \{ \Omega_1;;\Omega_2\ .\ \nu\ \gamma \ . \forall\ \widebar{\omega} :: 
+%       \gamma \leq \tau_\alpha\ .  \tau_\beta 
+%       \ |\ 
+%     \\\\
+%     \\ \text{fresh}\ \alpha\ \beta\
+%     \\ \Delta\ \Gamma \vdash t_1 : \tau \rightarrow \tau \rightsquigarrow N_1
+%     \\ \Omega_1.\tau_1' \in N_1
+%     \\\\
+%     \\ \Delta;;\Omega_1 \vdash \tau_1' \leq \alpha \rightarrow \beta 
+%     \rightsquigarrow M_2
+%     \\ \Omega_2 \in M_2
+%     \\\\
+%     \\ \alpha[\Delta;;\Omega_1;;\Omega_2] = \tau_\alpha
+%     \\ \beta[\Delta;;\Omega_1;;\Omega_2] = \tau_\beta
+%     \\\\
+%     \\ \text{freevars}\ \tau_\alpha = \widebar{\omega}
+%     \\\\
+%     \} = N
+%   }
+%   {\Delta\ \Gamma \vdash \text{fix}\ t_1 : \tau 
+%   \rightsquigarrow N} 
+
+
+% \end{mathpar}
+% \caption{Inference typing: part 2}
+% \end{figure*}
+
+
+\begin{enumerate}
+  \item definition 
+  \item lemmas and proofs 
+\end{enumerate}
+
+\subsection{Subtype unification}
 
 \begin{figure*}[h]
   \[
@@ -1148,215 +1487,88 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   \]
   \caption{Subtyping unification: part 2}
 \end{figure*}
+\begin{enumerate}
+  \item definition 
+  \item lemmas and proofs 
+\end{enumerate}
 
-
-
-
-
-
-
-
-
-
-
-
-
-\begin{figure*}[h]
-\begin{mathpar}
-\mprset{flushleft}
-
-\inferrule[Hole]
-  { }
-  {\Delta\ \Gamma \vdash \_ : \tau  \rightsquigarrow \{\} } 
-
-\inferrule[Unit]
-  { 
-    \{\Omega\ .\ \diamondsuit \ |\ 
-    \\\\
-    \ \ \ \ \Delta \vdash \diamondsuit \leq \tau \rightsquigarrow M
+\begin{figure}[h]
+  \[
+    \begin{array}{l @{} l}
+    \Omega\ ;;\ \cdot
+    &\ = \Omega 
     \\
-    \Omega \in M
-    \\\\
-    \} = N 
-  }
-  {\Delta\ \Gamma \vdash () : \tau  \rightsquigarrow N } 
+    \Omega_1;;(\Omega_2,\alpha \mapsto \tau) 
+    &\ = (\Omega_1;;\Omega_2),\alpha \mapsto \tau
+    \end{array}
+  \]
 
-\inferrule[Var]
-  { 
-    \{\Omega\ .\ \tau' \ |\ 
-    \\\\
-    \ \ \ \ \Delta \vdash \Gamma(x) \leq \tau \rightsquigarrow M 
+  \caption{Appending of environments}
+\end{figure}
+
+\begin{figure}[h]
+  \[
+    \begin{array}{l @{} l}
+    M_1 * M_2 
+    &\ = 
+    \{ \Omega_1 ;; \Omega_2 \ |\ 
+      \Omega_1 \in M_1
+      \ \wedge\ 
+      \Omega_2 \in M_2
+    \}
+    \end{array}
+  \]
+
+  \caption{Appending of environments}
+\end{figure}
+
+\begin{figure}[h]
+  \[
+    \begin{array}{l @{} l}
+    \text{reduce } ;\ \{ \} 
+    &\ = \top
     \\
-    \Omega \in M
-    \\\\
-    \} = N
-  }
-  {\Delta\ \Gamma \vdash x : \tau  
-    \rightsquigarrow N } 
+    \text{reduce } ;\ T
+    &\ = \tau\ ;\ (\text{reduce } ;\ T \setminus \tau)
+    \end{array}
+  \]
 
-\inferrule[Tag]
-  { 
-    \{\Omega_1;;\Omega_2\ .\ \#l\ \tau' \ |\ 
-    \\\\
-    \ \ \ \ \text{fresh}\ \alpha
-    \\\\
-    \ \ \ \ \Delta \vdash \#l\ \alpha \leq \tau \rightsquigarrow M_1 
+  \caption{multi-intersection}
+\end{figure}
+
+\begin{figure}[h]
+  \[
+    \begin{array}{l @{} l}
+      N_1 * N_2
+      &\ = 
+      \begin{array}[t]{l}
+        \{ \Omega_1 ;; \Omega_2 . \tau_1;\tau_2 \ |\ 
+          \\
+          \ \ \ \ \Omega_1.\tau_1 \in N_1
+          \ \wedge\ 
+          \Omega_2.\tau_2 \in N_2
+        \}
+      \end{array}
+    \end{array}
+  \]
+
+  \caption{Intersection of sets of contextual types}
+\end{figure}
+
+\begin{figure}[h]
+  \[
+    \begin{array}{l @{}l}
+    \text{reduce } * \{ N \}
+    & {}= N
     \\
-    \Omega_1 \in M_1
-    \\\\
-    \ \ \ \ \Delta;;\Omega_1\ \Gamma \vdash t : \alpha 
-      \rightsquigarrow N_2
-    \\
-    \Omega_2\ .\ \tau' \in N_2
-    \\\\
-    \} = N
-  }
-  {\Delta\ \Gamma \vdash \#l\ t : \tau  
-    \rightsquigarrow N} 
+    \text{reduce } * Ns
+    & {}= N * (\text{reduce } * Ns \setminus N)
+    \end{array}
+  \]
 
-\\\\
+  \caption{Intersection of sets of sets of contextual types}
+\end{figure}
 
-\inferrule[Record]
-  { 
-    \text{fresh\_fields}\ t = fields 
-    \\\\
-    \rhd\ ;\ \{.l\ \tau_1\ |\ (.l\ t_1, \tau_1) \in fields \} = \tau'
-    \\\\
-    \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
-    \\\\
-    \rhd * \{N_1\ |\ 
-    \\\\
-    \ \ \ \ (.l\ t_1, \tau_1) \in fields \\ \Omega \in M
-    \\\\
-    \ \ \ \ \Delta;;\Omega\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
-    \\\\
-    \} = N
-  }
-  {\Delta\ \Gamma \vdash t : \tau  
-    \rightsquigarrow N} 
-
-
-\inferrule[Function]
-  {
-    \text{fresh\_cases}\ t = cases 
-    \\\\
-    \rhd\ ;\ \{\tau_1 \rightarrow \tau_2\ |\ 
-    (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
-    \} = \tau'
-    \\\\
-    \Delta\ \vdash \tau' \leq \tau \rightsquigarrow M
-    \\\\
-    \rhd * \{N_2\ |\ 
-    \\\\
-    \ \ \ \ (\lambda\ t_1 : \tau_1 \Rightarrow t_2, \tau_2) \in cases 
-    \\\\
-    \ \ \ \ \text{pat\_wf}\ t_1 \\ \text{fresh\_env}\ t_1 = \Gamma_x \\ \Omega \in M
-    \\\\
-    \ \ \ \ \Delta;;\Omega\ \Gamma;;\Gamma_x \vdash t_1 : \tau_1 \rightsquigarrow N_1
-    \\
-    \Omega_1\ .\ \tau_1' \in N_1
-    \\\\
-    \ \ \ \ \Delta;;\Omega;;\Omega_1\ \Gamma;;\Gamma_x \vdash t_2 : \tau_2 \rightsquigarrow N_2
-    \\\\
-    \} = N
-  }
-  {\Delta\ \Gamma \vdash t : \tau  
-    \rightsquigarrow 
-    N } 
-
-\end{mathpar}
-\caption{Inference typing: part 1}
-\end{figure*}
-
-\begin{figure*}[h]
-\begin{mathpar}
-\mprset{flushleft}
-
-\inferrule[Proj]
-  {
-    \{\Omega_1;;\Omega_2\ .\ \alpha \ |\ 
-    \\\\
-    \\ \text{fresh}\ \alpha
-    \\\\
-    \\ \Delta\ \Gamma \vdash t_1 : .l\ \tau \rightsquigarrow N_1
-    \\ \Omega_1.\tau_1 \in N_1
-    \\\\
-    \\ \Delta;;\Omega_1 \vdash \tau_1 \leq .l\ \alpha \rightsquigarrow M_2
-    \\ \Omega_2 \in M_2
-    \\\\
-    \} = N
-  }
-  {\Delta\ \Gamma \vdash t_1.l : \tau 
-    \rightsquigarrow N} 
-
-\inferrule[App]
-  { 
-    \{\Omega_1;;\Omega_2.\tau\ |\ 
-    \\\\
-    \\ \text{fresh}\ \alpha\ 
-    \\ \Delta\ \Gamma \vdash t_1 : (\alpha \rightarrow \tau) 
-      \rightsquigarrow N_1
-    \\ \Omega_1.\tau_1' \in N_1
-    \\\\
-    \\\Delta;;\Omega_1\ \Gamma \vdash t_2 : \alpha
-      \rightsquigarrow N_2
-    \\ \Omega_2.\tau_2' \in N_2
-    \\\\
-    \} = N
-  }
-  {\Delta\ \Gamma \vdash t_1\ t_2 : \tau 
-    \rightsquigarrow  N
-    } 
-
-\inferrule[Let]
-  { 
-    \{ \Omega_1;;\Omega_2\ .\ \tau' \ |\ 
-    \\\\
-    \\ \Delta\ \Gamma \vdash t_1 : \tau_1 \rightsquigarrow N_1
-    \\ \Omega_1\ .\ \tau_1' \in N_1
-    \\\\
-    \\ \tau_1'[\Delta;;\Omega_1] = \tau_1''
-    \\ \text{freevars}\ \tau_1'' = \widebar{\alpha}
-    \\\\
-    % NOTE: Remy doesn't need to substitute, since their universal holds constraints 
-    \\ \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1''
-      \vdash t : \tau \rightsquigarrow N_2
-    \\\\
-    \\ \Omega_2.\tau' \in N_2
-    \\\\
-    \} = N
-  }
-  {\Delta\ \Gamma \vdash (\text{let}\ x : \tau_1 = t_1\ .\ t) : \tau 
-  \rightsquigarrow N} 
-
-\inferrule[Fix]
-  { 
-    \{ \Omega_1;;\Omega_2\ .\ \nu\ \gamma \ . \forall\ \widebar{\omega} :: 
-      \gamma \leq \tau_\alpha\ .  \tau_\beta 
-      \ |\ 
-    \\\\
-    \\ \text{fresh}\ \alpha\ \beta\
-    \\ \Delta\ \Gamma \vdash t_1 : \tau \rightarrow \tau \rightsquigarrow N_1
-    \\ \Omega_1.\tau_1' \in N_1
-    \\\\
-    \\ \Delta;;\Omega_1 \vdash \tau_1' \leq \alpha \rightarrow \beta 
-    \rightsquigarrow M_2
-    \\ \Omega_2 \in M_2
-    \\\\
-    \\ \alpha[\Delta;;\Omega_1;;\Omega_2] = \tau_\alpha
-    \\ \beta[\Delta;;\Omega_1;;\Omega_2] = \tau_\beta
-    \\\\
-    \\ \text{freevars}\ \tau_\alpha = \widebar{\omega}
-    \\\\
-    \} = N
-  }
-  {\Delta\ \Gamma \vdash \text{fix}\ t_1 : \tau 
-  \rightsquigarrow N} 
-
-
-\end{mathpar}
-\caption{Inference typing: part 2}
-\end{figure*}
 
 
 

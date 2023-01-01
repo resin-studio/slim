@@ -901,7 +901,7 @@ partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (prescribed : Bool) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
 match t with
-| Tm.hole => [(i + 1, {}, Ty.fvar i)] 
+| Tm.hole => [(i, {}, ty)] 
 | Tm.unit => 
   List.bind (unify i env_ty prescribed Ty.unit ty) (fun (i, env_ty_x) => 
     [(i, env_ty_x, Ty.unit)]
