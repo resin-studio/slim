@@ -989,12 +989,18 @@ match t with
   let init := u_env_ty1.map fun (i, env_ty1) => (i, env_ty1, Ty.top)
   List.foldl f_step init fs_typed 
 
+
 | .proj t1 l =>
-  List.bind (infer i env_ty env_tm prescribed t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
-  let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (unify i (env_ty ;; env_ty1) prescribed ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
-    [(i, env_ty1 ;; env_ty2, ty')]
-  ))
+  List.bind (infer i env_ty env_tm prescribed t1 (Ty.field l ty)) (fun (i, env_ty1, _) =>
+    [(i, env_ty1, ty)]
+  )
+
+-- | .proj t1 l =>
+--   List.bind (infer i env_ty env_tm prescribed t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
+--   let (i, ty') := (i + 1, Ty.fvar i)
+--   List.bind (unify i (env_ty ;; env_ty1) prescribed ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
+--     [(i, env_ty1 ;; env_ty2, ty')]
+--   ))
 
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
@@ -1002,6 +1008,15 @@ match t with
   List.bind (infer i (env_ty ;; env_ty1) env_tm prescribed t2 ty2) (fun (i, env_ty2, _) =>
      [(i, env_ty1 ;; env_ty2, ty)]
   ))
+
+-- | .app t1 t2 =>
+--   let (i, ty2) := (i + 1, Ty.fvar i)
+--   let (i, ty') := (i + 1, Ty.fvar i)
+--   List.bind (infer i env_ty env_tm prescribed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1) =>
+--   List.bind (infer i (env_ty ;; env_ty1) env_tm prescribed t2 ty2) (fun (i, env_ty2, ty2') =>
+--   List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) prescribed ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
+--      [(i, env_ty1 ;; env_ty2 ;; env_ty3, ty')]
+--   )))
 
 | .letb op_ty1 t1 t => 
   let (i, ty1) := match op_ty1 with
