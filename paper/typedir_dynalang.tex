@@ -1029,7 +1029,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \\
         \ \ \ \ \Gamma_1 \in \{\text{patenv } t_1\}
         \\
-        \ \ \ \ \Delta_2.\tau_1' \in \text{infer } \iota\ \Delta;;\Delta_1\ \Gamma;;\Gamma_1\ \vdash t_1 : \tau_1
+        \ \ \ \ \Delta_2.\tau_1' \in \text{infer } \blacksquare\ \Delta;;\Delta_1\ \Gamma;;\Gamma_1\ \vdash t_1 : \tau_1
         \\
         \}
         \\
@@ -1104,9 +1104,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
           \ |\ 
         \\
         \ \ \ \ \Delta_1.\tau_1 \in
-        \text{infer } \iota\ \Delta\ \Gamma \vdash t : \tau \rightarrow \tau
+        \text{infer } \blacksquare\ \Delta\ \Gamma \vdash t : \tau \rightarrow \tau
         \\
-        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;;\Delta_1 \vdash 
+        \ \ \ \ \Delta_2 \in \text{unify } \blacksquare\ \Delta;;\Delta_1 \vdash 
         \tau_1 \leq \alpha_1 \rightarrow \alpha_2 
         \\
         \ \ \ \ \tau_2 \in \{\alpha_1[\Delta;;\Delta_1;;\Delta_2]\}
@@ -1755,10 +1755,10 @@ between dynamic to static types to avoid all terms typing via the subsumption ru
     % and the decoupling of binder introduction from type combination 
     % and consistent treatment of type dependency and type membership 
     % provides an easier mental model to work with
-  % prescribed parameter 
-    % indicates if a constraint is user-specified or inferred
-    % contrasting with roundtrip,    
-      % where all rules are treated as prescribed
+  % closed parameter 
+    % indicates if a constraint is closed vs open 
+    % variables are fully determined in closed unification 
+    % variables are are open to future information in open unification 
 
 
 
