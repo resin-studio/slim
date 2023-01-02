@@ -509,7 +509,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     } {
       \Delta\ \Gamma \vdash t : \top 
     } 
-    \end{mathpar}
+  \end{mathpar}
   \caption{Typing semantics}
 \end{figure*}
 
@@ -517,58 +517,96 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 \subsection{Subtyping semantics}
 
 \begin{figure*}[h]
-\begin{mathpar}
-\mprset{flushleft}
+  \begin{mathpar}
 
-  \inferrule[bottom] {
-  } {
-    \Delta \vdash \bot \leq \tau
-  }
+    \inferrule[bottom] {
+    } {
+      \Delta \vdash \bot \leq \tau
+    }
 
-  \inferrule[top] {
-  } {
-    \Delta \vdash \tau \leq \top
-  } 
+    \inferrule[top] {
+    } {
+      \Delta \vdash \tau \leq \top
+    } 
 
-  \inferrule[tag] {
-    \Delta \vdash \tau_1 \leq \tau_2
-  } {
-    \Delta \vdash 
-      l*\tau_1 \leq l*\tau_2
-  } 
+    \inferrule[tag] {
+      \Delta \vdash \tau_1 \leq \tau_2
+    } {
+      \Delta \vdash 
+        l*\tau_1 \leq l*\tau_2
+    } 
 
-  \inferrule[tag] {
-    \Delta \vdash 
-      \tau_1 \leq \tau_2
-  } {
-    \Delta \vdash 
-      l\sim\tau_1 \leq l\sim\tau_2
-  } 
+    \inferrule[tag] {
+      \Delta \vdash 
+        \tau_1 \leq \tau_2
+    } {
+      \Delta \vdash 
+        l\sim\tau_1 \leq l\sim\tau_2
+    } 
 
-  \inferrule[case] {
-    \Delta \vdash \tau_3 \leq \tau_1 
-    \\
-    \Delta \vdash 
-      \tau_2 \leq \tau_4
-  } {
-    \Delta \vdash 
-      \tau_1 \rightarrow \tau_2 \leq \tau_3 \rightarrow \tau_4
-  } 
+    \inferrule[case] {
+      \Delta \vdash \tau_3 \leq \tau_1 
+      \\
+      \Delta \vdash 
+        \tau_2 \leq \tau_4
+    } {
+      \Delta \vdash 
+        \tau_1 \rightarrow \tau_2 \leq \tau_3 \rightarrow \tau_4
+    } 
 
+    \inferrule[exis-symm] { 
+      \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2
+      \\
+      \Delta;;\Delta_1 \vdash \tau_4 \leq \tau_5
+      \\\\
+      \Delta;;\Delta_1 \vdash \tau_3 \leq \tau_6
+    } { 
+      \Delta \vdash 
+        (\exists \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+        \leq 
+        (\exists \widebar{\alpha} :: \tau_4 \leq \tau_5\ .\ \tau_6)
+    }
 
-\inferrule[exis-rhs]
-  { 
-    \Delta \vdash 
-      \tau_1 \leq \tau_4
-    \\
-    \Delta \vdash 
-      \tau_2 \leq \tau_3
-  } { 
-    \Delta \vdash 
-      \tau_1
-      \leq 
-      (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-  }
+    \inferrule[exis-rhs] { 
+      \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_4
+      \\
+      \text{freevars } \Delta \cap \widebar{\alpha} = \emptyset 
+      \\\\
+      \Delta;;\Delta_1 \vdash 
+        \tau_2 \leq \tau_3
+    } { 
+      \Delta \vdash 
+        \tau_1
+        \leq 
+        (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+    }
+
+    \inferrule[univ-symm] { 
+      \Delta;;\Delta_1 \vdash \tau_4 \leq \tau_5
+      \\
+      \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2
+      \\\\
+      \Delta;;\Delta_1 \vdash \tau_3 \leq \tau_6
+    } { 
+      \Delta \vdash 
+        (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+        \leq 
+        (\forall \widebar{\alpha} :: \tau_4 \leq \tau_5\ .\ \tau_6)
+    }
+
+    \inferrule[univ-lhs] { 
+      \Delta;;\Delta_1 \vdash \tau_3 \leq \tau_4
+      \\
+      \text{freevars } \Delta \cap \widebar{\alpha} = \emptyset 
+      \\\\
+      \Delta;;\Delta_1 \vdash 
+        \tau_1 \leq \tau_2
+    } { 
+      \Delta \vdash 
+        (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+        \leq 
+        \tau_4
+    }
 
 % \inferrule[univ-free]
 %   { 
