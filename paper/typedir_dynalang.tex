@@ -424,85 +424,83 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   \begin{mathpar}
     \inferrule[Hole] { 
     } {
-      \Delta\ \Gamma \vdash \_ : \tau
+      \Gamma \vdash \_ : \tau
     } 
 
     \inferrule[Unit] { 
     } {
-      \Delta\ \Gamma \vdash () : \diamondsuit
+      \Gamma \vdash () : \diamondsuit
     } 
 
     \inferrule[Var] { 
       (x \mapsto \tau) \in \Gamma
     } {
-      \Delta\ \Gamma \vdash x : \tau  
+      \Gamma \vdash x : \tau  
     } 
 
     \inferrule[Tag] { 
-      \Delta\ \Gamma \vdash t : \tau
+      \Gamma \vdash t : \tau
     } {
-      \Delta\ \Gamma \vdash l\#t : l*\tau  
+      \Gamma \vdash l\#t : l*\tau  
     }
 
     \inferrule[Record] { 
       \bigwedge_{(l\sim\tau) \in types} 
       \ 
       \bigwedge_{(l:=t) \in fields} 
-      \Delta\ \Gamma \vdash t : \tau
+      \Gamma \vdash t : \tau
     } {
-      \Delta\ \Gamma \vdash \omega[fields] : (\text{reduce}\ ;\ types)  
+      \Gamma \vdash \omega[fields] : (\text{reduce}\ ;\ types)  
     } 
 
     \inferrule[Function] {
       \bigwedge_{(\tau_1 \rightarrow \tau_2) \in types} 
       \ 
       \bigwedge_{(t_1 : \tau_1 \Rightarrow t_2) \in cases } 
-      \Delta\ \Gamma_1 \vdash t_1 : \tau_1
+      \Gamma_1 \vdash t_1 : \tau_1
       \ \wedge\
-      \Delta\ \Gamma;;\Gamma_1 \vdash t_2 : \tau_2
+      \Gamma;;\Gamma_1 \vdash t_2 : \tau_2
     } {
-      \Delta\ \Gamma \vdash \lambda[cases] : (\text{reduce}\ ;\ types)  
+      \Gamma \vdash \lambda[cases] : (\text{reduce}\ ;\ types)  
     } 
 
     \inferrule[Proj] {
-      \Delta\ \Gamma \vdash t : l\sim\tau 
+      \Gamma \vdash t : l\sim\tau 
     } {
-      \Delta\ \Gamma \vdash t/l : \tau 
+      \Gamma \vdash t/l : \tau 
     } 
 
     \inferrule[App] { 
-      \Delta\ \Gamma \vdash t_1 : \tau_1 \rightarrow \tau
+      \Gamma \vdash t_1 : \tau_1 \rightarrow \tau
       \\
-      \Delta\ \Gamma \vdash t_2 : \tau_1
+      \Gamma \vdash t_2 : \tau_1
     } {
-      \Delta\ \Gamma \vdash (t_1\ t_2) : \tau 
+      \Gamma \vdash (t_1\ t_2) : \tau 
     } 
 
     \inferrule[Let] { 
-      \Delta\ \Gamma \vdash t_1 : \tau_1 
-      \\ 
-      \widebar{\alpha} = \{\alpha \ |\ \alpha \in \text{freevars}\ \tau_1\ \wedge\ 
-        \alpha \not\in \text{dom}(\Delta)
-      \}
+      \widebar{\alpha} = \text{freevars}\ \tau_1
       \\\\
-      \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1
+      \Gamma \vdash t_1 : \exists \widebar{\alpha} . \tau_1
+      \\
+      \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1
         \vdash t_2 : \tau 
     } {
-      \Delta\ \Gamma \vdash (\text{let}\ x : \tau_1 := t_1 \Rightarrow t_2) : \tau 
+      \Gamma \vdash (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) : \tau 
     } 
 
     \inferrule[Fix] { 
-      \Delta\ \Gamma \vdash t : \tau \rightarrow \tau 
+      \Gamma \vdash t : \tau \rightarrow \tau 
     } {
-      \Delta\ \Gamma \vdash \text{fix}\ t : \tau 
+      \Gamma \vdash \text{fix}\ t : \tau 
     } 
 
     \inferrule[Subsump] { 
-      \Delta\ \Gamma \vdash t : \tau'
+      \Gamma \vdash t : \tau'
       \\
-      \Delta \vdash \tau' \leq \tau
+      \tau' \leq \tau
     } {
-      \Delta\ \Gamma \vdash t : \tau
+      \Gamma \vdash t : \tau
     } 
 
     \inferrule[Top] { 
