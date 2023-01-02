@@ -479,20 +479,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     } 
 
     \inferrule[Let] { 
-      \Gamma \vdash t_1 : \exists \widebar{\alpha} :: \tau_3 \leq \tau_4\ .\ \tau_1
-      \dashv
-      C
+      \Gamma \vdash t_1 : \exists \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3
       \\\\
-      \Gamma,x \mapsto \forall \widebar{\alpha} :: \tau_3 \leq \tau_4\ .\ \tau_1
-        \vdash t_2 : \tau 
-      \dashv
-      C
-      \\
-      \widebar{\alpha} = \text{freevars}\ \tau_1
+      \Gamma,x \mapsto \forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3
+        \vdash t_2 : \tau_4 
     } {
-      \Gamma \vdash (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) : \tau 
-      \dashv
-      C;;(\exists \widebar{\alpha} :: \tau_3 \leq \tau_4)\ 
+      \Gamma \vdash 
+        (\text{let}\ x : (\exists \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3) 
+        = t_1 \text{ in } t_2) : \tau_4
     } 
 
     \inferrule[Fix] { 
@@ -502,11 +496,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     } 
 
     \inferrule[Subsump] { 
-      \Gamma \vdash t : \tau'[] \dashv C
+      \Gamma \vdash t : \tau'
       \\
-      \Delta\ \vdash \tau' \leq \tau \dashv C
+      \cdot \vdash \tau' \leq \tau
+      \
     } {
-      \Gamma \vdash t : \tau \dashv C
+      \Gamma \vdash 
+        t : \tau
     } 
 
     \inferrule[Top] { 
@@ -526,32 +522,27 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
   \inferrule[bottom] {
   } {
-    \Delta \vdash \bot \leq \tau \dashv C
+    \Delta \vdash \bot \leq \tau
   }
 
   \inferrule[top] {
   } {
-    \Delta \vdash \tau \leq \top \dashv C
+    \Delta \vdash \tau \leq \top
   } 
 
   \inferrule[tag] {
-    \Delta 
-      \vdash \tau_1 \leq \tau_2
-    \dashv C
+    \Delta \vdash \tau_1 \leq \tau_2
   } {
     \Delta \vdash 
       l*\tau_1 \leq l*\tau_2
-    \dashv C
   } 
 
   \inferrule[tag] {
     \Delta \vdash 
       \tau_1 \leq \tau_2
-    \dashv C
   } {
     \Delta \vdash 
       l\sim\tau_1 \leq l\sim\tau_2
-    \dashv C
   } 
 
   \inferrule[case] {
@@ -559,11 +550,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \\
     \Delta \vdash 
       \tau_2 \leq \tau_4
-    \dashv C
   } {
     \Delta \vdash 
       \tau_1 \rightarrow \tau_2 \leq \tau_3 \rightarrow \tau_4
-    \dashv C
   } 
 
 
@@ -571,17 +560,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   { 
     \Delta \vdash 
       \tau_1 \leq \tau_4
-    \dashv C
     \\
     \Delta \vdash 
       \tau_2 \leq \tau_3
-    \dashv C
   } { 
     \Delta \vdash 
       \tau_1
       \leq 
       (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-    \dashv C
   }
 
 % \inferrule[univ-free]
