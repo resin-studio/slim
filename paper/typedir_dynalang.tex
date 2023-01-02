@@ -502,7 +502,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     } 
 
     \inferrule[Subsump] { 
-      \Gamma \vdash t : \tau'[\Delta] \dashv C
+      \Gamma \vdash t : \tau'[] \dashv C
       \\
       \Delta\ \vdash \tau' \leq \tau \dashv C
     } {
@@ -526,46 +526,62 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 
   \inferrule[bottom] {
   } {
-    \bot \leq \tau	
+    \Delta \vdash \bot \leq \tau \dashv C
   }
 
   \inferrule[top] {
   } {
-    \tau \leq \top	
+    \Delta \vdash \tau \leq \top \dashv C
   } 
 
   \inferrule[tag] {
-    \tau_1 \leq \tau_2
+    \Delta 
+      \vdash \tau_1 \leq \tau_2
+    \dashv C
   } {
-    l*\tau_1 \leq l*\tau_2
+    \Delta \vdash 
+      l*\tau_1 \leq l*\tau_2
+    \dashv C
   } 
 
   \inferrule[tag] {
-    \tau_1 \leq \tau_2
+    \Delta \vdash 
+      \tau_1 \leq \tau_2
+    \dashv C
   } {
-    l\sim\tau_1 \leq l\sim\tau_2
+    \Delta \vdash 
+      l\sim\tau_1 \leq l\sim\tau_2
+    \dashv C
   } 
 
   \inferrule[case] {
-    \tau_3 \leq \tau_1 
+    \Delta \vdash \tau_3 \leq \tau_1 
     \\
-    \tau_2 \leq \tau_4
+    \Delta \vdash 
+      \tau_2 \leq \tau_4
+    \dashv C
   } {
-    \tau_1 \rightarrow \tau_2 \leq \tau_3 \rightarrow \tau_4
+    \Delta \vdash 
+      \tau_1 \rightarrow \tau_2 \leq \tau_3 \rightarrow \tau_4
+    \dashv C
   } 
 
 
 \inferrule[exis-rhs]
   { 
-    \tau_1 \leq \tau_4[\Delta]
+    \Delta \vdash 
+      \tau_1 \leq \tau_4
+    \dashv C
     \\
-    \tau_2[\Delta] \leq \tau_3[\Delta]
-    \\
-    \text{cyclefree } \Delta
+    \Delta \vdash 
+      \tau_2 \leq \tau_3
+    \dashv C
   } { 
-    \tau_1
-    \leq 
-    (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+    \Delta \vdash 
+      \tau_1
+      \leq 
+      (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+    \dashv C
   }
 
 % \inferrule[univ-free]
