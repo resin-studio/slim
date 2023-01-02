@@ -636,15 +636,14 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 -- figure out how to match existential on the lhs
 | .exis n1 ty_c1 ty_c2 ty1, .exis n2 ty_c3 ty_c4 ty2 =>
   if n1 == n2 then
-    let (i, args1) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
-    let ty_c1 := Ty.instantiate 0 args1 ty_c1
-    let ty_c2 := Ty.instantiate 0 args1 ty_c2
-    let ty1 := Ty.instantiate 0 args1 ty1
+    let (i, args) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
+    let ty_c1 := Ty.instantiate 0 args ty_c1
+    let ty_c2 := Ty.instantiate 0 args ty_c2
+    let ty1 := Ty.instantiate 0 args ty1
 
-    let (i, args2) := (i + n2, (List.range n2).map (fun j => Ty.fvar (i + j)))
-    let ty_c3 := Ty.instantiate 0 args2 ty_c3
-    let ty_c4 := Ty.instantiate 0 args2 ty_c4
-    let ty2 := Ty.instantiate 0 args2 ty2
+    let ty_c3 := Ty.instantiate 0 args ty_c3
+    let ty_c4 := Ty.instantiate 0 args ty_c4
+    let ty2 := Ty.instantiate 0 args ty2
 
     -- solve constraint on LHS first
     List.bind (unify i (env_ty) True ty_c1 ty_c2) (fun (i, env_ty1) =>
@@ -673,15 +672,14 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 -- figure out how to match universal on the rhs
 | .univ n1 ty_c1 ty_c2 ty1, .univ n2 ty_c3 ty_c4 ty2 =>
   if n1 == n2 then
-    let (i, args1) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
-    let ty_c1 := Ty.instantiate 0 args1 ty_c1
-    let ty_c2 := Ty.instantiate 0 args1 ty_c2
-    let ty1 := Ty.instantiate 0 args1 ty1
+    let (i, args) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
+    let ty_c1 := Ty.instantiate 0 args ty_c1
+    let ty_c2 := Ty.instantiate 0 args ty_c2
+    let ty1 := Ty.instantiate 0 args ty1
 
-    let (i, args2) := (i + n2, (List.range n2).map (fun j => Ty.fvar (i + j)))
-    let ty_c3 := Ty.instantiate 0 args2 ty_c3
-    let ty_c4 := Ty.instantiate 0 args2 ty_c4
-    let ty2 := Ty.instantiate 0 args2 ty2
+    let ty_c3 := Ty.instantiate 0 args ty_c3
+    let ty_c4 := Ty.instantiate 0 args ty_c4
+    let ty2 := Ty.instantiate 0 args ty2
 
     -- solve constraint on RHS first
     List.bind (unify i (env_ty) True ty_c3 ty_c4) (fun (i, env_ty1) =>

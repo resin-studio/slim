@@ -555,10 +555,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     } 
 
     \inferrule[exis-symm] { 
-      \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2
+      \Delta;;\Delta_1 \vdash \tau_4 \leq \tau_1
       \\
-      \Delta;;\Delta_1 \vdash \tau_4 \leq \tau_5
+      \Delta;;\Delta_1 \vdash \tau_2 \leq \tau_5
       \\\\
+      \Delta;;\Delta_1 \vdash \tau_4 \leq \tau_5
+      \\
       \Delta;;\Delta_1 \vdash \tau_3 \leq \tau_6
     } { 
       \Delta \vdash 
@@ -582,10 +584,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     }
 
     \inferrule[univ-symm] { 
-      \Delta;;\Delta_1 \vdash \tau_4 \leq \tau_5
+      \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_4
       \\
-      \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2
+      \Delta;;\Delta_1 \vdash \tau_5 \leq \tau_2
       \\\\
+      \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2
+      \\
       \Delta;;\Delta_1 \vdash \tau_3 \leq \tau_6
     } { 
       \Delta \vdash 
