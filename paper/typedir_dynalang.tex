@@ -479,14 +479,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     } 
 
     \inferrule[Let] { 
-      \widebar{\alpha} = \text{freevars}\ \tau_1
+      \Gamma \vdash t_1 : \exists \widebar{\alpha} :: \tau_3 \leq \tau_4\ .\ \tau_1
+      \dashv
+      C
       \\\\
-      \Gamma \vdash t_1 : \exists \widebar{\alpha} . \tau_1
-      \\
-      \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1
+      \Gamma,x \mapsto \forall \widebar{\alpha} :: \tau_3 \leq \tau_4\ .\ \tau_1
         \vdash t_2 : \tau 
+      \dashv
+      C
+      \\
+      \widebar{\alpha} = \text{freevars}\ \tau_1
     } {
       \Gamma \vdash (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) : \tau 
+      \dashv
+      C;;(\exists \widebar{\alpha} :: \tau_3 \leq \tau_4)\ 
     } 
 
     \inferrule[Fix] { 
@@ -496,11 +502,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     } 
 
     \inferrule[Subsump] { 
-      \Gamma \vdash t : \tau'
+      \Gamma \vdash t : \tau'[\Delta] \dashv C
       \\
-      \tau' \leq \tau
+      \Delta\ \vdash \tau' \leq \tau \dashv C
     } {
-      \Gamma \vdash t : \tau
+      \Gamma \vdash t : \tau \dashv C
     } 
 
     \inferrule[Top] { 
@@ -549,7 +555,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   } 
 
 
-% TODO: should type environment or substitution be used
 \inferrule[exis-rhs]
   { 
     \tau_1 \leq \tau_4[\Delta]
