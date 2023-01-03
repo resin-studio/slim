@@ -557,16 +557,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \inferrule[exis-symm] { 
       \Delta;;\Delta_1 \vdash \tau_4 \leq \tau_1
       \\
-      \Delta;;\Delta_1 \vdash \tau_2 \leq \tau_5
+      \text{freevars } \Delta \cap \widebar{\alpha_1} = \emptyset 
       \\\\
-      \Delta;;\Delta_1 \vdash \tau_4 \leq \tau_5
+      \Delta;;\Delta_1 \vdash \tau_2 \leq \tau_5
       \\
+      \text{freevars } \Delta \cap \widebar{\alpha_2} = \emptyset 
+      \\\\
       \Delta;;\Delta_1 \vdash \tau_3 \leq \tau_6
+      \\
+      \Delta;;\Delta_1; \vdash \tau_4 \leq \tau_5
     } { 
       \Delta \vdash 
-        (\exists \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+        (\exists \widebar{\alpha_1} :: \tau_1 \leq \tau_2\ .\ \tau_3)
         \leq 
-        (\exists \widebar{\alpha} :: \tau_4 \leq \tau_5\ .\ \tau_6)
+        (\exists \widebar{\alpha_2} :: \tau_4 \leq \tau_5\ .\ \tau_6)
     }
 
     \inferrule[exis-rhs] { 
@@ -586,16 +590,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \inferrule[univ-symm] { 
       \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_4
       \\
-      \Delta;;\Delta_1 \vdash \tau_5 \leq \tau_2
+      \text{freevars } \Delta \cap \widebar{\alpha_1} = \emptyset 
       \\\\
-      \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2
+      \Delta;;\Delta_1 \vdash \tau_5 \leq \tau_2
       \\
+      \text{freevars } \Delta \cap \widebar{\alpha_2} = \emptyset 
+      \\\\
       \Delta;;\Delta_1 \vdash \tau_3 \leq \tau_6
+      \\
+      \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2
     } { 
       \Delta \vdash 
-        (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+        (\forall \widebar{\alpha_1} :: \tau_1 \leq \tau_2\ .\ \tau_3)
         \leq 
-        (\forall \widebar{\alpha} :: \tau_4 \leq \tau_5\ .\ \tau_6)
+        (\forall \widebar{\alpha_2} :: \tau_4 \leq \tau_5\ .\ \tau_6)
     }
 
     \inferrule[univ-lhs] { 
