@@ -635,25 +635,30 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 -- TODO: fix subtyping for relational types 
 -- figure out how to match existential on the lhs
 | .exis n1 ty_c1 ty_c2 ty1, .exis n2 ty_c3 ty_c4 ty2 =>
+  -- if False then
   if n1 == n2 then
-    let (i, args) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
-    let ty_c1 := Ty.instantiate 0 args ty_c1
-    let ty_c2 := Ty.instantiate 0 args ty_c2
-    let ty1 := Ty.instantiate 0 args ty1
+    let (i, args1) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
+    let ty_c1 := Ty.instantiate 0 args1 ty_c1
+    let ty_c2 := Ty.instantiate 0 args1 ty_c2
+    let ty1 := Ty.instantiate 0 args1 ty1
 
-    let ty_c3 := Ty.instantiate 0 args ty_c3
-    let ty_c4 := Ty.instantiate 0 args ty_c4
-    let ty2 := Ty.instantiate 0 args ty2
+    let (i, args2) := (i + n2, (List.range n1).map (fun j => Ty.fvar (i + j)))
+    let ty_c3 := Ty.instantiate 0 args2 ty_c3
+    let ty_c4 := Ty.instantiate 0 args2 ty_c4
+    let ty2 := Ty.instantiate 0 args2 ty2
 
-    -- solve constraint on LHS first
-    List.bind (unify i (env_ty) True ty_c1 ty_c2) (fun (i, env_ty1) =>
     -- these bindings are different from System F.
     -- unlike system F, the bound variables don't have to match
     -- Instead, we unify the target types first to align bound variables.
-    List.bind (unify i (env_ty;;env_ty1) closed ty1 ty2) (fun (i, env_ty2) =>
-    List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c3 ty_c4) (fun (i, env_ty3) =>
-      [ (i, env_ty1;;env_ty2;;env_ty3)  ]
-    )))
+    List.bind (unify i (env_ty) closed ty1 ty2) (fun (i, env_ty1) =>
+    List.bind (unify i (env_ty;;env_ty1) True ty_c3 ty_c4) (fun (i, env_ty2) =>
+
+    -- unify with LHS constraints narrower than RHS constraints 
+    List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c3 ty_c1) (fun (i, env_ty3) =>
+    List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3) True ty_c2 ty_c4) (fun (i, env_ty4) =>
+
+      [ (i, env_ty1;;env_ty2;;env_ty3;;env_ty4)  ]
+    ))))
   else
     .nil
 
@@ -672,24 +677,28 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 -- figure out how to match universal on the rhs
 | .univ n1 ty_c1 ty_c2 ty1, .univ n2 ty_c3 ty_c4 ty2 =>
   if n1 == n2 then
-    let (i, args) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
-    let ty_c1 := Ty.instantiate 0 args ty_c1
-    let ty_c2 := Ty.instantiate 0 args ty_c2
-    let ty1 := Ty.instantiate 0 args ty1
+  -- if False then
+    let (i, args1) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
+    let ty_c1 := Ty.instantiate 0 args1 ty_c1
+    let ty_c2 := Ty.instantiate 0 args1 ty_c2
+    let ty1 := Ty.instantiate 0 args1 ty1
 
-    let ty_c3 := Ty.instantiate 0 args ty_c3
-    let ty_c4 := Ty.instantiate 0 args ty_c4
-    let ty2 := Ty.instantiate 0 args ty2
+    let (i, args2) := (i + n2, (List.range n1).map (fun j => Ty.fvar (i + j)))
+    let ty_c3 := Ty.instantiate 0 args2 ty_c3
+    let ty_c4 := Ty.instantiate 0 args2 ty_c4
+    let ty2 := Ty.instantiate 0 args2 ty2
 
-    -- solve constraint on RHS first
-    List.bind (unify i (env_ty) True ty_c3 ty_c4) (fun (i, env_ty1) =>
     -- these bindings are different from System F.
     -- unlike system F, the bound variables don't have to match
     -- Instead, we unify the target types first to align bound variables.
-    List.bind (unify i (env_ty;;env_ty1) closed ty1 ty2) (fun (i, env_ty2) =>
-    List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c1 ty_c2) (fun (i, env_ty3) =>
-      [ (i, env_ty1;;env_ty2;;env_ty3)  ]
-    )))
+    List.bind (unify i (env_ty) closed ty1 ty2) (fun (i, env_ty1) =>
+    List.bind (unify i (env_ty;;env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) =>
+
+    -- unify with LHS constraints wider than RHS constraints 
+    List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c1 ty_c3) (fun (i, env_ty3) =>
+    List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3) True ty_c4 ty_c2) (fun (i, env_ty4) =>
+      [ (i, env_ty1;;env_ty2;;env_ty3;;env_ty4)  ]
+    ))))
   else
     .nil
 
