@@ -647,18 +647,16 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     let ty_c4 := Ty.instantiate 0 args2 ty_c4
     let ty2 := Ty.instantiate 0 args2 ty2
 
-    -- these bindings are different from System F.
-    -- unlike system F, the bound variables don't have to match
-    -- Instead, we unify the target types first to align bound variables.
     List.bind (unify i (env_ty) closed ty1 ty2) (fun (i, env_ty1) =>
     List.bind (unify i (env_ty;;env_ty1) True ty_c3 ty_c4) (fun (i, env_ty2) =>
 
     -- unify with LHS constraints narrower than RHS constraints 
     List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c3 ty_c1) (fun (i, env_ty3) =>
-    List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3) True ty_c2 ty_c4) (fun (i, env_ty4) =>
+    List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3) True ty_c1 ty_c2) (fun (i, env_ty4) =>
+    List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3;;env_ty4) True ty_c2 ty_c4) (fun (i, env_ty5) =>
 
-      [ (i, env_ty1;;env_ty2;;env_ty3;;env_ty4)  ]
-    ))))
+      [ (i, env_ty1;;env_ty2;;env_ty3;;env_ty4;;env_ty5)  ]
+    )))))
   else
     .nil
 
@@ -696,9 +694,10 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
     -- unify with LHS constraints wider than RHS constraints 
     List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c1 ty_c3) (fun (i, env_ty3) =>
-    List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3) True ty_c4 ty_c2) (fun (i, env_ty4) =>
-      [ (i, env_ty1;;env_ty2;;env_ty3;;env_ty4)  ]
-    ))))
+    List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3) True ty_c3 ty_c4) (fun (i, env_ty4) =>
+    List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3;;env_ty4) True ty_c4 ty_c2) (fun (i, env_ty5) =>
+      [ (i, env_ty1;;env_ty2;;env_ty3;;env_ty4;;env_ty5)  ]
+    )))))
   else
     .nil
 
