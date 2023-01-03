@@ -438,6 +438,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \Gamma \vdash x : \tau  
     } 
 
+    \\\\
+
     \inferrule[Tag] { 
       \Gamma \vdash t : \tau
     } {
@@ -464,6 +466,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \Gamma \vdash \lambda[cases] : (\text{reduce}\ ;\ types)  
     } 
 
+    \\\\
+
     \inferrule[Proj] {
       \Gamma \vdash t : l\sim\tau 
     } {
@@ -478,15 +482,19 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \Gamma \vdash (t_1\ t_2) : \tau 
     } 
 
+    \\\\
+
     \inferrule[Let] { 
-      \Gamma \vdash t_1 : \exists \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3
+      \cdot \vdash (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4\ .\ \tau_5) \leq \tau_1
       \\\\
-      \Gamma,x \mapsto \forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3
-        \vdash t_2 : \tau_4 
+      \Gamma \vdash t_1 : \exists \widebar{\alpha} :: \tau_3 \leq \tau_4\ .\ \tau_5
+      \\\\
+      \Gamma,x \mapsto (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4\ .\ \tau_5)
+        \vdash t_2 : \tau_2
     } {
       \Gamma \vdash 
-        (\text{let}\ x : (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3) 
-        = t_1 \text{ in } t_2) : \tau_4
+        (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) 
+        : \tau_2
     } 
 
     \inferrule[Fix] { 
@@ -503,11 +511,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     } {
       \Gamma \vdash 
         t : \tau
-    } 
-
-    \inferrule[Top] { 
-    } {
-      \Delta\ \Gamma \vdash t : \top 
     } 
   \end{mathpar}
   \caption{Typing}
@@ -1346,127 +1349,133 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   \item restate results 
 \end{enumerate}
 
-\section*{Notes}
+% \section*{Notes}
 
-\subsection*{dualities}
-\begin{enumerate}
-  \item \(\bot \leq \top \)
-  \item \(\tau_1\ \&\ \tau_2  \leq \tau_1\ |\ \tau_2 \)
-  \item \(\forall \alpha . \tau \leq \exists \alpha . \tau \)
-  \item \(\nu \alpha . \tau \leq \mu \alpha . \tau \)
-\end{enumerate}
+% \subsection*{dualities}
+% \begin{enumerate}
+%   \item \(\bot \leq \top \)
+%   \item \(\tau_1\ \&\ \tau_2  \leq \tau_1\ |\ \tau_2 \)
+%   \item \(\forall \alpha . \tau \leq \exists \alpha . \tau \)
+%   \item \(\nu \alpha . \tau \leq \mu \alpha . \tau \)
+% \end{enumerate}
 
-\subsection*{contributions}
-\begin{enumerate}
-  \item program synthesis such that:
-    \begin{enumerate}
-      \item goal defined by partial programs with missing annotations  
-      \item goal transformed into type specification 
-      \item type specification may contain dynamic type  
-    \end{enumerate}
-  \item algorithmic subsumption allows simple subtyping rule with dynamic type
-    \begin{enumerate}
-      \item subtyping can have a dynamic type on either side without risk of   
-        all terms being accepted by typing rules (i.e. everything typing)
-    \end{enumerate}
-  \item an expressive type system 
-    based on intersection, union, recursive, and co-recursive types
-    \begin{enumerate}
-      \item without dependent types 
-      \item comparable to prolog 
-      \item allows dynamic type 
-      \item sound modulo absence of dynamic type 
-        or static type union/intersect with dynamic
-      \item types behave either leniently or strict depending on usage as actual type or expected type
-    \end{enumerate}
-  \item full type synthesis with full type propagation (for all rules)
-  \item type unification such that: 
-    \begin{enumerate}
-      \item the principal type of all terms is top
-      \item lenient (but unsound) static type inference
-      \item expanding type info with union and intersection and dynamic type
-    \end{enumerate}
-  \item interleaving type constraint generation and solving with dynamic type 
-\end{enumerate}
+% \subsection*{contributions}
+% \begin{enumerate}
+%   \item program synthesis such that:
+%     \begin{enumerate}
+%       \item goal defined by partial programs with missing annotations  
+%       \item goal transformed into type specification 
+%       \item type specification may contain dynamic type  
+%     \end{enumerate}
+%   \item algorithmic subsumption allows simple subtyping rule with dynamic type
+%     \begin{enumerate}
+%       \item subtyping can have a dynamic type on either side without risk of   
+%         all terms being accepted by typing rules (i.e. everything typing)
+%     \end{enumerate}
+%   \item an expressive type system 
+%     based on intersection, union, recursive, and co-recursive types
+%     \begin{enumerate}
+%       \item without dependent types 
+%       \item comparable to prolog 
+%       \item allows dynamic type 
+%       \item sound modulo absence of dynamic type 
+%         or static type union/intersect with dynamic
+%       \item types behave either leniently or strict depending on usage as actual type or expected type
+%     \end{enumerate}
+%   \item full type synthesis with full type propagation (for all rules)
+%   \item type unification such that: 
+%     \begin{enumerate}
+%       \item the principal type of all terms is top
+%       \item lenient (but unsound) static type inference
+%       \item expanding type info with union and intersection and dynamic type
+%     \end{enumerate}
+%   \item interleaving type constraint generation and solving with dynamic type 
+% \end{enumerate}
 
-\subsection*{differences}
-in contrast with gradual typing:  
-\begin{enumerate}
-  \item infers more static type info 
-  \item stronger soundness claim (i.e. weaker soundness precondition)
-  \item dynamic semantics are irrelevant 
-  \item deterministic subsumption 
-  \item dynamic type built into subtyping 
-\end{enumerate}
+% \subsection*{differences}
+% in contrast with System F:  
+% \begin{enumerate}
+%   \item types are not used as arguments to functions 
+%   \item universal binders do not represent placeholder for type argument 
+% \end{enumerate}
 
-in contrast with HM type inference:  
-\begin{enumerate}
-  \item synthesizes type in addition to constraint solution 
-    due to subtyping
-  \item propagates types
-  \item global top type, leaves types open during unification
-  \item expands and narrows types  
-\end{enumerate}
+% in contrast with gradual typing:  
+% \begin{enumerate}
+%   \item infers more static type info 
+%   \item stronger soundness claim (i.e. weaker soundness precondition)
+%   \item dynamic semantics are irrelevant 
+%   \item deterministic subsumption 
+%   \item dynamic type built into subtyping 
+% \end{enumerate}
 
-in contrast with Roundtrip typing:  
-\begin{enumerate}
-  \item type combinators without dependent types
-  \item prolog-like type language  
-  \item synthesizes types for all rules
-  \item global top type, leaves types open during unification
-  \item expands and narrows types  
-  \item delegates to unification to decompose types 
-  \item delegates to unification to free bound variables 
-\end{enumerate}
+% in contrast with HM type inference:  
+% \begin{enumerate}
+%   \item synthesizes type in addition to constraint solution 
+%     due to subtyping
+%   \item propagates types
+%   \item global top type, leaves types open during unification
+%   \item expands and narrows types  
+% \end{enumerate}
 
-
-
-
-\subsection*{gradual typing}
-How gradually typed inference typically works:
-\begin{enumerate}
-  \item infer either a strict static type or a dynamic type
-  \item let annotations implicitly guide the usage of static vs dynamic checks 
-\end{enumerate}
-There exists work on type inference for gradually typed programs.
-To the best of my knowledge, they are all sound and complete.
-Other gradual type inference systems separate 
-generating constraints from solving constraints.
-Gradual typing systems use the dynamic type \lstinline{(?)} to indicate 
-that dynamic checks should be used.
-Gradual type inference relies on ML types with union extension.
-They do not contain the idea of using intersection and union to keep types open.
-Gradual typing systems separate subtyping from the relation 
-between dynamic to static types to avoid all terms typing via the subsumption rule.
+% in contrast with Roundtrip typing:  
+% \begin{enumerate}
+%   \item type combinators without dependent types
+%   \item prolog-like type language  
+%   \item synthesizes types for all rules
+%   \item global top type, leaves types open during unification
+%   \item expands and narrows types  
+%   \item delegates to unification to decompose types 
+%   \item delegates to unification to free bound variables 
+% \end{enumerate}
 
 
-\subsection*{references}
-\begin{enumerate}
-\item Refinement types for ML by Tim Freeman and Frank Pfenning 
-\item Refinement types as proof irrelevance by William Lovas and Frank Pfenning 
-\item Local type inference by Benjamin C. Pierce and David N. Turner
-\item Liquid types - \url{http://goto.ucsd.edu/~rjhala/papers/liquid_types.pdf}
-\item Program synthesis from polymorphic refinement types by Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama
-\item Example-directed synthesis: a type-theoretic interpretation by Frankle, Osera, Walker, and Zdancewic
-\item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
-\item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
-\item Gradual typing for objects by Jeremy G. Siek and Walid Taha 
-\item Gradual typing with unification-based inference by Siek and Manish Vachharajani 
-\item Dynamic Type Inference for Gradual Hindley–Milner Typing - \url{https://dl.acm.org/doi/pdf/10.1145/3290331}
-\item Principal type schemes for gradual programs - \url{https://www.cs.ubc.ca/~rxg/ptsgp.pdf}
-\item Gradual Liquid Type Inference - \url{https://arxiv.org/pdf/1807.02132.pdf}
-\item Gradual typing with union and intersection types - \url{https://dl.acm.org/doi/pdf/10.1145/3110285}
-\item Gradual typing: a new perspective - unions, intersections, dynamic type, and type inference - \url{https://www.irif.fr/~gc/papers/popl19.pdf}
-\item Gradual refinement types (via abstract interpretation) - \url{https://pleiad.cl/papers/2017/lehmannTanter-popl2017.pdf}
-\item Consistent subtyping for all - \url{https://xnning.github.io/papers/consistent-subtyping-for-all-toplas.pdf}
-\item Polymorphic functions with set-theoretic types, part 1 - \url{https://www.irif.fr/~gc/papers/polydeuces-part1.pdf}
-\item Polymorphic functions with set-theoretic types, part 2 - \url{https://www.irif.fr/~gc/papers/polydeuces-part2.pdf}
-\item Revisiting occurrence typing - \url{https://arxiv.org/pdf/1907.05590.pdf} 
-\item An ideal model for recursive polymorphic types; MacQueen, Plotkin, Sethi; Metric/Contraction/Banach fixed point theorem
-\item Bottom-up synthesis of recursive functional programs using angelic execution - Anders Miltner et al
 
 
-\end{enumerate}
+% \subsection*{gradual typing}
+% How gradually typed inference typically works:
+% \begin{enumerate}
+%   \item infer either a strict static type or a dynamic type
+%   \item let annotations implicitly guide the usage of static vs dynamic checks 
+% \end{enumerate}
+% There exists work on type inference for gradually typed programs.
+% To the best of my knowledge, they are all sound and complete.
+% Other gradual type inference systems separate 
+% generating constraints from solving constraints.
+% Gradual typing systems use the dynamic type \lstinline{(?)} to indicate 
+% that dynamic checks should be used.
+% Gradual type inference relies on ML types with union extension.
+% They do not contain the idea of using intersection and union to keep types open.
+% Gradual typing systems separate subtyping from the relation 
+% between dynamic to static types to avoid all terms typing via the subsumption rule.
+
+
+% \subsection*{references}
+% \begin{enumerate}
+% \item Refinement types for ML by Tim Freeman and Frank Pfenning 
+% \item Refinement types as proof irrelevance by William Lovas and Frank Pfenning 
+% \item Local type inference by Benjamin C. Pierce and David N. Turner
+% \item Liquid types - \url{http://goto.ucsd.edu/~rjhala/papers/liquid_types.pdf}
+% \item Program synthesis from polymorphic refinement types by Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama
+% \item Example-directed synthesis: a type-theoretic interpretation by Frankle, Osera, Walker, and Zdancewic
+% \item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
+% \item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
+% \item Gradual typing for objects by Jeremy G. Siek and Walid Taha 
+% \item Gradual typing with unification-based inference by Siek and Manish Vachharajani 
+% \item Dynamic Type Inference for Gradual Hindley–Milner Typing - \url{https://dl.acm.org/doi/pdf/10.1145/3290331}
+% \item Principal type schemes for gradual programs - \url{https://www.cs.ubc.ca/~rxg/ptsgp.pdf}
+% \item Gradual Liquid Type Inference - \url{https://arxiv.org/pdf/1807.02132.pdf}
+% \item Gradual typing with union and intersection types - \url{https://dl.acm.org/doi/pdf/10.1145/3110285}
+% \item Gradual typing: a new perspective - unions, intersections, dynamic type, and type inference - \url{https://www.irif.fr/~gc/papers/popl19.pdf}
+% \item Gradual refinement types (via abstract interpretation) - \url{https://pleiad.cl/papers/2017/lehmannTanter-popl2017.pdf}
+% \item Consistent subtyping for all - \url{https://xnning.github.io/papers/consistent-subtyping-for-all-toplas.pdf}
+% \item Polymorphic functions with set-theoretic types, part 1 - \url{https://www.irif.fr/~gc/papers/polydeuces-part1.pdf}
+% \item Polymorphic functions with set-theoretic types, part 2 - \url{https://www.irif.fr/~gc/papers/polydeuces-part2.pdf}
+% \item Revisiting occurrence typing - \url{https://arxiv.org/pdf/1907.05590.pdf} 
+% \item An ideal model for recursive polymorphic types; MacQueen, Plotkin, Sethi; Metric/Contraction/Banach fixed point theorem
+% \item Bottom-up synthesis of recursive functional programs using angelic execution - Anders Miltner et al
+
+
+% \end{enumerate}
 
 
 
