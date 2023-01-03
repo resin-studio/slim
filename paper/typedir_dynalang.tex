@@ -418,7 +418,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   \item rules 
 \end{enumerate}
 
-\subsection{Typing semantics}
+\subsection{Typing}
 
 \begin{figure*}[h]
   \begin{mathpar}
@@ -510,11 +510,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \Delta\ \Gamma \vdash t : \top 
     } 
   \end{mathpar}
-  \caption{Typing semantics}
+  \caption{Typing}
 \end{figure*}
 
 
-\subsection{Subtyping semantics}
+\subsection{Subtyping}
 
 \begin{figure*}[h]
   \begin{mathpar}
@@ -624,57 +624,38 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \tau_4
     }
 
-% \inferrule[univ-free]
-%   { 
-%     \{ \Delta_1;;\Delta_2 \ |\ 
-%     \\\\
-%     \ \ \ \ \Delta \vdash \tau' \leq \tau \rightsquigarrow M_1
-%     \\
-%     \Delta_1 \in M_1
-%     \\\\
-%     \ \ \ \ \Delta;;\Delta_1 \vdash \tau_1 \leq \tau_2 \rightsquigarrow M_2
-%     \\
-%     \Delta_2 \in M_2
-%     \\\\
-%     \} = M
-%     \\
-%     \text{fresh}\ \widebar{\alpha}
-%   }
-%   { 
-%     \Delta \vdash 
-%       (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau')
-%       \leq 
-%       \tau
-%       \rightsquigarrow
-%       M
-%   }
+    \inferrule[recur-symm] { 
+      \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] \leq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
+    } {
+      \Delta \vdash \mu \alpha_1 . \tau_1 \leq \mu \alpha_2 . \tau_2
+    }
 
-% \inferrule[recur-symm]
-%   { 
-%      \Delta \vdash \tau'[\alpha\mapsto\mu\alpha.\tau] \leq \tau[\alpha\mapsto\mu\alpha.\tau] \rightsquigarrow M 
-%   }
-%   {\Delta \vdash \mu \alpha . \tau' \leq \mu \alpha . \tau	\rightsquigarrow M}
+    \inferrule[recur-roll] {
+    } {
+       \Delta \vdash \tau[\alpha\mapsto\mu \alpha . \tau] \leq\mu \alpha . \tau
+    }
 
-% \inferrule[recur-tag]
-%   {\Delta \vdash  \#l\ \tau_1 \leq \tau[\alpha\mapsto\mu \alpha . \tau] \rightsquigarrow M}
-%   {\Delta \vdash \#l\ \tau_1 \leq \mu \alpha . \tau	\rightsquigarrow  M }
+    \inferrule[recur-unroll] {
+    } {
+       \Delta \vdash \mu\alpha.\tau \leq \tau[\alpha\mapsto\mu \alpha . \tau]
+    }
 
-% \inferrule[recur-record]
-%   {  
-%     \Delta \vdash_{R} \tau'
-%     \\
-%     \Delta \vdash 
-%       \tau' 
-%       \leq 
-%       \tau[\alpha\mapsto\mu\alpha.\tau]	
-%     \rightsquigarrow M 
-%   }
-%   {
-%     \Delta \vdash 
-%       \tau'  
-%       \leq 
-%       \mu \alpha . \tau	\rightsquigarrow M 
-%   }
+    \inferrule[corec-symm] { 
+      \Delta \vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] \leq \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+    } {
+      \Delta \vdash \nu \alpha_1 . \tau_1 \leq \nu \alpha_2 . \tau_2
+    }
+
+    \inferrule[corec-roll] {
+    } {
+       \Delta \vdash \tau[\alpha\mapsto\nu \alpha . \tau] \leq\nu \alpha . \tau
+    }
+
+    \inferrule[corec-unroll] {
+    } {
+       \Delta \vdash \nu\alpha.\tau \leq \tau[\alpha\mapsto\nu \alpha . \tau]
+    }
+
 
 % \inferrule[corec-symm]
 %   { 
@@ -763,8 +744,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
 %     \rightsquigarrow M_1 \cup M_2 
 %   }
 
+    \inferrule[refl] {
+    } {
+       \Delta \vdash \tau \leq \tau
+    }
+
   \end{mathpar}
-  \caption{Subtyping semantics}
+  \caption{Subtyping}
 \end{figure*}
 
 \begin{enumerate}
