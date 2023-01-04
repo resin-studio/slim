@@ -579,7 +579,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   | none => 
     [ 
       (i, PHashMap.from_list [
-        (id, roll_recur id env_ty (.univ n ty_c1 ty_c2 ty))
+        (id, roll_corec id env_ty (.univ n ty_c1 ty_c2 ty))
       ]) 
     ]
   | some ty' => unify i env_ty closed ty' (.exis n ty_c1 ty_c2 ty) 
@@ -594,38 +594,18 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     ]
   | some ty' => unify i env_ty closed (.univ n ty_c1 ty_c2 ty) ty' 
 
-| .fvar id, .union ty1 ty2 =>
-  match env_ty.find? id with 
-  | none => 
-    [ 
-      (i, PHashMap.from_list [
-        (id, roll_recur id env_ty (.union ty1 ty2))
-      ]) 
-    ]
-  | some ty => unify i env_ty closed ty (.union ty1 ty2) 
-
-| .inter ty1 ty2, .fvar id  =>
-  match env_ty.find? id with 
-  | none => 
-    [ 
-      (i, PHashMap.from_list [
-        (id, roll_recur id env_ty (.inter ty1 ty2))
-      ]) 
-    ]
-  | some ty => unify i env_ty closed (.inter ty1 ty2) ty 
-
 | .fvar id, ty  => 
   match env_ty.find? id with 
   | none => 
     [ 
       if closed then
         (i, PHashMap.from_list [
-          (id, roll_recur id env_ty ty)
+          (id, roll_corec id env_ty ty)
         ]) 
       else
-      (i + 1, PHashMap.from_list [
-        (id, Ty.inter (roll_recur id env_ty ty) (Ty.fvar i))
-      ]) 
+        (i + 1, PHashMap.from_list [
+          (id, roll_corec id env_ty (Ty.inter ty (Ty.fvar i)))
+        ]) 
     ]
   | some ty' => unify i env_ty closed ty' ty 
 
@@ -637,9 +617,9 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
           (id, roll_corec id env_ty ty')
         ]) 
       else
-      (i + 1, PHashMap.from_list [
-        (id, Ty.union (roll_corec id env_ty ty') (Ty.fvar i))
-      ]) 
+        (i + 1, PHashMap.from_list [
+          (id, roll_corec id env_ty (Ty.union ty' (Ty.fvar i)))
+        ]) 
     ]
   | some ty => unify i env_ty closed ty' ty 
 

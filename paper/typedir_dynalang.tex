@@ -1024,11 +1024,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \Delta(\alpha_1) = \text{none} \ \wedge\
         \alpha_1 \in \text{freevars}(\tau[\Delta])
         \\
-        \text{unify } \iota\ \Delta \vdash \tau_1 
+        \text{unify } \iota\ \Delta \vdash 
+        \tau_4
         \leq
         (\exists \widebar{\alpha_2} :: \tau_1 \leq \tau_2 \ .\ \tau_3)
         &\text{if }
-        \Delta(\alpha_1) = \text{some } \tau_1
+        \Delta(\alpha_1) = \text{some } \tau_4
       \end{cases}
       \\
 
@@ -1054,11 +1055,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \Delta(\alpha_2) = \text{none} \ \wedge\ 
         \alpha_2 \notin \text{freevars}(\tau[\Delta])
         \\
+        \text{unify } \iota\ \Delta \vdash 
         (\forall \widebar{\alpha_1} :: \tau_1 \leq \tau_2 \ .\ \tau_3)
-        \leq
-        \text{unify } \iota\ \Delta \vdash \tau_1 
+        \leq  
+        \tau_4
         &\text{if }
-        \Delta(\alpha_2) = \text{some } \tau_1
+        \Delta(\alpha_2) = \text{some } \tau_4
       \end{cases}  
       \\
 
