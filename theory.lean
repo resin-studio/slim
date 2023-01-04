@@ -21,7 +21,7 @@ def PHashMap.insert_all [BEq α] [Hashable α]
 -- instance [BEq α] [Hashable α] : Append (PHashMap α β) where
 --   append := PHashMap.insert_all
 
-infixl:65   " ;; " => PHashMap.insert_all
+infixl:65   " ; " => PHashMap.insert_all
 
 def PHashMap.from_list [BEq α] [Hashable α] 
 (source : List (α × β)) : PHashMap α β :=
@@ -63,7 +63,7 @@ match ty with
 | .bot => "⊥" 
 | .top => "⊤" 
 | .tag l ty1 => 
-  (l ++ "^" ++ (Ty.repr ty1 n))
+  (l ++ "*" ++ (Ty.repr ty1 n))
 | .field l ty1 => 
   (l ++ " ~ " ++ (Ty.repr ty1 n))
 
@@ -77,7 +77,7 @@ match ty with
 | .inter (Ty.field "l" l) (Ty.field "r" r) =>
   Format.bracket "(" ((Ty.repr l n) ++ " × " ++ (Ty.repr r n)) ")"
 | .inter ty1 ty2 =>
-  Format.bracket "(" ((Ty.repr ty1 n) ++ " ; " ++ (Ty.repr ty2 n)) ")"
+  Format.bracket "(" ((Ty.repr ty1 n) ++ " ∧ " ++ (Ty.repr ty2 n)) ")"
 | .case ty1 ty2 =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
 | .univ n ty_c1 ty_c2 ty_pl =>
@@ -125,7 +125,7 @@ match t with
 | .fvar id => 
   "x[" ++ repr id ++ "]"
 | .tag l t1 =>
-  l ++ "#" ++ (Tm.repr t1 n)
+  l ++ "%" ++ (Tm.repr t1 n)
 | record [("l", l), ("r", r)] =>
   let _ : ToFormat Tm := ⟨fun t1 => Tm.repr t1 n ⟩
   Format.bracket "(" (Format.joinSep [l, r] ("," ++ Format.line)) ")"
@@ -180,12 +180,12 @@ syntax:90 "α["slm:100"]" : slm
 syntax:90 "@" : slm
 syntax:90 "⊥" : slm
 syntax:90 "⊤" : slm
-syntax:90 slm:100 "^" slm:90 : slm
+syntax:90 slm:100 "*" slm:90 : slm
 syntax:90 slm:100 "~" slm:90 : slm
 syntax:50 slm:51 "->" slm:50 : slm
-syntax:60 slm:60 "|" slm:61 : slm
+syntax:60 slm:60 "∨" slm:61 : slm
 syntax:60 slm:60 "+" slm:61 : slm
-syntax:70 slm:70 ";" slm:71 : slm
+syntax:70 slm:70 "∧" slm:71 : slm
 syntax:70 slm:70 "×" slm:71 : slm
 syntax:40 "∃" slm "::" slm "≤" slm "=>" slm:40 : slm 
 syntax:40 "∃" slm "=>" slm:40 : slm 
@@ -199,7 +199,7 @@ syntax:30 "_" : slm
 syntax:30 "()" : slm
 syntax:30 "y[" slm:90 "]": slm
 syntax:30 "x[" slm:90 "]" : slm
-syntax:30 slm:100 "#" slm:30 : slm
+syntax:30 slm:100 "%" slm:30 : slm
 syntax:30 slm:100 ":=" slm:30 : slm
 syntax:30 "(" slm "," slm ")" : slm
 syntax:30 "ω" slm : slm
@@ -235,12 +235,12 @@ macro_rules
 | `([: @ :]) => `(Ty.unit)
 | `([: ⊥ :]) => `(Ty.bot)
 | `([: ⊤ :]) => `(Ty.top)
-| `([: $a ^ $b:slm :]) => `(Ty.tag [: $a :] [: $b :])
+| `([: $a * $b:slm :]) => `(Ty.tag [: $a :] [: $b :])
 | `([: $a ~ $b:slm :]) => `(Ty.field [: $a :] [: $b :])
 | `([: $a -> $b :]) => `(Ty.case [: $a :] [: $b :])
-| `([: $a | $b :]) => `(Ty.union [: $a :] [: $b :])
+| `([: $a ∨ $b :]) => `(Ty.union [: $a :] [: $b :])
 | `([: $a + $b :]) => `(Ty.union (Ty.tag "inl" [: $a :]) (Ty.tag "inr" [: $b :]))
-| `([: $a ; $b :]) => `(Ty.inter [: $a :] [: $b :])
+| `([: $a ∧ $b :]) => `(Ty.inter [: $a :] [: $b :])
 | `([: $a × $b :]) => `(Ty.inter (Ty.field "l" [: $a :]) (Ty.field "r" [: $b :]))
 | `([: ∀ $a :: $b ≤ $c => $d :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
 | `([: ∀ $a:slm => $b:slm :]) => `(Ty.univ [: $a :] [: ⊥ :] [: ⊤ :] [: $b :] )
@@ -253,7 +253,7 @@ macro_rules
 | `([: () :]) => `(Tm.unit)
 | `([: y[$n] :]) => `(Tm.bvar [: $n :])
 | `([: x[$n] :]) => `(Tm.fvar [: $n :])
-| `([: $a # $b :]) => `(Tm.tag [: $a :] [: $b :])
+| `([: $a % $b :]) => `(Tm.tag [: $a :] [: $b :])
 | `([: $a := $b :]) => `(([: $a :], [: $b :]))
 | `([: for $b : $c => $d :]) => `(([: $b :], Option.some [: $c :], [: $d :]))
 | `([: for $b => $d :]) => `(([: $b :], Option.none, [: $d :]))
@@ -389,13 +389,13 @@ def Ty.free_vars : Ty -> PHashMap Nat Unit
 | .top => {} 
 | .tag l ty => (Ty.free_vars ty) 
 | .field l ty => (Ty.free_vars ty)
-| .union ty1 ty2 => Ty.free_vars ty1 ;; Ty.free_vars ty2
-| .inter ty1 ty2 => Ty.free_vars ty1 ;; Ty.free_vars ty2
-| .case ty1 ty2 => Ty.free_vars ty1 ;; Ty.free_vars ty2
+| .union ty1 ty2 => Ty.free_vars ty1 ; Ty.free_vars ty2
+| .inter ty1 ty2 => Ty.free_vars ty1 ; Ty.free_vars ty2
+| .case ty1 ty2 => Ty.free_vars ty1 ; Ty.free_vars ty2
 | .univ n ty_c1 ty_c2 ty => 
-  (Ty.free_vars ty_c1);;(Ty.free_vars ty_c2);;(Ty.free_vars ty)
+  (Ty.free_vars ty_c1);(Ty.free_vars ty_c2);(Ty.free_vars ty)
 | .exis n ty_c1 ty_c2 ty =>
-  (Ty.free_vars ty_c1);;(Ty.free_vars ty_c2);;(Ty.free_vars ty)
+  (Ty.free_vars ty_c1);(Ty.free_vars ty_c2);(Ty.free_vars ty)
 | .recur ty => (Ty.free_vars ty)
 | .corec ty => (Ty.free_vars ty)
 
@@ -647,8 +647,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
 | .case ty1 ty2', .case ty1' ty2 =>
   List.bind (unify i env_ty closed ty1' ty1) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ;; env_ty1) closed ty2' ty2) (fun (i, env_ty2) =>
-    [ (i, env_ty1 ;; env_ty2) ]
+  List.bind (unify i (env_ty ; env_ty1) closed ty2' ty2) (fun (i, env_ty2) =>
+    [ (i, env_ty1 ; env_ty2) ]
   ))
 
 
@@ -664,14 +664,14 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   let ty2 := Ty.instantiate 0 args2 ty2
 
   List.bind (unify i (env_ty) closed ty1 ty2) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty;;env_ty1) True ty_c3 ty_c4) (fun (i, env_ty2) =>
+  List.bind (unify i (env_ty;env_ty1) True ty_c3 ty_c4) (fun (i, env_ty2) =>
 
   -- unify with LHS constraints narrower than RHS constraints 
-  List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c3 ty_c1) (fun (i, env_ty3) =>
-  List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3) True ty_c1 ty_c2) (fun (i, env_ty4) =>
-  List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3;;env_ty4) True ty_c2 ty_c4) (fun (i, env_ty5) =>
+  List.bind (unify i (env_ty;env_ty1;env_ty2) True ty_c3 ty_c1) (fun (i, env_ty3) =>
+  List.bind (unify i (env_ty;env_ty1;env_ty2;env_ty3) True ty_c1 ty_c2) (fun (i, env_ty4) =>
+  List.bind (unify i (env_ty;env_ty1;env_ty2;env_ty3;env_ty4) True ty_c2 ty_c4) (fun (i, env_ty5) =>
 
-    [ (i, env_ty1;;env_ty2;;env_ty3;;env_ty4;;env_ty5)  ]
+    [ (i, env_ty1;env_ty2;env_ty3;env_ty4;env_ty5)  ]
   )))))
 
 | ty', .exis n ty_c1 ty_c2 ty =>
@@ -681,8 +681,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty := Ty.instantiate 0 args ty
   List.bind (unify i env_ty closed ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ;; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
-    [ (i, env_ty1 ;; env_ty2) ]
+  List.bind (unify i (env_ty ; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
+    [ (i, env_ty1 ; env_ty2) ]
   ))
 
 | .univ n1 ty_c1 ty_c2 ty1, .univ n2 ty_c3 ty_c4 ty2 =>
@@ -697,13 +697,13 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   let ty2 := Ty.instantiate 0 args2 ty2
 
   List.bind (unify i (env_ty) closed ty1 ty2) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty;;env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) =>
+  List.bind (unify i (env_ty;env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) =>
 
   -- unify with LHS constraints wider than RHS constraints 
-  List.bind (unify i (env_ty;;env_ty1;;env_ty2) True ty_c1 ty_c3) (fun (i, env_ty3) =>
-  List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3) True ty_c3 ty_c4) (fun (i, env_ty4) =>
-  List.bind (unify i (env_ty;;env_ty1;;env_ty2;;env_ty3;;env_ty4) True ty_c4 ty_c2) (fun (i, env_ty5) =>
-    [ (i, env_ty1;;env_ty2;;env_ty3;;env_ty4;;env_ty5)  ]
+  List.bind (unify i (env_ty;env_ty1;env_ty2) True ty_c1 ty_c3) (fun (i, env_ty3) =>
+  List.bind (unify i (env_ty;env_ty1;env_ty2;env_ty3) True ty_c3 ty_c4) (fun (i, env_ty4) =>
+  List.bind (unify i (env_ty;env_ty1;env_ty2;env_ty3;env_ty4) True ty_c4 ty_c2) (fun (i, env_ty5) =>
+    [ (i, env_ty1;env_ty2;env_ty3;env_ty4;env_ty5)  ]
   )))))
 
 | .univ n ty_c1 ty_c2 ty', ty =>
@@ -712,8 +712,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty' := Ty.instantiate 0 args ty'
   List.bind (unify i env_ty closed ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ;; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
-    [ (i, env_ty1 ;; env_ty2) ]
+  List.bind (unify i (env_ty ; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
+    [ (i, env_ty1 ; env_ty2) ]
   ))
 
 | .recur ty', .recur ty =>
@@ -749,8 +749,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
 | .union ty1 ty2, ty => 
   List.bind (unify i env_ty closed ty1 ty) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ;; env_ty1) closed ty2 ty) (fun (i, env_ty2) =>
-    [ (i, env_ty1 ;; env_ty2) ]
+  List.bind (unify i (env_ty ; env_ty1) closed ty2 ty) (fun (i, env_ty2) =>
+    [ (i, env_ty1 ; env_ty2) ]
   ))
 
 | ty, .union ty1 ty2 => 
@@ -759,8 +759,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
 | ty, .inter ty1 ty2 => 
   List.bind (unify i env_ty closed ty ty1) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ;; env_ty1) closed ty ty2) (fun (i, env_ty2) =>
-    [ (i, env_ty1 ;; env_ty2) ]
+  List.bind (unify i (env_ty ; env_ty1) closed ty ty2) (fun (i, env_ty2) =>
+    [ (i, env_ty1 ; env_ty2) ]
   ))
 
 | .inter ty1 ty2, ty => 
@@ -772,7 +772,7 @@ def unify_all (i : Nat) (cs : List (Ty × Ty)) : List (Nat × PHashMap Nat Ty) :
   List.foldl (fun u_env_ty1 => fun (ty_c1, ty_c2) => 
     List.bind u_env_ty1 (fun (i, env_ty1) => 
     List.bind (unify i env_ty1 False ty_c1 ty_c2) (fun (i, env_ty2) =>
-      [ (i, env_ty1 ;; env_ty2) ]
+      [ (i, env_ty1 ; env_ty2) ]
     ))
   ) [(i, {})] cs
 
@@ -929,8 +929,8 @@ match t with
 | .tag l t1 =>   
   let (i, ty1) := (i + 1, .fvar i)
   List.bind (unify i env_ty closed (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
-  List.bind (infer i (env_ty ;; env_ty1) env_tm closed t1 ty1) (fun (i, env_ty_x, ty1') =>
-    [ (i, env_ty1 ;; env_ty_x, Ty.tag l ty1') ]
+  List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 ty1) (fun (i, env_ty_x, ty1') =>
+    [ (i, env_ty1 ; env_ty_x, Ty.tag l ty1') ]
   ))
 
 | .record fds =>
@@ -948,8 +948,8 @@ match t with
 
   let f_step := fun acc => (fun (l, t1, ty1) =>
     List.bind acc (fun (i, env_ty_acc, ty_acc) =>
-    List.bind (infer i (env_ty ;; env_ty_acc) env_tm closed t1 ty1) (fun (i, env_ty_x, ty1') =>
-      [(i, env_ty_acc ;; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
+    List.bind (infer i (env_ty ; env_ty_acc) env_tm closed t1 ty1) (fun (i, env_ty_x, ty1') =>
+      [(i, env_ty_acc ; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
     ))
   )
 
@@ -991,9 +991,9 @@ match t with
       | .none => (i + 1, Ty.fvar i)
 
     let b := Tm.instantiate 0 list_tm_x b  
-    List.bind (infer i (env_ty ;; env_ty_acc) (env_tm ;; env_pat) True p ty_p) (fun (i, env_ty_p, _) =>
-    List.bind (infer i (env_ty ;; env_ty_acc ;; env_ty_p) (env_tm ;; env_pat) closed b ty_b) (fun (i, env_ty_b, ty_b') =>
-      [(i, env_ty_acc ;; env_ty_p ;; env_ty_b, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
+    List.bind (infer i (env_ty ; env_ty_acc) (env_tm ; env_pat) True p ty_p) (fun (i, env_ty_p, _) =>
+    List.bind (infer i (env_ty ; env_ty_acc ; env_ty_p) (env_tm ; env_pat) closed b ty_b) (fun (i, env_ty_b, ty_b') =>
+      [(i, env_ty_acc ; env_ty_p ; env_ty_b, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
     ))))
   )
 
@@ -1009,36 +1009,36 @@ match t with
 -- | .proj t1 l =>
 --   List.bind (infer i env_ty env_tm closed t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
 --   let (i, ty') := (i + 1, Ty.fvar i)
---   List.bind (unify i (env_ty ;; env_ty1) closed ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
---     [(i, env_ty1 ;; env_ty2, ty')]
+--   List.bind (unify i (env_ty ; env_ty1) closed ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
+--     [(i, env_ty1 ; env_ty2, ty')]
 --   ))
 
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
   List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
-  List.bind (infer i (env_ty ;; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, _) =>
-     [(i, env_ty1 ;; env_ty2, ty)]
+  List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, _) =>
+     [(i, env_ty1 ; env_ty2, ty)]
   ))
 
 -- | .app t1 t2 =>
 --   let (i, ty2) := (i + 1, Ty.fvar i)
 --   let (i, ty') := (i + 1, Ty.fvar i)
 --   List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1) =>
---   List.bind (infer i (env_ty ;; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, ty2') =>
---   List.bind (unify i (env_ty ;; env_ty1 ;; env_ty2) closed ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
---      [(i, env_ty1 ;; env_ty2 ;; env_ty3, ty')]
+--   List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, ty2') =>
+--   List.bind (unify i (env_ty ; env_ty1 ; env_ty2) closed ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
+--      [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
 --   )))
 
 | .letb ty1 t1 t => 
   let (i, tyx) := (i + 1, Ty.fvar i)
   List.bind (unify i env_ty closed ty1 tyx) (fun (i, env_ty0) =>
-  List.bind (infer i (env_ty;;env_ty0) env_tm closed t1 tyx) (fun (i, env_ty1, ty1') =>
-  let ty1' := (Ty.subst (env_ty;;env_ty0;;env_ty1) ty1')
+  List.bind (infer i (env_ty;env_ty0) env_tm closed t1 tyx) (fun (i, env_ty1, ty1') =>
+  let ty1' := (Ty.subst (env_ty;env_ty0;env_ty1) ty1')
   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
   let ty1' := [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
-  List.bind (infer i env_ty (env_tm ;; env_tmx) closed t ty) (fun (i, env_ty2, ty') =>
+  List.bind (infer i env_ty (env_tm ; env_tmx) closed t ty) (fun (i, env_ty2, ty') =>
     [ (i, env_ty2, ty') ]
   )))
 
@@ -1046,9 +1046,9 @@ match t with
   List.bind (infer i (env_ty) env_tm True t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
   let (i, ty_prem) := (i + 1, Ty.fvar i) 
   let (i, ty_conc) := (i + 1, Ty.fvar i) 
-  List.bind (unify i (env_ty ;; env_ty1) True ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
-    let ty_prem := Ty.subst (env_ty ;; env_ty1 ;; env_ty2) ty_prem 
-    let ty_conc := Ty.subst (env_ty ;; env_ty1 ;; env_ty2) ty_conc
+  List.bind (unify i (env_ty ; env_ty1) True ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
+    let ty_prem := Ty.subst (env_ty ; env_ty1 ; env_ty2) ty_prem 
+    let ty_conc := Ty.subst (env_ty ; env_ty1 ; env_ty2) ty_conc
 
     let fvs := (Ty.free_vars ty_prem).toList.bind (fun (k, _) => [k])
 
@@ -1059,7 +1059,7 @@ match t with
       )
     :]
 
-    [ (i, env_ty1 ;; env_ty2, ty') ]
+    [ (i, env_ty1 ; env_ty2, ty') ]
   ))
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
@@ -1074,8 +1074,8 @@ partial def infer_reduce (t : Tm) : Ty := infer_reduce_wt t [: α[30] :]
 #eval [: β[0] :]
 #eval [: β[0] :]
 
-#check [: β[0] | α[0] :]
-#check [: β[0] ; α[0] :]
+#check [: β[0] ∨ α[0] :]
+#check [: β[0] ∧ α[0] :]
 #check [: β[0] × α[0] :]
 #check [: β[0] + α[0] :]
 def x := 0
@@ -1085,59 +1085,59 @@ def x := 0
 #check [: ∀ 2 => β[0] :]
 #check [: @ :]
 #check [: α[24] :]
-#check [: foo ^ @ :]
-#check [: foo ^ @ | (boo ^ @) :]
-#check [: μ β[0] => foo ^ @ :]
-#check [: foo ^ boo ^ @ :]
-#check [: μ β[0] => foo ^ boo ^ @ :]
-#check [: μ β[0] => foo ^ β[0] :]
-#check [: μ β[0] => foo ^ β[0]  ; α[0] | α[2] ; α[0]:]
-#check [: β[3] ; α[0] -> α[1] | α[2] :]
-#check [: μ β[0] => foo ^ β[0] ; α[0] | α[2] ; α[0] -> α[1] | α[2] :]
-#check [: μ β[0] => foo ^ β[0] ; α[0] | α[2] ; α[0] :]
+#check [: foo * @ :]
+#check [: foo * @ ∨ (boo * @) :]
+#check [: μ β[0] => foo * @ :]
+#check [: foo * boo * @ :]
+#check [: μ β[0] => foo * boo * @ :]
+#check [: μ β[0] => foo * β[0] :]
+#check [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0]:]
+#check [: β[3] ∧ α[0] -> α[1] ∨ α[2] :]
+#check [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0] -> α[1] ∨ α[2] :]
+#check [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0] :]
 #check [: α[0] :]
 
 #eval [: ∀ 2 :: α[0] ≤ α[0] => β[0] :]
-#eval [: μ β[0] => foo ^ β[0] ; α[0] | α[2] ; α[0] :]
+#eval [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0] :]
 
 
 #eval ({} : PHashMap Nat Ty)
 
 def zero_ := [: 
-    zero ^ @
+    zero * @
 :]
 
 #eval (unify 3 {} False [:
-    (dumb^@)
+    (dumb*@)
 :] zero_)
 
 #eval unify 3 {} False [:
-    (zero^@)
+    (zero*@)
 :] zero_
 
 /-
   μ nat .
-    zero^@ | 
-    succ^nat 
+    zero*@ | 
+    succ*nat 
 -/
 def nat_ := [: 
   μ β[0] => 
-    zero^@ |
-    succ^β[0]
+    zero*@ ∨ 
+    succ*β[0]
 :]
 #eval nat_
 
 def even := [: 
   μ β[0] => 
-    zero^@ |
-    succ^succ^β[0]
+    zero*@ ∨ 
+    succ*succ*β[0]
 :]
 
 
 def weven := [: 
   μ β[0] => 
-    zero^@ |
-    succ^dumb^β[0]
+    zero*@ ∨ 
+    succ*dumb*β[0]
 :]
 
 #eval unify 3 {} True weven nat_ 
@@ -1162,35 +1162,35 @@ def weven := [:
 [: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
 
 #eval unify 3 {} False [:
-    (zero^@)
+    (zero*@)
 :] nat_ 
 
 #eval unify 3 {} False [:
-    (succ^(zero^@))
+    (succ*(zero*@))
 :] nat_ 
 
 #eval unify 3 {} False 
-[: (succ^(α[0])) :] 
+[: (succ*(α[0])) :] 
 nat_ 
 
 #eval unify_reduce 
-[: (succ^(α[0])) :] 
+[: (succ*(α[0])) :] 
 nat_ 
 [: α[0] :]
 
 def nat_list := [: 
   μ β[0] => (
-    (l ~ zero^@ ; r ~ nil^@) |
-    (∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[2] => 
-      (l ~ succ^β[0] ; r ~ cons^β[1]))
+    (l ~ zero*@ ∧ r ~ nil*@) ∨ 
+    (∃ 2 :: l ~ β[0] ∧ r ~ β[1] ≤ β[2] => 
+      (l ~ succ*β[0] ∧ r ~ cons*β[1]))
   )
 :]
-
+--  ∧ / ∧  
 def even_list := [: 
   μ β[0] => (
-    (l ~ zero^@ ; r ~ nil^@) |
-    (∃ 2 :: l ~ β[0] ; r ~ β[1] ≤ β[2] => 
-      (l ~ succ^succ^β[0] ; r ~ cons^cons^β[1]))
+    (l ~ zero*@ ∧ r ~ nil*@) ∨ 
+    (∃ 2 :: l ~ β[0] ∧ r ~ β[1] ≤ β[2] => 
+      (l ~ succ*succ*β[0] ∧ r ~ cons*cons*β[1]))
   )
 :]
 
@@ -1204,123 +1204,123 @@ def even_list := [:
   nat_list
 
 #eval unify 3 {} True 
-[: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello ^ β[0] :]
-[: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello ^ β[0] :]
+[: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
+[: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 
 #eval unify 3 {} True 
-[: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello ^ β[0] :]
-[: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello ^ β[0] :]
+[: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
+[: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 
 #eval unify 3 {} False
-  [: (l ~ zero^@ ; r ~ nil^@) :] 
+  [: (l ~ zero*@ ∧ r ~ nil*@) :] 
   nat_list
 
 #eval unify 3 {} False
-  [: (l ~ zero^@ ; r ~ dumb^@) :] 
+  [: (l ~ zero*@ ∧ r ~ dumb*@) :] 
   nat_list
 
 -- this is record type is not wellformed 
 #eval unify 3 {} False
-  [: (l ~ α[0] ; r ~ α[1]) :] 
+  [: (l ~ α[0] ∧ r ~ α[1]) :] 
   nat_list
 
 -- this is record type is not wellformed 
 #eval unify_reduce
-  [: (l ~ α[0] ; r ~ α[1]) :] 
+  [: (l ~ α[0] ∧ r ~ α[1]) :] 
   nat_list
   [: ⊤ :]
 
 #eval unify 3 {} False
-  [: (l ~ zero^@ ; r ~ α[0]) :] 
+  [: (l ~ zero*@ ∧ r ~ α[0]) :] 
   nat_list
 
 -- expected α[0] → /nil
 #eval unify 3 {} False
-  [: (l ~ succ^zero^@ ; r ~ cons^α[0]) :] 
+  [: (l ~ succ*zero*@ ∧ r ~ cons*α[0]) :] 
   nat_list
 
 #eval unify 3 {} False
-  [: (l ~ succ^succ^zero^@ ; r ~ cons^α[0]) :] 
+  [: (l ~ succ*succ*zero*@ ∧ r ~ cons*α[0]) :] 
   nat_list
 
 
 def examp1 := unify 3 {} False
-  [: (l ~ succ^succ^zero^@ ; r ~ cons^α[0]) :] 
+  [: (l ~ succ*succ*zero*@ ∧ r ~ cons*α[0]) :] 
   nat_list
 
 #eval unify_reduce 
-  [: (l ~ succ^succ^zero^@ ; r ~ cons^α[0]) :] 
+  [: (l ~ succ*succ*zero*@ ∧ r ~ cons*α[0]) :] 
   nat_list
   [: α[0]:]
 
 
 #eval unify 3 {} False
-  [: (l ~ succ^zero^@ ; r ~ cons^cons^α[0]) :] 
+  [: (l ~ succ*zero*@ ∧ r ~ cons*cons*α[0]) :] 
   nat_list
 
 
 
 def nat_to_list := [: 
   ν β[0] => 
-    (zero^@ -> nil^@) ; 
+    (zero*@ -> nil*@) ∧ 
     (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
-      succ^β[0] -> cons^β[1])
+      succ*β[0] -> cons*β[1])
 :]
 
 #eval unify 3 {} False 
   nat_to_list
-  [: (succ^zero^@) -> (cons^nil^@) :] 
+  [: (succ*zero*@) -> (cons*nil*@) :] 
 
 #eval unify_reduce 
   nat_to_list
-  [: (succ^zero^@) -> (cons^nil^@) :] 
+  [: (succ*zero*@) -> (cons*nil*@) :] 
   [: ⊤ :]
 
 #eval unify_reduce
   nat_to_list
-  [: (succ^zero^@ -> cons^α[0]) :] 
+  [: (succ*zero*@ -> cons*α[0]) :] 
   [: α[0] :]
 
 #eval unify_reduce
   nat_to_list
-  [: (succ^zero^@ -> cons^cons^α[0]) :] 
+  [: (succ*zero*@ -> cons*cons*α[0]) :] 
   [: α[0] :]
 
 
 /-
   μ plus .
     ∃ N .  
-      zero^@ × N × N | 
+      zero*@ × N × N | 
 
     ∃ X Y Z :: X, Y, Z ≤ plus .  
-      succ^X × Y × succ^Z
+      succ*X × Y × succ*Z
 -/
 def plus := [: 
   μ β[0] => 
     (∃ 1 => 
-      (x ~ zero^@ ; y ~ β[0] ; z ~ β[0])) |
+      (x ~ zero*@ ∧ y ~ β[0] ∧ z ~ β[0])) ∨ 
 
-    (∃ 3 :: (x ~ β[0] ; y ~ β[1] ; z ~ β[2]) ≤ β[3] => 
-      (x ~ succ^β[0] ; y ~ β[1] ; z ~ succ^β[2]))
+    (∃ 3 :: (x ~ β[0] ∧ y ~ β[1] ∧ z ~ β[2]) ≤ β[3] => 
+      (x ~ succ*β[0] ∧ y ~ β[1] ∧ z ~ succ*β[2]))
 :]
 
 -- /print plus
 
--- #eval [: (x ~ zero^@ ; y ~ zero^@ ; z ~ zero^@) :]  
--- #eval [: succ^succ^zero^@ :]  
+-- #eval [: (x ~ zero*@ ∧ y ~ zero*@ ∧ z ~ zero*@) :]  
+-- #eval [: succ*succ*zero*@ :]  
 
 
 #eval unify_reduce [:
-    x ~ zero^@ ;
-    y ~ α[0] ;
-    z ~ zero^@
+    x ~ zero*@ ∧ 
+    y ~ α[0] ∧ 
+    z ~ zero*@
 :] plus [: α[0] :]
 
 
 #eval unify_reduce [:
   (
-    x ~ (succ^zero^@) ;
-    y ~ (succ^zero^@) ;
+    x ~ (succ*zero*@) ∧ 
+    y ~ (succ*zero*@) ∧ 
     z ~ (α[0])
   )
 :] plus [: α[0] :]
@@ -1328,8 +1328,8 @@ def plus := [:
 
 #eval unify_reduce [:
   (
-    x ~ (succ^succ^zero^@) ;
-    y ~ (succ^zero^@) ;
+    x ~ (succ*succ*zero*@) ∧ 
+    y ~ (succ*zero*@) ∧
     z ~ (α[0])
   )
 :] plus
@@ -1337,28 +1337,28 @@ def plus := [:
 
 #eval unify_reduce [:
   (
-    x ~ (succ^zero^@) ;
-    y ~ (α[0]) ;
-    z ~ (succ^succ^zero^@)
+    x ~ (succ*zero*@) ∧ 
+    y ~ (α[0]) ∧
+    z ~ (succ*succ*zero*@)
   )
 :] plus
 [: α[0] :]
 
 #eval unify_reduce [:
   (
-    x ~ (succ^zero^@) ;
-    y ~ (succ^succ^zero^@) ;
+    x ~ (succ*zero*@) ∧
+    y ~ (succ*succ*zero*@) ∧
     z ~ (α[0])
   )
 :] plus [: α[0] :]
 
 
--- expected: α[0] ↦ succ^zero^@
+-- expected: α[0] ↦ succ*zero*@
 #eval unify_reduce [:
 (
-  x ~ α[0] ;
-  y ~ succ^zero^@ ;
-  z ~ succ^succ^zero^@
+  x ~ α[0] ∧
+  y ~ succ*zero*@ ∧
+  z ~ succ*succ*zero*@
 )
 :] plus
 [: α[0] :]
@@ -1366,9 +1366,9 @@ def plus := [:
 
 #eval unify_reduce [:
 (
-  x ~ succ^zero^@ ;
-  y ~ α[0] ;
-  z ~ succ^succ^zero^@
+  x ~ succ*zero*@ ∧
+  y ~ α[0] ∧
+  z ~ succ*succ*zero*@
 )
 :] plus
 [: α[0] :]
@@ -1376,21 +1376,21 @@ def plus := [:
 
 #eval unify_reduce [:
 (
-  x ~ (α[0]) ;
-  y ~ (α[1]) ;
-  z ~ (succ^succ^zero^@)
+  x ~ (α[0]) ∧
+  y ~ (α[1]) ∧
+  z ~ (succ*succ*zero*@)
 )
 :] plus
-[: x ~ α[0] ; y ~ α[1] :]
+[: x ~ α[0] ∧ y ~ α[1] :]
 
 #eval unify_reduce [:
 (
-  x ~ (succ^succ^zero^@) ;
-  y ~ (α[1]) ;
+  x ~ (succ*succ*zero*@) ∧
+  y ~ (α[1]) ∧
   z ~ (α[0])
 )
 :] plus
-[: y ~ α[1] ; z ~ α[0] :]
+[: y ~ α[1] ∧ z ~ α[0] :]
 
 
 -- term testing
@@ -1410,17 +1410,17 @@ def plus := [:
 
 
 #eval [:
-  succ#zero#()
+  succ%zero%()
 :]
 
 
 
 #eval infer_reduce [:
-  succ#zero#()
+  succ%zero%()
 :]
 
 #eval [:
-  succ#zero#()
+  succ%zero%()
 :]
 
 #eval [:
@@ -1450,96 +1450,96 @@ def plus := [:
 :]
 
 #eval infer_reduce [:
-  λ [for y[0] : abc^@ => y[0]]
+  λ [for y[0] : abc*@ => y[0]]
 :]
 
 #eval infer_reduce [:
-  λ [for y[0] : inp^@ -> out^@ =>
-  Out # λ [for y[0] => 
-      cons # ((y[1] y[0]), nil # ())
+  λ [for y[0] : inp*@ -> out*@ =>
+  Out % λ [for y[0] => 
+      cons % ((y[1] y[0]), nil % ())
   ]
   ]
 :]
 
 #eval infer_reduce [:
-  ((), nil # ())
+  ((), nil % ())
 :]
 
   
 #eval [:
-  hello^thing~@
+  hello*thing~@
   
 :]
 
 #eval infer_reduce [:
-  λ y[0] : nat^@ =>
-    let y[0] = (λ (y[0], y[1]) : (str^@ × str^@) => y[0]) =>
-    (y[0] (str#(), str#()))
+  λ y[0] : nat*@ =>
+    let y[0] = (λ (y[0], y[1]) : (str*@ × str*@) => y[0]) =>
+    (y[0] (str%(), str%()))
 :]
 
 #eval infer_reduce [:
-  λ y[0] : nat^@ =>
-    let y[0] = (λ (y[0], y[1]) : (str^@ × str^@) => y[0]) =>
-    (y[0] (_, str#()))
+  λ y[0] : nat*@ =>
+    let y[0] = (λ (y[0], y[1]) : (str*@ × str*@) => y[0]) =>
+    (y[0] (_, str%()))
 :]
 
 #eval infer_reduce [:
-  λ y[0] : nat^@ =>
-    let y[0] = λ[for (y[0], y[1]) : (str^@ × str^@) => y[0]] =>
+  λ y[0] : nat*@ =>
+    let y[0] = λ[for (y[0], y[1]) : (str*@ × str*@) => y[0]] =>
     (y[0] (y[1], _))
 :]
 
 -- Propagation: Down 
 -- even though, there is a hole in the program,
--- the type of α[0] can be inferred to be uno^@  
+-- the type of α[0] can be inferred to be uno*@  
 -- due to the application and downward propagation
 #eval infer_reduce [:
   λ y[0] : α[0] =>
-    let y[0] = (λ (y[0], y[1]) : (uno^@ × dos^@) => y[1]) =>
+    let y[0] = (λ (y[0], y[1]) : (uno*@ × dos*@) => y[1]) =>
     (y[0] (y[1], _))
 :]
 
 -- Propagation: Up
 #eval infer_reduce [:
-  λ y[0] : hello^@ -> world^@ =>
+  λ y[0] : hello*@ -> world*@ =>
   λ y[0] => 
-    (cons # ((y[1] y[0]), nil # ()))
+    (cons % ((y[1] y[0]), nil % ()))
 :]
 
 #eval infer_reduce [:
-  λ y[0] : int^@ -> str^@ => 
-  λ y[0] : int^@  =>
+  λ y[0] : int*@ -> str*@ => 
+  λ y[0] : int*@  =>
     (y[1] y[0])
 :]
 
 
 #eval infer_reduce [:
-  λ y[0] : str^@ -> @ => 
-  λ y[0] : str^@ => 
-     (OUTPUT # (y[1] y[0]))
+  λ y[0] : str*@ -> @ => 
+  λ y[0] : str*@ => 
+     (OUTPUT % (y[1] y[0]))
 :]
 
 #eval infer_reduce [:
-  λ y[0] : int^@ -> @ => 
-  λ y[0] : str^@ => 
+  λ y[0] : int*@ -> @ => 
+  λ y[0] : str*@ => 
      (y[1] y[0]) 
 :]
 
 #eval infer_reduce [:
-  λ y[0] : (int^@ | str^@) -> @ => 
-  λ y[0] : str^@ => 
+  λ y[0] : (int*@ ∨ str*@) -> @ => 
+  λ y[0] : str*@ => 
      (y[1] y[0]) 
 :]
 
 #eval infer_reduce [:
-  λ y[0] : (int^@ | α[1]) -> α[1] => 
-  λ y[0] : str^@ => 
+  λ y[0] : (int*@ ∨ α[1]) -> α[1] => 
+  λ y[0] : str*@ => 
      (y[1] y[0]) 
 :]
 
 #eval infer_reduce [:
   λ y[0] : ∀ 1 => (β[0] -> β[0]) => 
-  λ y[0] : int^@  =>
+  λ y[0] : int*@  =>
     (y[1] y[0])
 :]
 
@@ -1550,74 +1550,74 @@ def plus := [:
 -- Widening
 #eval infer_reduce [:
   λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
-    (OUTPUT # (y[0] hello#()))
+    (OUTPUT % (y[0] hello%()))
 :]
 
 -- Widening
 #eval infer_reduce [:
   λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
-    (OUTPUT # ((y[0] hello#()) world#()))
+    (OUTPUT % ((y[0] hello%()) world%()))
 :]
 
 
 -- Widening
 #eval infer_reduce [:
   λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
-  λ y[0] : hello^@ =>
-  λ y[0] : world^@ =>
-    OUTPUT # ((y[2] y[1]) y[0])
+  λ y[0] : hello*@ =>
+  λ y[0] : world*@ =>
+    OUTPUT % ((y[2] y[1]) y[0])
 :]
 
 -- Widening
 #eval infer_reduce [:
   λ y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
-  λ y[0] : hello^@ =>
-  λ y[0] : world^@ =>
-    OUTPUT # ((y[2] y[1]) y[0])
+  λ y[0] : hello*@ =>
+  λ y[0] : world*@ =>
+    OUTPUT % ((y[2] y[1]) y[0])
 :]
 
 #eval infer_reduce [:
   λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
-  let y[0] = ((y[0] hello#()) world#()) =>
-    OUTPUT # y[0]
+  let y[0] = ((y[0] hello%()) world%()) =>
+    OUTPUT % y[0]
 :]
 
 
 #eval infer_reduce [:
   λ y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
-  λ y[0] : int^@  =>
-  λ y[0] : str^@  =>
+  λ y[0] : int*@  =>
+  λ y[0] : str*@  =>
   let y[0] = ((y[2] y[1]) y[0]) =>
-  OUTPUT # y[0]
+  OUTPUT % y[0]
 :]
 
 #eval infer_reduce [:
-  let y[0] = (hello # ()) =>
+  let y[0] = (hello % ()) =>
   y[0]
 :]
 
 -- Narrowing
 
 #eval [:
-  λ y[0] : uno^@ -> @ => y[0]
+  λ y[0] : uno*@ -> @ => y[0]
 :]
 #eval [:
-  λ y[0] : uno^@ -> @ => 
-  λ y[0] : dos^@ -> @ =>
+  λ y[0] : uno*@ -> @ => 
+  λ y[0] : dos*@ -> @ =>
   λ y[0] =>
     ((y[2] y[0]), (y[1] y[0]))
 :]
 #eval infer_reduce [:
-  λ y[0] : uno^@ -> @ => 
-  λ y[0] : dos^@ -> @ =>
-  OUTPUT # (
+  λ y[0] : uno*@ -> @ => 
+  λ y[0] : dos*@ -> @ =>
+  OUTPUT % (
     λ y[0] => ((y[2] y[0]), (y[1] y[0]))
   )
 :]
 #eval infer_reduce [:
-  λ y[0] : uno^@ -> @ => 
-  λ y[0] : dos^@ -> @ =>
-  OUTPUT # (λ y[0] =>
+  λ y[0] : uno*@ -> @ => 
+  λ y[0] : dos*@ -> @ =>
+  OUTPUT % (λ y[0] =>
     ((y[2] y[0]), (y[1] y[0]))
   )
 :]
@@ -1626,28 +1626,28 @@ def plus := [:
 -- let-polymorphism
 
 #eval infer_reduce [:
-  let y[0] = (λ y[0] : str^@ => hello # y[0]) =>
-  (y[0] str#())
+  let y[0] = (λ y[0] : str*@ => hello % y[0]) =>
+  (y[0] str%())
 :]
 
 #eval infer_reduce [:
-  let y[0] = (λ y[0] => hello # y[0]) =>
+  let y[0] = (λ y[0] => hello % y[0]) =>
   (
     y[0]
   )
 :]
 
 #eval infer_reduce [:
-  let y[0] = (λ y[0] => hello # y[0]) =>
-  (y[0] uno#())
+  let y[0] = (λ y[0] => hello % y[0]) =>
+  (y[0] uno%())
 :]
 
 
 #eval infer_reduce [:
-  let y[0] = (λ y[0] => hello # y[0]) =>
+  let y[0] = (λ y[0] => hello % y[0]) =>
   (
-    (y[0] uno#()),
-    (y[0] dos#())
+    (y[0] uno%()),
+    (y[0] dos%())
   )
 :]
 
@@ -1656,9 +1656,9 @@ def plus := [:
 
 def repli := [:
   ∀ 1 => β[0] -> (ν β[0] =>
-    (zero^@ -> nil^@) ;
+    (zero*@ -> nil*@) ∧
     (∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
-      succ^β[0] -> cons^(β[3] × β[1])
+      succ*β[0] -> cons*(β[3] × β[1])
     )
   )
 :]
@@ -1667,82 +1667,82 @@ def repli := [:
 -----
 
 #eval unify 3 {} True 
-[: uno ~ @ ; dos ~ @ ; tres ~ @:]
-[: uno ~ @ ; tres ~ @:]
+[: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
+[: uno ~ @ ∧ tres ~ @:]
 
 #eval unify 3 {} True 
-[: uno ~ @ ; dos ~ @ ; tres ~ @:]
-[: ∀ 1 :: β[0] ≤ uno ~ @ | dos ~ @ | tres ~ @ => β[0]:]
+[: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
+[: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
 
 #eval unify 3 {} True 
-[: ∀ 1 :: β[0] ≤ uno ~ @ | dos ~ @ | tres ~ @ => β[0]:]
-[: uno ~ @ ; dos ~ @ ; tres ~ @:]
+[: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
+[: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
 
 
 #eval unify 3 {} True 
-[: uno ~ @ | dos ~ @ | tres ~ @ :]
-[:dos ~ @ ; tres ~ @ :]
+[: uno ~ @ ∨ dos ~ @ ∨ tres ~ @ :]
+[:dos ~ @ ∧ tres ~ @ :]
 
 #eval unify 3 {} True 
-[:dos ~ @ ; tres ~ @ ; four ~ @:]
-[: uno ~ @ | dos ~ @ | tres ~ @ :]
+[:dos ~ @ ∧ tres ~ @ ∧ four ~ @:]
+[: uno ~ @ ∨ dos ~ @ ∨ tres ~ @ :]
 
 #eval unify 3 {} True 
-[: ∀ 1 :: β[0] ≤ uno ~ @ | dos ~ @ | tres ~ @ => β[0]:]
-[:dos ~ @ ; tres ~ @ ; four ~ @:]
+[: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
+[:dos ~ @ ∧ tres ~ @ ∧ four ~ @:]
 
 #eval unify 3 {} True 
-[: ∀ 1 :: uno ~ @ ; dos ~ @ ; tres ~ @ ≤ β[0] => β[0]:]
-[:dos ~ @ ; tres ~ @ :]
+[: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
+[:dos ~ @ ∧ tres ~ @ :]
 
 #eval unify 3 {} True 
-[: ∀ 1 :: uno ~ @ ; dos ~ @ ; tres ~ @ ≤ β[0] => β[0]:]
-[: ∀ 1 :: uno ~ @ ; dos ~ @ ≤ β[0] => β[0]:]
+[: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
+[: ∀ 1 :: uno ~ @ ∧ dos ~ @ ≤ β[0] => β[0]:]
 
 #eval unify 3 {} True 
-[: ∀ 1 :: uno ~ @ ; dos ~ @ ≤ β[0] => β[0]:]
-[: ∀ 1 :: uno ~ @ ; dos ~ @ ; tres ~ @ ≤ β[0] => β[0]:]
+[: ∀ 1 :: uno ~ @ ∧ dos ~ @ ≤ β[0] => β[0]:]
+[: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 
 #eval unify 3 {} True 
-[: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello ^ β[0] :]
-[: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello ^ β[0] :]
+[: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
+[: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 
 #eval unify 3 {} True 
-[: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello ^ β[0] :]
-[: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello ^ β[0] :]
+[: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
+[: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 
 #eval unify 3 {} True 
-[: ∀ 1 :: uno ~ @ ; dos ~ @ ; tres ~ @ ≤ β[0] => β[0]:]
-[: ∀ 1 :: uno ~ @ ; dos ~ @ ; four ~ @ ≤ β[0] => β[0]:]
+[: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
+[: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ four ~ @ ≤ β[0] => β[0]:]
 
 #eval unify 3 {} True 
 [: ∀ 1 :: β[0] ≤ uno ~ @ => β[0]:]
-[:uno ~ @ ; four ~ @:]
+[:uno ~ @ ∧ four ~ @:]
 
 #eval unify 3 {} True 
 [: ∀ 1 :: uno ~ @ ≤ β[0] => β[0]:]
-[:uno ~ @ ; four ~ @:]
+[:uno ~ @ ∧ four ~ @:]
 
 
 ----- 
 
 def nat_to_unit := [: 
   ν β[0] => 
-    (zero^@ -> @) ; 
+    (zero*@ -> @) ∧ 
     (∀ 1 :: β[1] ≤ β[0] -> @ => 
-      (succ^β[0]) -> @) 
+      (succ*β[0]) -> @) 
 :]
 
 def even_to_unit := [: 
   ν β[0] => 
-    (zero^@ -> @) ; 
+    (zero*@ -> @) ∧ 
     (∀ 1 :: β[1] ≤ β[0] -> @ => 
-      (succ^succ^β[0]) -> @)
+      (succ*succ*β[0]) -> @)
 :]
 
 #eval unify 3 {} False 
 nat_to_unit
-[: (zero^@ -> @) :]
+[: (zero*@ -> @) :]
 
 #eval unify 3 {} True 
 nat_to_unit
@@ -1750,26 +1750,26 @@ nat_to_unit
 
 #eval unify 3 {} True 
 nat_to_unit
-[: (succ^zero^@ -> @) :]
+[: (succ*zero*@ -> @) :]
 
 #eval unify 3 {} True 
 even_to_unit
-[: (succ^succ^zero^@ -> @) :]
+[: (succ*succ*zero*@ -> @) :]
 
 #eval unify 3 {} True 
 even_to_unit
-[: (succ^zero^@ -> @) :]
+[: (succ*zero*@ -> @) :]
 
 -- #eval unify 3 {} True 
 -- [: 
---     (zero^@ -> @) ; 
+--     (zero*@ -> @) ∧ 
 --     (∀ 1 :: ⟨nat_to_unit⟩ ≤ β[0] -> @ => 
---       (succ^β[0]) -> @) 
+--       (succ*β[0]) -> @) 
 -- :]
 -- [: 
---     (zero^@ -> @) ; 
+--     (zero*@ -> @) ∧ 
 --     (∀ 1 :: ⟨nat_to_unit⟩ ≤ β[0] -> @ => 
---       (succ^succ^β[0]) -> @)
+--       (succ*succ*β[0]) -> @)
 -- :]
 
 -- #eval unify 3 {} True 
@@ -1784,36 +1784,36 @@ even_to_unit
 -- nat_
 -- even
 
-
 #eval repli
 
 #eval [:
   λ y[0] => fix (λ y[0] => λ[
-  for zero#() => nil#(),
-  for succ#y[0] => cons#(y[2], (y[1] y[0])) 
+  for zero%() => nil%(),
+  for succ%y[0] => cons%(y[2], (y[1] y[0])) 
   ]) 
 :]
 
+
 #eval infer_reduce [:
   λ[
-  for zero#() => nil#(),
-  for succ#y[0] => cons#((), ()) 
+  for zero%() => nil%(),
+  for succ%y[0] => cons%((), ()) 
   ] 
 :]
 
 
-#eval [: (zero^@ -> nil^@) ; (succ^⊤ -> cons^(@ × ⊥)) :]
+#eval [: (zero*@ -> nil*@) ∧ (succ*⊤ -> cons*(@ × ⊥)) :]
 
 #eval unify_reduce
-[: α[2] -> ((zero^@ -> nil^@) ; (succ^⊤ -> cons^(@ × @))) :]
+[: α[2] -> ((zero*@ -> nil*@) ∧ (succ*⊤ -> cons*(@ × @))) :]
 [: α[0] -> α[0] :]
 [: α[0] :]
 
 #eval infer_reduce_wt 
 [:
   (λ y[0] => λ[
-  for zero#() => nil#(),
-  for succ#y[0] => cons#((), (y[1] y[0])) 
+  for zero%() => nil%(),
+  for succ%y[0] => cons%((), (y[1] y[0])) 
   ]) 
 :]
 [: α[20] -> α[20] :]
@@ -1821,22 +1821,22 @@ even_to_unit
 
 #eval [:
   ∀ 1 => β[0] -> (ν β[0] =>
-    (zero^@ -> nil^@) ;
+    (zero*@ -> nil*@) ∧
     (∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
-      succ^β[0] -> cons^(β[3] × β[1])
+      succ*β[0] -> cons*(β[3] × β[1])
     )
   )
 :]
 
 #eval unify_reduce
-[: (α[0] -> α[1]) -> ((zero^@ -> nil^@) ; (succ^α[0] -> cons^(@ × α[1]))) :]
+[: (α[0] -> α[1]) -> ((zero*@ -> nil*@) ∧ (succ*α[0] -> cons*(@ × α[1]))) :]
 [: α[20] -> α[20] :]
 [: α[20] :]
 
 
 #eval infer_reduce [:
   fix (λ y[0] => λ[
-  for zero#() => nil#(),
-  for succ#y[0] => cons#((), (y[1] y[0])) 
+  for zero%() => nil%(),
+  for succ%y[0] => cons%((), (y[1] y[0])) 
   ]) 
 :]
