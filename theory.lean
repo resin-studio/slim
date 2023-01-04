@@ -574,6 +574,46 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   | (_, .some ty) => unify i env_ty closed (.fvar id1) ty 
   | (.some ty', _) => unify i env_ty closed ty' (.fvar id2) 
 
+| .fvar id, .exis n ty_c1 ty_c2 ty =>
+  match env_ty.find? id with 
+  | none => 
+    [ 
+      (i, PHashMap.from_list [
+        (id, roll_recur id env_ty (.univ n ty_c1 ty_c2 ty))
+      ]) 
+    ]
+  | some ty' => unify i env_ty closed ty' (.exis n ty_c1 ty_c2 ty) 
+
+| .univ n ty_c1 ty_c2 ty, .fvar id  =>
+  match env_ty.find? id with 
+  | none => 
+    [ 
+      (i, PHashMap.from_list [
+        (id, roll_recur id env_ty (.exis n ty_c1 ty_c2 ty))
+      ]) 
+    ]
+  | some ty' => unify i env_ty closed (.univ n ty_c1 ty_c2 ty) ty' 
+
+| .fvar id, .union ty1 ty2 =>
+  match env_ty.find? id with 
+  | none => 
+    [ 
+      (i, PHashMap.from_list [
+        (id, roll_recur id env_ty (.union ty1 ty2))
+      ]) 
+    ]
+  | some ty => unify i env_ty closed ty (.union ty1 ty2) 
+
+| .inter ty1 ty2, .fvar id  =>
+  match env_ty.find? id with 
+  | none => 
+    [ 
+      (i, PHashMap.from_list [
+        (id, roll_recur id env_ty (.inter ty1 ty2))
+      ]) 
+    ]
+  | some ty => unify i env_ty closed (.inter ty1 ty2) ty 
+
 | .fvar id, ty  => 
   match env_ty.find? id with 
   | none => 
@@ -583,9 +623,9 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
           (id, roll_recur id env_ty ty)
         ]) 
       else
-        (i + 1, PHashMap.from_list [
-          (id, Ty.inter (roll_recur id env_ty ty) (Ty.fvar i))
-        ]) 
+      (i + 1, PHashMap.from_list [
+        (id, Ty.inter (roll_recur id env_ty ty) (Ty.fvar i))
+      ]) 
     ]
   | some ty' => unify i env_ty closed ty' ty 
 
@@ -597,9 +637,9 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
           (id, roll_corec id env_ty ty')
         ]) 
       else
-        (i + 1, PHashMap.from_list [
-          (id, Ty.union (roll_corec id env_ty ty') (Ty.fvar i))
-        ]) 
+      (i + 1, PHashMap.from_list [
+        (id, Ty.union (roll_corec id env_ty ty') (Ty.fvar i))
+      ]) 
     ]
   | some ty => unify i env_ty closed ty' ty 
 
@@ -1010,18 +1050,20 @@ match t with
 --   )))
 
 | .letb op_ty1 t1 t => 
-  let (i, ty1) := match op_ty1 with
-    | .some ty1 => (i, ty1) 
-    | .none => (i + 1, Ty.fvar i)
-  List.bind (infer i env_ty env_tm closed t1 ty1) (fun (i, env_ty1, ty1') =>
-  let ty1' := (Ty.subst (env_ty;;env_ty1) ty1')
+  let (i, tyx) := (i + 1, Ty.fvar i)
+  let ty1 := match op_ty1 with
+    | .some ty1 => ty1
+    | .none => [: ∀ 1 => β[0] :]
+  List.bind (unify i env_ty closed ty1 tyx) (fun (i, env_ty0) =>
+  List.bind (infer i (env_ty;;env_ty0) env_tm closed t1 tyx) (fun (i, env_ty1, ty1') =>
+  let ty1' := (Ty.subst (env_ty;;env_ty0;;env_ty1) ty1')
   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
   let ty1' := [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
   List.bind (infer i env_ty (env_tm ;; env_tmx) closed t ty) (fun (i, env_ty2, ty') =>
     [ (i, env_ty2, ty') ]
-  ))
+  )))
 
 | .fix t1 =>
   List.bind (infer i (env_ty) env_tm True t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
