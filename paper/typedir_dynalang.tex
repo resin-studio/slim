@@ -409,6 +409,88 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
   \item english statement 
 \end{enumerate}
 \subsection{Syntax}
+
+
+\begin{figure*}[h]
+  \[
+    \begin{array}{l @{} l}
+      t 
+      &{} ::=
+      \begin{array}[t]{@{} l}
+        \_ 
+        \ |\ 
+        () 
+        \ |\ 
+        x
+        \ |\ 
+        l\#t 
+        \ |\ 
+        \omega\ fs  
+        \ |\ 
+        \lambda\ cs 
+        \ |\ 
+        t/l
+        \ |\ 
+        t\ t
+        \ |\ 
+        \text{let } x : \tau = t\ \text{in } t
+        \ |\ 
+        \text{fix } t
+      \end{array}
+      \\
+      fs 
+      &{} ::=
+      \begin{array}[t]{@{} l}
+        [] 
+        \ |\ 
+        l := t :: fs 
+      \end{array}
+      \\
+      cs
+      &{} ::=
+      \begin{array}[t]{@{} l}
+        [] 
+        \ |\ 
+        t : \tau \Rightarrow t :: cs 
+      \end{array}
+      \\
+      \tau
+      &{} ::=
+      \begin{array}[t]{@{} l}
+        \alpha 
+        \ |\ 
+        \bot 
+        \ |\ 
+        \top 
+        \ |\ 
+        l*\tau 
+        \ |\ 
+        l\sim\tau 
+        \ |\ 
+        \tau\rightarrow\tau 
+        \ |\ 
+        \exists \widebar{\alpha} :: \tau \leq \tau \ .\ \tau 
+        \ |\ 
+        \forall \widebar{\alpha} :: \tau \leq \tau \ .\ \tau 
+        \ |\ 
+        \mu \alpha.\tau 
+        \ |\ 
+        \nu \alpha.\tau 
+        \ |\ 
+        (\tau \ |\ \tau) 
+        \ |\ 
+        \tau\ ;\ \tau
+      \end{array}
+    \end{array}
+  \]
+  \caption{Syntax}
+\end{figure*}
+
+
+
+
+
+
 \begin{enumerate}
   \item rules 
 \end{enumerate}
