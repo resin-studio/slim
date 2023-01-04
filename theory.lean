@@ -107,7 +107,7 @@ inductive Tm : Type
 | func : List (Tm × Option Ty × Tm) -> Tm
 | proj : Tm -> String -> Tm
 | app : Tm -> Tm -> Tm
-| letb : Option Ty -> Tm -> Tm -> Tm
+| letb : Ty -> Tm -> Tm -> Tm
 | fix : Tm -> Tm
 deriving Repr, Inhabited, BEq
 
@@ -154,12 +154,12 @@ match t with
   Tm.repr t1 n ++ "/" ++ l
 | .app t1 t2 =>
   Format.bracket "(" (Tm.repr t1 n) ") " ++ "(" ++ Tm.repr t2 n ++ ")"
-| .letb op_ty1 t1 t2 =>
-  match op_ty1 with
-  | .some ty1 =>
+| .letb ty1 t1 t2 =>
+  match ty1 with
+  | .univ 1 Ty.bot Ty.top (Ty.bvar 0) =>
     "let y[0] : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
     Format.line  ++ (Tm.repr t2 n) 
-  | .none =>
+  | _ =>
     "let y[0] = " ++  (Tm.repr t1 n) ++ " =>" ++
     Format.line  ++ (Tm.repr t2 n) 
 | .fix t1 =>
@@ -264,8 +264,8 @@ macro_rules
 | `([: λ $a :]) => `(Tm.func [: $a :])
 | `([: $a / $b :]) => `(Tm.proj [: $a :] [: $b :])
 | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
-| `([: let y[0] : $a = $b => $c :]) => `(Tm.letb (Option.some [: $a :]) [: $b :] [: $c :])
-| `([: let y[0] = $b => $c :]) => `(Tm.letb Option.none [: $b :] [: $c :])
+| `([: let y[0] : $a = $b => $c :]) => `(Tm.letb [: $a :] [: $b :] [: $c :])
+| `([: let y[0] = $b => $c :]) => `(Tm.letb [: ∀ 1 => β[0] :] [: $b :] [: $c :])
 | `([: fix $a :]) => `(Tm.fix [: $a :])
 
 -- generic
@@ -1029,11 +1029,8 @@ match t with
 --      [(i, env_ty1 ;; env_ty2 ;; env_ty3, ty')]
 --   )))
 
-| .letb op_ty1 t1 t => 
+| .letb ty1 t1 t => 
   let (i, tyx) := (i + 1, Ty.fvar i)
-  let ty1 := match op_ty1 with
-    | .some ty1 => ty1
-    | .none => [: ∀ 1 => β[0] :]
   List.bind (unify i env_ty closed ty1 tyx) (fun (i, env_ty0) =>
   List.bind (infer i (env_ty;;env_ty0) env_tm closed t1 tyx) (fun (i, env_ty1, ty1') =>
   let ty1' := (Ty.subst (env_ty;;env_ty0;;env_ty1) ty1')
