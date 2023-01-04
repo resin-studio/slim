@@ -230,8 +230,8 @@ The actual type of a term can be inferred in an obvious way.
 
 \begin{lstlisting}
 
-#cons("hello",#cons("world",#nil())) : 
-#cons(str $\times$ #cons(str $\times$ #nil$\diamondsuit$))
+cons;("hello",cons;("world",nil;())) : 
+cons*(str $\times$ cons*(str $\times$ nil*$\diamondsuit$))
 
 \end{lstlisting}
 
@@ -312,8 +312,8 @@ For example, types can also specify a pair of a list and its length.
 
 \begin{lstlisting}[]
 let measurement : $\mu$ (nat $\times$ list) .
-  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
-  #succ nat $\times$ #cons (? $\times$ list)
+  zero*$\diamondsuit$ $\times$ nil*$\diamondsuit$ | 
+  succ*nat $\times$ cons*(? $\times$ list)
 \end{lstlisting} 
 
 \hfill
@@ -323,10 +323,10 @@ let measurement : $\mu$ (nat $\times$ list) .
 \begin{lstlisting}[]
 let measurement : 
 $\exists$ $\alpha$ . $\mu$ nat_and_list .
-  #zero $\diamondsuit$ $\times$ #nil $\diamondsuit$ | 
+  zero*$\diamondsuit$ $\times$ nil*$\diamondsuit$ | 
   $\exists$ nat list :: 
     (nat $\times$ list) $\leq$ nat_and_list .
-    #succ nat $\times$ #cons ($\alpha$ $\times$ list)
+    succ*nat $\times$ cons*($\alpha$ $\times$ list)
 \end{lstlisting}
 
 \hfill
@@ -352,8 +352,8 @@ and an element, and returns a list of \lstinline{n} elements.
 \begin{lstlisting}[]
 let replicate : 
 $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
-  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
-  #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+  zero*$\diamondsuit$ $\rightarrow$ nil*$\diamondsuit$ $\wedge$
+  succ*nat $\rightarrow$ cons*($\alpha$ $\times$ list)
 \end{lstlisting}
 
 
@@ -365,10 +365,10 @@ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
 \begin{lstlisting}[]
 let replicate : 
 $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
-  #zero $\diamondsuit$ $\rightarrow$ #nil $\diamondsuit$ & 
+  zero*$\diamondsuit$ $\rightarrow$ nil*$\diamondsuit$ $\wedge$
   $\forall$ nat list :: 
     nat_to_list $\leq$ (nat $\rightarrow$ list) .
-    #succ nat $\rightarrow$ #cons ($\alpha$ $\times$ list)
+    succ*nat $\rightarrow$ cons*($\alpha$ $\times$ list)
 \end{lstlisting}
 
 \hfill
@@ -397,10 +397,10 @@ replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$
 
 \begin{lstlisting}[]
 let replicate = 
-$\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
-  $\lambda$ #zero () $\Rightarrow$ #nil () ;
-  $\lambda$ #succ n $\Rightarrow$ #cons (x, self n)
-) 
+$\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
+  (zero;() $\Rightarrow$ nil;()),
+  (succ;n $\Rightarrow$ cons;(x, self n))
+]) 
 \end{lstlisting}
 
 
@@ -423,11 +423,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
         \ |\ 
         x
         \ |\ 
-        l\#t 
+        l;t 
         \ |\ 
         \omega\ \widebar{l := t}
         \ |\ 
-        \lambda\ \widebar{t : \tau \Rightarrow t :: cs} 
+        \lambda\ \widebar{t : \tau \Rightarrow t} 
         \ |\ 
         t/l
         \ |\ 
@@ -509,7 +509,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \inferrule[Tag] { 
       \Gamma \vdash t : \tau
     } {
-      \Gamma \vdash l\#t : l*\tau  
+      \Gamma \vdash l;t : l*\tau  
     }
 
     \inferrule[Record] { 
@@ -822,14 +822,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
       \\
 
       \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      l \# t : \tau
+      l ; t : \tau
       &{} =
       \begin{array}[t]{@{} l}
         \text{let } \alpha = \text{typevar}() 
         \\
-        \{\Delta_1;\Delta_2\ .\ l \# \tau_1 \ |
+        \{\Delta_1;\Delta_2\ .\ l ; \tau_1 \ |
         \\
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash l \# \alpha \leq \tau
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash l ; \alpha \leq \tau
         \\
         \ \ \ \ (\Delta_2.\tau_1) \in \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t : \alpha
         \\
@@ -1403,8 +1403,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \text{reduce} \wedge [] 
     &\ = \top
     \\
-    \text{reduce} \wedge \tau::\widebar{\tau}
-    &\ = \tau\ \wedge (\text{reduce} \wedge \widebar{\tau})
+    \text{reduce} \wedge \tau_1::\widebar{\tau_2}
+    &\ = \tau_1\ \wedge (\text{reduce} \wedge \widebar{\tau_2})
     \end{array}
   \]
 
@@ -1435,8 +1435,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$
     \text{reduce} * [N]
     & {}= N
     \\
-    \text{reduce} * N::\widebar{N}
-    & {}= N * (\text{reduce} * \widebar{N})
+    \text{reduce} * N_1::\widebar{N_2}
+    & {}= N_1 * (\text{reduce} * \widebar{N_2})
     \end{array}
   \]
 
