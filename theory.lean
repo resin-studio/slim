@@ -1058,9 +1058,17 @@ match t with
   ))
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
-  (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
-    Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
+  let ty' := (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
+    Ty.simplify (Ty.subst env_ty (Ty.union acc ty))
+    -- Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
   ) (Ty.bot)
+  let fvs := (Ty.free_vars ty').toList.reverse.bind (fun (k, _) => [k])
+  if fvs.isEmpty then
+    ty'
+  else
+    [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :]
+
+
 
 partial def infer_reduce (t : Tm) : Ty := infer_reduce_wt t [: α[30] :]
 
@@ -1834,4 +1842,10 @@ even_to_unit
   for zero;() => nil;(),
   for succ;y[0] => cons;((), (y[1] y[0])) 
   ]) 
+:]
+
+
+
+#eval infer_reduce [:
+  (λ y[0] => y[0]) 
 :]
