@@ -265,7 +265,7 @@ macro_rules
 | `([: $a / $b :]) => `(Tm.proj [: $a :] [: $b :])
 | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
 | `([: let y[0] : $a = $b => $c :]) => `(Tm.letb [: $a :] [: $b :] [: $c :])
-| `([: let y[0] = $b => $c :]) => `(Tm.letb [: ∀ 1 => β[0] :] [: $b :] [: $c :])
+| `([: let y[0] = $b => $c :]) => `(Tm.letb [: ∃ 1 => β[0] :] [: $b :] [: $c :])
 | `([: fix $a :]) => `(Tm.fix [: $a :])
 
 -- generic
@@ -1011,19 +1011,31 @@ match t with
 --      [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
 --   )))
 
-
 | .letb ty1 t1 t => 
   let (i, tyx) := (i + 1, Ty.fvar i)
-  List.bind (unify i env_ty True ty1 tyx) (fun (i, env_ty0) =>
-  List.bind (infer i (env_ty;env_ty0) env_tm closed t1 tyx) (fun (i, env_ty1, ty1') =>
-  let ty1' := (Ty.subst (env_ty;env_ty0;env_ty1) ty1')
+  -- List.bind (unify i env_ty True ty1 tyx) (fun (i, env_ty0) =>
+  List.bind (infer i (env_ty) env_tm closed t1 ty1) (fun (i, env_ty1, ty1') =>
+  let ty1' := (Ty.subst (env_ty;env_ty1) ty1')
   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
   let ty1' := [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
   List.bind (infer i env_ty (env_tm ; env_tmx) closed t ty) (fun (i, env_ty2, ty') =>
     [ (i, env_ty2, ty') ]
-  )))
+  ))
+
+-- | .letb ty1 t1 t => 
+--   let (i, tyx) := (i + 1, Ty.fvar i)
+--   List.bind (unify i env_ty True ty1 tyx) (fun (i, env_ty0) =>
+--   List.bind (infer i (env_ty;env_ty0) env_tm closed t1 tyx) (fun (i, env_ty1, ty1') =>
+--   let ty1' := (Ty.subst (env_ty;env_ty0;env_ty1) ty1')
+--   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
+--   let ty1' := [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
+--   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
+--   let t := Tm.instantiate 0 [x] t 
+--   List.bind (infer i env_ty (env_tm ; env_tmx) closed t ty) (fun (i, env_ty2, ty') =>
+--     [ (i, env_ty2, ty') ]
+--   )))
 
 | .fix t1 =>
   List.bind (infer i (env_ty) env_tm True t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
