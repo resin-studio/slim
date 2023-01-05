@@ -563,94 +563,6 @@ def wellformed_record_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
 
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (closed : Bool): 
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
-| (.fvar id1), (.fvar id2) => 
-  match (env_ty.find? id1, env_ty.find? id2) with 
-  | (.none, .none) => 
-    [
-      (i, PHashMap.from_list [
-        (id1, Ty.fvar id2)
-      ])
-    ]
-  | (_, .some ty) => unify i env_ty closed (.fvar id1) ty 
-  | (.some ty', _) => unify i env_ty closed ty' (.fvar id2) 
-
-| .fvar id, .exis n ty_c1 ty_c2 ty =>
-  match env_ty.find? id with 
-  | none => 
-    [ 
-      (i, PHashMap.from_list [
-        (id, roll_corec id env_ty (.univ n ty_c1 ty_c2 ty))
-      ]) 
-    ]
-  | some ty' => unify i env_ty closed ty' (.exis n ty_c1 ty_c2 ty) 
-
-| .univ n ty_c1 ty_c2 ty, .fvar id  =>
-  match env_ty.find? id with 
-  | none => 
-    [ 
-      (i, PHashMap.from_list [
-        (id, roll_recur id env_ty (.exis n ty_c1 ty_c2 ty))
-      ]) 
-    ]
-  | some ty' => unify i env_ty closed (.univ n ty_c1 ty_c2 ty) ty' 
-
-| .fvar id, ty  => 
-  match env_ty.find? id with 
-  | none => 
-    [ 
-      if closed then
-        (i, PHashMap.from_list [
-          (id, roll_corec id env_ty ty)
-        ]) 
-      else
-        (i + 1, PHashMap.from_list [
-          (id, roll_corec id env_ty (Ty.inter ty (Ty.fvar i)))
-        ]) 
-    ]
-  | some ty' => unify i env_ty closed ty' ty 
-
-| ty', .fvar id  => match env_ty.find? id with 
-  | none => 
-    [ 
-      if closed then
-        (i, PHashMap.from_list [
-          (id, roll_corec id env_ty ty')
-        ]) 
-      else
-        (i + 1, PHashMap.from_list [
-          (id, roll_corec id env_ty (Ty.union ty' (Ty.fvar i)))
-        ]) 
-    ]
-  | some ty => unify i env_ty closed ty' ty 
-
-| .bvar id1, .bvar id2  =>
-  if id1 = id2 then 
-    [ (i, {}) ]
-  else
-    .nil
-
-| .bot, _ => [ (i, {}) ] 
-| _, .top => [ (i, {}) ] 
-| .unit, .unit => [ (i, {}) ] 
-
-| .tag l' ty', .tag l ty =>
-  if l' = l then
-    unify i env_ty closed ty' ty
-  else
-    .nil 
-
-| .field l' ty', .field l ty =>
-  if l' = l then
-    unify i env_ty closed ty' ty
-  else
-    .nil
-
-| .case ty1 ty2', .case ty1' ty2 =>
-  List.bind (unify i env_ty closed ty1' ty1) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ; env_ty1) closed ty2' ty2) (fun (i, env_ty2) =>
-    [ (i, env_ty1 ; env_ty2) ]
-  ))
-
 
 | .exis n1 ty_c1 ty_c2 ty1, .exis n2 ty_c3 ty_c4 ty2 =>
   let (i, args1) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
@@ -715,6 +627,76 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   List.bind (unify i (env_ty ; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
     [ (i, env_ty1 ; env_ty2) ]
   ))
+
+------------------------------------------------
+| (.fvar id1), (.fvar id2) => 
+  match (env_ty.find? id1, env_ty.find? id2) with 
+  | (.none, .none) => 
+    [
+      (i, PHashMap.from_list [
+        (id1, Ty.fvar id2)
+      ])
+    ]
+  | (_, .some ty) => unify i env_ty closed (.fvar id1) ty 
+  | (.some ty', _) => unify i env_ty closed ty' (.fvar id2) 
+
+| .fvar id, ty  => 
+  match env_ty.find? id with 
+  | none => 
+    [ 
+      if closed then
+        (i, PHashMap.from_list [
+          (id, roll_corec id env_ty ty)
+        ]) 
+      else
+        (i + 1, PHashMap.from_list [
+          (id, roll_corec id env_ty (Ty.inter ty (Ty.fvar i)))
+        ]) 
+    ]
+  | some ty' => unify i env_ty closed ty' ty 
+
+| ty', .fvar id  => match env_ty.find? id with 
+  | none => 
+    [ 
+      if closed then
+        (i, PHashMap.from_list [
+          (id, roll_corec id env_ty ty')
+        ]) 
+      else
+        (i + 1, PHashMap.from_list [
+          (id, roll_corec id env_ty (Ty.union ty' (Ty.fvar i)))
+        ]) 
+    ]
+  | some ty => unify i env_ty closed ty' ty 
+
+| .bvar id1, .bvar id2  =>
+  if id1 = id2 then 
+    [ (i, {}) ]
+  else
+    .nil
+
+| .bot, _ => [ (i, {}) ] 
+| _, .top => [ (i, {}) ] 
+| .unit, .unit => [ (i, {}) ] 
+
+| .tag l' ty', .tag l ty =>
+  if l' = l then
+    unify i env_ty closed ty' ty
+  else
+    .nil 
+
+| .field l' ty', .field l ty =>
+  if l' = l then
+    unify i env_ty closed ty' ty
+  else
+    .nil
+
+| .case ty1 ty2', .case ty1' ty2 =>
+  List.bind (unify i env_ty closed ty1' ty1) (fun (i, env_ty1) => 
+  List.bind (unify i (env_ty ; env_ty1) closed ty2' ty2) (fun (i, env_ty2) =>
+    [ (i, env_ty1 ; env_ty2) ]
+  ))
+
 
 | .recur ty', .recur ty =>
   if Ty.equal env_ty ty' ty then
