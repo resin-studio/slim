@@ -400,6 +400,30 @@ def Ty.free_vars : Ty -> PHashMap Nat Unit
 | .corec ty => (Ty.free_vars ty)
 
 
+def Ty.negative_free_vars (posi : Bool) : Ty -> PHashMap Nat Unit
+| .bvar id => {} 
+| .fvar id => 
+  if posi then
+    {}
+  else
+    let u : Unit := Unit.unit
+    PHashMap.from_list [(id, u)] 
+| .unit => {} 
+| .bot => {} 
+| .top => {} 
+| .tag l ty => (Ty.negative_free_vars posi ty) 
+| .field l ty => (Ty.negative_free_vars posi ty)
+| .union ty1 ty2 => Ty.negative_free_vars posi ty1 ; Ty.negative_free_vars posi ty2
+| .inter ty1 ty2 => Ty.negative_free_vars posi ty1 ; Ty.negative_free_vars posi ty2
+| .case ty1 ty2 => (Ty.negative_free_vars (!posi) ty1) ; Ty.negative_free_vars posi ty2
+| .univ n ty_c1 ty_c2 ty => 
+  (Ty.negative_free_vars posi ty)
+| .exis n ty_c1 ty_c2 ty =>
+  (Ty.negative_free_vars posi ty)
+| .recur ty => (Ty.negative_free_vars posi ty)
+| .corec ty => (Ty.negative_free_vars posi ty)
+
+
 def Ty.generalize (fids : List Nat) (start : Nat) : Ty -> Ty
 | .bvar id => .bvar id 
 | .fvar id => 
@@ -1059,14 +1083,13 @@ match t with
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
   let ty' := (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
-    Ty.simplify (Ty.subst env_ty (Ty.union acc ty))
-    -- Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
+    (Ty.subst env_ty (Ty.union acc ty))
   ) (Ty.bot)
-  let fvs := (Ty.free_vars ty').toList.reverse.bind (fun (k, _) => [k])
+  let fvs := (Ty.negative_free_vars True ty').toList.reverse.bind (fun (k, _) => [k])
   if fvs.isEmpty then
-    ty'
+    Ty.simplify (Ty.subst_default True ty')
   else
-    [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :]
+    Ty.simplify (Ty.subst_default True [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :])
 
 
 
