@@ -1601,6 +1601,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \end{document}
 
+% curious idiosyncrasy
+% let-polymorphism with subtyping allows expected type to be smaller than checked type
+  % in particular case of universal <: existential
+  % this is due to the fact that a particular term inhabiting a universal
+  % must be specialized at time of use.
+
 % Observations:
 % language of types
   % a type is a set of objects
