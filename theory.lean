@@ -1029,9 +1029,10 @@ match t with
 --      [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
 --   )))
 
+
 | .letb ty1 t1 t => 
   let (i, tyx) := (i + 1, Ty.fvar i)
-  List.bind (unify i env_ty closed ty1 tyx) (fun (i, env_ty0) =>
+  List.bind (unify i env_ty True ty1 tyx) (fun (i, env_ty0) =>
   List.bind (infer i (env_ty;env_ty0) env_tm closed t1 tyx) (fun (i, env_ty1, ty1') =>
   let ty1' := (Ty.subst (env_ty;env_ty0;env_ty1) ty1')
   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])

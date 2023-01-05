@@ -425,7 +425,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         \ |\ 
         l;t 
         \ |\ 
-        \omega\ \widebar{l := t}
+        \omega\ \widebar{l \approx t}
         \ |\ 
         \lambda\ \widebar{t : \tau \Rightarrow t} 
         \ |\ 
@@ -441,6 +441,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \tau
       &{} ::=
       \begin{array}[t]{@{} l}
+        \diamondsuit 
+        \ |\ 
         \alpha 
         \ |\ 
         \bot 
@@ -514,10 +516,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
     \inferrule[Record] { 
       \bigwedge_{l\sim\tau} 
-      \bigwedge_{l:=t} 
+      \bigwedge_{l \approx t} 
       \Gamma \vdash t : \tau
     } {
-      \Gamma \vdash \omega\ (\widebar{l:=t}) : (\text{reduce} \wedge \widebar{l\sim\tau})  
+      \Gamma \vdash \omega\ (\widebar{l \approx t}) : (\text{reduce} \wedge \widebar{l\sim\tau})  
     } 
 
     \inferrule[Function] {
@@ -841,9 +843,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \omega[ fields ] : \tau
       &{} =
       \begin{array}[t]{@{} l}
-        \text{let } fields' = \{(l:=t, \text{typevar}())\ |\ (l:=t) \in fields \}
+        \text{let } fields' = \{(l \approx t, \text{typevar}())\ |\ (l \approx t) \in fields \}
         \\
-        \text{let } \tau_1 = \text{reduce} \wedge \{l \sim \alpha\ |\ (l := t, \alpha) \in fields' \}
+        \text{let } \tau_1 = \text{reduce} \wedge \{l \sim \alpha\ |\ (l \approx t, \alpha) \in fields' \}
         \\
 
 
@@ -852,7 +854,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         \\
         \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau_1 \leq \tau
         \\
-        \ \ \ \ (l := t, \alpha) \in fields'
+        \ \ \ \ (l \approx t, \alpha) \in fields'
         \\
         \}
         \\
@@ -921,14 +923,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \\
 
       \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      (\text{let}\ x : \tau_1 := t_1 \Rightarrow t_2) : \tau_2
+      (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) : \tau_2
       &{} =
       \begin{array}[t]{@{} l}
-        \text{let } \alpha_1 := \text{typevar}()
+        \text{let } \alpha_1 = \text{typevar}()
         \\
         \{ \Delta_3\ .\ \tau_2' \ |\ 
         \\
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau_1 \leq \alpha_1
+        \ \ \ \ \Delta_1 \in \text{unify } \blacksquare\ \Delta\ \vdash \tau_1 \leq \alpha_1
         \\
         \ \ \ \ \Delta_2.\tau_1' \in \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_1 : \alpha_1
         \\ 
