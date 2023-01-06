@@ -427,7 +427,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         \ |\ 
         \omega\ \widebar{l \approx t}
         \ |\ 
-        \lambda\ \widebar{t : \tau \Rightarrow t} 
+        \lambda\ \widebar{p : \tau \Rightarrow t} 
         \ |\ 
         t/l
         \ |\ 
@@ -436,6 +436,30 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         \text{let } x : \tau = t\ \text{in } t
         \ |\ 
         \text{fix } t
+      \end{array}
+      \\
+      v 
+      &{} ::=
+      \begin{array}[t]{@{} l}
+        () 
+        \ |\ 
+        l;v
+        \ |\ 
+        \omega\ \widebar{l \approx v}
+        \ |\ 
+        \lambda\ \widebar{p : \tau \Rightarrow t} 
+      \end{array}
+      \\
+      p 
+      &{} ::=
+      \begin{array}[t]{@{} l}
+        x 
+        \ |\ 
+        () 
+        \ |\ 
+        l;p
+        \ |\ 
+        \omega\ \widebar{l \approx p}
       \end{array}
       \\
       \tau
@@ -482,9 +506,86 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{enumerate}
 
 \subsection{Operational semantics}
-\begin{enumerate}
-  \item rules 
-\end{enumerate}
+\begin{figure*}[h]
+  \begin{mathpar}
+
+    \inferrule[Unit] { 
+    } {
+      () \Downarrow () 
+    } 
+
+    \inferrule[Tag] { 
+      t \Downarrow v 
+    } {
+      l;t \Downarrow l*v  
+    }
+
+    \inferrule[Record] { 
+      \bigwedge_{l \approx v} 
+      \bigwedge_{l \approx t} 
+      t \Downarrow v 
+    } {
+      \omega\ (\widebar{l \approx t}) : \omega\ (\widebar{l \approx v})  
+    } 
+
+    \inferrule[Function] {
+    } {
+      \lambda\ (\widebar{p : \tau\Rightarrow t}) 
+      \Downarrow 
+      \lambda\ (\widebar{p : \tau\Rightarrow t})  
+    } 
+
+    % \\\\
+
+    \inferrule[Proj] {
+      t \Downarrow \omega [\hdots, l \approx v, \hdots] 
+    } {
+      t/l \Downarrow v
+    } 
+
+    \inferrule[App] { 
+      t_1 \Downarrow \lambda\ \widebar{p : \tau \Rightarrow t_3}
+      \\
+      t_2 \Downarrow v_1 
+      \\\\
+      (\text{match } v_1\ \widebar{p : \tau \Rightarrow t_3}) \Downarrow v
+    } {
+      t_1\ t_2 \Downarrow v 
+    } 
+
+    % \\\\
+
+    \inferrule[Let] { 
+      t_1 \Downarrow v_1
+      \\
+      t_2[x \mapsto v_1] \Downarrow v
+    } {
+      (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) 
+      \Downarrow 
+      v
+    } 
+
+    \inferrule[Fix] { 
+      TODO
+    } {
+      \text{fix}\ t \Downarrow v 
+    } 
+
+  \end{mathpar}
+  \caption{Operational semantics}
+\end{figure*}
+
+\begin{figure*}[h]
+  \[
+    \begin{array}{l @{} l}
+      \text{match}
+      &{} =
+      TODO 
+    \end{array}
+  \]
+  \caption{Pattern matching}
+\end{figure*}
+
 
 \subsection{Typing}
 
