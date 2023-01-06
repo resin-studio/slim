@@ -438,18 +438,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         \text{fix } t
       \end{array}
       \\
-      v 
-      &{} ::=
-      \begin{array}[t]{@{} l}
-        () 
-        \ |\ 
-        l;v
-        \ |\ 
-        \omega\ \widebar{l \approx v}
-        \ |\ 
-        \lambda\ \widebar{p : \tau \Rightarrow t} 
-      \end{array}
-      \\
       p 
       &{} ::=
       \begin{array}[t]{@{} l}
@@ -491,6 +479,36 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         \ |\ 
         \tau \wedge \tau
       \end{array}
+      \\
+      E 
+      &{} ::=
+      []
+      \ |\ 
+      l;E 
+      \ |\ 
+      \omega\ \widebar{l \approx E}
+      \ |\ 
+      E/l
+      \ |\ 
+      E\ t
+      \ |\ 
+      v\ E
+      \ |\ 
+      \text{let } x : \tau = E\ \text{in } t
+      \ |\ 
+      \text{fix } E 
+      \\
+      v 
+      &{} ::=
+      \begin{array}[t]{@{} l}
+        () 
+        \ |\ 
+        l;v
+        \ |\ 
+        \omega\ \widebar{l \approx v}
+        \ |\ 
+        \lambda\ \widebar{p : \tau \Rightarrow t} 
+      \end{array}
     \end{array}
   \]
   \caption{Syntax}
@@ -509,66 +527,36 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{figure*}[h]
   \begin{mathpar}
 
-    \inferrule[Unit] { 
+    \inferrule[PopPush] { 
+      t \longrightarrow t' 
     } {
-      () \Downarrow () 
-    } 
-
-    \inferrule[Tag] { 
-      t \Downarrow v 
-    } {
-      l;t \Downarrow l*v  
+      E[t] \longrightarrow E[t']  
     }
 
-    \inferrule[Record] { 
-      \bigwedge_{l \approx v} 
-      \bigwedge_{l \approx t} 
-      t \Downarrow v 
-    } {
-      \omega\ (\widebar{l \approx t}) : \omega\ (\widebar{l \approx v})  
-    } 
-
-    \inferrule[Function] {
-    } {
-      \lambda\ (\widebar{p : \tau\Rightarrow t}) 
-      \Downarrow 
-      \lambda\ (\widebar{p : \tau\Rightarrow t})  
-    } 
-
-    % \\\\
-
     \inferrule[Proj] {
-      t \Downarrow \omega [\hdots, l \approx v, \hdots] 
     } {
-      t/l \Downarrow v
+      \omega [\hdots, l \approx v, \hdots]/l \longrightarrow v
     } 
 
     \inferrule[App] { 
-      t_1 \Downarrow \lambda\ \widebar{p : \tau \Rightarrow t_3}
-      \\
-      t_2 \Downarrow v_1 
-      \\\\
-      (\text{match } v_1\ \widebar{p : \tau \Rightarrow t_3}) \Downarrow v
     } {
-      t_1\ t_2 \Downarrow v 
+      (\lambda\ \widebar{p : \tau \Rightarrow t})\ v 
+      \longrightarrow 
+      (\text{match } v\ \widebar{p : \tau \Rightarrow t})
     } 
 
-    % \\\\
-
     \inferrule[Let] { 
-      t_1 \Downarrow v_1
-      \\
-      t_2[x \mapsto v_1] \Downarrow v
     } {
-      (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) 
-      \Downarrow 
-      v
+      \text{let}\ x : \tau = v \text{ in } t
+      \longrightarrow 
+      t[x \mapsto v]
     } 
 
     \inferrule[Fix] { 
-      TODO
     } {
-      \text{fix}\ t \Downarrow v 
+      \text{fix}\ \lambda [x:\tau \Rightarrow t]
+      \longrightarrow 
+      t[x \mapsto \text{fix}\ \lambda [x:\tau \Rightarrow t]]
     } 
 
   \end{mathpar}
@@ -578,9 +566,36 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{figure*}[h]
   \[
     \begin{array}{l @{} l}
-      \text{match}
+      \text{match}\ v\ ((p : \tau \Rightarrow t) :: cs)
       &{} =
-      TODO 
+      \begin{cases}
+        t[H]
+        &\text{if }
+        \text{unify}\ v\ p = H 
+        \\
+        
+        \text{match}\ v\ cs
+        &\text{otherwise}
+      \end{cases}
+    \end{array}
+  \]
+  \[
+    \begin{array}{l @{} l}
+      \text{unify}\ v\ x 
+      &{} =
+      \cdot, x \mapsto v
+      \\
+      \text{unify}\ ()\ () 
+      &{} =
+      \cdot
+      \\
+      \text{unify}\ l;v\ l;p 
+      &{} =
+      \text{unify}\ v\ p
+      \\
+      \text{unify}\ (\omega\ \widebar{l \approx v})\ (\omega\ \widebar{l \approx p}) 
+      &{} =
+      \text{reduce } ; \widebar{\text{unify}\ v\ p}
     \end{array}
   \]
   \caption{Pattern matching}
