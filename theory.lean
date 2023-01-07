@@ -590,7 +590,7 @@ partial def wellformed_case_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
     match ty1 with 
     | .fvar _ => false
     | _ => 
-      wellformed_record_type env_ty ty1 && 
+      (linearize_fields ty1 == .none || wellformed_record_type env_ty ty1) && 
       (match ty2 with 
         | .case _ _ => wellformed_case_type env_ty ty2
         | _ => true
@@ -1105,7 +1105,8 @@ match t with
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
   let ty' := (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
-    (Ty.subst env_ty (Ty.union acc ty))
+    -- (Ty.subst env_ty (Ty.union acc ty))
+    Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
   ) (Ty.bot)
   let fvs := (Ty.negative_free_vars True ty').toList.reverse.bind (fun (k, _) => [k])
   if fvs.isEmpty then
