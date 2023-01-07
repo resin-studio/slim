@@ -584,6 +584,19 @@ def wellformed_record_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
     ) 
   | .none => false
 
+partial def wellformed_case_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
+  match (Ty.simplify (Ty.subst env_ty ty)) with
+  | .case ty1 ty2 => 
+    match ty1 with 
+    | .fvar _ => false
+    | _ => 
+      wellformed_record_type env_ty ty1 && 
+      (match ty2 with 
+        | .case _ _ => wellformed_case_type env_ty ty2
+        | _ => true
+      )
+  | _ => false
+
 
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (closed : Bool): 
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
@@ -749,9 +762,16 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     unify i env_ty closed ty' ty
 
 
--- TODO: determine if wellformed check is needed to always converge
-| .corec ty_corec, Ty.case ty1 ty2 =>
-  unify i env_ty closed (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
+-- use a wellformed check instead of single case 
+-- wellformed iff there is at least one tag in nesting of cases/records. 
+-- return nil if not wellformed
+-- | .corec ty_corec, Ty.case ty1 ty2 =>
+--   unify i env_ty closed (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
+| .corec ty1, ty2 =>
+  if wellformed_case_type env_ty ty2 then
+    unify i env_ty closed (unroll (Ty.corec ty1)) ty2
+  else
+    .nil
 
 | .union ty1 ty2, ty => 
   List.bind (unify i env_ty closed ty1 ty) (fun (i, env_ty1) => 
@@ -1021,6 +1041,8 @@ match t with
 
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
+  -- TODO: Ty.case ty2 ty (A -> B) may result in infinite immediate failure
+  -- not wellformed to prevent divergence!
   List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
   List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, _) =>
      [(i, env_ty1 ; env_ty2, ty)]
@@ -1865,6 +1887,101 @@ even_to_unit
   for zero;() => nil;(),
   for succ;y[0] => cons;((), (y[1] y[0])) 
   ]) 
+:]
+
+#eval infer_reduce_wt [:
+  fix (λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) 
+:]
+[:
+  (zero*@ -> nil*@)
+:]
+
+
+#eval infer_reduce_wt [:
+  (λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) 
+:]
+[:
+  (zero*@ -> nil*@)
+  ->
+  (zero*@ -> nil*@)
+:]
+
+#eval infer_reduce_wt [:
+  fix (λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) 
+:]
+[:
+  ν β[0] => 
+  (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
+    (zero*@ -> nil*@) ∧ 
+    (succ*β[0] -> cons*(@ × β[1]))
+  )
+:]
+
+
+#eval infer_reduce_wt [:
+  fix (λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) 
+:]
+[:
+  ν β[0] => 
+  (
+    (zero*@ -> nil*@) ∧ 
+    (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
+      (succ*β[0] -> cons*(@ × β[1]))
+    )
+  )
+:]
+
+
+-- TODO: problem with breaking down corecursion into case parts 
+#eval infer_reduce
+[:
+  λ y[0] : (ν β[0] => 
+    (
+      (zero*@ -> nil*@)
+    )
+  ) => (y[0] (zero;()))
+:]
+
+
+-- TODO: problem with breaking down corecursion into case parts 
+#eval infer_reduce
+[:
+  λ y[0] : (ν β[0] => 
+    (
+      (zero*@ -> nil*@) ∧ 
+      (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
+        (succ*β[0] -> cons*(@ × β[1]))
+      )
+    )
+  ) => (y[0] (zero;()))
+:]
+
+#eval infer_reduce_wt [:
+  (λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) 
+:]
+[:
+  (ν β[0] => ∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[0] -> cons*(@ × β[1])))
+  )
+  ->
+  (ν β[0] => ∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[0] -> cons*(@ × β[1])))
+  )
 :]
 
 
