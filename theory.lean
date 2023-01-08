@@ -759,6 +759,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 -- | .corec ty_corec, Ty.case ty1 ty2 =>
 --   unify i env_ty closed (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
 -- TODO: find way to turn unwellformed premise into simple recursion 
+-- extract premise type by analyzing corecursive structure.
 | .corec ty1, Ty.case ty2 ty3 =>
   if wellformed_premise_type env_ty ty2 then
     unify i env_ty closed (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
