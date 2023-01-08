@@ -1047,8 +1047,8 @@ match t with
 -- due to not being wellformed to prevent divergence!
 | .app t1 t2 =>
   let result := (
-    -- this part does partial downward prop checking
-    -- incomplete due to overly safe divergence prevention
+    -- this part does partial downward propagation
+    -- incomplete due to restrictive max-1 depth divergence prevention
     let (i, ty2) := (i + 1, Ty.fvar i)
     let (i, ty') := (i + 1, Ty.fvar i)
     List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty')) (fun (i, env_ty1, _) =>
@@ -1057,34 +1057,17 @@ match t with
       [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
     )))
   )
-  result
-  -- -- this part does complete inference but requires inferring argument type first
-  -- List.bind (infer i (env_ty) env_tm closed t2 Ty.top) (fun (i, env_ty1, ty2) =>
-  -- let (i, ty') := (i + 1, Ty.fvar i)
-  -- List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 (Ty.case ty2 ty')) (fun (i, env_ty2, _) =>
-  -- List.bind (unify i (env_ty ; env_ty1 ; env_ty2) closed ty' ty) (fun (i, env_ty3) =>
-  --   [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
-  -- )))
+  -- result
+  -- this part does complete inference but requires inferring argument type first
+  List.bind (infer i (env_ty) env_tm closed t2 Ty.top) (fun (i, env_ty1, ty2) =>
+  let (i, ty') := (i + 1, Ty.fvar i)
+  List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 (Ty.case ty2 ty')) (fun (i, env_ty2, _) =>
+  List.bind (unify i (env_ty ; env_ty1 ; env_ty2) closed ty' ty) (fun (i, env_ty3) =>
+    [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
+  )))
 
--- | .app t1 t2 =>
---   let (i, ty2) := (i + 1, Ty.fvar i)
---   List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
---   List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, _) =>
---      [(i, env_ty1 ; env_ty2, ty)]
---   ))
-
--- | .app t1 t2 =>
---   let (i, ty2) := (i + 1, Ty.fvar i)
---   let (i, ty') := (i + 1, Ty.fvar i)
---   List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1) =>
---   List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, ty2') =>
---   List.bind (unify i (env_ty ; env_ty1 ; env_ty2) closed ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
---      [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
---   )))
 
 | .letb ty1 t1 t => 
-  let (i, tyx) := (i + 1, Ty.fvar i)
-  -- List.bind (unify i env_ty True ty1 tyx) (fun (i, env_ty0) =>
   List.bind (infer i (env_ty) env_tm closed t1 ty1) (fun (i, env_ty1, ty1') =>
   let ty1' := (Ty.subst (env_ty;env_ty1) ty1')
   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
@@ -1095,18 +1078,6 @@ match t with
     [ (i, env_ty2, ty') ]
   ))
 
--- | .letb ty1 t1 t => 
---   let (i, tyx) := (i + 1, Ty.fvar i)
---   List.bind (unify i env_ty True ty1 tyx) (fun (i, env_ty0) =>
---   List.bind (infer i (env_ty;env_ty0) env_tm closed t1 tyx) (fun (i, env_ty1, ty1') =>
---   let ty1' := (Ty.subst (env_ty;env_ty0;env_ty1) ty1')
---   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
---   let ty1' := [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
---   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
---   let t := Tm.instantiate 0 [x] t 
---   List.bind (infer i env_ty (env_tm ; env_tmx) closed t ty) (fun (i, env_ty2, ty') =>
---     [ (i, env_ty2, ty') ]
---   )))
 
 | .fix t1 =>
   List.bind (infer i (env_ty) env_tm True t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
