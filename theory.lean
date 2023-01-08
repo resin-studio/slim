@@ -584,18 +584,10 @@ def wellformed_record_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
     ) 
   | .none => false
 
-partial def wellformed_case_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
-  match (Ty.simplify (Ty.subst env_ty ty)) with
-  | .case ty1 ty2 => 
-    match ty1 with 
-    | .fvar _ => false
-    | _ => 
-      (linearize_fields ty1 == .none || wellformed_record_type env_ty ty1) && 
-      (match ty2 with 
-        | .case _ _ => wellformed_case_type env_ty ty2
-        | _ => true
-      )
-  | _ => false
+partial def wellformed_premise_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
+  match (Ty.simplify (Ty.subst env_ty ty)) with 
+  | .fvar _ => false
+  | ty => (linearize_fields ty == .none) || (wellformed_record_type env_ty ty)
 
 
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (closed : Bool): 
@@ -761,20 +753,19 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     let ty := [: ⟨ty⟩ ↑ 0 // [ν β[0] => ⟨ty'⟩] :]
     unify i env_ty closed ty' ty
 
-
 -- use a wellformed check instead of single case 
 -- wellformed iff there is at least one tag in nesting of cases/records. 
 -- return nil if not wellformed
 -- | .corec ty_corec, Ty.case ty1 ty2 =>
 --   unify i env_ty closed (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
--- TODO: reconsider how corec is handled to enable breaking relation for downard propagation
--- allow premise to be single variable 
-| .corec ty1, ty2 =>
-  if wellformed_case_type env_ty ty2 then
-    unify i env_ty closed (unroll (Ty.corec ty1)) ty2
+-- TODO: find way to turn unwellformed premise into simple recursion 
+| .corec ty1, Ty.case ty2 ty3 =>
+  if wellformed_premise_type env_ty ty2 then
+    unify i env_ty closed (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
   else
     -- .nil
-    unify i env_ty closed [: ⟨ty1⟩ ↑ 0 // [⊥] :] ty2
+    unify i env_ty closed [: ⟨ty1⟩ ↑ 0 // [⊥] :] (Ty.case ty2 ty3)
+
     
 
 | .union ty1 ty2, ty => 
@@ -1057,14 +1048,14 @@ match t with
       [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
     )))
   )
-  -- result
+  result
   -- this part does complete inference but requires inferring argument type first
-  List.bind (infer i (env_ty) env_tm closed t2 Ty.top) (fun (i, env_ty1, ty2) =>
-  let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 (Ty.case ty2 ty')) (fun (i, env_ty2, _) =>
-  List.bind (unify i (env_ty ; env_ty1 ; env_ty2) closed ty' ty) (fun (i, env_ty3) =>
-    [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
-  )))
+  -- List.bind (infer i (env_ty) env_tm closed t2 Ty.top) (fun (i, env_ty1, ty2) =>
+  -- let (i, ty') := (i + 1, Ty.fvar i)
+  -- List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 (Ty.case ty2 ty')) (fun (i, env_ty2, _) =>
+  -- List.bind (unify i (env_ty ; env_ty1 ; env_ty2) closed ty' ty) (fun (i, env_ty3) =>
+  --   [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
+  -- )))
 
 
 | .letb ty1 t1 t => 
@@ -1986,7 +1977,7 @@ even_to_unit
         (succ*β[0] -> cons*(@ × β[1]))
       )
     )
-  ) => (y[0] (succ;zero;()))
+  ) => (y[0] (succ;succ;_))
 :]
 
 
