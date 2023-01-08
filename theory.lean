@@ -767,11 +767,15 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 -- return nil if not wellformed
 -- | .corec ty_corec, Ty.case ty1 ty2 =>
 --   unify i env_ty closed (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
+-- TODO: reconsider how corec is handled to enable breaking relation for downard propagation
+-- allow premise to be single variable 
 | .corec ty1, ty2 =>
   if wellformed_case_type env_ty ty2 then
     unify i env_ty closed (unroll (Ty.corec ty1)) ty2
   else
-    .nil
+    -- .nil
+    unify i env_ty closed [: ⟨ty1⟩ ↑ 0 // [⊥] :] ty2
+    
 
 | .union ty1 ty2, ty => 
   List.bind (unify i env_ty closed ty1 ty) (fun (i, env_ty1) => 
@@ -1043,21 +1047,24 @@ match t with
 -- due to not being wellformed to prevent divergence!
 | .app t1 t2 =>
   let result := (
+    -- this part does partial downward prop checking
+    -- incomplete due to overly safe divergence prevention
     let (i, ty2) := (i + 1, Ty.fvar i)
-    List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
+    let (i, ty') := (i + 1, Ty.fvar i)
+    List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty')) (fun (i, env_ty1, _) =>
     List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, _) =>
-      [(i, env_ty1 ; env_ty2, ty)]
-    ))
+    List.bind (unify i (env_ty ; env_ty1 ; env_ty2) closed ty' ty) (fun (i, env_ty3) =>
+      [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
+    )))
   )
-  if result.isEmpty then 
-    (
-      List.bind (infer i (env_ty) env_tm closed t2 Ty.top) (fun (i, env_ty1, ty2) =>
-      List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty2, ty1) =>
-        [(i, env_ty1 ; env_ty2, ty)]
-      ))
-    )
-  else
-    result
+  result
+  -- -- this part does complete inference but requires inferring argument type first
+  -- List.bind (infer i (env_ty) env_tm closed t2 Ty.top) (fun (i, env_ty1, ty2) =>
+  -- let (i, ty') := (i + 1, Ty.fvar i)
+  -- List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 (Ty.case ty2 ty')) (fun (i, env_ty2, _) =>
+  -- List.bind (unify i (env_ty ; env_ty1 ; env_ty2) closed ty' ty) (fun (i, env_ty3) =>
+  --   [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
+  -- )))
 
 -- | .app t1 t2 =>
 --   let (i, ty2) := (i + 1, Ty.fvar i)
@@ -1987,6 +1994,31 @@ even_to_unit
   ) => (y[0] (succ;zero;()))
 :]
 
+#eval infer_reduce
+[:
+  λ y[0] : (ν β[0] => 
+    (
+      (zero*@ -> nil*@) ∧ 
+      (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
+        (succ*β[0] -> cons*(@ × β[1]))
+      )
+    )
+  ) => (y[0] (succ;_))
+:]
+
+#eval infer_reduce
+[:
+  λ y[0] : (ν β[0] => 
+    (
+      (zero*@ -> nil*@) ∧ 
+      (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
+        (succ*β[0] -> cons*(@ × β[1]))
+      )
+    )
+  ) => (y[0] (succ;zero;()))
+:]
+
+
 #eval infer_reduce_wt [:
   (λ y[0] => λ[
   for zero;() => nil;(),
@@ -2013,7 +2045,7 @@ even_to_unit
 
 ≤ 
 
-(μ nat . 
+μ nat . 
   zero | succ nat
 ) ->
 (μ list .
