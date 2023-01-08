@@ -1041,18 +1041,27 @@ match t with
 
 -- TODO: Ty.case ty2 ty (A -> B) results in immediate failure
 -- not wellformed to prevent divergence!
+| .app t1 t2 =>
+  (
+    let (i, ty2) := (i + 1, Ty.fvar i)
+    List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
+    List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, _) =>
+      [(i, env_ty1 ; env_ty2, ty)]
+    ))
+  ) ++
+  (
+    List.bind (infer i (env_ty) env_tm closed t2 Ty.top) (fun (i, env_ty1, ty2) =>
+    List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty2, ty1) =>
+      [(i, env_ty1 ; env_ty2, ty)]
+    ))
+  )
+
 -- | .app t1 t2 =>
---   List.bind (infer i env_ty env_tm closed t1 (Ty.case Ty.bot ty)) (fun (i, env_ty1, ty1) =>
+--   let (i, ty2) := (i + 1, Ty.fvar i)
+--   List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
 --   List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, _) =>
 --      [(i, env_ty1 ; env_ty2, ty)]
 --   ))
-
-| .app t1 t2 =>
-  let (i, ty2) := (i + 1, Ty.fvar i)
-  List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
-  List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, _) =>
-     [(i, env_ty1 ; env_ty2, ty)]
-  ))
 
 -- | .app t1 t2 =>
 --   let (i, ty2) := (i + 1, Ty.fvar i)
@@ -1972,7 +1981,7 @@ even_to_unit
         (succ*β[0] -> cons*(@ × β[1]))
       )
     )
-  ) => (y[0] (zero;()))
+  ) => (y[0] (succ;zero;()))
 :]
 
 #eval infer_reduce_wt [:
