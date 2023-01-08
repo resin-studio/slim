@@ -1039,10 +1039,16 @@ match t with
 --     [(i, env_ty1 ; env_ty2, ty')]
 --   ))
 
+-- TODO: Ty.case ty2 ty (A -> B) results in immediate failure
+-- not wellformed to prevent divergence!
+-- | .app t1 t2 =>
+--   List.bind (infer i env_ty env_tm closed t1 (Ty.case Ty.bot ty)) (fun (i, env_ty1, ty1) =>
+--   List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, _) =>
+--      [(i, env_ty1 ; env_ty2, ty)]
+--   ))
+
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
-  -- TODO: Ty.case ty2 ty (A -> B) may result in infinite immediate failure
-  -- not wellformed to prevent divergence!
   List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, _) =>
   List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, _) =>
      [(i, env_ty1 ; env_ty2, ty)]
@@ -1984,6 +1990,27 @@ even_to_unit
     ((zero*@ -> nil*@) ∧ (succ*β[0] -> cons*(@ × β[1])))
   )
 :]
+
+/-
+
+ν nat_to_list . 
+  zero -> nil ∧
+  ∀ nat list :: nat_to_list ≤ nat -> list . 
+    succ nat -> cons list
+
+
+≤ 
+
+(μ nat . 
+  zero | succ nat
+) ->
+(μ list .
+  nil | cons list
+)
+
+
+
+-/
 
 
 
