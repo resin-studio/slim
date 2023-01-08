@@ -584,7 +584,7 @@ def wellformed_record_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
     ) 
   | .none => false
 
-partial def wellformed_premise_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
+partial def wellformed_unroll_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
   match (Ty.simplify (Ty.subst env_ty ty)) with 
   | .fvar _ => false
   | ty => (linearize_fields ty == .none) || (wellformed_record_type env_ty ty)
@@ -735,12 +735,11 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     let ty := [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
     unify i env_ty closed ty' ty
 
-| .tag l ty', .recur ty =>
-  unify i env_ty closed (.tag l ty') (unroll (.recur ty))
-
+-- | .tag l ty', .recur ty =>
+--   unify i env_ty closed (.tag l ty') (unroll (.recur ty))
 
 | ty', .recur ty =>
-  if wellformed_record_type env_ty ty' then 
+  if wellformed_unroll_type env_ty ty' then 
     unify i env_ty closed ty' (unroll (Ty.recur ty))
   else
     .nil
@@ -761,10 +760,11 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 -- TODO: find way to turn unwellformed premise into simple recursion 
 -- extract premise type by analyzing corecursive structure.
 | .corec ty1, Ty.case ty2 ty3 =>
-  if wellformed_premise_type env_ty ty2 then
+  if wellformed_unroll_type env_ty ty2 || wellformed_unroll_type env_ty ty2 then
     unify i env_ty closed (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
   else
     -- .nil
+    -- TODO: unify i env_ty closed ty2 extract_premise(.corec ty1)
     unify i env_ty closed [: ⟨ty1⟩ ↑ 0 // [⊥] :] (Ty.case ty2 ty3)
 
     
