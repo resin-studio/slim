@@ -2001,6 +2001,24 @@ even_to_unit
   ) => (y[0] (succ;succ;_))
 :]
 
+#eval unify_reduce 
+[:
+  (ν β[0] => 
+    (
+      (zero*@ -> nil*@) ∧ 
+      (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
+        (succ*β[0] -> cons*(@ × β[1]))
+      )
+    )
+  )
+:]
+[:
+  α[0] -> α[1]
+:]
+[: α[0] :]
+
+
+
 #eval extract_premise 0 [:
     (
       (zero*@ -> nil*@) ∧ 
