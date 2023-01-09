@@ -590,6 +590,29 @@ partial def wellformed_unroll_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :
   | ty => (linearize_fields ty == .none) || (wellformed_record_type env_ty ty)
 
 
+def extract_premise (start : Nat) : Ty -> Option Ty 
+| .univ n (.bvar id) (Ty.case ty1 _) ty3 => 
+  if id == start + n then
+    Option.bind (extract_premise (start + n) ty3) (fun ty3_prem =>
+    (Ty.exis n ty1 (.bvar (start + n)) ty3_prem)
+    )
+  else 
+    none
+| Ty.inter ty1 ty2 => 
+  Option.bind (extract_premise start ty1) (fun ty1_prem =>
+  Option.bind (extract_premise start ty2) (fun ty2_prem =>
+    Ty.union ty1_prem ty2_prem
+  ))
+| Ty.case ty1 _ => some ty1 
+| _ => none
+
+--   match ty with
+--   | .univ n (.bvar 0) (Ty.case ty1 _) (Ty.case ty3 _) =>
+--     some (Ty.exis n ty1 (.bvar 0) ty3)
+--   | Ty.case ty1 _ => some ty1 
+--   | _ => none
+-- | _ => none
+
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (closed : Bool): 
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
@@ -763,11 +786,10 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   if wellformed_unroll_type env_ty ty2 || wellformed_unroll_type env_ty ty2 then
     unify i env_ty closed (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
   else
-    -- .nil
-    -- TODO: unify i env_ty closed ty2 extract_premise(.corec ty1)
-    unify i env_ty closed [: ⟨ty1⟩ ↑ 0 // [⊥] :] (Ty.case ty2 ty3)
-
-    
+    match extract_premise 0 ty1 with
+    | none => .nil
+    | .some ty1_prem => 
+      unify i env_ty closed ty2 (Ty.recur ty1_prem)
 
 | .union ty1 ty2, ty => 
   List.bind (unify i env_ty closed ty1 ty) (fun (i, env_ty1) => 
@@ -1039,8 +1061,7 @@ match t with
 -- due to not being wellformed to prevent divergence!
 | .app t1 t2 =>
   let result := (
-    -- this part does partial downward propagation
-    -- incomplete due to restrictive max-1 depth divergence prevention
+    -- this part does downward propagation
     let (i, ty2) := (i + 1, Ty.fvar i)
     let (i, ty') := (i + 1, Ty.fvar i)
     List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty')) (fun (i, env_ty1, _) =>
@@ -1049,14 +1070,13 @@ match t with
       [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
     )))
   )
-  result
-  -- this part does complete inference but requires inferring argument type first
-  -- List.bind (infer i (env_ty) env_tm closed t2 Ty.top) (fun (i, env_ty1, ty2) =>
-  -- let (i, ty') := (i + 1, Ty.fvar i)
-  -- List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 (Ty.case ty2 ty')) (fun (i, env_ty2, _) =>
-  -- List.bind (unify i (env_ty ; env_ty1 ; env_ty2) closed ty' ty) (fun (i, env_ty3) =>
-  --   [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
-  -- )))
+  -- this part does inference to get return type but requires inferring argument type first
+  List.bind (infer i (env_ty) env_tm closed t2 Ty.top) (fun (i, env_ty1, ty2) =>
+  let (i, ty') := (i + 1, Ty.fvar i)
+  List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 (Ty.case ty2 ty')) (fun (i, env_ty2, _) =>
+  List.bind (unify i (env_ty ; env_ty1 ; env_ty2) closed ty' ty) (fun (i, env_ty3) =>
+    [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
+  )))
 
 
 | .letb ty1 t1 t => 
@@ -1981,7 +2001,17 @@ even_to_unit
   ) => (y[0] (succ;succ;_))
 :]
 
+#eval extract_premise 0 [:
+    (
+      (zero*@ -> nil*@) ∧ 
+      (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
+        (succ*β[0] -> cons*(@ × β[1]))
+      )
+    )
+:]
 
+
+-- TODO: figure out why this fails
 #eval infer_reduce_wt [:
   (λ y[0] => λ[
   for zero;() => nil;(),
@@ -1997,28 +2027,6 @@ even_to_unit
     ((zero*@ -> nil*@) ∧ (succ*β[0] -> cons*(@ × β[1])))
   )
 :]
-
-/-
-
-ν nat_to_list . 
-  zero -> nil ∧
-  ∀ nat list :: nat_to_list ≤ nat -> list . 
-    succ nat -> cons list
-
-
-≤ 
-
-μ nat . 
-  zero | succ nat
-) ->
-(μ list .
-  nil | cons list
-)
-
-
-
--/
-
 
 
 #eval infer_reduce [:
