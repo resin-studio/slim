@@ -1046,26 +1046,20 @@ match t with
 
 
 | .proj t1 l =>
-  List.bind (infer i env_ty env_tm closed t1 (Ty.field l ty)) (fun (i, env_ty1, _) =>
-    [(i, env_ty1, ty)]
-  )
-
--- | .proj t1 l =>
---   List.bind (infer i env_ty env_tm closed t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
---   let (i, ty') := (i + 1, Ty.fvar i)
---   List.bind (unify i (env_ty ; env_ty1) closed ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
---     [(i, env_ty1 ; env_ty2, ty')]
---   ))
+  List.bind (infer i env_ty env_tm closed t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
+  let (i, ty') := (i + 1, Ty.fvar i)
+  List.bind (unify i (env_ty ; env_ty1) closed ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
+    [(i, env_ty1 ; env_ty2, ty')]
+  ))
 
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
   let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 Ty.top)) (fun (i, env_ty1, ty1) =>
+  List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1) =>
   List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, ty2') =>
   List.bind (unify i (env_ty ; env_ty1) closed ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
-  List.bind (unify i (env_ty ; env_ty1 ; env_ty2 ; env_ty3) closed ty' ty) (fun (i, env_ty4) =>
-    [(i, env_ty1 ; env_ty2 ; env_ty3 ; env_ty4, ty')]
-  ))))
+    [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
+  )))
 
 
 | .letb ty1 t1 t => 
