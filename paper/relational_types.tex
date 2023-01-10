@@ -115,7 +115,7 @@ to be dependent on programs.
 % motivation: Programming 
 With expressive types, using types to guide the user's programming or automatic program synthesis 
 becomes a more realistic endeavor, as there may be enough information in the specification to narrow the field
-and guide the generation useful programs. Lean and Synquid\cite{} (Based on Liquid Haskell) 
+and guide the generation of useful programs. Lean and Synquid\cite{} (Based on Liquid Haskell) 
 are two examples of systems that decompose and propagate type specifications 
 to incomplete sections or holes in programs. 
 In the case of Lean, users can use this local type specification to help them construct programs and proofs,
@@ -134,69 +134,48 @@ The contributions of the relational type system include:
 % summary 
 
 In section 2, we illustrate the problem and our solution with examples.
-In section 3, we define the problem and define the syntax, dynamic semantics, and syntax of our language.
+In section 3, we define the problem and the syntax, semantics, typing, and subtyping of our language.
 In section 4, we present the synthesis and unification algorithms.
 In section 5, we evaluate the problem and its solution. 
 In section 6, we discuss related work of the past and possible future directions. 
 
-\section{Old Introduction/Overview}
+\section{Overview}
 
+In this work, we introduce three cohesive strategies towards making
+dynamically typed programs easier to write with fewer errors.  
 \begin{enumerate}
-  \item example-driven context 
-  \item example-driven motivation
-  \item example-driven solution  
+  \item propagating types (downward/upward) 
+  \item adjusting types (widening/narrowing) 
+  \item relating types (recursive/corecursive) 
 \end{enumerate}
+We introduce a programming language with a specification language to indicate static bounds. 
+As is common these days, the static bounds are represented in a language of types.
 
+\subsection{Propagating types}
+Writing type annotations can be burdensome, so the first step 
+towards making static checks feasible is to infer types from terms.
 
-\textbf{Dynamically typed} languages can make writing programs quick and easy 
-because they don't require specifying static bounds on behavior.
-Two of the most popular programming languages today, JavaScript and Python, 
-are dynamically typed. 
-JavaScript is the language of the web, while Python is the most popular choice
-for data science and machine learning projects. 
-Consider a Python program that operates on strings or integers. 
+\begin{lstlisting}
+cons;(hello;(),cons;(world;(),nil;())) : 
 
-\begin{lstlisting}[language=Python]
-def foo(x):
-    if isinstance(x, int):
-        return x + 1 
-    elif isinstance(x, str): 
-        return x + "abc"
+cons*(hello*unit $\times$ 
+cons*(world*unit $\times$ 
+nil*unit
+))
 \end{lstlisting}
 
-\noindent The dynamically typed program avoids the extra step of associating terms with
-static bounds as seen in ML-family languages using the datatype mechanism. 
-
-\begin{lstlisting}[language=ML]
-datatype int_or_str = 
-    Int of int | 
-    Str of string
-
-fun foo(Int x) = x + 1
-  | foo(Str x) = x ^ "abc"
-\end{lstlisting}
+\noindent The example above illustrates a type inferred from a term.
+The part left of the colon is the term and the part right of the colon is the type.
+The unit term is represented as \lstinline{()}, and it belongs to type \lstinline{unit}. 
+A tagged term is constructed from a literal sequence of characters and a term separated
+by a semicolon. So the type of \lstinline{hello;()} is \lstinline{hello*unit}.
 
 
-Although dynamically typed languages already offer ease and efficiency for writing programs, 
-this facility can be enhanced with \textbf{synthesis of programs} 
-from surrounding context. 
-This article presents a system that synthesizes terms from context 
-in a dynamically typed language.
-Synthesis of programs for a dynamically typed language introduces a fundamental tension. 
-While dynamically typed programs benefit from a lack of static bounds, program synthesis
-must be a terminating procedure driven by static bounds representing the goals of synthesis.   
+\subsection{Type adjustments}
+\subsection{Type relations}
 
-\textbf{Types} have become the lingua franca of formal specification of static bounds.
-Others have shown how various forms of specification, including examples, abstract values, 
-pure propositions, and modal propositions, can be encoded as types.
-Types have been used successfully for verifying programs, 
-guiding program synthesis in ML-family languages, 
-and guiding humans in dependently-typed interactive theorem proving. 
 
-Dynamically, two interfaces may have the same correctness result for some inputs,
-while differing on other inputs. \textbf{subtyping} is used to decide if a term's 
-composition is statically invalid, maintaining semblance to dynamically typed programming,
-while also adding safety with static behavior.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 By \textbf{downward propagating} and decomposing types, 
 it is possible to guide the synthesis of programs.
@@ -224,16 +203,6 @@ In order to have fine-grained control over where types are utilized or avoided,
 types may be composed of \textbf{dynamic types}, represented by \lstinline{(?)} to indicate 
 that any subterm corresponding to that portion of the type 
 will not be subject to static constraints.
-
-If type annotations are not available, then types \textbf{propagated upward} from context. 
-The actual type of a term can be inferred in an obvious way.
-
-\begin{lstlisting}
-
-cons;("hello",cons;("world",nil;())) : 
-cons*(str $\times$ cons*(str $\times$ nil*$\diamondsuit$))
-
-\end{lstlisting}
 
 To infer expected types, type inference techniques for ML-family languages 
 are a good starting point.
@@ -1665,12 +1634,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \end{document}
 
-% curious idiosyncrasy
-% let-polymorphism with subtyping allows expected type to be smaller than checked type
-  % in particular case of universal <: existential
-  % this is due to the fact that a particular term inhabiting a universal
-  % must be specialized at time of use.
-
 % Observations:
 % language of types
   % a type is a set of objects
@@ -1684,12 +1647,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % Freeing variables happens in subtyping/unification due to subtyping asymmetry  
   % free variable in subtyping connects to free variable associated with term 
   % if expected type has free variable.
-% unrolling corresponds to iteratively finding least/greatest fixedpoint 
-  % recursion on rhs; find least fixedpoint
-  % co-recursion on lhs; find greatest fixedpoint
-% Abstract interpretations' widening/narrowing operator is embedded 
-  % recursion: if not unroll-form  then failure, corresponding to lhs widening to top
-  % co-recursion: if not unroll-form then failure, corresponding to rhs narrowing to bottom 
 % widening and narrowing in type inference
   % exactness param chosen during inference 
     % exactness flag is justified by dual purpose of type system
