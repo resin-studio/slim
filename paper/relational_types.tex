@@ -22,7 +22,7 @@
 % \usepackage[T1]{fontenc}
 
 
-\title{Type and program synthesis with relational types}
+\title{Programming with relational types}
 \author{Thomas Logan}
 \date{October 2022}
 
@@ -1684,12 +1684,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % Freeing variables happens in subtyping/unification due to subtyping asymmetry  
   % free variable in subtyping connects to free variable associated with term 
   % if expected type has free variable.
-% unification is solving for the greatest fixedpoint
-  % it terminates at a failure (bottom of lattice)
-  % or it terminates at a variable assignment 
-% Abstract interpretations' narrowing operator is embedded 
-  % failure (bottom) when two type structures are incompatible
-  % recursive types are only compatible with certain forms of compound types
+% unrolling corresponds to iteratively finding least/greatest fixedpoint 
+  % recursion on rhs; find least fixedpoint
+  % co-recursion on lhs; find greatest fixedpoint
+% Abstract interpretations' widening/narrowing operator is embedded 
+  % recursion: if not unroll-form  then failure, corresponding to lhs widening to top
+  % co-recursion: if not unroll-form then failure, corresponding to rhs narrowing to bottom 
 % widening and narrowing in type inference
   % exactness param chosen during inference 
     % exactness flag is justified by dual purpose of type system
