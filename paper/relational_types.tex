@@ -233,25 +233,27 @@ is propagated and decomposed such that the subtyping constraint
 
 \subsection{Adjusting types}
 
-
-To infer expected types, type inference techniques for ML-family languages 
-are a good starting point.
-ML-family type inference is sound, because an ML term is 
-intrinsically associated with a static bound in accordance with ML's datatype mechanism.
-Terms in dynamically typed languages are not intrinsically associated with a principal type. 
-Type inference for dynamically typed languages cannot be sound without greatly violating the 
-liberal reuse of terms afforded by dynamic types. 
-
-Thus, it is necessary to devise a method of type inference that is unsound, 
-yet still provides sufficient information to guide efficient program synthesis.
-Additionally, despite being unsound, it should be able to prune/reject 
-a significant portion of bad programs. 
-It may reject good programs, but only if it can infer a static type.
+In a dynamically typed language, since types are not necessarily prescribed
+for terms of particular constructions (as they are in ML datatypes), 
+the optimal type for a term will depend on how terms and parameters are used in context. 
+When inferring a type that may be associated with various terms throughout a program,  
+The optimal type may depend on widening a type as new use cases are discovered,
+or narrowing a type as new restrictions are discovered. 
 
 \subsection{Adjusting wider}
 
 In parametric types where a generic input type must be the same as a generic output type,
-The dynamic nature of terms is at odds with inferring types.
+The dynamic nature of terms is seemingly at odds with inferring types.
+
+In the case of a function with generic types, 
+the types can be specialized based on the terms that are witnessed as inputs. 
+
+Since there's no particular upper bound type associated with 
+a term other than top ($\top$), 
+The parameter type must accommodate types of unforeseen arguments, 
+while the return type should be widened with each successive
+argument's type.
+widening is achieved with the introduction of the union type operator ($\vee$).
 
 \begin{lstlisting}
 ($\lambda$ pair : $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\alpha$ $\rightarrow$ ($\alpha$ $\times$ $\alpha$) $\Rightarrow$ 
@@ -260,30 +262,33 @@ The dynamic nature of terms is at odds with inferring types.
 )))
 \end{lstlisting}
 
-\noindent These generic types can be specialized based on the terms that are witnessed as inputs. 
-Since the principal type of any term in dynamically typed languages is top, 
-The parameter type must accommodate types of unforeseen arguments, 
-while the return type should be \textbf{widened} but restricted 
-to previously seen arguments.
-This system tackles the tension in these goals by combining the union combinator  
-with the dynamic type. 
-
+Let \lstinline{?} stand for a fresh type variable.
 Once \lstinline{pair} is applied to an integer its generic type is specialized to 
-\lstinline{(int | ?)}, 
+\lstinline{(int $\vee$ ?)}, 
 in which union with the dynamic type behaves like the top type $\top$, 
 accommodating receiving a string as a the subsequent input.
-Thus, the generic type is specialized to \lstinline{(int | str | ?)}.
+Thus, the generic type is specialized to 
+\newline
+\lstinline{(int $\vee$ str $\vee$ ?)}.
+The type variable always passes type checking, 
+thus behaving like bottom for term types
+and behaving like top for parameter types.
+As such, the parameters' union types behave like top,
+and the type variable simply falls away in the union of the result type. 
 The result type for \lstinline{(pair n s)} ends up as 
-\lstinline{(int | string) $\times$ (int | string)}. 
-The semantics of union with the dynamic type result in the dynamic type 
-falling away for actual types.
-
+\lstinline{(int $\vee$ string) $\times$ (int $\vee$ string)}. 
 
 \subsection{Adjusting narrower}
 
 In functions where a parameter has an unknown type and that parameter is 
-internally used as an argument to an application, the dynamic nature of terms  
-adds some complications to type inference.
+internally used as an argument to an application, the dynamically typed 
+nature of terms adds some complications to type inference.
+
+The argument type must be amenable to parameter types 
+of unforeseen compositions,
+while the external parameter type should be narrowed 
+to the smallest type necessary for internal compositions to
+succeed.
 
 \begin{lstlisting}
 ($\lambda$ i2n : int $\rightarrow$ nat $\Rightarrow$ 
@@ -293,22 +298,23 @@ adds some complications to type inference.
 
 \end{lstlisting}
 
-The argument type must avail itself to internal parameter types of unforeseen compositions,
-while the external parameter type should be \textbf{narrowed} and restricted 
-to the internal parameter types of previously seen compositions.
 Once \lstinline{i2n} is applied to \lstinline{x}, 
-the type for \lstinline{x} is specialized to \lstinline{(int & ?)}, 
+the type for \lstinline{x} is specialized to \lstinline{(int $\wedge$ ?)}, 
 in which intersection with the dynamic type behaves like the bottom type $\bot$,
 availing itself to be used in subsequent applications. 
-Thus, the dynamic type is inferred to be \lstinline{(int & str & ?)}.
-The external parameter type for ends up as \lstinline{(int & str)}. 
-The semantics of intersection with the dynamic type result in the dynamic type
-falling away for expected types.
+Thus, the dynamic type is inferred to be \lstinline{(int $\wedge$ str $\wedge$ ?)}.
+
+The type variable always passes type checking, 
+thus behaving like bottom for term types
+and behaving like top for parameter types.
+As such, the intersections of argument types behave like bottom,
+and the type variable simply falls away in the intersection type of a parameter.
+The external parameter type for ends up as \lstinline{(int $\wedge$ str)}. 
 
 
 \subsection{Relating types}
 
-In order thoroughly catch errors and guide programming, 
+In order to thoroughly catch errors and guide programming, 
 types must be able to \textbf{express} fairly precise information. 
 The system presented here offers types with 
 expressivity comparable to typical decidable predicate logics. \\
