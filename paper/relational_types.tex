@@ -2,6 +2,37 @@
 % \documentclass[]{acmart}
 \documentclass[sigplan,screen]{acmart}
 
+% claim: SOTA: type systems for dynamically typed languages do not have type-directed synthesis methods. 
+% identify problems for synthesis evaluation
+% translate Liquid type benchmarks to this relational type language. 
+
+
+% /-
+% translating Liquid types into relational types
+
+% List with len where
+% [] : {v ∈ List | len v = 0} | 
+% () :: (xs : List) : {v ∈ List | len v = (len xs) + 1} | 
+
+% n : Nat -> {v ∈ List | len v = n}
+
+% ...
+
+% ∀ N . N ≤ Nat => N -> (∃ L . 
+%   (N × L) ≤ (μ N' × L' .  (0 × []) | (N' + 1 × () :: L'))  =>
+%   L
+% )
+
+% ...
+
+% ν N -> L .
+%   0 -> [] ∧ 
+%   N + 1 -> () :: L  
+
+
+% -/
+
+
 \usepackage{mathpartir}
 \usepackage{hyperref}
 \usepackage{mathtools}
@@ -284,6 +315,7 @@ and behaving like top for parameter types.
 As such, the parameters' union types behave like top,
 and the type variable simply falls away in the union of the result type. 
 The result type for \lstinline{(pair n s)} ends up as 
+\newline
 \lstinline{(int $\vee$ string) $\times$ (int $\vee$ string)}. 
 
 \subsection{Adjusting narrower}
@@ -342,7 +374,7 @@ For example, types can also specify a pair of a list and its length.
 
 \begin{lstlisting}[]
 let measurement : $\mu$ (nat $\times$ list) .
-  zero*$\diamondsuit$ $\times$ nil*$\diamondsuit$ $\vee$
+  zero*unit $\times$ nil*unit $\vee$
   succ*nat $\times$ cons*(? $\times$ list)
 \end{lstlisting} 
 
@@ -353,7 +385,7 @@ let measurement : $\mu$ (nat $\times$ list) .
 \begin{lstlisting}[]
 let measurement : 
 $\exists$ $\alpha$ . $\mu$ nat_and_list .
-  zero*$\diamondsuit$ $\times$ nil*$\diamondsuit$ $\vee$ 
+  zero*unit $\times$ nil*unit $\vee$ 
   $\exists$ nat list :: 
     (nat $\times$ list) $\leq$ nat_and_list .
     succ*nat $\times$ cons*($\alpha$ $\times$ list)
@@ -368,7 +400,7 @@ and an element, and returns a list of \lstinline{n} elements.
 \begin{lstlisting}[]
 let replicate : 
 $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
-  zero*$\diamondsuit$ $\rightarrow$ nil*$\diamondsuit$ $\wedge$
+  zero*unit $\rightarrow$ nil*unit $\wedge$
   succ*nat $\rightarrow$ cons*($\alpha$ $\times$ list)
 \end{lstlisting}
 
@@ -381,7 +413,7 @@ $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
 \begin{lstlisting}[]
 let replicate : 
 $\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
-  zero*$\diamondsuit$ $\rightarrow$ nil*$\diamondsuit$ $\wedge$
+  zero*unit $\rightarrow$ nil*unit $\wedge$
   $\forall$ nat list :: 
     nat_to_list $\leq$ (nat $\rightarrow$ list) .
     succ*nat $\rightarrow$ cons*($\alpha$ $\times$ list)
@@ -469,7 +501,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \tau
       &{} ::=
       \begin{array}[t]{@{} l}
-        \diamondsuit 
+        \text{unit} 
         \ |\ 
         \alpha 
         \ |\ 
@@ -629,7 +661,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
     \inferrule[Unit] { 
     } {
-      \Gamma \vdash () : \diamondsuit
+      \Gamma \vdash () : \text{unit} 
     } 
 
     \inferrule[Var] { 
@@ -937,8 +969,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       () : \tau
       &{} =
       \begin{array}[t]{@{} l}
-        \{\Delta_1.\diamondsuit\ |
-        \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \diamondsuit \leq \tau
+        \{\Delta_1.\text{unit}\ |
+        \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \text{unit} \leq \tau
         \}
       \end{array}
       \\
@@ -1309,7 +1341,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       &{} = 
       \{\cdot\}
       \\
-      \text{unify } \iota\ \Delta \vdash \diamondsuit \leq \diamondsuit	
+      \text{unify } \iota\ \Delta \vdash \text{unit}  \leq \text{unit}	
       &{} = 
       \{\cdot\}
       \\
