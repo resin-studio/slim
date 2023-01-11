@@ -313,11 +313,14 @@ The external parameter type for ends up as \lstinline{(int $\wedge$ str)}.
 
 
 \subsection{Relating types}
-
 In order to thoroughly catch errors and guide programming, 
-types must be able to \textbf{express} fairly precise information. 
-The system presented here offers types with 
-expressivity comparable to typical decidable predicate logics. \\
+the specification language must be able to relations
+between values. Rather than adding a second syntactic layer 
+of predicates and propositions to our specification language,
+we build on the notions of type variables, union, and 
+intersection operators already present in the system, 
+yielding a novel system of relational types.
+
 
 \subsection{Relating recursively}
 
@@ -326,7 +329,7 @@ For example, types can also specify a pair of a list and its length.
 
 \begin{lstlisting}[]
 let measurement : $\mu$ (nat $\times$ list) .
-  zero*$\diamondsuit$ $\times$ nil*$\diamondsuit$ | 
+  zero*$\diamondsuit$ $\times$ nil*$\diamondsuit$ $\vee$
   succ*nat $\times$ cons*(? $\times$ list)
 \end{lstlisting} 
 
@@ -337,7 +340,7 @@ let measurement : $\mu$ (nat $\times$ list) .
 \begin{lstlisting}[]
 let measurement : 
 $\exists$ $\alpha$ . $\mu$ nat_and_list .
-  zero*$\diamondsuit$ $\times$ nil*$\diamondsuit$ | 
+  zero*$\diamondsuit$ $\times$ nil*$\diamondsuit$ $\vee$ 
   $\exists$ nat list :: 
     (nat $\times$ list) $\leq$ nat_and_list .
     succ*nat $\times$ cons*($\alpha$ $\times$ list)
