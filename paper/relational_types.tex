@@ -504,7 +504,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
     \inferrule[Proj] {
     } {
-      \omega [\hdots, l \approx v, \hdots]/l \longrightarrow v
+      (\omega\ \widebar{l_i \approx v_i})/l_j \longrightarrow v_j
     } 
 
     \inferrule[App] { 
@@ -600,21 +600,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     }
 
     \inferrule[Record] { 
-      \bigwedge_{l\sim\tau} 
-      \bigwedge_{l \approx t} 
-      \Gamma \vdash t : \tau
+      \bigwedge_{i} 
+      \Gamma \vdash t_i : \tau_i
     } {
-      \Gamma \vdash \omega\ (\widebar{l \approx t}) : (\text{reduce} \wedge \widebar{l\sim\tau})  
+      \Gamma \vdash \omega\ (\widebar{l_i \approx t_i}) : (\text{reduce} \wedge \widebar{l_i\sim\tau_i})  
     } 
 
     \inferrule[Function] {
-      \bigwedge_{(\tau_1 \rightarrow \tau_2)} 
-      \bigwedge_{(t_1 : \tau_1 \Rightarrow t_2)} 
-      \Gamma_1 \vdash t_1 : \tau_1
+      \bigwedge_{i} 
+      \Gamma_1 \vdash p_i : \tau_i
       \ \wedge\
-      \Gamma;\Gamma_1 \vdash t_2 : \tau_2
+      \Gamma;\Gamma_1 \vdash t_i : \tau'_i
     } {
-      \Gamma \vdash \lambda\ (\widebar{t_1 : \tau_1\Rightarrow t_2}) : (\text{reduce} \wedge \widebar{\tau_1 \rightarrow \tau_2})  
+      \Gamma \vdash \lambda\ (\widebar{p_i : \tau_i\Rightarrow t_i}) 
+      : (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
     } 
 
     \\\\
@@ -928,20 +927,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \\
 
       \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      \omega\ \widebar{l \approx t} : \tau
+      \omega\ \widebar{l_i \approx t_i} : \tau
       &{} =
       \begin{array}[t]{@{} l}
-        \text{let } \widebar{(l \approx t, \alpha)} = 
-        [(l \approx t, \text{typevar}()) \ |\ l \approx t ]
+        \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
         \\
-        \text{let } \tau_1 = \text{reduce} \wedge [l \sim \alpha \ |\ (l \approx t, \alpha) ]
+        \text{let } \tau' = \text{reduce} \wedge \widebar{l_i \sim \alpha_i}
         \\
         \text{reduce} * \{
-        \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t : \alpha\ |\ 
+        \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_i : \alpha_i\ |\ 
         \\
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau_1 \leq \tau
-        \\
-        \ \ \ \ (l \approx t, \alpha)
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau' \leq \tau
         \\
         \}
         \\
@@ -949,25 +945,22 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \\
 
       \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      \lambda\ \widebar{p : \tau \Rightarrow t} : \tau
+      \lambda\ \widebar{p_i : \tau_i \Rightarrow t_i} : \tau
       &{} =
       \begin{array}[t]{@{} l}
-        \text{let } \widebar{(p : \tau \Rightarrow t, \alpha)} = 
-        [(p : \tau \Rightarrow t, \text{typevar}()) \ |\ p : \tau \Rightarrow t]
+        \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
         \\
-        \text{let } \tau_1 = \text{reduce} \wedge 
-        [\tau \rightarrow \alpha \ |\ (p : \tau \Rightarrow t, \alpha)]
+        \text{let } \tau' = \text{reduce} \wedge 
+        \widebar{\tau_i \rightarrow \alpha_i }
         \\
         \text{reduce} * \{
-        \text{infer } \iota\ \Delta;\Delta_1;\Delta_2\ \Gamma;\Gamma_1 \vdash t_2 : \alpha\ |\ 
+        \text{infer } \iota\ \Delta;\Delta_1;\Delta_2\ \Gamma;\Gamma_1 \vdash t_i : \alpha_i\ |\ 
         \\
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau_1 \leq \tau
+        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau' \leq \tau
         \\
-        \ \ \ \ (p : \tau \Rightarrow t, \alpha)
+        \ \ \ \ \Gamma_1 \in \{\text{patenv } p_i\}
         \\
-        \ \ \ \ \Gamma_1 \in \{\text{patenv } p\}
-        \\
-        \ \ \ \ \Delta_2.\tau' \in \text{infer } \blacksquare\ \Delta;\Delta_1\ \Gamma;\Gamma_1\ \vdash p : \tau
+        \ \ \ \ \Delta_2.\tau' \in \text{infer } \blacksquare\ \Delta;\Delta_1\ \Gamma;\Gamma_1\ \vdash p_i : \tau_i
         \\
         \}
         \\
@@ -1038,8 +1031,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         \\
         \text{let } \alpha_2 = \text{typevar}()
         \\
-        \{ \Delta_1;\Delta_2\ .\ \nu\ \alpha_4 \ . \forall\ \widebar{\alpha_3} ::
-          \alpha_4 \leq \tau_2\ .  \tau_3
+        \{ \Delta_1;\Delta_2\ .\ \nu\ \alpha_4 \ . \forall\ \widebar{\alpha} ::
+          \alpha_4 \leq \tau_2\ .\ \tau_3
           \ |\ 
         \\
         \ \ \ \ \Delta_1.\tau_1 \in
@@ -1052,7 +1045,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         \\ 
         \ \ \ \ \tau_3 \in \{\alpha_2[\Delta;\Delta_1;\Delta_2]\} 
         \\
-        \ \ \ \ \widebar{\alpha_3} \in \{ \text{freevars}\ \tau_2 \}
+        \ \ \ \ \widebar{\alpha} \in \{ \text{freevars}\ \tau_2 \}
         \\
         \} 
       \end{array}
@@ -1438,8 +1431,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{reduce} \wedge [] 
     &\ = \top
     \\
-    \text{reduce} \wedge \tau_1::\widebar{\tau_2}
-    &\ = \tau_1\ \wedge (\text{reduce} \wedge \widebar{\tau_2})
+    \text{reduce} \wedge \tau::\widebar{\tau}
+    &\ = \tau\ \wedge (\text{reduce} \wedge \widebar{\tau})
     \end{array}
   \]
 
@@ -1467,15 +1460,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{figure*}[h]
   \[
     \begin{array}{l @{}l}
-    \text{reduce} * [N]
+    \text{reduce} * \{N\}
     & {}= N
     \\
-    \text{reduce} * N_1::\widebar{N_2}
-    & {}= N_1 * (\text{reduce} * \widebar{N_2})
+    \text{reduce} * \widebar{N_i}
+    & {}= N_j * (\text{reduce} * \widebar{N_i}\setminus\{N_j\})
     \end{array}
   \]
 
-  \caption{Reduction of lists of contextual types}
+  \caption{Reduction of sets of contextual types}
 \end{figure*}
 
 
