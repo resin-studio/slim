@@ -606,6 +606,22 @@ def extract_premise (start : Nat) : Ty -> Option Ty
 | Ty.case ty1 _ => some ty1 
 | _ => none
 
+def extract_conclusion (start : Nat) : Ty -> Option Ty 
+| .univ n (.bvar id) (Ty.case _ ty2) ty3 => 
+  if id == start + n then
+    Option.bind (extract_conclusion (start + n) ty3) (fun ty3_conc =>
+    (Ty.exis n ty2 (.bvar (start + n)) ty3_conc)
+    )
+  else 
+    none
+| Ty.inter ty1 ty2 => 
+  Option.bind (extract_conclusion start ty1) (fun ty1_conc =>
+  Option.bind (extract_conclusion start ty2) (fun ty2_conc =>
+    Ty.union ty1_conc ty2_conc
+  ))
+| Ty.case _ ty_conc => some ty_conc 
+| _ => none
+
 --   match ty with
 --   | .univ n (.bvar 0) (Ty.case ty1 _) (Ty.case ty3 _) =>
 --     some (Ty.exis n ty1 (.bvar 0) ty3)
@@ -783,13 +799,15 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 -- TODO: find way to turn unwellformed premise into simple recursion 
 -- extract premise type by analyzing corecursive structure.
 | .corec ty1, Ty.case ty2 ty3 =>
-  if wellformed_unroll_type env_ty ty2 || wellformed_unroll_type env_ty ty2 then
+  if wellformed_unroll_type env_ty ty2 || wellformed_unroll_type env_ty ty3 then
     unify i env_ty closed (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
   else
-    match extract_premise 0 ty1 with
-    | none => .nil
-    | .some ty1_prem => 
-      unify i env_ty closed ty2 (Ty.recur ty1_prem)
+    match extract_premise 0 ty1, extract_conclusion 0 ty1 with
+    | .some ty1_prem, .some ty1_conc => 
+      List.bind (unify i env_ty closed ty2 (Ty.recur ty1_prem)) (fun (i, env_ty1) =>
+        unify i (env_ty;env_ty1) closed ty3 (Ty.recur ty1_conc)
+      )
+    | _, _ => .nil
 
 | .union ty1 ty2, ty => 
   List.bind (unify i env_ty closed ty1 ty) (fun (i, env_ty1) => 
@@ -2003,6 +2021,15 @@ even_to_unit
 
 
 #eval extract_premise 0 [:
+    (
+      (zero*@ -> nil*@) ∧ 
+      (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
+        (succ*β[0] -> cons*(@ × β[1]))
+      )
+    )
+:]
+
+#eval extract_conclusion 0 [:
     (
       (zero*@ -> nil*@) ∧ 
       (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
