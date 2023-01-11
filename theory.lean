@@ -2002,6 +2002,15 @@ even_to_unit
   ) => (y[0] (succ;succ;_))
 :]
 
+-- TODO: why doesn't this work?
+#eval infer_reduce [:
+  let y[0] = (λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) => 
+  (y[0] (succ;succ;_))
+:]
+
 #eval unify_reduce 
 [:
   (ν β[0] => 
