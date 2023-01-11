@@ -56,11 +56,11 @@ def foo(x):
 
 % motivation: Specification 
 Much of the work on synthesizing specifications from programs has been based on \textbf{ML type inference}.
-In contrast to dynamically typed languages, \textbf{ML languages} require static bounds are prescribed 
+In contrast to dynamically typed languages, \textbf{ML languages} require that static bounds are prescribed 
 in its programs via its \textbf{datatype} mechanism. The design of ML's datatype mechanism is clever, 
 such that these static bound prescriptions are only needed at the definitions of types and can be 
-inferred when the data of types are used. When a piece of data is seen an upper static bound 
-may be inferred, \text{propagated upward}, and combined with other inferred types.
+inferred when the data of types are used. When a piece of data is seen, an upper static bound 
+may be inferred and propagated around the syntax tree to check correct composition of the program.
 
 \begin{lstlisting}[language=ML]
 datatype int_or_str = 
@@ -70,6 +70,10 @@ datatype int_or_str =
 fun foo(Int x) = x + 1
   | foo(Str x) = x ^ "abc"
 \end{lstlisting}
+
+In addition, to intrinsically associating certain terms with upper bounds, many languages require
+type annotations that restrict the values used in place of variables or parameters.
+
 
 % motivation: subtyping 
 Since dynamically typed languages do not require prescribed static bounds, 
