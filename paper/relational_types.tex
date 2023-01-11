@@ -141,11 +141,11 @@ In section 6, we discuss related work of the past and possible future directions
 
 \section{Overview}
 
-In this work, we introduce three cohesive strategies towards making
+This work introduces three cohesive strategies towards making
 dynamically typed programs easier to write with fewer errors.  
 \begin{enumerate}
   \item propagating types (downward/upward) 
-  \item adjusting types (widening/narrowing) 
+  \item adjusting types (wider/narrower) 
   \item relating types (recursive/corecursive) 
 \end{enumerate}
 We introduce a programming language with a specification language to indicate static bounds. 
@@ -168,17 +168,50 @@ nil*unit
 The part left of the colon is the term and the part right of the colon is the type.
 The unit term is represented as \lstinline{()}, and it belongs to type \lstinline{unit}. 
 A tagged term is constructed from a literal sequence of characters and a term separated
-by a semicolon. So the type of \lstinline{hello;()} is \lstinline{hello*unit}.
+by a semicolon. A tagged term is constructed from a literal sequence of characters
+and a type separated by a star.
+So the type of \lstinline{hello;()} is \lstinline{hello*unit}.
+
+The reason for inferring types is the check for errors statically or 
+provide hints on how to complete missing parts of a program. To this end,
+types propagate back up the syntax tree and down siblings' trees in order
+to facilitate type checking and type hinting.
+Depending on a programming languages requirements of static specification, 
+whether types are propagated up or down may vary. 
+In the case dynamically typed programs, no static specification or type annotations
+are required, so types are propagated in both directions for every syntax rule
+of the language.
 
 
-\subsection{Type adjustments}
-\subsection{Type relations}
+\subsection{Propagating upward}
+Since annotations are not required, it is important to propagate types up to check
+that a term fits its context.
+For example, a function abstraction is not required to be annotated 
+with either an input type or an output type. 
+\noindent By propagating up the input type we can check the composition of the application.
+By propagating up the type of the body, we can check the result of the function application 
+with its surrounding context. 
 
+\begin{lstlisting}
+let f = ($\lambda$ x $\Rightarrow$ 
+  let g : nat -> str = $\hdots$
+  hello ; (g x)
+) 
+let y : world * str = f 4
+\end{lstlisting}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The type of \lstinline{f} is inferred to be \lstinline{nat $\rightarrow$ hello*str}, 
+by propagating up the types inferred for its parameter and body.
+The application is satisfactory since applied to the term \lstinline{4}, 
+but it fails when checked against the function application's context,
+which expects \lstinline{world*str}.
+\begin{lstlisting}
+hello*str $\leq$ world*str
+\end{lstlisting}
 
-By \textbf{downward propagating} and decomposing types, 
-it is possible to guide the synthesis of programs.
+\subsection{Propagating downward}
+By propagating down and decomposing types, 
+it is possible to guide the completion of programs with type hints.
 To maintain the spirit of dynamic types, type annotations must remain optional.
 Previous work has demonstrated the utility of downward propagating types 
 in theorem proving systems, local type checking, 
@@ -188,7 +221,6 @@ For example, in a program that extracts
 the first element of a pair of a particular type, 
 it's possible to detect an error before knowing the second element.
 
-to detect an error of a pairt of a   
 \begin{lstlisting}
 $\lambda$ n : nat $\Rightarrow$
   let first = ($\lambda$ (x,y) : (str $\times$ str) $\Rightarrow$ x) .
@@ -199,10 +231,8 @@ $\lambda$ n : nat $\Rightarrow$
 is propagated and decomposed such that the subtyping constraint 
 \lstinline{nat $\subseteq$ str} is decided. 
 
-In order to have fine-grained control over where types are utilized or avoided, 
-types may be composed of \textbf{dynamic types}, represented by \lstinline{(?)} to indicate 
-that any subterm corresponding to that portion of the type 
-will not be subject to static constraints.
+\subsection{Adjusting types}
+
 
 To infer expected types, type inference techniques for ML-family languages 
 are a good starting point.
@@ -217,6 +247,8 @@ yet still provides sufficient information to guide efficient program synthesis.
 Additionally, despite being unsound, it should be able to prune/reject 
 a significant portion of bad programs. 
 It may reject good programs, but only if it can infer a static type.
+
+\subsection{Adjusting wider}
 
 In parametric types where a generic input type must be the same as a generic output type,
 The dynamic nature of terms is at odds with inferring types.
@@ -246,6 +278,9 @@ The result type for \lstinline{(pair n s)} ends up as
 The semantics of union with the dynamic type result in the dynamic type 
 falling away for actual types.
 
+
+\subsection{Adjusting narrower}
+
 In functions where a parameter has an unknown type and that parameter is 
 internally used as an argument to an application, the dynamic nature of terms  
 adds some complications to type inference.
@@ -271,11 +306,15 @@ The semantics of intersection with the dynamic type result in the dynamic type
 falling away for expected types.
 
 
+\subsection{Relating types}
 
-In order to efficiently guide program synthesis, 
+In order thoroughly catch errors and guide programming, 
 types must be able to \textbf{express} fairly precise information. 
 The system presented here offers types with 
 expressivity comparable to typical decidable predicate logics. \\
+
+\subsection{Relating recursively}
+
 \hfill \\
 For example, types can also specify a pair of a list and its length.
 
@@ -298,21 +337,7 @@ $\exists$ $\alpha$ . $\mu$ nat_and_list .
     succ*nat $\times$ cons*($\alpha$ $\times$ list)
 \end{lstlisting}
 
-\hfill
-
-\noindent Semantically, the type of measurement is similar to the definition of 
-list and length in Synquid \cite{}    
-
-\begin{lstlisting}[keywords={termination, measure, data, where}]
-termination measure len :: List $\beta$ $\rightarrow$ Nat 
-data List $\beta$ where
-  Nil :: {v: List $\beta$ | len v = 0}
-  Cons :: $\beta$ $\rightarrow$ xs: List $\beta$ $\rightarrow$ 
-    {v: List $\beta$ | len v = len xs + 1}
-
-\end{lstlisting}
-
-\hfill
+\subsection{Relating corecursively}
 
 \noindent Correspondingly, the types are expressive enough to precisely specify
 a function that takes a natural number \lstinline{n} 
