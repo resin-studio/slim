@@ -598,6 +598,10 @@ def extract_premise (start : Nat) : Ty -> Option Ty
     )
   else 
     none
+| Ty.inter ty1 Ty.top => 
+  (extract_premise start ty1)
+| Ty.inter Ty.top ty2 => 
+  (extract_premise start ty2)
 | Ty.inter ty1 ty2 => 
   Option.bind (extract_premise start ty1) (fun ty1_prem =>
   Option.bind (extract_premise start ty2) (fun ty2_prem =>
@@ -614,6 +618,10 @@ def extract_conclusion (start : Nat) : Ty -> Option Ty
     )
   else 
     none
+| Ty.inter ty1 Ty.top => 
+  (extract_conclusion start ty1)
+| Ty.inter Ty.top ty2 => 
+  (extract_conclusion start ty2)
 | Ty.inter ty1 ty2 => 
   Option.bind (extract_conclusion start ty1) (fun ty1_conc =>
   Option.bind (extract_conclusion start ty2) (fun ty2_conc =>
@@ -622,12 +630,6 @@ def extract_conclusion (start : Nat) : Ty -> Option Ty
 | Ty.case _ ty_conc => some ty_conc 
 | _ => none
 
---   match ty with
---   | .univ n (.bvar 0) (Ty.case ty1 _) (Ty.case ty3 _) =>
---     some (Ty.exis n ty1 (.bvar 0) ty3)
---   | Ty.case ty1 _ => some ty1 
---   | _ => none
--- | _ => none
 
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (closed : Bool): 
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
@@ -791,13 +793,6 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     let ty := [: ⟨ty⟩ ↑ 0 // [ν β[0] => ⟨ty'⟩] :]
     unify i env_ty closed ty' ty
 
--- use a wellformed check instead of single case 
--- wellformed iff there is at least one tag in nesting of cases/records. 
--- return nil if not wellformed
--- | .corec ty_corec, Ty.case ty1 ty2 =>
---   unify i env_ty closed (unroll (Ty.corec ty_corec)) (Ty.case ty1 ty2)
--- TODO: find way to turn unwellformed premise into simple recursion 
--- extract premise type by analyzing corecursive structure.
 | .corec ty1, Ty.case ty2 ty3 =>
   if wellformed_unroll_type env_ty ty2 || wellformed_unroll_type env_ty ty3 then
     unify i env_ty closed (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
@@ -896,6 +891,9 @@ partial def unify_reduce (ty1) (ty2) (ty_result) :=
     Ty.simplify ((Ty.subst env_ty (Ty.union acc ty_result)))
   ) (Ty.bot)
 
+partial def unify_test (ty1) (ty2) :=
+  (unify 31 {} True ty1 ty2)
+
 
 
 -- -- notation convetion:
@@ -974,7 +972,8 @@ partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (closed : Bool) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
 match t with
-| Tm.hole => [(i, {}, ty)] 
+| Tm.hole => 
+  [(i, {}, ty)] 
 | Tm.unit => 
   List.bind (unify i env_ty closed Ty.unit ty) (fun (i, env_ty_x) => 
     [(i, env_ty_x, Ty.unit)]
@@ -1083,11 +1082,12 @@ match t with
 | .letb ty1 t1 t => 
   List.bind (infer i (env_ty) env_tm closed t1 ty1) (fun (i, env_ty1, ty1') =>
   let ty1' := (Ty.subst (env_ty;env_ty1) ty1')
+  -- let ty1' := (Ty.simplify (Ty.subst (env_ty;env_ty1) ty1'))
   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
-  let ty1' := [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
+  let ty1' := if fvs.isEmpty then ty1' else [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
-  List.bind (infer i env_ty (env_tm ; env_tmx) closed t ty) (fun (i, env_ty2, ty') =>
+  List.bind (infer i (env_ty;env_ty1) (env_tm ; env_tmx) closed t ty) (fun (i, env_ty2, ty') =>
     [ (i, env_ty2, ty') ]
   ))
 
@@ -1112,9 +1112,11 @@ match t with
     [ (i, env_ty1 ; env_ty2, ty') ]
   ))
 
+partial def infer_test (t : Tm) (ty : Ty) :=
+  (infer 31 {} {} False t ty)
+
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
   let ty' := (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
-    -- (Ty.subst env_ty (Ty.union acc ty))
     Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
   ) (Ty.bot)
   let fvs := (Ty.negative_free_vars True ty').toList.reverse.bind (fun (k, _) => [k])
@@ -2002,13 +2004,183 @@ even_to_unit
   ) => (y[0] (succ;succ;_))
 :]
 
--- TODO: why doesn't this work?
 #eval infer_reduce [:
-  let y[0] = (λ y[0] => λ[
+  λ y[0] : (
+    ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+  ) => (y[0] (succ;_))
+:]
+
+#eval infer_reduce [:
+  λ y[0] : (
+    ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+  ) => (y[0] (succ;succ;_))
+:]
+
+#eval infer_reduce [:
+  λ y[0] : (
+    ∀ 0 :: ⊥ ≤ ⊤ => (
+      ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+      ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+    )
+  ) => (y[0] (zero;()))
+:]
+
+---------
+
+#eval infer_reduce [:
+  let y[0] : (
+    ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+  ) = _ => (y[0] (zero;()))
+:]
+
+#eval infer_reduce [:
+  let y[0] : (
+    ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+  ) = _ => (y[0] (succ;succ;zero;()))
+:]
+
+#eval infer_reduce [:
+  let y[0] : (
+    ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+  ) = _ => y[0]
+:]
+
+
+#eval infer_reduce [:
+  let y[0] : (
+    ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+      ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
+  ) = _ => (y[0] (succ;succ;zero;()))
+:]
+
+
+#eval unify_test 
+[:
+  ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
+:]
+[:
+  α[0] -> α[1]
+:]
+
+#eval extract_premise 0
+[:
+  ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
+:]
+
+#eval extract_conclusion 0
+[:
+  ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
+:]
+
+#eval extract_conclusion 0
+[:
+  ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    (zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ r ~ β[0])))
+:]
+
+#eval unify_test 
+[:
+  ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    (zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ r ~ β[0])))
+:]
+[:
+  α[0] -> α[1]
+:]
+
+
+#eval infer_reduce [:
+  let y[0] = fix(λ y[0] => λ[
   for zero;() => nil;(),
   for succ;y[0] => cons;((), (y[1] y[0])) 
   ]) => 
-  (y[0] (succ;succ;_))
+  y[0]
+:]
+
+#eval infer_test [:
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) => 
+  y[0]
+:]
+[: α[30] :]
+
+#eval infer_test [:
+  let y[0] : (
+    ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+  ) = _ => y[0]
+:]
+[: α[30] :]
+
+#eval infer_reduce [:
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) => 
+  (y[0] (zero;()))
+:]
+
+
+-- TODO: figure out why this fails
+#eval infer_test [:
+  fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) 
+:] [:
+  ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+  ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+:]
+
+#eval unify_test [:
+  ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+  ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+:] [:
+  ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+  ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+:]
+
+
+-- TODO: figure out why this fails
+#eval infer_reduce_wt [:
+  (λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) 
+:]
+[:
+  (ν β[0] => ∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[0] -> cons*(@ × β[1])))
+  )
+  ->
+  (ν β[0] => ∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[0] -> cons*(@ × β[1])))
+  )
+:]
+
+
+#eval infer_reduce [:
+  fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) 
+:]
+
+#eval infer_reduce [:
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) => 
+  y[0]
 :]
 
 #eval unify_reduce 
@@ -2048,22 +2220,6 @@ even_to_unit
 :]
 
 
--- TODO: figure out why this fails
-#eval infer_reduce_wt [:
-  (λ y[0] => λ[
-  for zero;() => nil;(),
-  for succ;y[0] => cons;((), (y[1] y[0])) 
-  ]) 
-:]
-[:
-  (ν β[0] => ∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
-    ((zero*@ -> nil*@) ∧ (succ*β[0] -> cons*(@ × β[1])))
-  )
-  ->
-  (ν β[0] => ∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
-    ((zero*@ -> nil*@) ∧ (succ*β[0] -> cons*(@ × β[1])))
-  )
-:]
 
 
 #eval infer_reduce [:
