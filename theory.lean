@@ -2069,3 +2069,54 @@ even_to_unit
 #eval infer_reduce [:
   (λ y[0] => y[0]) 
 :]
+
+
+
+
+/-
+first order quantification
+
+μ NL .
+  {(0, [])} ∨ 
+  ∃ (n, l) : NL . 
+    (n + 1,  () :: l)  
+
+ν N2L .
+  {0 => []} ∧ 
+  ∀ n -> l : N2L .  WRONG
+    {n + 1 => () :: l }
+
+ν N2L .
+  0 -> nil*unit ∧ 
+  ∀ N2L ≤ N -> L .    
+    N + 1 => unit :: L
+
+--- 
+by second order quantification with subtyping rather than first order with membership,
+we avoid mapping between terms and types in unification procedure.
+We also enable the succient corecursive definitions of functions.
+
+-/
+
+/-
+translating Liquid types into relational types
+
+List with len where
+[] : {v ∈ List | len v = 0} | 
+() :: (xs : List) : {v ∈ List | len v = (len xs) + 1} | 
+
+n : Nat -> {v ∈ List | len v = n}
+
+...
+
+∀ N . N ≤ Nat => N -> (∃ L . 
+  (N × L) ≤ (μ N' × L' .  (0 × []) | (N' + 1 × () :: L'))  =>
+  L
+)
+
+...
+
+ν N -> L .
+  0 -> [] ∧ 
+  N + 1 -> () :: L  
+-/
