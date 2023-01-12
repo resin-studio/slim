@@ -799,9 +799,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   else
     match extract_premise 0 ty1, extract_conclusion 0 ty1 with
     | .some ty1_prem, .some ty1_conc => 
-
-      List.bind (unify i env_ty closed ty2 (Ty.recur [: μ β[0] => ⟨ty1_prem⟩ :])) (fun (i, env_ty1) =>
-        unify i (env_ty;env_ty1) closed ty3 (Ty.recur [: μ β[0] => ⟨ty1_conc⟩ :])
+      List.bind (unify i env_ty closed ty2 (Ty.recur ty1_prem)) (fun (i, env_ty1) =>
+        unify i (env_ty;env_ty1) closed ty3 (Ty.recur ty1_conc)
       )
     | _, _ => .nil
 
@@ -2042,6 +2041,13 @@ even_to_unit
     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
   ) = _ => (y[0] (succ;succ;zero;()))
+:]
+
+#eval infer_reduce [:
+  let y[0] : (
+    ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+  ) = _ => (y[0] (succ;succ;_))
 :]
 
 #eval infer_reduce [:
