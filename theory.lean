@@ -797,6 +797,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   if wellformed_unroll_type env_ty ty2 || wellformed_unroll_type env_ty ty3 then
     unify i env_ty closed (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
   else
+    -- TODO: conclusion needs to be constrained by parameter type
     match extract_premise 0 ty1, extract_conclusion 0 ty1 with
     | .some ty1_prem, .some ty1_conc => 
       List.bind (unify i env_ty closed ty2 (Ty.recur ty1_prem)) (fun (i, env_ty1) =>
