@@ -799,8 +799,9 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   else
     match extract_premise 0 ty1, extract_conclusion 0 ty1 with
     | .some ty1_prem, .some ty1_conc => 
-      List.bind (unify i env_ty closed ty2 (Ty.recur ty1_prem)) (fun (i, env_ty1) =>
-        unify i (env_ty;env_ty1) closed ty3 (Ty.recur ty1_conc)
+
+      List.bind (unify i env_ty closed ty2 (Ty.recur [: μ β[0] => ⟨ty1_prem⟩ :])) (fun (i, env_ty1) =>
+        unify i (env_ty;env_ty1) closed ty3 (Ty.recur [: μ β[0] => ⟨ty1_conc⟩ :])
       )
     | _, _ => .nil
 
@@ -2130,6 +2131,39 @@ even_to_unit
 :]
 
 
+-- TODO: why does this fail?
+#eval infer_reduce [:
+  let y[0] : ⟨nat_⟩ = _ =>
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) => 
+  (y[0] y[1])
+:]
+
+#eval infer_reduce [:
+  let y[0] : ⟨nat_⟩ = _ =>
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) => 
+  y[1]
+:]
+
+#eval (extract_premise 0 [: 
+    ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+    ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+:])
+
+#eval unify_test
+nat_
+[:
+μ β[0] => ∃ 2 :: β[1] ≤ β[2] =>
+zero*@ ∨ 
+succ*β[1]
+:]
+
+
 -- TODO: figure out why this fails
 #eval infer_test [:
   fix(λ y[0] => λ[
@@ -2144,6 +2178,23 @@ even_to_unit
 #eval unify_test [:
   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+:] [:
+  ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+  ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+:]
+
+-- TODO: why does this fail?
+#eval unify_test [:
+  ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+  ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+:] [:
+  ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
+    (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
+:]
+
+#eval unify_test [:
+  ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
+    (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
 :] [:
   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
