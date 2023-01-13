@@ -798,6 +798,8 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     unify i env_ty closed (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
   else
     -- TODO: conclusion needs to be constrained by parameter type
+    -- construct an equisatisfiable type
+    -- ∀ P :: P <: Prem => ∃ C :: (P × C) <: R => C
     match extract_premise 0 ty1, extract_conclusion 0 ty1 with
     | .some ty1_prem, .some ty1_conc => 
       List.bind (unify i env_ty closed ty2 (Ty.recur ty1_prem)) (fun (i, env_ty1) =>
