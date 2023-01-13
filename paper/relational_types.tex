@@ -1408,7 +1408,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         &\text{if }
         \text{unrollform } \Delta \vdash \tau_1
         \\
-        \{\}
+        \emptyset
         &\text{otherwise}
       \end{cases}
 
@@ -1441,15 +1441,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         &\text{if }
         \text{unrollform } \Delta \vdash \tau_3
         \\
-        \begin{array}[t]{@{} l}
-          \{\Delta_1;\Delta_2\ |
-          \\ 
-          \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_2 \leq \text{extractprem } \alpha\ \tau_1
-          \\
-          \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_3 \leq \text{extractconc } \alpha\ \tau_1
-          \\
-          \}
-        \end{array}
+        \text{unify } \iota\ \Delta \vdash
+        (\text{rw\_func\_type}\ \nu\alpha.\tau_1)
+        \leq 
+        \tau_2 \rightarrow \tau_3
         &\text{otherwise }
       \end{cases}
 
