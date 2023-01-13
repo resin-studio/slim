@@ -72,7 +72,7 @@ match ty with
 | .union ty1 ty2 =>
   let _ : ToFormat Ty := ⟨fun ty' => Ty.repr ty' n ⟩
   let tys := [ty1, ty2] 
-  Format.joinSep tys (" |" ++ Format.line)
+  Format.joinSep tys (" ∨" ++ Format.line)
 
 | .inter (Ty.field "l" l) (Ty.field "r" r) =>
   Format.bracket "(" ((Ty.repr l n) ++ " × " ++ (Ty.repr r n)) ")"
@@ -81,17 +81,25 @@ match ty with
 | .case ty1 ty2 =>
   Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
 | .univ n ty_c1 ty_c2 ty_pl =>
-  "∀ " ++ (repr n) ++ " :: " ++
-  (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " =>" ++ Format.line ++ 
-  (Ty.repr ty_pl n)
+  Format.bracket "(" (
+    "∀ " ++ (repr n) ++ " :: " ++
+    (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " =>" ++ Format.line ++ 
+    (Ty.repr ty_pl n)
+  ) ")"
 | .exis n ty_c1 ty_c2 ty_pl =>
-  "∃ " ++ (repr n) ++ " :: " ++
-  (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " =>" ++ Format.line ++ 
-  (Ty.repr ty_pl n)
+  Format.bracket "(" (
+    "∃ " ++ (repr n) ++ " :: " ++
+    (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " =>" ++ Format.line ++ 
+    (Ty.repr ty_pl n)
+  ) ")"
 | .recur ty1 =>
-  "μ β[0] => " ++ (Ty.repr ty1 n)
+  Format.bracket "(" (
+    "μ β[0] => " ++ (Ty.repr ty1 n)
+  ) ")"
 | .corec ty1 =>
-  "ν β[0] => " ++ (Ty.repr ty1 n)
+  Format.bracket "(" (
+    "ν β[0] => " ++ (Ty.repr ty1 n)
+  ) ")"
 
 instance : Repr Ty where
   reprPrec := Ty.repr
@@ -610,25 +618,38 @@ def extract_premise (start : Nat) : Ty -> Option Ty
 | Ty.case ty1 _ => some ty1 
 | _ => none
 
-def extract_conclusion (start : Nat) : Ty -> Option Ty 
-| .univ n (.bvar id) (Ty.case _ ty2) ty3 => 
+def extract_relation (start : Nat) : Ty -> Option Ty 
+| .univ n (.bvar id) (Ty.case ty1 ty2) ty3 => 
   if id == start + n then
-    Option.bind (extract_conclusion (start + n) ty3) (fun ty3_conc =>
-    (Ty.exis n ty2 (.bvar (start + n)) ty3_conc)
+    Option.bind (extract_relation (start + n) ty3) (fun ty3_rel =>
+    (Ty.exis n [: ⟨ty1⟩ × ⟨ty2⟩ :] (.bvar (start + n)) ty3_rel)
     )
   else 
     none
 | Ty.inter ty1 Ty.top => 
-  (extract_conclusion start ty1)
+  (extract_relation start ty1)
 | Ty.inter Ty.top ty2 => 
-  (extract_conclusion start ty2)
+  (extract_relation start ty2)
 | Ty.inter ty1 ty2 => 
-  Option.bind (extract_conclusion start ty1) (fun ty1_conc =>
-  Option.bind (extract_conclusion start ty2) (fun ty2_conc =>
-    Ty.union ty1_conc ty2_conc
+  Option.bind (extract_relation start ty1) (fun ty1_rel =>
+  Option.bind (extract_relation start ty2) (fun ty2_rel =>
+    Ty.union ty1_rel ty2_rel
   ))
-| Ty.case _ ty_conc => some ty_conc 
+| Ty.case ty1 ty2 => some [: ⟨ty1⟩ × ⟨ty2⟩ :] 
 | _ => none
+
+def rewrite_function_type : Ty -> Option Ty 
+| Ty.corec ty =>
+  bind (extract_premise 0 ty) (fun prem =>
+  bind (extract_relation 0 ty) (fun rel =>
+    [:
+      ∀ 1 :: β[0] ≤ ⟨Ty.recur prem⟩ => (
+        β[0] -> (∃ 1 :: β[1] × β[0] ≤ ⟨Ty.recur rel⟩ => β[0])
+      )
+    :]
+  )) 
+| _ => none
+
 
 
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (closed : Bool): 
@@ -776,9 +797,6 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
     let ty := [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
     unify i env_ty closed ty' ty
 
--- | .tag l ty', .recur ty =>
---   unify i env_ty closed (.tag l ty') (unroll (.recur ty))
-
 | ty', .recur ty =>
   if wellformed_unroll_type env_ty ty' then 
     unify i env_ty closed ty' (unroll (Ty.recur ty))
@@ -797,15 +815,10 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   if wellformed_unroll_type env_ty ty2 || wellformed_unroll_type env_ty ty3 then
     unify i env_ty closed (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
   else
-    -- TODO: conclusion needs to be constrained by parameter type
-    -- construct an equisatisfiable type
-    -- ∀ P :: P <: Prem => ∃ C :: (P × C) <: R => C
-    match extract_premise 0 ty1, extract_conclusion 0 ty1 with
-    | .some ty1_prem, .some ty1_conc => 
-      List.bind (unify i env_ty closed ty2 (Ty.recur ty1_prem)) (fun (i, env_ty1) =>
-        unify i (env_ty;env_ty1) closed ty3 (Ty.recur ty1_conc)
-      )
-    | _, _ => .nil
+    match rewrite_function_type (.corec ty1) with
+    | .some ty' => 
+      unify i env_ty closed ty' (Ty.case ty2 ty3)
+    | .none => .nil
 
 | .union ty1 ty2, ty => 
   List.bind (unify i env_ty closed ty1 ty) (fun (i, env_ty1) => 
@@ -1959,7 +1972,6 @@ even_to_unit
 :]
 
 
--- TODO: problem with breaking down corecursion into case parts 
 #eval infer_reduce
 [:
   λ y[0] : (ν β[0] => 
@@ -1970,7 +1982,6 @@ even_to_unit
 :]
 
 
--- TODO: problem with breaking down corecursion into case parts 
 #eval infer_reduce
 [:
   λ y[0] : (ν β[0] => 
@@ -2076,24 +2087,6 @@ even_to_unit
 :]
 [:
   α[0] -> α[1]
-:]
-
-#eval extract_premise 0
-[:
-  ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
-    ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
-:]
-
-#eval extract_conclusion 0
-[:
-  ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
-    ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
-:]
-
-#eval extract_conclusion 0
-[:
-  ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
-    (zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ r ~ β[0])))
 :]
 
 #eval unify_test 
@@ -2270,7 +2263,8 @@ succ*β[1]
     )
 :]
 
-#eval extract_conclusion 0 [:
+#eval rewrite_function_type [:
+  ν β[0] =>
     (
       (zero*@ -> nil*@) ∧ 
       (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
@@ -2280,11 +2274,22 @@ succ*β[1]
 :]
 
 
-
-
-#eval infer_reduce [:
-  (λ y[0] => y[0]) 
+#eval unify_reduce
+[:
+  (∀ 1 :: β[0] ≤ (μ β[0] => zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0])) =>
+    (β[0] ->
+      (∃ 1 :: 
+        (β[1] × β[0]) ≤ (μ β[0] => 
+          (zero*@ × nil*@) ∨
+          (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*(@ × β[1])))
+        ) =>
+        β[0]
+      )
+    )
+  )
 :]
+[: α[0] -> α[1] :]
+[: α[1] :]
 
 
 
