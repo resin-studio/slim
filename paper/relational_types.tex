@@ -823,17 +823,23 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\\\
 
     \inferrule[exis-lhs] { 
+      \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2
+      \\
+      \forall \Delta_1'\ .\ \Delta_1' < \Delta_1 \longrightarrow \Delta;\Delta_1' \not\vdash \tau_1 \leq \tau_2
+      \\
+      \Delta;\Delta_1 \vdash \tau_3 \leq \tau_4
+      \\\\
       \Delta;\Delta_2 \vdash \tau_1 \leq \tau_2
       \\
-      \Delta_2 < \Delta_3 \longrightarrow \Delta;\Delta_3 \not\vdash \tau_1 \leq \tau_2
-      \\\\
-      \text{dom}(\Delta_2) = \text{freevars}\ \tau_1 \cup \text{freevars}\ \tau_2
+      \forall \Delta_2'\ .\ \Delta_2 < \Delta_2' \longrightarrow \Delta;\Delta_2' \not\vdash \tau_1 \leq \tau_2
       \\
-      \Delta_1 = \text{reduce}\ ,\ \widebar{\alpha_i \mapsto \top}
+      \Delta;\Delta_2 \vdash \tau_3 \leq \tau_4
       \\\\
-      \Delta;\Delta_1;\Delta_2 \vdash \tau_3 \leq \tau_4
-      \\
       \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
+      \\
+      \text{dom}(\Delta_1) \subseteq \widebar{\alpha_i}
+      \\
+      \text{dom}(\Delta_2) \subseteq \widebar{\alpha_i}
     } { 
       \Delta \vdash 
         (\exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3)
@@ -858,17 +864,23 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\\\
 
     \inferrule[univ-rhs] { 
+      \Delta;\Delta_1 \vdash \tau_2 \leq \tau_3
+      \\
+      \forall \Delta_1'\ .\ \Delta_1' < \Delta_1 \longrightarrow \Delta;\Delta_1' \not\vdash \tau_2 \leq \tau_3
+      \\
+      \Delta;\Delta_1 \vdash \tau_1 \leq \tau_4
+      \\\\
       \Delta;\Delta_2 \vdash \tau_2 \leq \tau_3
       \\
-      \Delta_3 < \Delta_2 \longrightarrow \Delta;\Delta_3 \not\vdash \tau_2 \leq \tau_3
-      \\\\
-      \text{dom}(\Delta_2) = \text{freevars}\ \tau_2 \cup \text{freevars}\ \tau_3
+      \forall \Delta_2'\ .\ \Delta_2 < \Delta_2' \longrightarrow \Delta;\Delta_2' \not\vdash \tau_2 \leq \tau_3
       \\
-      \Delta_1 = \text{reduce}\ ,\ \widebar{\alpha_i \mapsto \bot}
+      \Delta;\Delta_2 \vdash \tau_1 \leq \tau_4
       \\\\
-      \Delta;\Delta_1;\Delta_2 \vdash \tau_1 \leq \tau_4
-      \\
       \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
+      \\
+      \text{dom}(\Delta_1) \subseteq \widebar{\alpha_i}
+      \\
+      \text{dom}(\Delta_2) \subseteq \widebar{\alpha_i}
     } { 
       \Delta \vdash 
         \tau_1

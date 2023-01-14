@@ -2,7 +2,6 @@ import Init.Data.Hashable
 import Lean.Data.AssocList
 import Lean.Data.PersistentHashMap
 
-
 open Lean PersistentHashMap
 open Std
 
@@ -12,6 +11,8 @@ partial def multi_step {T : Type} [BEq T] (step : T -> T) (source : T): T :=
     sink
   else 
     multi_step step sink
+
+
 
 
 def PHashMap.insert_all [BEq α] [Hashable α] 
@@ -540,11 +541,11 @@ partial def Ty.subst_default (sign : Bool) : Ty -> Ty
 | .case ty1 ty2 => Ty.case (Ty.subst_default (!sign) ty1) (Ty.subst_default sign ty2)
 | .univ n cty1 cty2 ty => 
     Ty.univ n  
-      (Ty.subst_default True cty1) (Ty.subst_default False cty2)
+      (Ty.subst_default true cty1) (Ty.subst_default false cty2)
       (Ty.subst_default sign ty)
 | .exis n cty1 cty2 ty => 
     Ty.exis n  
-      (Ty.subst_default True cty1) (Ty.subst_default False cty2)
+      (Ty.subst_default true cty1) (Ty.subst_default false cty2)
       (Ty.subst_default sign ty)
 | .recur ty => Ty.recur (Ty.subst_default sign ty)
 | .corec ty => Ty.corec (Ty.subst_default sign ty)
@@ -651,8 +652,12 @@ def rewrite_function_type : Ty -> Option Ty
 | _ => none
 
 
+inductive Aim : Type
+| adj | cen | max | min
 
-partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (closed : Bool): 
+
+-- TODO: replace aim with aim = adj | cen | max | min
+partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (aim : Aim) :
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
 ------------------------------------------------
@@ -664,53 +669,74 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
         (id1, Ty.fvar id2)
       ])
     ]
-  | (_, .some ty) => unify i env_ty closed (.fvar id1) ty 
-  | (.some ty', _) => unify i env_ty closed ty' (.fvar id2) 
+  | (_, .some ty) => unify i env_ty aim (.fvar id1) ty 
+  | (.some ty', _) => unify i env_ty aim ty' (.fvar id2) 
 
 | .fvar id, ty  => 
   match env_ty.find? id with 
   | none => 
+    let (i, ty_up) := (
+      match aim with
+      | .adj => (i + 1, Ty.inter ty (Ty.fvar i))
+      | .cen => (i, ty)
+      | .max => (i, ty)
+      | .min => (i, Ty.bot)
+    )
     [ 
-      if closed then
-        (i, PHashMap.from_list [
-          (id, roll_corec id env_ty ty)
-        ]) 
-      else
-        (i + 1, PHashMap.from_list [
-          (id, roll_corec id env_ty (Ty.inter ty (Ty.fvar i)))
-        ]) 
+      (i, PHashMap.from_list [
+        (id, roll_corec id env_ty ty_up)
+      ]) 
     ]
-  | some ty' => unify i env_ty closed ty' ty 
+  | some ty' => unify i env_ty aim ty' ty 
 
-| ty', .fvar id  => match env_ty.find? id with 
+| ty', .fvar id  => 
+  match env_ty.find? id with 
   | none => 
+    let (i, ty_low) := (
+      match aim with
+      | .adj => (i + 1, Ty.union ty' (Ty.fvar i))
+      | .cen => (i, ty')
+      | .max => (i, Ty.top)
+      | .min => (i, ty')
+    )
     [ 
-      if closed then
-        (i, PHashMap.from_list [
-          (id, roll_corec id env_ty ty')
-        ]) 
-      else
-        (i + 1, PHashMap.from_list [
-          (id, roll_corec id env_ty (Ty.union ty' (Ty.fvar i)))
-        ]) 
+      (i, PHashMap.from_list [
+        (id, roll_corec id env_ty ty_low)
+      ]) 
     ]
-  | some ty => unify i env_ty closed ty' ty 
+  | some ty => unify i env_ty aim ty' ty 
 
 --------------------------------------------
 
 | .exis n ty_c1 ty_c2 ty1, ty2 =>
   let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
   let args := ids.map (fun id => Ty.fvar id)
-  let env_ty1 := PHashMap.from_list (ids.map (fun id => (id, Ty.top))) 
   let ty_c1 := Ty.instantiate 0 args ty_c1
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty1 := Ty.instantiate 0 args ty1
 
-  List.bind (unify i (env_ty) True ty_c1 ty_c2) (fun (i, env_ty2) =>
-  List.bind (unify i (env_ty;env_ty1;env_ty2) True ty1 ty2) (fun (i, env_ty3) =>
-    [(i, env_ty1;env_ty2;env_ty3)]
-  ))
-
+  if (
+    List.bind (unify i (env_ty) Aim.max ty_c1 ty_c2) (fun (i, env_ty2) =>
+    let env_ty1 := PHashMap.from_list (ids.map (fun id => (id, Ty.top))) 
+    List.bind (unify i (env_ty;env_ty1;env_ty2) Aim.cen ty1 ty2) (fun (i, env_ty3) =>
+      [(i, env_ty1;env_ty2;env_ty3)]
+    ))
+  ).isEmpty then
+    .nil
+  else if (
+    List.bind (unify i (env_ty) Aim.min ty_c1 ty_c2) (fun (i, env_ty2) =>
+    let env_ty1 := PHashMap.from_list (ids.map (fun id => (id, Ty.bot))) 
+    List.bind (unify i (env_ty;env_ty1;env_ty2) Aim.cen ty1 ty2) (fun (i, env_ty3) =>
+      [(i, env_ty1;env_ty2;env_ty3)]
+    ))
+  ).isEmpty then
+    .nil
+  else (
+    List.bind (unify i (env_ty) aim ty_c1 ty_c2) (fun (i, env_ty1) =>
+    List.bind (unify i (env_ty;env_ty1) aim ty1 ty2) (fun (i, env_ty2) =>
+      [(i, env_ty1;env_ty2)]
+    ))
+  )
 
 | ty', .exis n ty_c1 ty_c2 ty =>
   let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
@@ -718,31 +744,48 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   let ty_c1 := Ty.instantiate 0 args ty_c1
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty := Ty.instantiate 0 args ty
-  List.bind (unify i env_ty closed ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
+  List.bind (unify i env_ty aim ty' ty) (fun (i, env_ty1) =>
+  List.bind (unify i (env_ty ; env_ty1) aim ty_c1 ty_c2) (fun (i, env_ty2) => 
     [ (i, env_ty1 ; env_ty2) ]
   ))
 
 | ty1, .univ n ty_c1 ty_c2 ty2 =>
   let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
   let args := ids.map (fun id => Ty.fvar id)
-  let env_ty1 := PHashMap.from_list (ids.map (fun id => (id, Ty.bot))) 
   let ty_c1 := Ty.instantiate 0 args ty_c1
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty2 := Ty.instantiate 0 args ty2
 
-  List.bind (unify i (env_ty) True ty_c1 ty_c2) (fun (i, env_ty2) =>
-  List.bind (unify i (env_ty;env_ty1;env_ty2) True ty1 ty2) (fun (i, env_ty3) =>
-    [(i, env_ty1;env_ty2;env_ty3)]
-  ))
+  if (
+    List.bind (unify i (env_ty) Aim.max ty_c1 ty_c2) (fun (i, env_ty2) =>
+    let env_ty1 := PHashMap.from_list (ids.map (fun id => (id, Ty.top))) 
+    List.bind (unify i (env_ty;env_ty1;env_ty2) Aim.cen ty1 ty2) (fun (i, env_ty3) =>
+      [(i, env_ty1;env_ty2;env_ty3)]
+    ))
+  ).isEmpty then
+    .nil
+  else if (
+    List.bind (unify i (env_ty) Aim.min ty_c1 ty_c2) (fun (i, env_ty2) =>
+    let env_ty1 := PHashMap.from_list (ids.map (fun id => (id, Ty.bot))) 
+    List.bind (unify i (env_ty;env_ty1;env_ty2) Aim.cen ty1 ty2) (fun (i, env_ty3) =>
+      [(i, env_ty1;env_ty2;env_ty3)]
+    ))
+  ).isEmpty then
+    .nil
+  else (
+    List.bind (unify i (env_ty) aim ty_c1 ty_c2) (fun (i, env_ty1) =>
+    List.bind (unify i (env_ty;env_ty1) aim ty1 ty2) (fun (i, env_ty2) =>
+      [(i, env_ty1;env_ty2)]
+    ))
+  )
 
 | .univ n ty_c1 ty_c2 ty', ty =>
   let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
   let ty_c1 := Ty.instantiate 0 args ty_c1
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty' := Ty.instantiate 0 args ty'
-  List.bind (unify i env_ty closed ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
+  List.bind (unify i env_ty aim ty' ty) (fun (i, env_ty1) =>
+  List.bind (unify i (env_ty ; env_ty1) aim ty_c1 ty_c2) (fun (i, env_ty2) => 
     [ (i, env_ty1 ; env_ty2) ]
   ))
 
@@ -758,19 +801,19 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
 | .tag l' ty', .tag l ty =>
   if l' = l then
-    unify i env_ty closed ty' ty
+    unify i env_ty aim ty' ty
   else
     .nil 
 
 | .field l' ty', .field l ty =>
   if l' = l then
-    unify i env_ty closed ty' ty
+    unify i env_ty aim ty' ty
   else
     .nil
 
 | .case ty1 ty2', .case ty1' ty2 =>
-  List.bind (unify i env_ty closed ty1' ty1) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ; env_ty1) closed ty2' ty2) (fun (i, env_ty2) =>
+  List.bind (unify i env_ty aim ty1' ty1) (fun (i, env_ty1) => 
+  List.bind (unify i (env_ty ; env_ty1) aim ty2' ty2) (fun (i, env_ty2) =>
     [ (i, env_ty1 ; env_ty2) ]
   ))
 
@@ -781,11 +824,11 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   else
     let ty' := [: ⟨ty'⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
     let ty := [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
-    unify i env_ty closed ty' ty
+    unify i env_ty aim ty' ty
 
 | ty', .recur ty =>
   if wellformed_unroll_type env_ty ty' then 
-    unify i env_ty closed ty' (unroll (Ty.recur ty))
+    unify i env_ty aim ty' (unroll (Ty.recur ty))
   else
     .nil
 
@@ -795,42 +838,42 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   else
     let ty' := [: ⟨ty'⟩ ↑ 0 // [ν β[0] => ⟨ty'⟩] :]
     let ty := [: ⟨ty⟩ ↑ 0 // [ν β[0] => ⟨ty'⟩] :]
-    unify i env_ty closed ty' ty
+    unify i env_ty aim ty' ty
 
 | .corec ty1, Ty.case ty2 ty3 =>
   if wellformed_unroll_type env_ty ty2 || wellformed_unroll_type env_ty ty3 then
-    unify i env_ty closed (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
+    unify i env_ty aim (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
   else
     match rewrite_function_type (.corec ty1) with
     | .some ty' => 
-      unify i env_ty closed ty' (Ty.case ty2 ty3)
+      unify i env_ty aim ty' (Ty.case ty2 ty3)
     | .none => .nil
 
 | .union ty1 ty2, ty => 
-  List.bind (unify i env_ty closed ty1 ty) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ; env_ty1) closed ty2 ty) (fun (i, env_ty2) =>
+  List.bind (unify i env_ty aim ty1 ty) (fun (i, env_ty1) => 
+  List.bind (unify i (env_ty ; env_ty1) aim ty2 ty) (fun (i, env_ty2) =>
     [ (i, env_ty1 ; env_ty2) ]
   ))
 
 | ty, .union ty1 ty2 => 
-  (unify i env_ty closed ty ty1) ++ (unify i env_ty closed ty ty2)
+  (unify i env_ty aim ty ty1) ++ (unify i env_ty aim ty ty2)
 
 
 | ty, .inter ty1 ty2 => 
-  List.bind (unify i env_ty closed ty ty1) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ; env_ty1) closed ty ty2) (fun (i, env_ty2) =>
+  List.bind (unify i env_ty aim ty ty1) (fun (i, env_ty1) => 
+  List.bind (unify i (env_ty ; env_ty1) aim ty ty2) (fun (i, env_ty2) =>
     [ (i, env_ty1 ; env_ty2) ]
   ))
 
 | .inter ty1 ty2, ty => 
-  (unify i env_ty closed ty1 ty) ++ (unify i env_ty closed ty2 ty)
+  (unify i env_ty aim ty1 ty) ++ (unify i env_ty aim ty2 ty)
 
 | _, _ => .nil 
 
 def unify_all (i : Nat) (cs : List (Ty × Ty)) : List (Nat × PHashMap Nat Ty) := 
   List.foldl (fun u_env_ty1 => fun (ty_c1, ty_c2) => 
     List.bind u_env_ty1 (fun (i, env_ty1) => 
-    List.bind (unify i env_ty1 False ty_c1 ty_c2) (fun (i, env_ty2) =>
+    List.bind (unify i env_ty1 Aim.cen ty_c1 ty_c2) (fun (i, env_ty2) =>
       [ (i, env_ty1 ; env_ty2) ]
     ))
   ) [(i, {})] cs
@@ -889,12 +932,12 @@ partial def Ty.union_all : (List Ty) -> Option Ty
 
 
 partial def unify_reduce (ty1) (ty2) (ty_result) :=
-  (unify 31 {} True ty1 ty2).foldl (fun acc => fun  (_, env_ty) =>
+  (unify 31 {} Aim.cen ty1 ty2).foldl (fun acc => fun  (_, env_ty) =>
     Ty.simplify ((Ty.subst env_ty (Ty.union acc ty_result)))
   ) (Ty.bot)
 
 partial def unify_test (ty1) (ty2) :=
-  (unify 31 {} True ty1 ty2)
+  not (unify 31 {} Aim.cen ty1 ty2).isEmpty
 
 
 
@@ -971,28 +1014,28 @@ def Option.toList : Option T -> List T
 
 
 partial def infer (i : Nat)
-(env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (closed : Bool) (t : Tm) (ty : Ty) : 
+(env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (aim : Aim) (t : Tm) (ty : Ty) : 
 List (Nat × (PHashMap Nat Ty) × Ty) := 
 match t with
 | Tm.hole => 
   [(i, {}, ty)] 
 | Tm.unit => 
-  List.bind (unify i env_ty closed Ty.unit ty) (fun (i, env_ty_x) => 
+  List.bind (unify i env_ty aim Ty.unit ty) (fun (i, env_ty_x) => 
     [(i, env_ty_x, Ty.unit)]
   )
 | Tm.bvar _ => .nil 
 | Tm.fvar id =>
   match (env_tm.find? id) with 
     | .some ty' => 
-      List.bind (unify i env_ty closed ty' ty) (fun (i, env_ty_x) =>
+      List.bind (unify i env_ty aim ty' ty) (fun (i, env_ty_x) =>
         [(i, env_ty_x, ty')]
       )
     | .none => .nil 
 
 | .tag l t1 =>   
   let (i, ty1) := (i + 1, .fvar i)
-  List.bind (unify i env_ty closed (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
-  List.bind (infer i (env_ty ; env_ty1) env_tm closed t1 ty1) (fun (i, env_ty_x, ty1') =>
+  List.bind (unify i env_ty aim (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
+  List.bind (infer i (env_ty ; env_ty1) env_tm aim t1 ty1) (fun (i, env_ty_x, ty1') =>
     [ (i, env_ty1 ; env_ty_x, Ty.tag l ty1') ]
   ))
 
@@ -1007,11 +1050,11 @@ match t with
     Ty.inter (Ty.field l ty1) ty_acc 
   ) ty_init trips 
 
-  let u_env_ty1 := unify i env_ty closed ty' ty 
+  let u_env_ty1 := unify i env_ty aim ty' ty 
 
   let f_step := fun acc => (fun (l, t1, ty1) =>
     List.bind acc (fun (i, env_ty_acc, ty_acc) =>
-    List.bind (infer i (env_ty ; env_ty_acc) env_tm closed t1 ty1) (fun (i, env_ty_x, ty1') =>
+    List.bind (infer i (env_ty ; env_ty_acc) env_tm aim t1 ty1) (fun (i, env_ty_x, ty1') =>
       [(i, env_ty_acc ; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
     ))
   )
@@ -1033,7 +1076,7 @@ match t with
     (i, Ty.inter (Ty.case ty_p ty_b) ty_acc) 
   ) (i, case_init) fs_typed 
 
-  let u_env_ty1 := unify i env_ty closed ty' ty 
+  let u_env_ty1 := unify i env_ty aim ty' ty 
 
   let f_step := (fun acc (p, op_ty_p, b, ty_b) =>
     List.bind acc (fun (i, env_ty_acc, ty_acc) =>
@@ -1054,8 +1097,8 @@ match t with
       | .none => (i + 1, Ty.fvar i)
 
     let b := Tm.instantiate 0 list_tm_x b  
-    List.bind (infer i (env_ty ; env_ty_acc) (env_tm ; env_pat) True p ty_p) (fun (i, env_ty_p, _) =>
-    List.bind (infer i (env_ty ; env_ty_acc ; env_ty_p) (env_tm ; env_pat) closed b ty_b) (fun (i, env_ty_b, ty_b') =>
+    List.bind (infer i (env_ty ; env_ty_acc) (env_tm ; env_pat) Aim.cen p ty_p) (fun (i, env_ty_p, _) =>
+    List.bind (infer i (env_ty ; env_ty_acc ; env_ty_p) (env_tm ; env_pat) aim b ty_b) (fun (i, env_ty_b, ty_b') =>
       [(i, env_ty_acc ; env_ty_p ; env_ty_b, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
     ))))
   )
@@ -1065,40 +1108,40 @@ match t with
 
 
 | .proj t1 l =>
-  List.bind (infer i env_ty env_tm closed t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i env_ty env_tm aim t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
   let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (unify i (env_ty ; env_ty1) closed ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
+  List.bind (unify i (env_ty ; env_ty1) aim ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
     [(i, env_ty1 ; env_ty2, ty')]
   ))
 
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
   let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (infer i env_ty env_tm closed t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1) =>
-  List.bind (infer i (env_ty ; env_ty1) env_tm closed t2 ty2) (fun (i, env_ty2, ty2') =>
-  List.bind (unify i (env_ty ; env_ty1) closed ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
+  List.bind (infer i env_ty env_tm aim t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1) =>
+  List.bind (infer i (env_ty ; env_ty1) env_tm aim t2 ty2) (fun (i, env_ty2, ty2') =>
+  List.bind (unify i (env_ty ; env_ty1) aim ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
     [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
   )))
 
 
 | .letb ty1 t1 t => 
-  List.bind (infer i (env_ty) env_tm closed t1 ty1) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i (env_ty) env_tm aim t1 ty1) (fun (i, env_ty1, ty1') =>
   let ty1' := (Ty.subst (env_ty;env_ty1) ty1')
   -- let ty1' := (Ty.simplify (Ty.subst (env_ty;env_ty1) ty1'))
   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
   let ty1' := if fvs.isEmpty then ty1' else [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
-  List.bind (infer i (env_ty;env_ty1) (env_tm ; env_tmx) closed t ty) (fun (i, env_ty2, ty') =>
+  List.bind (infer i (env_ty;env_ty1) (env_tm ; env_tmx) aim t ty) (fun (i, env_ty2, ty') =>
     [ (i, env_ty2, ty') ]
   ))
 
 
 | .fix t1 =>
-  List.bind (infer i (env_ty) env_tm True t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i (env_ty) env_tm Aim.cen t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
   let (i, ty_prem) := (i + 1, Ty.fvar i) 
   let (i, ty_conc) := (i + 1, Ty.fvar i) 
-  List.bind (unify i (env_ty ; env_ty1) True ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
+  List.bind (unify i (env_ty ; env_ty1) Aim.cen ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
     let ty_prem := Ty.subst (env_ty ; env_ty1 ; env_ty2) ty_prem 
     let ty_conc := Ty.subst (env_ty ; env_ty1 ; env_ty2) ty_conc
 
@@ -1115,17 +1158,17 @@ match t with
   ))
 
 partial def infer_test (t : Tm) (ty : Ty) :=
-  (infer 31 {} {} False t ty)
+  (infer 31 {} {} Aim.adj t ty)
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
-  let ty' := (infer 31 {} {} False t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
-    Ty.simplify (Ty.subst_default True (Ty.subst env_ty (Ty.union acc ty)))
+  let ty' := (infer 31 {} {} Aim.adj t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
+    Ty.simplify (Ty.subst_default true (Ty.subst env_ty (Ty.union acc ty)))
   ) (Ty.bot)
-  let fvs := (Ty.negative_free_vars True ty').toList.reverse.bind (fun (k, _) => [k])
+  let fvs := (Ty.negative_free_vars true ty').toList.reverse.bind (fun (k, _) => [k])
   if fvs.isEmpty then
-    Ty.simplify (Ty.subst_default True ty')
+    Ty.simplify (Ty.subst_default true ty')
   else
-    Ty.simplify (Ty.subst_default True [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :])
+    Ty.simplify (Ty.subst_default true [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :])
 
 
 
@@ -1169,11 +1212,11 @@ def zero_ := [:
     zero * @
 :]
 
-#eval (unify 3 {} False [:
+#eval unify_test [:
     (dumb*@)
-:] zero_)
+:] zero_
 
-#eval unify 3 {} False [:
+#eval unify_test [:
     (zero*@)
 :] zero_
 
@@ -1202,36 +1245,34 @@ def weven := [:
     succ*dumb*β[0]
 :]
 
-#eval unify 3 {} True weven nat_ 
-#eval unify 3 {} True even nat_ 
-#eval unify 3 {} True nat_ even
+#eval unify_test weven nat_ 
+#eval unify_test even nat_ 
+#eval unify_test nat_ even
 
 
-#eval unify 3 {} True 
+#eval unify_test
 [: ∃ 2 :: β[0] ≤ ⟨even⟩ => β[0] × β[1]:] 
 [: ∃ 2 :: β[0] ≤ ⟨nat_⟩ => β[0] × β[1]:] 
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
 [: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
 
-#eval unify 3 {} False 
+#eval unify_test 
 [: ∃ 2 :: β[0] ≤ ⟨nat_⟩ => β[0] × β[1]:] 
 [: ∃ 2 :: β[0] ≤ ⟨even⟩ => β[0] × β[1]:] 
 
-#eval unify 3 {} False 
+#eval unify_test 
 [: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
 [: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
 
-#eval unify 3 {} False [:
-    (zero*@)
-:] nat_ 
+#eval unify_test 
+[: (zero*@) :] nat_ 
 
-#eval unify 3 {} False [:
-    (succ*(zero*@))
-:] nat_ 
+#eval unify_test 
+[: (succ*(zero*@)) :] nat_ 
 
-#eval unify 3 {} False 
+#eval unify_test 
 [: (succ*(α[0])) :] 
 nat_ 
 
@@ -1257,32 +1298,32 @@ def even_list := [:
 :]
 
 -- TODO
-#eval unify 3 {} False
+#eval unify_test 
   nat_list
   even_list
 
-#eval unify 3 {} False
+#eval unify_test 
   even_list
   nat_list
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 [: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 [: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 
-#eval unify 3 {} False
+#eval unify_test 
   [: (l ~ zero*@ ∧ r ~ nil*@) :] 
   nat_list
 
-#eval unify 3 {} False
+#eval unify_test 
   [: (l ~ zero*@ ∧ r ~ dumb*@) :] 
   nat_list
 
 -- this is record type is not wellformed 
-#eval unify 3 {} False
+#eval unify_test 
   [: (l ~ α[0] ∧ r ~ α[1]) :] 
   nat_list
 
@@ -1292,23 +1333,19 @@ def even_list := [:
   nat_list
   [: ⊤ :]
 
-#eval unify 3 {} False
+#eval unify_test 
   [: (l ~ zero*@ ∧ r ~ α[0]) :] 
   nat_list
 
 -- expected α[0] → /nil
-#eval unify 3 {} False
+#eval unify_test 
   [: (l ~ succ*zero*@ ∧ r ~ cons*α[0]) :] 
   nat_list
 
-#eval unify 3 {} False
+#eval unify_test 
   [: (l ~ succ*succ*zero*@ ∧ r ~ cons*α[0]) :] 
   nat_list
 
-
-def examp1 := unify 3 {} False
-  [: (l ~ succ*succ*zero*@ ∧ r ~ cons*α[0]) :] 
-  nat_list
 
 #eval unify_reduce 
   [: (l ~ succ*succ*zero*@ ∧ r ~ cons*α[0]) :] 
@@ -1316,7 +1353,7 @@ def examp1 := unify 3 {} False
   [: α[0]:]
 
 
-#eval unify 3 {} False
+#eval unify_test 
   [: (l ~ succ*zero*@ ∧ r ~ cons*cons*α[0]) :] 
   nat_list
 
@@ -1329,7 +1366,7 @@ def nat_to_list := [:
       succ*β[0] -> cons*β[1])
 :]
 
-#eval unify 3 {} False 
+#eval unify_test 
   nat_to_list
   [: (succ*zero*@) -> (cons*nil*@) :] 
 
@@ -1728,60 +1765,60 @@ def repli := [:
 
 -----
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
 [: uno ~ @ ∧ tres ~ @:]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
 [: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
 [: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
 
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: uno ~ @ ∨ dos ~ @ ∨ tres ~ @ :]
 [:dos ~ @ ∧ tres ~ @ :]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [:dos ~ @ ∧ tres ~ @ ∧ four ~ @:]
 [: uno ~ @ ∨ dos ~ @ ∨ tres ~ @ :]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
 [:dos ~ @ ∧ tres ~ @ ∧ four ~ @:]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 [:dos ~ @ ∧ tres ~ @ :]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ≤ β[0] => β[0]:]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ≤ β[0] => β[0]:]
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 [: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 [: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ four ~ @ ≤ β[0] => β[0]:]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∀ 1 :: β[0] ≤ uno ~ @ => β[0]:]
 [:uno ~ @ ∧ four ~ @:]
 
-#eval unify 3 {} True 
+#eval unify_test 
 [: ∀ 1 :: uno ~ @ ≤ β[0] => β[0]:]
 [:uno ~ @ ∧ four ~ @:]
 
@@ -1802,28 +1839,28 @@ def even_to_unit := [:
       (succ*succ*β[0]) -> @)
 :]
 
-#eval unify 3 {} False 
+#eval unify_test 
 nat_to_unit
 [: (zero*@ -> @) :]
 
-#eval unify 3 {} True 
+#eval unify_test 
 nat_to_unit
 nat_to_unit
 
-#eval unify 3 {} True 
+#eval unify_test 
 nat_to_unit
 [: (succ*zero*@ -> @) :]
 
-#eval unify 3 {} True 
+#eval unify_test 
 even_to_unit
 [: (succ*succ*zero*@ -> @) :]
 
-#eval unify 3 {} True 
+#eval unify_test 
 even_to_unit
 [: (succ*zero*@ -> @) :]
 
 -- -- TODO: why does this diverge?
--- #eval unify 3 {} True 
+-- #eval unify 3 {} Ty.top 
 -- [: 
 --     (zero*@ -> @) ∧ 
 --     (∀ 1 :: ⟨nat_to_unit⟩ ≤ β[0] -> @ => 
@@ -1835,15 +1872,15 @@ even_to_unit
 --       (succ*succ*β[0]) -> @)
 -- :]
 
--- #eval unify 3 {} True 
+-- #eval unify 3 {} Ty.top 
 -- nat_to_unit
 -- even_to_unit
 
--- #eval unify 3 {} True 
+-- #eval unify 3 {} Ty.top 
 -- even_to_unit
 -- nat_to_unit
 
--- #eval unify 3 {} True 
+-- #eval unify 3 {} Ty.top 
 -- nat_
 -- even
 
@@ -2350,6 +2387,7 @@ succ*β[1]
   ⟨even⟩ -> @ 
 :]
 
+-- expected: true
 #eval unify_test [:
   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
     (β[0] -> @)
@@ -2360,26 +2398,7 @@ succ*β[1]
   )
 :]
 
-#eval unify_test [:
-  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
-    (β[0])
-  )
-:] [:
-  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
-    (β[0])
-  )
-:]
-
-#eval unify_test [:
-  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
-    (β[0])
-  )
-:] [:
-  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
-    (β[0])
-  )
-:]
-
+-- expected: false 
 #eval unify_test [:
   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
     (β[0] -> @)
@@ -2390,6 +2409,89 @@ succ*β[1]
   )
 :]
 
+-- expected: true
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0])
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:]
+
+-- expected: false 
+-- this is overly strict, but safe 
+-- there is no way for the LHS to know to instantiate with ⊥ vs nat_
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0])
+  )
+:]
+
+-- expected: true 
+#eval unify_test [:
+  (∀ 1 :: ⟨even⟩ ≤ β[0] =>
+    (β[0])
+  )
+:] [:
+  (∀ 1 :: ⟨nat_⟩ ≤ β[0] =>
+    (β[0])
+  )
+:]
+
+
+-- expected: false 
+-- RHS could be ⊥, but LHS must be > ⊥
+#eval unify_test [:
+  (∀ 1 :: ⟨even⟩ ≤ β[0] =>
+    (β[0])
+  )
+:] [:
+  (∀ 1 => (β[0]))
+:]
+
+#eval unify_test even [: ⊥ :]
+
+-- expected: false 
+-- RHS could be ⊤ -> @, but LHS must be > even -> @ 
+-- must give negative positions ⊤, and positive positions ⊥
+-- bound flips based on negative/positive position
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0] -> @)
+  )
+:] [:
+  (∀ 1 => (β[0] -> @))
+:]
+
+-- expected: true 
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0] -> @)
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0] -> @)
+  )
+:]
+
+-- expected: false
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0] -> @)
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0] -> @)
+  )
+:]
+
+-- expected: true 
 #eval unify_test [:
   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
     (β[0])
@@ -2399,6 +2501,8 @@ succ*β[1]
     (β[0])
   )
 :]
+
+-- expected: false 
 #eval unify_test [:
   (∃ 2 :: β[0] × β[1] ≤ ⟨nat_⟩ × ⟨nat_⟩ =>
     β[0] × β[1]
@@ -2409,6 +2513,7 @@ succ*β[1]
   )
 :]
 
+-- expected: true 
 #eval unify_test [:
   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
     (β[0])
@@ -2419,6 +2524,8 @@ succ*β[1]
     (β[0])
   )
 :] nat_
+
+-- expected: false 
 #eval unify_test [:
   (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
     (β[0])
@@ -2430,7 +2537,8 @@ succ*β[1]
 :]
 
 
--- TODO: this should fail; β[0] could be TOP
+-- expected: false
+-- β[0] could be TOP
 #eval unify_test [:
   (∃ 1 :: ⟨even⟩ ≤ β[0] =>
     (β[0])
