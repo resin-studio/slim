@@ -655,70 +655,6 @@ def rewrite_function_type : Ty -> Option Ty
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (closed : Bool): 
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
-| .exis n1 ty_c1 ty_c2 ty1, .exis n2 ty_c3 ty_c4 ty2 =>
-  let (i, args1) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
-  let ty_c1 := Ty.instantiate 0 args1 ty_c1
-  let ty_c2 := Ty.instantiate 0 args1 ty_c2
-  let ty1 := Ty.instantiate 0 args1 ty1
-
-  let (i, args2) := (i + n2, (List.range n1).map (fun j => Ty.fvar (i + j)))
-  let ty_c3 := Ty.instantiate 0 args2 ty_c3
-  let ty_c4 := Ty.instantiate 0 args2 ty_c4
-  let ty2 := Ty.instantiate 0 args2 ty2
-
-  List.bind (unify i (env_ty) closed ty1 ty2) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty;env_ty1) True ty_c3 ty_c4) (fun (i, env_ty2) =>
-
-  -- unify with LHS constraints narrower than RHS constraints 
-  List.bind (unify i (env_ty;env_ty1;env_ty2) True ty_c3 ty_c1) (fun (i, env_ty3) =>
-  List.bind (unify i (env_ty;env_ty1;env_ty2;env_ty3) True ty_c1 ty_c2) (fun (i, env_ty4) =>
-  List.bind (unify i (env_ty;env_ty1;env_ty2;env_ty3;env_ty4) True ty_c2 ty_c4) (fun (i, env_ty5) =>
-
-    [ (i, env_ty1;env_ty2;env_ty3;env_ty4;env_ty5)  ]
-  )))))
-
-| ty', .exis n ty_c1 ty_c2 ty =>
-  let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
-
-  let ty_c1 := Ty.instantiate 0 args ty_c1
-  let ty_c2 := Ty.instantiate 0 args ty_c2
-  let ty := Ty.instantiate 0 args ty
-  List.bind (unify i env_ty closed ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
-    [ (i, env_ty1 ; env_ty2) ]
-  ))
-
-| .univ n1 ty_c1 ty_c2 ty1, .univ n2 ty_c3 ty_c4 ty2 =>
-  let (i, args1) := (i + n1, (List.range n1).map (fun j => Ty.fvar (i + j)))
-  let ty_c1 := Ty.instantiate 0 args1 ty_c1
-  let ty_c2 := Ty.instantiate 0 args1 ty_c2
-  let ty1 := Ty.instantiate 0 args1 ty1
-
-  let (i, args2) := (i + n2, (List.range n1).map (fun j => Ty.fvar (i + j)))
-  let ty_c3 := Ty.instantiate 0 args2 ty_c3
-  let ty_c4 := Ty.instantiate 0 args2 ty_c4
-  let ty2 := Ty.instantiate 0 args2 ty2
-
-  List.bind (unify i (env_ty) closed ty1 ty2) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty;env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) =>
-
-  -- unify with LHS constraints wider than RHS constraints 
-  List.bind (unify i (env_ty;env_ty1;env_ty2) True ty_c1 ty_c3) (fun (i, env_ty3) =>
-  List.bind (unify i (env_ty;env_ty1;env_ty2;env_ty3) True ty_c3 ty_c4) (fun (i, env_ty4) =>
-  List.bind (unify i (env_ty;env_ty1;env_ty2;env_ty3;env_ty4) True ty_c4 ty_c2) (fun (i, env_ty5) =>
-    [ (i, env_ty1;env_ty2;env_ty3;env_ty4;env_ty5)  ]
-  )))))
-
-| .univ n ty_c1 ty_c2 ty', ty =>
-  let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
-  let ty_c1 := Ty.instantiate 0 args ty_c1
-  let ty_c2 := Ty.instantiate 0 args ty_c2
-  let ty' := Ty.instantiate 0 args ty'
-  List.bind (unify i env_ty closed ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
-    [ (i, env_ty1 ; env_ty2) ]
-  ))
-
 ------------------------------------------------
 | (.fvar id1), (.fvar id2) => 
   match (env_ty.find? id1, env_ty.find? id2) with 
@@ -759,6 +695,56 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
         ]) 
     ]
   | some ty => unify i env_ty closed ty' ty 
+
+--------------------------------------------
+
+| .exis n ty_c1 ty_c2 ty1, ty2 =>
+  let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
+  let args := ids.map (fun id => Ty.fvar id)
+  let env_ty1 := PHashMap.from_list (ids.map (fun id => (id, Ty.top))) 
+  let ty_c1 := Ty.instantiate 0 args ty_c1
+  let ty_c2 := Ty.instantiate 0 args ty_c2
+  let ty1 := Ty.instantiate 0 args ty1
+
+  List.bind (unify i (env_ty) True ty_c1 ty_c2) (fun (i, env_ty2) =>
+  List.bind (unify i (env_ty;env_ty1;env_ty2) True ty1 ty2) (fun (i, env_ty3) =>
+    [(i, env_ty1;env_ty2;env_ty3)]
+  ))
+
+
+| ty', .exis n ty_c1 ty_c2 ty =>
+  let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
+
+  let ty_c1 := Ty.instantiate 0 args ty_c1
+  let ty_c2 := Ty.instantiate 0 args ty_c2
+  let ty := Ty.instantiate 0 args ty
+  List.bind (unify i env_ty closed ty' ty) (fun (i, env_ty1) =>
+  List.bind (unify i (env_ty ; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
+    [ (i, env_ty1 ; env_ty2) ]
+  ))
+
+| ty1, .univ n ty_c1 ty_c2 ty2 =>
+  let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
+  let args := ids.map (fun id => Ty.fvar id)
+  let env_ty1 := PHashMap.from_list (ids.map (fun id => (id, Ty.bot))) 
+  let ty_c1 := Ty.instantiate 0 args ty_c1
+  let ty_c2 := Ty.instantiate 0 args ty_c2
+  let ty2 := Ty.instantiate 0 args ty2
+
+  List.bind (unify i (env_ty) True ty_c1 ty_c2) (fun (i, env_ty2) =>
+  List.bind (unify i (env_ty;env_ty1;env_ty2) True ty1 ty2) (fun (i, env_ty3) =>
+    [(i, env_ty1;env_ty2;env_ty3)]
+  ))
+
+| .univ n ty_c1 ty_c2 ty', ty =>
+  let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
+  let ty_c1 := Ty.instantiate 0 args ty_c1
+  let ty_c2 := Ty.instantiate 0 args ty_c2
+  let ty' := Ty.instantiate 0 args ty'
+  List.bind (unify i env_ty closed ty' ty) (fun (i, env_ty1) =>
+  List.bind (unify i (env_ty ; env_ty1) True ty_c1 ty_c2) (fun (i, env_ty2) => 
+    [ (i, env_ty1 ; env_ty2) ]
+  ))
 
 | .bvar id1, .bvar id2  =>
   if id1 = id2 then 
@@ -1836,6 +1822,7 @@ even_to_unit
 even_to_unit
 [: (succ*zero*@ -> @) :]
 
+-- -- TODO: why does this diverge?
 -- #eval unify 3 {} True 
 -- [: 
 --     (zero*@ -> @) ∧ 
@@ -2098,6 +2085,14 @@ even_to_unit
   α[0] -> α[1]
 :]
 
+#eval infer_reduce [:
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;((), (y[1] y[0])) 
+  ]) => 
+  (y[0] succ;zero;())
+:]
+
 
 #eval infer_reduce [:
   let y[0] = fix(λ y[0] => λ[
@@ -2290,6 +2285,149 @@ succ*β[1]
 :]
 [: α[0] -> α[1] :]
 [: α[1] :]
+
+-- TODO: why does this fail?
+#eval unify_test [:
+  ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+  ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+:] [:
+  ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
+    (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
+:]
+
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ (μ β[0] => zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0])) =>
+    (β[0] ->
+      (∃ 1 :: 
+        (β[1] × β[0]) ≤ (μ β[0] => 
+          (zero*@ × nil*@) ∨
+          (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*(@ × β[1])))
+        ) =>
+        β[0]
+      )
+    )
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ (μ β[0] => zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0])) =>
+    (β[0] ->
+      (∃ 1 :: 
+        (β[1] × β[0]) ≤ (μ β[0] => 
+          (zero*@ × nil*@) ∨
+          (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*(@ × β[1])))
+        ) =>
+        β[0]
+      )
+    )
+  )
+:]
+
+-- TODO: why does this fail?
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0] ->
+      (∃ 1 :: 
+        (β[1] × β[0]) ≤ ⟨nat_list⟩ =>
+        β[0]
+      )
+    )
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0] ->
+      (∃ 1 :: 
+        (β[1] × β[0]) ≤ ⟨nat_list⟩ =>
+        β[0]
+      )
+    )
+  )
+:]
+
+#eval unify_test even nat_
+
+#eval unify_test [:
+  ⟨nat_⟩ -> @
+:] [:
+  ⟨even⟩ -> @ 
+:]
+
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0] -> @)
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0] -> @)
+  )
+:]
+
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0])
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:]
+
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0])
+  )
+:]
+
+#eval unify_test [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0] -> @)
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0] -> @)
+  )
+:]
+
+#eval unify_test [:
+  (∃ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:] [:
+  (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0])
+  )
+:]
+#eval unify_test [:
+  (∃ 2 :: β[0] × β[1] ≤ ⟨nat_⟩ × ⟨nat_⟩ =>
+    β[0] × β[1]
+  )
+:] [:
+  (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (succ*@ × β[0])
+  )
+:]
+
+#eval unify_test [:
+  (∃ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:] nat_
+#eval unify_test [:
+  (∃ 1 =>
+    (β[0])
+  )
+:] nat_
+#eval unify_test [:
+  (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0])
+  )
+:] [:
+  (∃ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:]
 
 
 
