@@ -825,13 +825,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \inferrule[exis-lhs] { 
       \Delta;\Delta_2 \vdash \tau_1 \leq \tau_2
       \\
-      \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
+      \Delta_2 < \Delta_3 \longrightarrow \Delta;\Delta_3 \not\vdash \tau_1 \leq \tau_2
       \\\\
       \text{dom}(\Delta_2) = \text{freevars}\ \tau_1 \cup \text{freevars}\ \tau_2
+      \\
+      \Delta_1 = \text{reduce}\ ,\ \widebar{\alpha_i \mapsto \top}
       \\\\
       \Delta;\Delta_1;\Delta_2 \vdash \tau_3 \leq \tau_4
       \\
-      \Delta_1 = \text{reduce}\ ,\ \widebar{\alpha_i \mapsto \top}
+      \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
     } { 
       \Delta \vdash 
         (\exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3)
@@ -858,14 +860,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \inferrule[univ-rhs] { 
       \Delta;\Delta_2 \vdash \tau_2 \leq \tau_3
       \\
-      \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
+      \Delta_3 < \Delta_2 \longrightarrow \Delta;\Delta_3 \not\vdash \tau_2 \leq \tau_3
       \\\\
       \text{dom}(\Delta_2) = \text{freevars}\ \tau_2 \cup \text{freevars}\ \tau_3
+      \\
+      \Delta_1 = \text{reduce}\ ,\ \widebar{\alpha_i \mapsto \bot}
       \\\\
       \Delta;\Delta_1;\Delta_2 \vdash \tau_1 \leq \tau_4
       \\
-      \Delta_1 = \text{reduce}\ ,\ \widebar{\alpha_i \mapsto \bot}
-      \\
+      \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
     } { 
       \Delta \vdash 
         \tau_1
