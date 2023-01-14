@@ -2430,6 +2430,26 @@ succ*β[1]
 :]
 
 
+-- TODO: this should fail; β[0] could be TOP
+#eval unify_test [:
+  (∃ 1 :: ⟨even⟩ ≤ β[0] =>
+    (β[0])
+  )
+:] [:
+  (∃ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:]
+
+#eval unify_test [:
+  ⊤ 
+:] [:
+  (∃ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:]
+
+
 
 
 /-
