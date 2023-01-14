@@ -656,7 +656,10 @@ inductive Aim : Type
 | adj | cen | max | min
 
 
--- TODO: replace aim with aim = adj | cen | max | min
+/-
+Aim.prec is safe when the free variables may be chosen (i.e. choosable).
+Aim.max and Aim.min is necessary when the variables are fixed but unknown; they may not be chosen. 
+-/
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (aim : Aim) :
 Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 
