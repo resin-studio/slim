@@ -822,25 +822,21 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
     \\\\
 
-    \inferrule[exis-symm] { 
-      \Delta;\Delta_1 \vdash \tau_3 \leq \tau_6
+    \inferrule[exis-lhs] { 
+      \Delta;\Delta_2 \vdash \tau_1 \leq \tau_2
       \\
-      \Delta;\Delta_1; \vdash \tau_4 \leq \tau_5
+      \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
       \\\\
-      \Delta;\Delta_1 \vdash \tau_4 \leq \tau_1
+      \text{dom}(\Delta_2) = \text{freevars}\ \tau_1 \cup \text{freevars}\ \tau_2
+      \\\\
+      \Delta;\Delta_1;\Delta_2 \vdash \tau_3 \leq \tau_4
       \\
-      \text{freevars } \Delta \cap \widebar{\alpha_1} = \emptyset 
-      \\\\
-      \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2
-      \\
-      \text{freevars } \Delta \cap \widebar{\alpha_2} = \emptyset 
-      \\\\
-      \Delta;\Delta_1 \vdash \tau_2 \leq \tau_5
+      \Delta_1 = \text{reduce}\ ,\ \widebar{\alpha_i \mapsto \top}
     } { 
       \Delta \vdash 
-        (\exists \widebar{\alpha_1} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+        (\exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3)
         \leq 
-        (\exists \widebar{\alpha_2} :: \tau_4 \leq \tau_5\ .\ \tau_6)
+        \tau_4
     }
 
     \inferrule[exis-rhs] { 
@@ -859,25 +855,22 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     
     \\\\
 
-    \inferrule[univ-symm] { 
-      \Delta;\Delta_1 \vdash \tau_3 \leq \tau_6
+    \inferrule[univ-rhs] { 
+      \Delta;\Delta_2 \vdash \tau_2 \leq \tau_3
       \\
-      \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2
+      \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
       \\\\
-      \Delta;\Delta_1 \vdash \tau_1 \leq \tau_4
+      \text{dom}(\Delta_2) = \text{freevars}\ \tau_2 \cup \text{freevars}\ \tau_3
+      \\\\
+      \Delta;\Delta_1;\Delta_2 \vdash \tau_1 \leq \tau_4
       \\
-      \text{freevars } \Delta \cap \widebar{\alpha_1} = \emptyset 
-      \\\\
-      \Delta;\Delta_1 \vdash \tau_4 \leq \tau_5
+      \Delta_1 = \text{reduce}\ ,\ \widebar{\alpha_i \mapsto \bot}
       \\
-      \text{freevars } \Delta \cap \widebar{\alpha_2} = \emptyset 
-      \\\\
-      \Delta;\Delta_1 \vdash \tau_5 \leq \tau_2
     } { 
       \Delta \vdash 
-        (\forall \widebar{\alpha_1} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+        \tau_1
         \leq 
-        (\forall \widebar{\alpha_2} :: \tau_4 \leq \tau_5\ .\ \tau_6)
+        (\forall \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
     }
 
     \inferrule[univ-lhs] { 
