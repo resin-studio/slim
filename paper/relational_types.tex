@@ -15,6 +15,15 @@
 % variables are not restricted to be alone on the left side of subtyping. 
 % this generality allows for concise descriptions of recursive function types.
 
+% the bounded quantification of system F serves a different purpose than the constrained quantification of relational types.
+% In system F the upper bound on universally quantified variables serves as an external indicator, that a type may be specialized.
+% The bounded quantification is not necessary in order to express the content of the type.
+% in contrast, constrained quantification is used to express the content of a type precisely,
+% similar to how first order quantification is used liquid types.
+% Remy's ML-calc uses quantified constraint for a similar goal, but technically quite different.
+% Remy's ML-calc makes a distinction between subtyping and instantiating relation of universal
+% relational types merges the notion of instantiation with subtyping
+
 
 % /-
 % first order quantification
