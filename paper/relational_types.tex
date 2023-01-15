@@ -1,82 +1,6 @@
 % \documentclass{article}
 % \documentclass[]{acmart}
 \documentclass[sigplan,screen]{acmart}
-
-% claim: SOTA: type systems for dynamically typed languages do not have type-directed synthesis methods. 
-% identify problems for synthesis evaluation
-% translate Liquid type benchmarks to this relational type language. 
-
-% Aim.prec is safe when the free variables may be chosen (i.e. choosable).
-% Aim.max and Aim.min is necessary when the variables are fixed but unknown; they may not be chosen. 
-
-% for dynamically typed languages, system F subtyping is too restrictive
-% we need to compare types that have varying degrees of variable generalization 
-% additionally, the subtyping constraints in quantified types are more general than system F
-% variables are not restricted to be alone on the left side of subtyping. 
-% this generality allows for concise descriptions of recursive function types.
-
-% the bounded quantification of system F serves a different purpose than the constrained quantification of relational types.
-% In system F the upper bound on universally quantified variables serves as an external indicator, that a type may be specialized.
-% The bounded quantification is not necessary in order to express the content of the type.
-% in contrast, constrained quantification is used to express the content of a type precisely,
-% similar to how first order quantification is used liquid types.
-% Remy's ML-calc uses quantified constraint for a similar goal, but technically quite different.
-% Remy's ML-calc makes a distinction between subtyping and instantiating relation of universal
-% relational types merges the notion of instantiation with subtyping
-
-
-% /-
-% first order quantification
-
-% μ NL .
-%   {(0, [])} ∨ 
-%   ∃ (n, l) : NL . 
-%     (n + 1,  () :: l)  
-
-% ν N2L .
-%   {0 => []} ∧ 
-%   ∀ n -> l : N2L .  WRONG
-%     {n + 1 => () :: l }
-
-% ν N2L .
-%   0 -> nil*unit ∧ 
-%   ∀ N2L ≤ N -> L .    
-%     N + 1 => unit :: L
-
-% --- 
-% by second order quantification with subtyping rather than first order with membership,
-% we avoid mapping between terms and types in unification procedure.
-% We also enable the succient corecursive definitions of functions.
-
-% -/
-
-
-% /-
-% translating Liquid types into relational types
-
-% List with len where
-% [] : {v ∈ List | len v = 0} | 
-% () :: (xs : List) : {v ∈ List | len v = (len xs) + 1} | 
-
-% n : Nat -> {v ∈ List | len v = n}
-
-% ...
-
-% ∀ N . N ≤ Nat => N -> (∃ L . 
-%   (N × L) ≤ (μ N' × L' .  (0 × []) | (N' + 1 × () :: L'))  =>
-%   L
-% )
-
-% ...
-
-% ν N -> L .
-%   0 -> [] ∧ 
-%   N + 1 -> () :: L  
-
-
-% -/
-
-
 \usepackage{mathpartir}
 \usepackage{hyperref}
 \usepackage{mathtools}
@@ -1738,7 +1662,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \end{enumerate}
 
 
-
 \end{document}
 
 % Observations:
@@ -1812,6 +1735,88 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     % indicates if a constraint is closed vs open 
     % variables are fully determined in closed unification 
     % variables are are open to future information in open unification 
+
+
+% claim: SOTA: type systems for dynamically typed languages do not have type-directed synthesis methods. 
+% identify problems for synthesis evaluation
+% translate Liquid type benchmarks to this relational type language. 
+
+% Aim.prec is safe when the free variables may be chosen (i.e. choosable).
+% Aim.max and Aim.min is necessary when the variables are fixed but unknown; they may not be chosen. 
+
+% for dynamically typed languages, system F subtyping is too restrictive
+% we need to compare types that have varying degrees of variable generalization 
+% additionally, the subtyping constraints in quantified types are more general than system F
+% variables are not restricted to be alone on the left side of subtyping. 
+% this generality allows for concise descriptions of recursive function types.
+
+% the bounded quantification of system F serves a different purpose than the constrained quantification of relational types.
+% In system F the upper bound on universally quantified variables serves as an external indicator, that a type may be specialized.
+% The bounded quantification is not necessary in order to express the content of the type.
+% in contrast, constrained quantification is used to express the content of a type precisely,
+% similar to how first order quantification is used liquid types.
+% Remy's ML-calc uses quantified constraint for a similar goal, but technically quite different.
+% Remy's ML-calc makes a distinction between subtyping and instantiating relation of universal
+% relational types merges the notion of instantiation with subtyping
+
+% synquid has a symmetrical rule using implication for subtyping constraint types
+% in Synquid is subtyping depends only on the constraints 
+% in our setting subtyping can depend on base types too
+% the asymmetrical rules can handle all permutations 
+
+
+% /-
+% first order quantification
+
+% μ NL .
+%   {(0, [])} ∨ 
+%   ∃ (n, l) : NL . 
+%     (n + 1,  () :: l)  
+
+% ν N2L .
+%   {0 => []} ∧ 
+%   ∀ n -> l : N2L .  WRONG
+%     {n + 1 => () :: l }
+
+% ν N2L .
+%   0 -> nil*unit ∧ 
+%   ∀ N2L ≤ N -> L .    
+%     N + 1 => unit :: L
+
+% --- 
+% by second order quantification with subtyping rather than first order with membership,
+% we avoid mapping between terms and types in unification procedure.
+% We also enable the succient corecursive definitions of functions.
+
+% -/
+
+
+% /-
+% translating Liquid types into relational types
+
+% List with len where
+% [] : {v ∈ List | len v = 0} | 
+% () :: (xs : List) : {v ∈ List | len v = (len xs) + 1} | 
+
+% n : Nat -> {v ∈ List | len v = n}
+
+% ...
+
+% ∀ N . N ≤ Nat => N -> (∃ L . 
+%   (N × L) ≤ (μ N' × L' .  (0 × []) | (N' + 1 × () :: L'))  =>
+%   L
+% )
+
+% ...
+
+% ν N -> L .
+%   0 -> [] ∧ 
+%   N + 1 -> () :: L  
+
+
+% -/
+
+
 
 
 
