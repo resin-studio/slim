@@ -1741,7 +1741,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % identify problems for synthesis evaluation
 % translate Liquid type benchmarks to this relational type language. 
 
-% Aim.prec is safe when the free variables may be chosen (i.e. choosable).
+% Aim.cen/Aim.adj is safe when the free variables may be chosen (i.e. choosable).
+% we use Aim.cen when we only care about checking for safety.
+% we use Aim.adj when we want to find the most lenient model possible, 
+% amenable to safe term compositions in the unexplored parts of the program. 
 % Aim.max and Aim.min is necessary when the variables are fixed but unknown; they may not be chosen. 
 
 % for dynamically typed languages, system F subtyping is too restrictive
