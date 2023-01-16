@@ -1768,6 +1768,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % the asymmetrical rules can handle all permutations 
 
 
+% subtyping constraints may be thought of as decidable propositions of the metalanguage 
+% equivalent to deciding if a proof satisfies a proposition (of the object language)
+% types may be thought of as possibly undecidable propositions of the object language
+% the advantage of using subtyping as the only metalanguage predicate is operating on types
+% is that types can be reused across both the object language and metalanguage propositions.
+
+% it would have been possible to define a first-order constraint language, as is the case in Synquid,
+% but that would not allow reusing information across types and constraints.
+% by adding constraints to the second-order quantification of types, 
+% a single quantification mechanism serves two distinct purpose
+% 1. to precise define the contents of a type. (typically the purpose of first-order quantification)
+% 2. to allow specialization of type based on usage (typically the purpose of second-order quantification) 
+
+
 % /-
 % first order quantification
 
