@@ -2391,6 +2391,8 @@ succ*β[1]
 [: α[1] :]
 
 -- TODO: why does this fail?
+-- ∀ can't be instantiated 
+-- safe to fail, but not lenient
 #eval unify_test [:
   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
@@ -2398,6 +2400,19 @@ succ*β[1]
   ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
 :]
+
+-- TODO: why does this fail?
+-- ν can't be unrolled
+-- safe to fail, but not lenient
+#eval unify_test 
+[:
+  ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
+    (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
+:]
+[:
+  ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
+  ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
+:] 
 
 #eval unify_test [:
   (∀ 1 :: β[0] ≤ (μ β[0] => zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0])) =>
