@@ -657,7 +657,7 @@ inductive Aim : Type
 
 
 /-
-Aim.prec is safe when the free variables may be chosen (i.e. choosable).
+Aim.cen is safe when the free variables may be chosen (i.e. choosable).
 Aim.max and Aim.min is necessary when the variables are fixed but unknown; they may not be chosen. 
 -/
 partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (aim : Aim) :
@@ -1127,6 +1127,21 @@ match t with
   )))
 
 
+-- | .letb ty1 t1 t => 
+--   List.bind (infer i (env_ty) env_tm aim t1 ty1) (fun (i, env_ty1, ty1') =>
+
+--   let ty_u := [: ∀ 1 :: β[0] ≤ ⟨ty1'⟩ => β[0] :]
+
+--   let ty1' := (Ty.subst (env_ty;env_ty1) ty1')
+--   -- let ty1' := (Ty.simplify (Ty.subst (env_ty;env_ty1) ty1'))
+--   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
+--   let ty1' := if fvs.isEmpty then ty1' else [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
+--   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
+--   let t := Tm.instantiate 0 [x] t 
+--   List.bind (infer i (env_ty;env_ty1) (env_tm ; env_tmx) aim t ty) (fun (i, env_ty2, ty') =>
+--     [ (i, env_ty2, ty') ]
+--   ))
+
 | .letb ty1 t1 t => 
   List.bind (infer i (env_ty) env_tm aim t1 ty1) (fun (i, env_ty1, ty1') =>
   let ty1' := (Ty.subst (env_ty;env_ty1) ty1')
@@ -1138,7 +1153,6 @@ match t with
   List.bind (infer i (env_ty;env_ty1) (env_tm ; env_tmx) aim t ty) (fun (i, env_ty2, ty') =>
     [ (i, env_ty2, ty') ]
   ))
-
 
 | .fix t1 =>
   List.bind (infer i (env_ty) env_tm Aim.cen t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
@@ -1724,6 +1738,74 @@ def plus := [:
   )
 :]
 
+-- let-polymorphism: how generic?
+
+-- not generic enough
+-- could possibly infer the type to have universal
+-- note that Remy' constraint uses existential because the subtyping is inside
+-- ∃ X :: C(X) ∧ X ≤ T === (∀ X :: C(X) . X) ≤ T
+#eval infer_reduce [:
+  ((λ y[0] : ⟨nat_⟩ => y[0]) zero;())
+:]
+
+-- not generic enough
+#eval infer_reduce [:
+  let y[0] = (λ y[0] : ⟨nat_⟩ => y[0]) =>
+  (y[0] zero;())
+:]
+
+-- not generic enough
+#eval infer_reduce [:
+  let y[0] = (λ y[0] : ⟨nat_⟩ => y[0]) =>
+  y[0]
+:]
+
+-- expected: ⊥ 
+#eval infer_reduce [:
+  let y[0] : (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) = (λ y[0] : ⟨nat_⟩ => y[0]) =>
+  y[0]
+:]
+
+-- expected: true 
+#eval unify_test 
+[: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
+[: ⟨nat_⟩ -> ⟨nat_⟩ :]
+
+-- expected: false 
+#eval unify_test 
+[: ⟨nat_⟩ -> ⟨nat_⟩ :]
+[: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
+
+
+#eval infer_reduce [:
+  let y[0] : (∀ 1 :: ⟨nat_⟩ ≤ β[0] => β[0] -> β[0]) = (λ y[0] : ⟨nat_⟩ => y[0]) =>
+  y[0]
+:]
+
+-- generic enough
+-- but a too redundant
+#eval infer_reduce [:
+  let y[0] : (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) = (λ y[0] => y[0]) =>
+  (y[0] zero;())
+:]
+
+
+
+#eval infer_reduce [:
+  let y[0] = (λ y[0] => y[0]) =>
+  (y[0] zero;())
+:]
+
+#eval infer_reduce [:
+  let y[0] = (λ y[0] => y[0]) =>
+  y[0]
+:]
+
+#eval infer_reduce [:
+  let y[0] = (λ y[0] : ⟨nat_⟩ => ()) =>
+  let y[0] = (λ y[0] => ((y[1] y[0]), y[0])) =>
+  (y[0] zero;())
+:]
 
 -- let-polymorphism
 
