@@ -2390,7 +2390,7 @@ succ*β[1]
 [: α[0] -> α[1] :]
 [: α[1] :]
 
--- TODO: why does this fail?
+-- false: why does this fail?
 -- ∀ can't be instantiated 
 -- safe to fail, but not lenient
 #eval unify_test [:
@@ -2401,7 +2401,7 @@ succ*β[1]
     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
 :]
 
--- TODO: why does this fail?
+-- false: why does this fail?
 -- ν can't be unrolled
 -- safe to fail, but not lenient
 #eval unify_test 
