@@ -1762,6 +1762,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % Remy's ML-calc makes a distinction between subtyping and instantiating relation of universal
 % relational types merges the notion of instantiation with subtyping
 
+% note that Remy' constraint uses existential because the subtyping is inside
+% ∃ X :: C(X) ∧ X ≤ T === (∀ X :: C(X) . X) ≤ T
+
 % synquid has a symmetrical rule using implication for subtyping constraint types
 % in Synquid is subtyping depends only on the constraints 
 % in our setting subtyping can depend on base types too
