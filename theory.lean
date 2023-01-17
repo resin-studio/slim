@@ -1724,22 +1724,21 @@ def plus := [:
 :]
 
 -- let-polymorphism: how generic?
-
--- not generic enough
--- could possibly infer the type to have universal
 -- note that Remy' constraint uses existential because the subtyping is inside
 -- ∃ X :: C(X) ∧ X ≤ T === (∀ X :: C(X) . X) ≤ T
+
+-- not generic
 #eval infer_reduce [:
   ((λ y[0] : ⟨nat_⟩ => y[0]) zero;())
 :]
 
--- not generic enough
+-- not generic
 #eval infer_reduce [:
   let y[0] = (λ y[0] : ⟨nat_⟩ => y[0]) =>
   (y[0] zero;())
 :]
 
--- not generic enough
+-- not generic
 #eval infer_reduce [:
   let y[0] = (λ y[0] : ⟨nat_⟩ => y[0]) =>
   y[0]
