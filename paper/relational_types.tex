@@ -1781,6 +1781,26 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % 2. to allow specialization of type based on usage (typically the purpose of second-order quantification) 
 
 
+% there are two distinct purposes of quantification over types
+  % 1. polymorphic - ignoring a sub part of a type (typically 2nd order) 
+  % 2. constrained - defining a type based on constraints (typically 1st order)
+% there are two distinct forms of composition checks 
+  % 1. instantiation a quantified type
+  % 2. refinement of quantified type 
+
+% RT uses second order univ/exists quantifiers subsume both constraint types and polymorphic types
+% RT's subtyping subsumes both instantiation and refinement  
+% liquid's refinement type is an intersection of a base type and a constraint type. 
+  % that is, the resulting type is a refinement of the base type. 
+
+
+% RT's subtyping subsumes both System F polymorphic subtyping with Synquid/Remy's polymorphic instantiation  
+% RT's subtyping subsumes both Synquid's refinement subtyping and existential instantiation
+% RT's existential generalizes subpart irrelevance and subpart refinement 
+
+
+
+
 % /-
 % first order quantification
 
@@ -1853,7 +1873,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % represented with functions instead of inference rules 
   % this is difficult to represent with inference rules 
 
-% sequent calculus rules enable generating derivation
+% relational type's inference and synthesis 
+  % type inference for each term case and an arbitrary type
+  % program synthesis for for hole term and each type case.
+
+% sequent calculus rules 
+  % enable generating derivation
   % the essence is its using left and right rules (relative to the turnstile)
   % left rules have type/prop form on lhs of |-
   % left rules correspond to elimination rules of natural deduction
