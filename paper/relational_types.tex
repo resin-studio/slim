@@ -1781,12 +1781,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % 2. to allow specialization of type based on usage (typically the purpose of second-order quantification) 
 
 
-% there are two distinct purposes of quantification over types
-  % 1. polymorphic - ignoring a sub part of a type (typically 2nd order) 
-  % 2. constrained - defining a type based on constraints (typically 1st order)
-% there are two distinct forms of composition checks 
-  % 1. instantiation a quantified type
-  % 2. refinement of quantified type 
+% there are two distinct purposes of polymorphic quantification over types
+  % 1. parametric - ignoring a sub part of a type (2nd order) 
+  % 2. constrained - defining a type based on constraints (1st or 2nd order)
+
+% there are two distinct forms of checking polymorphic composition 
+  % 1. instantiation a quantified variable supports both parametric and constrained polymorphism
+  % 2. subtyping of quantified type over the same variables   
 
 % RT uses second order univ/exists quantifiers subsume both constraint types and polymorphic types
 % RT's subtyping subsumes both instantiation and refinement  
