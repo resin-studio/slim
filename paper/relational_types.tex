@@ -1888,15 +1888,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 % TODO:
-% write declarative typing and subtyping rules
-  % non-deterministically introduce an environment for subtyping of universal 
-  % without unification of bound variables 
-  % write subsumption without everything typechecking
-    % unassigned variables are not allowed
-    % variables must be given a top or bottom type before subtyping check
+% modify to full program synthesis
+  % see if data structure transformers can be emulated using refinement type inference 
+  % does angelic synthesis relate to this?
+% find way to integrate SMT solvers 
 % write paper 
-  % - 0. introduction 
-  % - 1. motivating example / overview 
+  % [x] 0. introduction 
+  % [ ] 1. motivating example / overview 
   % - 2. problem statement 
   % - 3. overall synthesis/inference algorithm/rules 
     % include how type information propagates
@@ -1904,27 +1902,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     % includes propagation of types
   % - 4. unification / subtyping / relational typing
     % including recursion over intersection and functions
-% write "calculating definitions" as functions
-  % must be algorithmic
-  % more details; function is more compact
-% write "verification definitions" as inference rules
-  % may be undecidable 
 % find decision procedure for relational types (subtyping over induction on compound types)
   % terminate if one side is compound with all variables and other is recursive? 
   % Banach fixed-point theorem?
   % contraction maps?
   % metric spaces?
-% find efficient algorithm to mitigate combinatorial explosion 
-  % due to intersection and union
-  % SAT and SMT?
-% extend type inference to program synthesis 
-  % does angelic synthesis work for this?
 % determine if negation/relative complement is needed to improve program synthesis 
   % see anti-specification in Anders' paper
   % https://courses.cs.washington.edu/courses/cse507/14au/sched.html
   % https://www.cs.utexas.edu/~bornholt/post/synthesis-explained.html
   % https://people.csail.mit.edu/asolar/SynthesisCourse/Lecture1.htm
-% write dynamic semantics 
 % implement proof of soundness
 % implement translation from surface syntax to nameless syntax 
-% implement pretty printer 
