@@ -1885,6 +1885,19 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % left rules correspond to elimination rules of natural deduction
   % it's not essential that the sequents have multiple consequents
 
+% synthesis rules
+  % use sequent-calculus style
+  % union on left should result in a cases function applied to an argument
+  % intersection on Right should result in either a function or a record
+  % thus, can reduce union on left to intersection on right.
+  % first-class pattern matching with beta-normal form heuristic
+    % could require function to be let-bound 
+
+% use of negation
+  % could negation of T be encoded as T -> bot?
+  % that is,
+    % T1 -> T2 /\ NOT T3 = % T1 -> T2 /\ T3 -> bot
+
 
 
 % TODO:
@@ -1914,3 +1927,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % https://people.csail.mit.edu/asolar/SynthesisCourse/Lecture1.htm
 % implement proof of soundness
 % implement translation from surface syntax to nameless syntax 
+% consider methods of ensuring beta-normal forms
+  % splitting off elim forms than can't refer to intro forms to prevent non-beta-normal forms
+  % normal form syntax use let-binding (similar to ANF or CPS or SSA)
