@@ -1898,13 +1898,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % that is,
     % T1 -> T2 /\ NOT T3 = % T1 -> T2 /\ T3 -> bot
 
-% inductive generalization
-  % inductive generalization normalized as finding a subtype
-  % generalization adds information
-  % thus decreasing information loss when finding types for holes in deduction phase 
-
-
-% enumeration
+% enumeration: enumerating combinations from a set
   % data-guided
     % unsound guidance from data constructors found in types 
   % relation-guided
@@ -1914,6 +1908,16 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     % samples from context are combined
     % polymorphic sampling
       % not supported in Frankle's sequent calculus
+
+% inductive generalization
+  % inductive generalization normalized as finding a subtype
+    % either infer type from term
+    % or if hole with expected type
+      % enumerate possibilities for hole 
+      % choose one
+      % infer type
+  % generalization adds information
+  % thus decreasing information loss when finding types for holes in deduction phase 
 
 % future work: specification of reactive programs
   % non-termination programs. no output, just side-effects or internal state.
