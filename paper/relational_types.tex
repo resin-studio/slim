@@ -1903,11 +1903,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % generalization adds information
   % thus decreasing information loss when finding types for holes in deduction phase 
 
-% polymorphic sampling
-  % by allowing polymorphism in subtyping
-    % we enable synthesizing usage of polymorphic function
-  % we normalize sampling and defining of polymorphic function
-    % both instantiation and generalization of polymorphism are baked into subtyping
+
+% enumeration
+  % data-guided
+    % unsound guidance from data constructors found in types 
+  % relation-guided
+    % using relation between data in types
+    % shown by Frankle to be worse than broader data-guidance 
+  % context-guided 
+    % samples from context are combined
+    % polymorphic sampling
+      % not supported in Frankle's sequent calculus
 
 % future work: specification of reactive programs
   % non-termination programs. no output, just side-effects or internal state.
