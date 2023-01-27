@@ -1919,6 +1919,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % generalization adds information
   % thus decreasing information loss when finding types for holes in deduction phase 
 
+
+% best-first search
+  % need priority queue to determine which hypothesis to try next after failed hypothesis 
+    % with DFS, we wouldn't be able to determine which depth's solution to retry.
+  % to avoid redundant traversals of expressions, holes are identified by variable and a hole type-environment.
+    % when hypothesis is generated, then it's substituted in, and removed from hole type-env.
+  % Feser's algorithm and Frankle's synchronous rules are BFS
+
 % future work: specification of reactive programs
   % non-termination programs. no output, just side-effects or internal state.
 
