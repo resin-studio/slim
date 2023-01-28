@@ -1,7 +1,9 @@
-import Theory
-import Lean.Data.PersistentHashMap
+import TestLib
+import LogicLib
 
 open Lean PersistentHashMap
+
+
 
 
 #eval [: β[0] :]
@@ -34,36 +36,31 @@ def x := 0
 #eval [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0] :]
 
 
+
 #eval ({} : PHashMap Nat Ty)
 
 def zero_ := [: 
     zero * @
 :]
 
-#eval unify_test [:
-    (dumb*@)
-:] zero_
 
-#eval unify_test [:
-    (zero*@)
-:] zero_
+def main : IO Unit :=
+  test [
+    ("unfiy same tag ", unify_decide [: zero * @ :] [: zero * @ :] == true),
+    ("unify diff tag", unify_decide [: zero * @ :] [: one * @ :] == false)
+  ]
+
 
 /-
-  μ nat .
-    zero*@ | 
-    succ*nat 
+  μ nat .  zero*@ ∨ succ*nat 
 -/
 def nat_ := [: 
-  μ β[0] => 
-    zero*@ ∨ 
-    succ*β[0]
+  μ β[0] => zero*@ ∨ succ*β[0]
 :]
 #eval nat_
 
 def even := [: 
-  μ β[0] => 
-    zero*@ ∨ 
-    succ*succ*β[0]
+  μ β[0] => zero*@ ∨ succ*succ*β[0]
 :]
 
 
@@ -73,34 +70,34 @@ def weven := [:
     succ*dumb*β[0]
 :]
 
-#eval unify_test weven nat_ 
-#eval unify_test even nat_ 
-#eval unify_test nat_ even
+#eval unify_decide weven nat_ 
+#eval unify_decide even nat_ 
+#eval unify_decide nat_ even
 
 
-#eval unify_test
+#eval unify_decide
 [: ∃ 2 :: β[0] ≤ ⟨even⟩ => β[0] × β[1]:] 
 [: ∃ 2 :: β[0] ≤ ⟨nat_⟩ => β[0] × β[1]:] 
 
-#eval unify_test 
+#eval unify_decide 
 [: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
 [: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
 
-#eval unify_test 
+#eval unify_decide 
 [: ∃ 2 :: β[0] ≤ ⟨nat_⟩ => β[0] × β[1]:] 
 [: ∃ 2 :: β[0] ≤ ⟨even⟩ => β[0] × β[1]:] 
 
-#eval unify_test 
+#eval unify_decide 
 [: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
 [: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
 
-#eval unify_test 
+#eval unify_decide 
 [: (zero*@) :] nat_ 
 
-#eval unify_test 
+#eval unify_decide 
 [: (succ*(zero*@)) :] nat_ 
 
-#eval unify_test 
+#eval unify_decide 
 [: (succ*(α[0])) :] 
 nat_ 
 
@@ -126,32 +123,32 @@ def even_list := [:
 :]
 
 -- TODO
-#eval unify_test 
+#eval unify_decide 
   nat_list
   even_list
 
-#eval unify_test 
+#eval unify_decide 
   even_list
   nat_list
 
-#eval unify_test 
+#eval unify_decide 
 [: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 [: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 [: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 
-#eval unify_test 
+#eval unify_decide 
   [: (l ~ zero*@ ∧ r ~ nil*@) :] 
   nat_list
 
-#eval unify_test 
+#eval unify_decide 
   [: (l ~ zero*@ ∧ r ~ dumb*@) :] 
   nat_list
 
 -- this is record type is not wellformed 
-#eval unify_test 
+#eval unify_decide 
   [: (l ~ α[0] ∧ r ~ α[1]) :] 
   nat_list
 
@@ -161,16 +158,16 @@ def even_list := [:
   nat_list
   [: ⊤ :]
 
-#eval unify_test 
+#eval unify_decide 
   [: (l ~ zero*@ ∧ r ~ α[0]) :] 
   nat_list
 
 -- expected α[0] → /nil
-#eval unify_test 
+#eval unify_decide 
   [: (l ~ succ*zero*@ ∧ r ~ cons*α[0]) :] 
   nat_list
 
-#eval unify_test 
+#eval unify_decide 
   [: (l ~ succ*succ*zero*@ ∧ r ~ cons*α[0]) :] 
   nat_list
 
@@ -181,7 +178,7 @@ def even_list := [:
   [: α[0]:]
 
 
-#eval unify_test 
+#eval unify_decide 
   [: (l ~ succ*zero*@ ∧ r ~ cons*cons*α[0]) :] 
   nat_list
 
@@ -194,7 +191,7 @@ def nat_to_list := [:
       succ*β[0] -> cons*β[1])
 :]
 
-#eval unify_test 
+#eval unify_decide 
   nat_to_list
   [: (succ*zero*@) -> (cons*nil*@) :] 
 
@@ -575,12 +572,12 @@ def plus := [:
 :]
 
 -- expected: true 
-#eval unify_test 
+#eval unify_decide 
 [: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
 [: ⟨nat_⟩ -> ⟨nat_⟩ :]
 
 -- expected: false 
-#eval unify_test 
+#eval unify_decide 
 [: ⟨nat_⟩ -> ⟨nat_⟩ :]
 [: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
 
@@ -658,60 +655,60 @@ def repli := [:
 
 -----
 
-#eval unify_test 
+#eval unify_decide 
 [: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
 [: uno ~ @ ∧ tres ~ @:]
 
-#eval unify_test 
+#eval unify_decide 
 [: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
 [: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
 [: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
 
 
-#eval unify_test 
+#eval unify_decide 
 [: uno ~ @ ∨ dos ~ @ ∨ tres ~ @ :]
 [:dos ~ @ ∧ tres ~ @ :]
 
-#eval unify_test 
+#eval unify_decide 
 [:dos ~ @ ∧ tres ~ @ ∧ four ~ @:]
 [: uno ~ @ ∨ dos ~ @ ∨ tres ~ @ :]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
 [:dos ~ @ ∧ tres ~ @ ∧ four ~ @:]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 [:dos ~ @ ∧ tres ~ @ :]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ≤ β[0] => β[0]:]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ≤ β[0] => β[0]:]
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 [: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 [: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ four ~ @ ≤ β[0] => β[0]:]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∀ 1 :: β[0] ≤ uno ~ @ => β[0]:]
 [:uno ~ @ ∧ four ~ @:]
 
-#eval unify_test 
+#eval unify_decide 
 [: ∀ 1 :: uno ~ @ ≤ β[0] => β[0]:]
 [:uno ~ @ ∧ four ~ @:]
 
@@ -732,23 +729,23 @@ def even_to_unit := [:
       (succ*succ*β[0]) -> @)
 :]
 
-#eval unify_test 
+#eval unify_decide 
 nat_to_unit
 [: (zero*@ -> @) :]
 
-#eval unify_test 
+#eval unify_decide 
 nat_to_unit
 nat_to_unit
 
-#eval unify_test 
+#eval unify_decide 
 nat_to_unit
 [: (succ*zero*@ -> @) :]
 
-#eval unify_test 
+#eval unify_decide 
 even_to_unit
 [: (succ*succ*zero*@ -> @) :]
 
-#eval unify_test 
+#eval unify_decide 
 even_to_unit
 [: (succ*zero*@ -> @) :]
 
@@ -997,7 +994,7 @@ even_to_unit
 :]
 
 
-#eval unify_test 
+#eval unify_decide 
 [:
   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
     ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
@@ -1006,7 +1003,7 @@ even_to_unit
   α[0] -> α[1]
 :]
 
-#eval unify_test 
+#eval unify_decide 
 [:
   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
     (zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ r ~ β[0])))
@@ -1082,7 +1079,7 @@ even_to_unit
     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 :])
 
-#eval unify_test
+#eval unify_decide
 nat_
 [:
 μ β[0] => ∃ 2 :: β[1] ≤ β[2] =>
@@ -1102,7 +1099,7 @@ succ*β[1]
   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 :]
 
-#eval unify_test [:
+#eval unify_decide [:
   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 :] [:
@@ -1111,7 +1108,7 @@ succ*β[1]
 :]
 
 -- TODO: why does this fail?
-#eval unify_test [:
+#eval unify_decide [:
   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 :] [:
@@ -1119,7 +1116,7 @@ succ*β[1]
     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
 :]
 
-#eval unify_test [:
+#eval unify_decide [:
   ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
 :] [:
@@ -1219,7 +1216,7 @@ succ*β[1]
 -- false: why does this fail?
 -- ∀ can't be instantiated 
 -- safe to fail, but not lenient
-#eval unify_test [:
+#eval unify_decide [:
   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 :] [:
@@ -1230,7 +1227,7 @@ succ*β[1]
 -- false: why does this fail?
 -- ν can't be unrolled
 -- safe to fail, but not lenient
-#eval unify_test 
+#eval unify_decide 
 [:
   ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
@@ -1240,7 +1237,7 @@ succ*β[1]
   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 :] 
 
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: β[0] ≤ (μ β[0] => zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0])) =>
     (β[0] ->
       (∃ 1 :: 
@@ -1267,7 +1264,7 @@ succ*β[1]
 :]
 
 -- TODO: why does this fail?
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
     (β[0] ->
       (∃ 1 :: 
@@ -1287,16 +1284,16 @@ succ*β[1]
   )
 :]
 
-#eval unify_test even nat_
+#eval unify_decide even nat_
 
-#eval unify_test [:
+#eval unify_decide [:
   ⟨nat_⟩ -> @
 :] [:
   ⟨even⟩ -> @ 
 :]
 
 -- expected: true
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
     (β[0] -> @)
   )
@@ -1307,7 +1304,7 @@ succ*β[1]
 :]
 
 -- expected: false 
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
     (β[0] -> @)
   )
@@ -1318,7 +1315,7 @@ succ*β[1]
 :]
 
 -- expected: true
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
     (β[0])
   )
@@ -1331,7 +1328,7 @@ succ*β[1]
 -- expected: false 
 -- this is overly strict, but safe 
 -- there is no way for the LHS to know to instantiate with ⊥ vs nat_
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
     (β[0])
   )
@@ -1342,7 +1339,7 @@ succ*β[1]
 :]
 
 -- expected: true 
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: ⟨even⟩ ≤ β[0] =>
     (β[0])
   )
@@ -1355,7 +1352,7 @@ succ*β[1]
 
 -- expected: false 
 -- RHS could be ⊥, but LHS must be > ⊥
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: ⟨even⟩ ≤ β[0] =>
     (β[0])
   )
@@ -1363,13 +1360,13 @@ succ*β[1]
   (∀ 1 => (β[0]))
 :]
 
-#eval unify_test even [: ⊥ :]
+#eval unify_decide even [: ⊥ :]
 
 -- expected: false 
 -- RHS could be ⊤ -> @, but LHS must be > even -> @ 
 -- must give negative positions ⊤, and positive positions ⊥
 -- bound flips based on negative/positive position
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
     (β[0] -> @)
   )
@@ -1378,7 +1375,7 @@ succ*β[1]
 :]
 
 -- expected: true 
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
     (β[0] -> @)
   )
@@ -1389,7 +1386,7 @@ succ*β[1]
 :]
 
 -- expected: false
-#eval unify_test [:
+#eval unify_decide [:
   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
     (β[0] -> @)
   )
@@ -1400,7 +1397,7 @@ succ*β[1]
 :]
 
 -- expected: true 
-#eval unify_test [:
+#eval unify_decide [:
   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
     (β[0])
   )
@@ -1411,7 +1408,7 @@ succ*β[1]
 :]
 
 -- expected: false 
-#eval unify_test [:
+#eval unify_decide [:
   (∃ 2 :: β[0] × β[1] ≤ ⟨nat_⟩ × ⟨nat_⟩ =>
     β[0] × β[1]
   )
@@ -1422,19 +1419,19 @@ succ*β[1]
 :]
 
 -- expected: true 
-#eval unify_test [:
+#eval unify_decide [:
   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
     (β[0])
   )
 :] nat_
-#eval unify_test [:
+#eval unify_decide [:
   (∃ 1 =>
     (β[0])
   )
 :] nat_
 
 -- expected: false 
-#eval unify_test [:
+#eval unify_decide [:
   (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
     (β[0])
   )
@@ -1447,7 +1444,7 @@ succ*β[1]
 
 -- expected: false
 -- β[0] could be TOP
-#eval unify_test [:
+#eval unify_decide [:
   (∃ 1 :: ⟨even⟩ ≤ β[0] =>
     (β[0])
   )
@@ -1457,7 +1454,7 @@ succ*β[1]
   )
 :]
 
-#eval unify_test [:
+#eval unify_decide [:
   ⊤ 
 :] [:
   (∃ 1 :: β[0] ≤ ⟨even⟩ =>

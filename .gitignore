@@ -1,5 +1,5 @@
 /build
-lake-packages/**
+/lake-packages/**
 **.aux
 **.log
 **.nav

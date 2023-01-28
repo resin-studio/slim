@@ -5,17 +5,12 @@ import Lean.Data.PersistentHashMap
 open Lean PersistentHashMap
 open Std
 
-
-def hello := "My World ;)"
-
 partial def multi_step {T : Type} [BEq T] (step : T -> T) (source : T): T :=
   let sink := step source 
   if sink == source then
     sink
   else 
     multi_step step sink
-
-
 
 
 def PHashMap.insert_all [BEq α] [Hashable α] 
@@ -942,7 +937,7 @@ partial def unify_reduce (ty1) (ty2) (ty_result) :=
     Ty.simplify ((Ty.subst env_ty (Ty.union acc ty_result)))
   ) (Ty.bot)
 
-partial def unify_test (ty1) (ty2) :=
+partial def unify_decide (ty1) (ty2) :=
   not (unify 31 {} Aim.cen ty1 ty2).isEmpty
 
 
@@ -1162,8 +1157,6 @@ match t with
     [ (i, env_ty1 ; env_ty2, ty') ]
   ))
 
-partial def infer_test (t : Tm) (ty : Ty) :=
-  (infer 31 {} {} Aim.adj t ty)
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
   let ty' := (infer 31 {} {} Aim.adj t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
