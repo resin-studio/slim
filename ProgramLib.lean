@@ -1,6 +1,7 @@
+import Std.Data.BinomialHeap
 import Init.Data.Hashable
-import Lean.Data.AssocList
 import Lean.Data.PersistentHashMap
+
 
 open Lean PersistentHashMap
 open Std
@@ -1014,30 +1015,49 @@ def Option.toList : Option T -> List T
 | .none => []
 
 
+structure Guide where
+  env_tm : PHashMap Nat Ty
+  ty_exp : Ty
+deriving Repr
+
+structure Contract where
+  i : Nat
+  env_ty : PHashMap Nat Ty 
+  guides : List (Nat × Guide) -- [..., (hole variable, guide), ...]
+  t : Tm
+  ty : Ty 
+deriving Repr
+
+-- TODO: rewrite type annotations
+-- TODO: prevent overgeneralizing in let-poly 
+  -- write test for overgeneralization
+  -- consider storing constraint in universal
+  -- consider excluding fresh vars introduced for bindings from result.
 partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (aim : Aim) (t : Tm) (ty : Ty) : 
-List (Nat × (PHashMap Nat Ty) × Ty) := 
+List Contract := 
 match t with
 | Tm.hole => 
-  [(i, {}, ty)] 
+  let guide : Guide := ⟨env_tm, ty⟩
+  [{i := i + 1, env_ty := {}, guides := [(i, guide)], t := (Tm.fvar i), ty := ty}] 
 | Tm.unit => 
   List.bind (unify i env_ty aim Ty.unit ty) (fun (i, env_ty_x) => 
-    [(i, env_ty_x, Ty.unit)]
+    [{i := i, env_ty := env_ty_x, guides := [], t := t, ty := Ty.unit}]
   )
 | Tm.bvar _ => .nil 
 | Tm.fvar id =>
   match (env_tm.find? id) with 
     | .some ty' => 
       List.bind (unify i env_ty aim ty' ty) (fun (i, env_ty_x) =>
-        [(i, env_ty_x, ty')]
+        [{i := i, env_ty := env_ty_x, guides := [], t := t, ty := ty'}]
       )
     | .none => .nil 
 
 | .tag l t1 =>   
-  let (i, ty1) := (i + 1, .fvar i)
+  let (i, ty1) := (i + 1, Ty.fvar i)
   List.bind (unify i env_ty aim (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
-  List.bind (infer i (env_ty ; env_ty1) env_tm aim t1 ty1) (fun (i, env_ty_x, ty1') =>
-    [ (i, env_ty1 ; env_ty_x, Ty.tag l ty1') ]
+  List.bind (infer i (env_ty ; env_ty1) env_tm aim t1 ty1) (fun ⟨i, env_ty_x, guides_t1, t1', ty1'⟩ =>
+    [ ⟨i, env_ty1 ; env_ty_x, guides_t1, Tm.tag l t1', Ty.tag l ty1'⟩ ]
   ))
 
 | .record fds =>
@@ -1053,15 +1073,24 @@ match t with
 
   let u_env_ty1 := unify i env_ty aim ty' ty 
 
-  let f_step := fun acc => (fun (l, t1, ty1) =>
-    List.bind acc (fun (i, env_ty_acc, ty_acc) =>
-    List.bind (infer i (env_ty ; env_ty_acc) env_tm aim t1 ty1) (fun (i, env_ty_x, ty1') =>
-      [(i, env_ty_acc ; env_ty_x, Ty.inter (Ty.field l ty1') ty_acc)]
+  let f_step := (fun (l, t1, ty1) acc =>
+    List.bind acc (fun ⟨i, env_ty_acc, guides_acc, t_acc, ty_acc⟩ =>
+    List.bind (infer i (env_ty ; env_ty_acc) env_tm aim t1 ty1) (fun ⟨i, env_ty_x, guides_t1, t1', ty1'⟩ =>
+      match t_acc with
+      | Tm.record fds_acc =>
+        [⟨
+          i,
+          env_ty_acc ; env_ty_x, 
+          guides_acc ++ guides_t1,
+          Tm.record ((l, t1') :: fds_acc),
+          Ty.inter (Ty.field l ty1') ty_acc
+        ⟩]
+      | _ => .nil
     ))
   )
 
-  let init := u_env_ty1.map fun (i, env_ty1) => (i, env_ty1, Ty.top)
-  List.foldl f_step init trips 
+  let init := u_env_ty1.map fun (i, env_ty1) => ⟨i, env_ty1, [], Tm.record [], Ty.top⟩
+  List.foldr f_step init trips 
 
 | .func fs =>
   let (i, fs_typed) := List.foldl (fun (i, ty_acc) => fun (p, op_ty_p, b) =>
@@ -1079,8 +1108,8 @@ match t with
 
   let u_env_ty1 := unify i env_ty aim ty' ty 
 
-  let f_step := (fun acc (p, op_ty_p, b, ty_b) =>
-    List.bind acc (fun (i, env_ty_acc, ty_acc) =>
+  let f_step := (fun (p, op_ty_p, b, ty_b) acc =>
+    List.bind acc (fun ⟨i, env_ty_acc, guides_acc, t_acc, ty_acc⟩ =>
     List.bind (pattern_wellformed 0 p).toList (fun n =>
 
     let env_pat : PHashMap Nat Ty := (List.range n).foldl (init := {}) (fun env_pat j => 
@@ -1098,47 +1127,56 @@ match t with
       | .none => (i + 1, Ty.fvar i)
 
     let b := Tm.instantiate 0 list_tm_x b  
-    List.bind (infer i (env_ty ; env_ty_acc) (env_tm ; env_pat) Aim.cen p ty_p) (fun (i, env_ty_p, _) =>
-    List.bind (infer i (env_ty ; env_ty_acc ; env_ty_p) (env_tm ; env_pat) aim b ty_b) (fun (i, env_ty_b, ty_b') =>
-      [(i, env_ty_acc ; env_ty_p ; env_ty_b, Ty.inter (Ty.case ty_p ty_b') ty_acc)]
+    List.bind (infer i (env_ty ; env_ty_acc) (env_tm ; env_pat) Aim.cen p ty_p) (fun ⟨i, env_ty_p, _, _, _⟩ =>
+    List.bind (infer i (env_ty ; env_ty_acc ; env_ty_p) (env_tm ; env_pat) aim b ty_b) (fun ⟨i, env_ty_b, guides_b, b', ty_b'⟩ =>
+      match t_acc with
+      | Tm.func cases_acc =>
+        [⟨
+          i,
+          env_ty_acc ; env_ty_p ; env_ty_b, 
+          guides_acc ++ guides_b,
+          Tm.func ((p, op_ty_p, b') :: cases_acc),
+          Ty.inter (Ty.case ty_p ty_b') ty_acc
+        ⟩]
+      | _ => .nil
     ))))
   )
 
-  let init := u_env_ty1.map fun (i, env_ty1) => (i, env_ty1, Ty.top)
-  List.foldl f_step init fs_typed 
+  let init := u_env_ty1.map fun (i, env_ty1) => ⟨i, env_ty1, [], Tm.func [], Ty.top⟩
+  List.foldr f_step init fs_typed 
 
 
 | .proj t1 l =>
-  List.bind (infer i env_ty env_tm aim t1 (Ty.field l ty)) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i env_ty env_tm aim t1 (Ty.field l ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
   let (i, ty') := (i + 1, Ty.fvar i)
   List.bind (unify i (env_ty ; env_ty1) aim ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
-    [(i, env_ty1 ; env_ty2, ty')]
+    [⟨i, env_ty1 ; env_ty2, guides_t1, Tm.proj t1' l, ty'⟩]
   ))
 
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
   let (i, ty') := (i + 1, Ty.fvar i)
-  List.bind (infer i env_ty env_tm aim t1 (Ty.case ty2 ty)) (fun (i, env_ty1, ty1) =>
-  List.bind (infer i (env_ty ; env_ty1) env_tm aim t2 ty2) (fun (i, env_ty2, ty2') =>
+  List.bind (infer i env_ty env_tm aim t1 (Ty.case ty2 ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1⟩ =>
+  List.bind (infer i (env_ty ; env_ty1) env_tm aim t2 ty2) (fun ⟨i, env_ty2, guides_t2, t2', ty2'⟩ =>
   List.bind (unify i (env_ty ; env_ty1) aim ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
-    [(i, env_ty1 ; env_ty2 ; env_ty3, ty')]
+    [⟨i, env_ty1 ; env_ty2 ; env_ty3, guides_t1 ++ guides_t2, Tm.app t1' t2', ty'⟩]
   )))
 
 
 | .letb ty1 t1 t => 
-  List.bind (infer i (env_ty) env_tm aim t1 ty1) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i (env_ty) env_tm aim t1 ty1) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
   let ty1' := (Ty.subst (env_ty;env_ty1) ty1')
   -- let ty1' := (Ty.simplify (Ty.subst (env_ty;env_ty1) ty1'))
   let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
   let ty1' := if fvs.isEmpty then ty1' else [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
-  List.bind (infer i (env_ty;env_ty1) (env_tm ; env_tmx) aim t ty) (fun (i, env_ty2, ty') =>
-    [ (i, env_ty2, ty') ]
+  List.bind (infer i (env_ty;env_ty1) (env_tm ; env_tmx) aim t ty) (fun ⟨i, env_ty2, guides_t, t', ty'⟩ =>
+    [ ⟨i, env_ty2, guides_t1 ++ guides_t, .letb ty1 t1' t', ty'⟩ ]
   ))
 
 | .fix t1 =>
-  List.bind (infer i (env_ty) env_tm Aim.cen t1 (Ty.case ty ty)) (fun (i, env_ty1, ty1') =>
+  List.bind (infer i (env_ty) env_tm Aim.cen t1 (Ty.case ty ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
   let (i, ty_prem) := (i + 1, Ty.fvar i) 
   let (i, ty_conc) := (i + 1, Ty.fvar i) 
   List.bind (unify i (env_ty ; env_ty1) Aim.cen ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
@@ -1154,12 +1192,11 @@ match t with
       )
     :]
 
-    [ (i, env_ty1 ; env_ty2, ty') ]
+    [ ⟨i, env_ty1 ; env_ty2, guides_t1, Tm.fix t1', ty'⟩ ]
   ))
 
-
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
-  let ty' := (infer 31 {} {} Aim.adj t ty).foldl (fun acc => fun  (_, env_ty, ty) =>
+  let ty' := (infer 31 {} {} Aim.adj t ty).foldl (fun acc => fun  ⟨_, env_ty, _, _, ty⟩ =>
     Ty.simplify (Ty.subst_default true (Ty.subst env_ty (Ty.union acc ty)))
   ) (Ty.bot)
   let fvs := (Ty.negative_free_vars true ty').toList.reverse.bind (fun (k, _) => [k])
@@ -1170,4 +1207,91 @@ partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
 
 
 
-partial def infer_reduce (t : Tm) : Ty := infer_reduce_wt t [: α[30] :]
+partial def infer_reduce (t : Tm) : Ty := infer_reduce_wt t [: ∃ 1 => β[0] :]
+
+
+-- Do we need to re-analyze the syntax tree in case there's new patch that specializes a type?
+structure Work where
+  cost : Nat
+  i : Nat
+  env_ty : PHashMap Nat Ty 
+  guides : PHashMap Nat Guide
+  patches : PHashMap Nat Tm 
+  t : Tm
+deriving Repr
+
+
+def Work.le (x y: Work): Bool := x.cost <= y.cost
+
+def Work.Queue := BinomialHeap Work Work.le
+
+-- TODO
+def Tm.cost (t : Tm) : Nat :=
+  0 
+
+-- TODO
+def Tm.subst (m : PHashMap Nat Tm) (t : Tm) : Tm := t
+
+
+structure Hypoth where
+  cost : Nat
+  i : Nat
+  env_ty : PHashMap Nat Ty 
+  guides : PHashMap Nat Guide
+  patch : Tm
+deriving Repr
+
+-- TODO
+def enumerate (i : Nat) (guide : Guide) : List Hypoth :=
+  [] 
+
+#check BinomialHeap.ofList
+#check BinomialHeap.merge
+
+partial def synthesize_loop (queue : Work.Queue) : Option Tm := 
+  Option.bind (queue.deleteMin) (fun (work, queue') =>
+    if work.guides.isEmpty then
+      some (Tm.subst work.patches work.t)
+    else 
+      let queue_ext := BinomialHeap.ofList Work.le (
+        List.bind work.guides.toList (fun (id, guide) =>
+          let hypotheses := enumerate work.i guide 
+          List.bind hypotheses (fun ⟨cost, i, env_ty, guides, patch⟩ =>
+            [
+              {
+                cost := work.cost + cost,
+                i := i,
+                env_ty := work.env_ty ; env_ty,
+                guides := work.guides.erase id ; guides,
+                patches := work.patches.insert id patch 
+                t := work.t 
+              }
+
+            ]
+          )
+        ) 
+      )
+
+      let queue'' := BinomialHeap.merge queue' queue_ext
+
+      synthesize_loop queue''
+  )
+
+
+
+partial def synthesize (t : Tm) : Option Tm := 
+  let contracts := infer 0 {} {} Aim.cen t [: ∃ 1 => β[0] :]
+  let works : List Work := contracts.map (fun contract =>
+    {
+      cost := (Tm.cost t), i := contract.i, 
+      env_ty := contract.env_ty,   
+      guides := PHashMap.from_list contract.guides, 
+      patches := {},
+      t := contract.t
+    }
+  )
+  let queue := List.foldl (fun queue work =>
+    queue.insert work
+  ) BinomialHeap.empty works
+
+  (synthesize_loop queue) 

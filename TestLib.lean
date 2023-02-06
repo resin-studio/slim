@@ -12,7 +12,7 @@ def tally (tests : List (String × Bool)) : IO (Nat × Nat) :=
 
 def test (tests : List (String × Bool)) : IO Unit := do
   let (pass_count, fail_count) <- tally (tests.reverse)
-  let total <- (return pass_count + fail_count)
+  let total := pass_count + fail_count
   IO.println s!"pass_count: {pass_count}/{total}"
   IO.println s!"fail_count: {fail_count}/{total}"
   return ()

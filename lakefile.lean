@@ -13,7 +13,7 @@ require mathlib from git
 
 
 @[default_target]
-lean_lib LogicLib {
+lean_lib ProgramLib {
   -- add any library configuration options here
 }
 
@@ -23,6 +23,6 @@ lean_lib TestLib {
 }
 
 @[default_target]
-lean_exe «test»  {
-  root := `TestScript
+lean_exe «sanity»  {
+  root := `SanityScript
 }

@@ -1869,6 +1869,34 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     % all rules handle both program checking and program synthesis 
       % propagate programs down and up
 
+% previously unsolved challenges of synthesis for dynamically typed languages 
+  % challenge: instantiation of polymorphic arguments to narrow search
+    % novel solution: partial instantiation in generalized polymorphic subtyping
+  % challenge: lack of type annotations to guide search 
+    % novel solution: both up and down propagation for every syntax rule
+  % challenge: lack of prescribed upper bound (since no datatypes)
+    % novel solution: adjusting types with union and intersection
+  % challenge: expressive types without using datatypes
+    % novel solution: relational types
+
+
+% automatic partial instantiation 
+  % NOTE: this seems like a significant innovation in eager inference. 
+  % specializes arguments not just applicator
+  % specializes type of polymorphic arguments!!!
+    % g(f : All X . T)
+    %: h : All X . S
+    % g(h)
+    % specializes h
+  % when expected type is also polymorphic 
+  % with general constraints (rather than just upper bound)
+  % generalization of subtyping
+  % compare to instantiation of other systems
+    % Cardelli's system F<: does not have instantiation
+    % Pierce's local type inference (section 3) does not have partial instantiation
+    % synquid does not have partial instantiation or polymorphic subtyping 
+    % system F does not have instantiation or generalized constraints
+
 % relational type's type inference and unification with union type
   % generates sets of typing environments 
   % represented with functions instead of inference rules 
@@ -1886,7 +1914,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % it's not essential that the sequents have multiple consequents
 
 % synthesis rules
-  % use sequent-calculus style
   % union on left should result in a cases function applied to an argument
   % intersection on Right should result in either a function or a record
   % thus, can reduce union on left to intersection on right.
@@ -1919,6 +1946,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % generalization adds information
   % thus decreasing information loss when finding types for holes in deduction phase 
 
+% propagation down of subtype/generalized type
+  % will be sound (no information loss) 
+    % whereas propagation of examples/supertype would lose information
+    % less refined search space
+    % less strict type checking for the hole
+  % providing better guidance to search for term
 
 % best-first search
   % need priority queue to determine which hypothesis to try next after failed hypothesis 
@@ -1926,6 +1959,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % to avoid redundant traversals of expressions, holes are identified by variable and a hole type-environment.
     % when hypothesis is generated, then it's substituted in, and removed from hole type-env.
   % Feser's algorithm and Frankle's synchronous rules are BFS
+
+
+% -- synthesize procedure
+%   -- best-first search
+%   -- alternate between infer (deduce) and enumerate (induce)
+%   -- infer produces a Contract 
+%   -- enumerate produces a Hypothesis
+
+
 
 % semantics (non-deterministic)
   % syntax-directed with non-deterministic subsumption 
