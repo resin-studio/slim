@@ -44,11 +44,149 @@ open Lean PersistentHashMap
 -- :]
 
 
-def main : IO Unit :=
+-- #eval infer_reduce [:
+--   let y[0] = (λ y[0] : str*@ => hello ; y[0]) =>
+--   (y[0] str;())
+-- :]
+
+
+
+-- let-binding
+-- expected: hello*uno*@
+-- actual  : hello*uno*@
+#eval infer_reduce [:
+  let y[0] = (λ y[0] => hello ; y[0]) =>
+  (y[0] uno;())
+:]
+
+-- type generalization 
+-- exptected: (∀ 1 => (β[0] -> hello*β[0]))
+-- actual   : (∀ 1 => (β[0] -> hello*β[0]))
+#eval infer_reduce [:
+  let y[0] = (λ y[0] => hello ; y[0]) =>
+  (
+    y[0]
+  )
+:]
+
+-- TODO: fix error
+-- type generalization; not overgeneralized  
+-- expected: (α[0] -> (∀ 1 => (β[1] -> (α[0] × hello*β[0]))))
+-- actual: (⊤ -> (∀ 2 :: ⊥ ≤ ⊤ => (β[1] -> (β[0] × hello*β[1]))))
+#eval infer_reduce [:
+  (λ y[0] : α[0] => 
+  let y[0] = (λ y[0] => (y[1], (hello ; y[0]))) =>
+  (
+    y[0]
+  ))
+:]
+
+
+-- type instatiation of applicator
+-- expected: (hello*uno*@ × hello*dos*@)
+-- actual  : (hello*uno*@ × hello*dos*@)
+#eval infer_reduce [:
+  let y[0] = (λ y[0] => hello ; y[0]) =>
+  (
+    (y[0] uno;()),
+    (y[0] dos;())
+  )
+:]
+
+-- type of pair 
+-- expected: (hello*@ × world*@)
+-- actual  : (hello*@ × world*@)
+#eval infer_reduce [:
+  (hello;(), world;())
+:]
+
+-- type instatiation of argument 
+-- TODO
+
+
+def test_let_poly : IO Unit :=
   test [
-    ("unfiy same tag ", unify_decide [: zero * @ :] [: zero * @ :] == true),
-    ("unify diff tag", unify_decide [: zero * @ :] [: one * @ :] == false)
+    ("unfiy same tag ", unify_decide [: zero * @ :] [: zero * @ :] == true)
   ]
+
+-- def main : IO Unit :=
+  -- test_let_poly
+  -- test [
+  --   ("unfiy same tag ", unify_decide [: zero * @ :] [: zero * @ :] == true),
+  --   ("unify diff tag", unify_decide [: zero * @ :] [: one * @ :] == false)
+  -- ]
+
+-- -- let-polymorphism: how generic?
+
+-- -- not generic
+-- #eval infer_reduce [:
+--   ((λ y[0] : ⟨nat_⟩ => y[0]) zero;())
+-- :]
+
+-- -- not generic
+-- #eval infer_reduce [:
+--   let y[0] = (λ y[0] : ⟨nat_⟩ => y[0]) =>
+--   (y[0] zero;())
+-- :]
+
+-- -- not generic
+-- #eval infer_reduce [:
+--   let y[0] = (λ y[0] : ⟨nat_⟩ => y[0]) =>
+--   y[0]
+-- :]
+
+-- -- expected: ⊥ 
+-- #eval infer_reduce [:
+--   let y[0] : (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) = (λ y[0] : ⟨nat_⟩ => y[0]) =>
+--   y[0]
+-- :]
+
+-- -- expected: true 
+-- #eval unify_decide 
+-- [: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
+-- [: ⟨nat_⟩ -> ⟨nat_⟩ :]
+
+-- -- expected: false 
+-- #eval unify_decide 
+-- [: ⟨nat_⟩ -> ⟨nat_⟩ :]
+-- [: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
+
+
+-- #eval infer_reduce [:
+--   let y[0] : (∀ 1 :: ⟨nat_⟩ ≤ β[0] => β[0] -> β[0]) = (λ y[0] : ⟨nat_⟩ => y[0]) =>
+--   y[0]
+-- :]
+
+-- -- generic enough
+-- -- but too redundant
+-- #eval infer_reduce [:
+--   let y[0] : (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) = (λ y[0] => y[0]) =>
+--   (y[0] zero;())
+-- :]
+
+
+
+-- #eval infer_reduce [:
+--   let y[0] = (λ y[0] => y[0]) =>
+--   (y[0] zero;())
+-- :]
+
+-- #eval infer_reduce [:
+--   let y[0] = (λ y[0] => y[0]) =>
+--   y[0]
+-- :]
+
+-- #eval infer_reduce [:
+--   let y[0] = (λ y[0] : ⟨nat_⟩ => ()) =>
+--   let y[0] = (λ y[0] => ((y[1] y[0]), y[0])) =>
+--   (y[0] zero;())
+-- :]
+
+
+
+
+
+
 
 
 -- /-
@@ -543,100 +681,6 @@ def main : IO Unit :=
 --   λ y[0] : dos*@ -> @ =>
 --   OUTPUT ; (λ y[0] =>
 --     ((y[2] y[0]), (y[1] y[0]))
---   )
--- :]
-
--- -- let-polymorphism: how generic?
-
--- -- not generic
--- #eval infer_reduce [:
---   ((λ y[0] : ⟨nat_⟩ => y[0]) zero;())
--- :]
-
--- -- not generic
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] : ⟨nat_⟩ => y[0]) =>
---   (y[0] zero;())
--- :]
-
--- -- not generic
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] : ⟨nat_⟩ => y[0]) =>
---   y[0]
--- :]
-
--- -- expected: ⊥ 
--- #eval infer_reduce [:
---   let y[0] : (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) = (λ y[0] : ⟨nat_⟩ => y[0]) =>
---   y[0]
--- :]
-
--- -- expected: true 
--- #eval unify_decide 
--- [: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
--- [: ⟨nat_⟩ -> ⟨nat_⟩ :]
-
--- -- expected: false 
--- #eval unify_decide 
--- [: ⟨nat_⟩ -> ⟨nat_⟩ :]
--- [: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
-
-
--- #eval infer_reduce [:
---   let y[0] : (∀ 1 :: ⟨nat_⟩ ≤ β[0] => β[0] -> β[0]) = (λ y[0] : ⟨nat_⟩ => y[0]) =>
---   y[0]
--- :]
-
--- -- generic enough
--- -- but too redundant
--- #eval infer_reduce [:
---   let y[0] : (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) = (λ y[0] => y[0]) =>
---   (y[0] zero;())
--- :]
-
-
-
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] => y[0]) =>
---   (y[0] zero;())
--- :]
-
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] => y[0]) =>
---   y[0]
--- :]
-
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] : ⟨nat_⟩ => ()) =>
---   let y[0] = (λ y[0] => ((y[1] y[0]), y[0])) =>
---   (y[0] zero;())
--- :]
-
--- -- let-polymorphism
-
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] : str*@ => hello ; y[0]) =>
---   (y[0] str;())
--- :]
-
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] => hello ; y[0]) =>
---   (
---     y[0]
---   )
--- :]
-
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] => hello ; y[0]) =>
---   (y[0] uno;())
--- :]
-
-
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] => hello ; y[0]) =>
---   (
---     (y[0] uno;()),
---     (y[0] dos;())
 --   )
 -- :]
 

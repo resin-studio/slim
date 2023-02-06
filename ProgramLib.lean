@@ -1061,13 +1061,13 @@ match t with
   ))
 
 | .record fds =>
-  let (i, trips) := List.foldl (fun (i, ty_acc) => fun (l, t1) =>
+  let (i, trips) := List.foldr (fun (l, t1) (i, ty_acc) =>
     (i + 1, (l, t1, (Ty.fvar i)) :: ty_acc)
   ) (i, []) fds
 
   let ty_init := Ty.top
 
-  let ty' := List.foldl (fun ty_acc => fun (l, _, ty1) => 
+  let ty' := List.foldr (fun (l, _, ty1) ty_acc => 
     Ty.inter (Ty.field l ty1) ty_acc 
   ) ty_init trips 
 
@@ -1093,13 +1093,13 @@ match t with
   List.foldr f_step init trips 
 
 | .func fs =>
-  let (i, fs_typed) := List.foldl (fun (i, ty_acc) => fun (p, op_ty_p, b) =>
+  let (i, fs_typed) := List.foldr (fun (p, op_ty_p, b) (i, ty_acc) =>
     (i + 1, (p, op_ty_p, b, (Ty.fvar i)) :: ty_acc)
   ) (i, []) fs
 
   let case_init := Ty.top
 
-  let (i, ty') := List.foldl (fun (i, ty_acc) (p, op_ty_p, b, ty_b) => 
+  let (i, ty') := List.foldr (fun (p, op_ty_p, b, ty_b) (i, ty_acc) => 
     let (i, ty_p) := match op_ty_p with
       | .some ty_p => (i, ty_p)
       | .none => (i + 1, Ty.fvar i)
