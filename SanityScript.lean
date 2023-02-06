@@ -44,20 +44,12 @@ open Lean PersistentHashMap
 -- :]
 
 
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] : str*@ => hello ; y[0]) =>
---   (y[0] str;())
--- :]
-
-
-
 -- let-binding
--- expected: hello*uno*@
--- actual  : hello*uno*@
 #eval infer_reduce [:
-  let y[0] = (λ y[0] => hello ; y[0]) =>
-  (y[0] uno;())
+  let y[0] = (λ y[0] : str*@ => hello ; y[0]) =>
+  y[0]
 :]
+
 
 -- type generalization 
 -- exptected: (∀ 1 => (β[0] -> hello*β[0]))
