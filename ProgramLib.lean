@@ -666,11 +666,20 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 | (.fvar id1), (.fvar id2) => 
   match (env_ty.find? id1, env_ty.find? id2) with 
   | (.none, .none) => 
-    [
-      (i, PHashMap.from_list [
-        (id1, Ty.fvar id2)
-      ])
-    ]
+    if id1 < id2 then
+      [
+        (i, PHashMap.from_list [
+          (id2, Ty.fvar id1)
+        ])
+      ]
+    else if id1 > id2 then
+      [
+        (i, PHashMap.from_list [
+          (id1, Ty.fvar id2)
+        ])
+      ]
+    else
+      []
   | (_, .some ty) => unify i env_ty aim (.fvar id1) ty 
   | (.some ty', _) => unify i env_ty aim ty' (.fvar id2) 
 
@@ -1166,11 +1175,10 @@ match t with
 | .letb ty1 t1 t => 
   let free_var_boundary := i
   List.bind (infer i (env_ty) env_tm aim t1 ty1) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
-  let ty1' := (Ty.subst (env_ty;env_ty1) ty1')
-  -- MAYBE: consider simplification
-  -- let ty1' := (Ty.simplify (Ty.subst (env_ty;env_ty1) ty1'))
+  let ty1' := (Ty.simplify (Ty.subst (env_ty;env_ty1) ty1'))
 
-  -- filter to prevent overgeneralization
+  -- TODO: fix overgeneralization
+  -- consider unifying variables based on order, so earlier variables are visible after substitution 
   let fvs := List.filter (. >= free_var_boundary) (
     (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
   )
@@ -1204,13 +1212,17 @@ match t with
 
 partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
   let ty' := (infer 31 {} {} Aim.adj t ty).foldl (fun acc => fun  ⟨_, env_ty, _, _, ty⟩ =>
-    Ty.simplify (Ty.subst_default true (Ty.subst env_ty (Ty.union acc ty)))
+    Ty.simplify (Ty.subst env_ty (Ty.union acc ty))
+    -- Ty.simplify (Ty.subst_default true (Ty.subst env_ty (Ty.union acc ty)))
   ) (Ty.bot)
-  let fvs := (Ty.negative_free_vars true ty').toList.reverse.bind (fun (k, _) => [k])
-  if fvs.isEmpty then
-    Ty.simplify (Ty.subst_default true ty')
-  else
-    Ty.simplify (Ty.subst_default true [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :])
+  ty'
+  -- Ty.simplify (Ty.subst_default true ty')
+  -- let fvs := (Ty.negative_free_vars true ty').toList.reverse.bind (fun (k, _) => [k])
+  -- if fvs.isEmpty then
+  --   Ty.simplify (Ty.subst_default true ty')
+  -- else
+  --   [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :]
+  --   Ty.simplify (Ty.subst_default true [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :])
 
 
 

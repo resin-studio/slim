@@ -61,11 +61,20 @@ open Lean PersistentHashMap
   )
 :]
 
--- TODO: fix error
 -- type generalization; not overgeneralized  
 -- expected: (α[0] -> (∀ 1 => (β[1] -> (α[0] × hello*β[0]))))
+-- actual: (α[0] -> (∀ 1 => (β[1] -> (α[0] × hello*β[0]))))
+#eval infer_reduce [:
+  (λ y[0] : α[0] => 
+    let y[0] = (λ y[0] => (y[1], (hello ; y[0]))) =>
+    (
+      y[0]
+    )
+  )
+:]
+
 -- expected: ((A*@ -> B*@) -> (A*@ -> ((∀ 1 => (β[0] -> (A*@ × hello*β[0]))) × B*@)))
--- actual  : ((A*@ -> B*@) -> (⊤ -> ((∀ 2 => (β[1] -> (β[0] × hello*β[1]))) × B*@)))
+-- actual: ((A*@ -> B*@) -> ((A*@ ∧ α[61]) -> ((∀ 1 :: ⊥ ≤ ⊤ => (β[0] -> ((A*@ ∧ α[61]) × hello*β[0]))) × B*@ ∨ α[62])))
 #eval infer_reduce [:
   (λ y[0] : A*@ -> B*@ => 
   (λ y[0] : α[0] => 
