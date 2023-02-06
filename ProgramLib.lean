@@ -1164,11 +1164,18 @@ match t with
 
 
 | .letb ty1 t1 t => 
+  let free_var_boundary := i
   List.bind (infer i (env_ty) env_tm aim t1 ty1) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
   let ty1' := (Ty.subst (env_ty;env_ty1) ty1')
+  -- MAYBE: consider simplification
   -- let ty1' := (Ty.simplify (Ty.subst (env_ty;env_ty1) ty1'))
-  let fvs := (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
+
+  -- filter to prevent overgeneralization
+  let fvs := List.filter (. >= free_var_boundary) (
+    (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
+  )
   let ty1' := if fvs.isEmpty then ty1' else [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
+
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
   List.bind (infer i (env_ty;env_ty1) (env_tm ; env_tmx) aim t ty) (fun ⟨i, env_ty2, guides_t, t', ty'⟩ =>
