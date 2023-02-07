@@ -1888,13 +1888,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     % novel solution: relational types
       % relating types (recursive/corecursive) 
       %A type level language capable of expressing (co)inductive relations without the complexity of dependent types or propositional syntax.  
-  % challenge: type inference without constraints 
-    % sota: separate constraints and types 
-      % constraints can characterize let-bindings
+
+% additional observations 
+  % observation: type inference without constraints 
+    % sota: separate constraints and types
+      % constraint type schemes are separate from subtyping
+      % constraint language is more expressive than type language
     % novel solution: 
-      % expressive types with union and intersection 
-      % constraints and constraint semantics 
-        % replaced by expressive types and subtyping
+      % constraint semantics are subsumed by subtyping
+      % subtyping is expressive enough to constrain acceptable programs  
+        % without being overly strict 
+        %e.g. union and intersection, asymmetrical quantification subtyping
 
 
 % automatic partial instantiation 
