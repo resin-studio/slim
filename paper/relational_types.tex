@@ -1886,25 +1886,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       % A unification algorithm capable of preserving the flexibility of dynamically typed programming. 
 
 % additional observations 
-  % result: type inference without constraints 
-    % sota: separate constraints and types
-      % constraint type schemes are separate from subtyping
-      % constraint language is more expressive than type language
-    % novel solution: 
-      % two independent sufficient reasons we don't need constraints:
-        % we eagerly unify, and just propagate resulting type environment
-        % the subtyping semantics is sufficiently expressive to record constraints 
-      % constraint semantics are subsumed by subtyping
-      % subtyping is expressive enough to constrain acceptable programs  
-        % without being overly strict 
-        %e.g. union and intersection, asymmetrical quantification subtyping
+  % outcome: subtyping is first-class
+    % sota: separate constraints, type schemes 
+      % separate constraints, type schemes, and types
+      % separate constraint semantics, instantiation/generalization, subtyping
+    % contribution: 
+      % the subtyping semantics is sufficiently expressive
+      % subtyping subsumes constraint semantics and instantiation/generalization
+      %e.g. union and intersection, asymmetrical quantification subtyping
       %partial instantiation in generalized polymorphic subtyping
       % subtyping encodes instantiation: ((ALL X . T) <: T')
       % e.g. 
         % g(f : int -> int)
         % h : All X . X -> X
         % g(h) is accepted by specializing h in subtyping
-
 
 % automatic partial instantiation 
   % NOTE: this seems like a significant innovation in eager inference. 
