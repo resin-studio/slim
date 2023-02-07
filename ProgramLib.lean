@@ -1239,11 +1239,29 @@ def Work.le (x y: Work): Bool := x.cost <= y.cost
 def Work.Queue := BinomialHeap Work Work.le
 
 -- TODO
-def Tm.cost (t : Tm) : Nat :=
-  0 
+def Tm.cost (t : Tm) : Nat := 0
 
--- TODO
-def Tm.subst (m : PHashMap Nat Tm) (t : Tm) : Tm := t
+partial def Tm.subst (m : PHashMap Nat Tm) : Tm -> Tm 
+| hole => hole 
+| unit => unit 
+| bvar id => bvar id 
+| fvar id => (match m.find? id with
+  | some t => Tm.subst m t 
+  | none => .fvar id
+)
+| tag l t => tag l (Tm.subst m t)
+| record entries => 
+  let entries' := List.map (fun (l, t) => (l, Tm.subst m t)) entries 
+  record entries'
+| func cases =>
+  let cases' := List.map (fun (p, op_ty_p, t_b) => 
+    (p, op_ty_p, Tm.subst m t_b)
+  ) cases 
+  func cases'
+| proj t l => proj (Tm.subst m t) l
+| app t1 t2 => app (Tm.subst m t1) (Tm.subst m t2)
+| letb ty t1 t2 => letb ty (Tm.subst m t1) (Tm.subst m t2)
+| .fix t => Tm.fix (Tm.subst m t)
 
 
 structure Hypoth where
