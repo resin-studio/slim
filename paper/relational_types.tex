@@ -1871,13 +1871,23 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 % previously unsolved challenges of synthesis for dynamically typed languages 
   % challenge: instantiation of polymorphic arguments to narrow search
+    % sota: separate instantiation and subtyping
     % novel solution: partial instantiation in generalized polymorphic subtyping
   % challenge: lack of type annotations to guide search 
+    % sota: bidirectional/roundtrip typing using annotations 
     % novel solution: both up and down propagation for every syntax rule
   % challenge: lack of prescribed upper bound (since no datatypes)
+    % sota: datatypes/ML languages require upper bound 
     % novel solution: adjusting types with union and intersection
   % challenge: expressive types without using datatypes
+    % sota: refinement types require base type 
     % novel solution: relational types
+  % challenge: first class constraints 
+    % sota: separate constraints and types 
+      % constraints can characterize let-bindings
+    % novel solution: 
+      % type annotations in let and lambda
+      % expressive types with union and intersection 
 
 
 % automatic partial instantiation 
