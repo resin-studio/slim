@@ -682,12 +682,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\\\
 
     \inferrule[Let] { 
-      \Gamma \vdash t_1 : \tau_1  
-      \\
       \cdot \vdash 
-      \tau_1
+      (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5)
       \leq 
-      (\exists \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5)
+      \tau_1
+      \\\\
+      \Gamma \vdash t_1 : (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5)  
       \\\\
       \Gamma,x \mapsto (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5) 
         \vdash t_2 : \tau_2
