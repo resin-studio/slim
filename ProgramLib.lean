@@ -1038,11 +1038,6 @@ structure Contract where
   ty : Ty 
 deriving Repr
 
--- TODO: rewrite type annotations
--- TODO: prevent overgeneralizing in let-poly 
-  -- write test for overgeneralization
-  -- consider storing constraint in universal
-  -- consider excluding fresh vars introduced for bindings from result.
 partial def infer (i : Nat)
 (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (aim : Aim) (t : Tm) (ty : Ty) : 
 List Contract := 
@@ -1137,7 +1132,7 @@ match t with
       | .none => (i + 1, Ty.fvar i)
 
     let b := Tm.instantiate 0 list_tm_x b  
-    List.bind (infer i (env_ty ; env_ty_acc) (env_tm ; env_pat) Aim.cen p ty_p) (fun ⟨i, env_ty_p, _, _, _⟩ =>
+    List.bind (infer i (env_ty ; env_ty_acc) (env_tm ; env_pat) Aim.cen p ty_p) (fun ⟨i, env_ty_p, _, _, ty_p'⟩ =>
     List.bind (infer i (env_ty ; env_ty_acc ; env_ty_p) (env_tm ; env_pat) aim b ty_b) (fun ⟨i, env_ty_b, guides_b, b', ty_b'⟩ =>
       match t_acc with
       | Tm.func cases_acc =>
@@ -1145,8 +1140,8 @@ match t with
           i,
           env_ty_acc ; env_ty_p ; env_ty_b, 
           guides_acc ++ guides_b,
-          Tm.func ((p, op_ty_p, b') :: cases_acc),
-          Ty.inter (Ty.case ty_p ty_b') ty_acc
+          Tm.func ((p, (some ty_p'), b') :: cases_acc),
+          Ty.inter (Ty.case ty_p' ty_b') ty_acc
         ⟩]
       | _ => .nil
     ))))
@@ -1187,7 +1182,7 @@ match t with
   let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
   let t := Tm.instantiate 0 [x] t 
   List.bind (infer i (env_ty;env_ty1) (env_tm ; env_tmx) aim t ty) (fun ⟨i, env_ty2, guides_t, t', ty'⟩ =>
-    [ ⟨i, env_ty2, guides_t1 ++ guides_t, .letb ty1 t1' t', ty'⟩ ]
+    [ ⟨i, env_ty2, guides_t1 ++ guides_t, .letb ty1' t1' t', ty'⟩ ]
   ))
 
 | .fix t1 =>
