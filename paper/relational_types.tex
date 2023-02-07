@@ -1869,38 +1869,41 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     % all rules handle both program checking and program synthesis 
       % propagate programs down and up
 
-% main results 
-  % result: synthesis from context (without annotations) 
+% novel contributions 
+  % 1. outcome: synthesis from context (without annotations) 
     % sota: bidirectional/roundtrip typing using annotations 
-    % novel solution: both up and down propagation for every syntax rule
+    % contribution: both up and down propagation for every syntax rule
       % propagating types (downward/upward) 
       % A synthesis algorithm capable of generating local constraints for incomplete programs. 
-  % result: inference of expressive types
+  % 2. outcome: inference of expressive types
     % sota: refinement types require base type 
-    % novel solution: relational types
+    % contribution: relational types
       % relating types (recursive/corecursive) 
       % A type level language capable of expressing (co)inductive relations without the complexity of dependent types or propositional syntax.  
-  % result: safe but lenient type inference without prescription
+  % 3. outcome: safe but lenient type inference without prescription
     % sota: datatypes/ML languages prescribe upper bound 
-    % novel solution: adjusting types with union and intersection
+    % contribution: adjusting types with union and intersection
       % A unification algorithm capable of preserving the flexibility of dynamically typed programming. 
-  % result: instantiation of polymorphic arguments to narrow search
-    % sota: separate instantiation and subtyping
-    % novel solution: partial instantiation in generalized polymorphic subtyping
-      % subtyping encodes instantiation: ((ALL X . T) <: T')
-      % e.g. 
-        % g(f : int -> int)
-        % h : All X . X -> X
-        % g(h) is accepted by specializing h in subtyping
+
+% additional observations 
   % result: type inference without constraints 
     % sota: separate constraints and types
       % constraint type schemes are separate from subtyping
       % constraint language is more expressive than type language
     % novel solution: 
+      % two independent sufficient reasons we don't need constraints:
+        % we eagerly unify, and just propagate resulting type environment
+        % the subtyping semantics is sufficiently expressive to record constraints 
       % constraint semantics are subsumed by subtyping
       % subtyping is expressive enough to constrain acceptable programs  
         % without being overly strict 
         %e.g. union and intersection, asymmetrical quantification subtyping
+      %partial instantiation in generalized polymorphic subtyping
+      % subtyping encodes instantiation: ((ALL X . T) <: T')
+      % e.g. 
+        % g(f : int -> int)
+        % h : All X . X -> X
+        % g(h) is accepted by specializing h in subtyping
 
 
 % automatic partial instantiation 
