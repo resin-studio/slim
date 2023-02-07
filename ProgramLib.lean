@@ -1238,8 +1238,20 @@ def Work.le (x y: Work): Bool := x.cost <= y.cost
 
 def Work.Queue := BinomialHeap Work Work.le
 
--- TODO
-def Tm.cost (t : Tm) : Nat := 0
+partial def Tm.cost : Tm -> Nat
+| hole => 1 
+| unit => 1 
+| bvar id => 1 
+| fvar id => 1
+| tag l t => 1 + (Tm.cost t)
+| record entries => 
+  List.foldl (fun cost' (l, t) => cost' + (Tm.cost t)) 1 entries
+| func cases =>
+  List.foldl (fun cost' (p, op_ty_p, t_b) => cost' + (Tm.cost t_b)) 1 cases
+| proj t l => 1 + (Tm.cost t)
+| app t1 t2 => 1 + (Tm.cost t1) + (Tm.cost t2)
+| letb ty t1 t2 => 1 + (Tm.cost t1) + (Tm.cost t2)
+| .fix t => 1 + (Tm.cost t)
 
 partial def Tm.subst (m : PHashMap Nat Tm) : Tm -> Tm 
 | hole => hole 
