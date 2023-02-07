@@ -666,6 +666,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
 | (.fvar id1), (.fvar id2) => 
   match (env_ty.find? id1, env_ty.find? id2) with 
   | (.none, .none) => 
+    -- ensure older unassigned free variables appear in simplified form
     if id1 < id2 then
       [
         (i, PHashMap.from_list [
@@ -1177,8 +1178,7 @@ match t with
   List.bind (infer i (env_ty) env_tm aim t1 ty1) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
   let ty1' := (Ty.simplify (Ty.subst (env_ty;env_ty1) ty1'))
 
-  -- TODO: fix overgeneralization
-  -- consider unifying variables based on order, so earlier variables are visible after substitution 
+  -- prevent overgeneralization by filtering
   let fvs := List.filter (. >= free_var_boundary) (
     (Ty.free_vars ty1').toList.reverse.bind (fun (k, _) => [k])
   )
@@ -1229,7 +1229,6 @@ partial def infer_reduce_wt (t : Tm) (ty : Ty): Ty :=
 partial def infer_reduce (t : Tm) : Ty := infer_reduce_wt t [: ∃ 1 => β[0] :]
 
 
--- Do we need to re-analyze the syntax tree in case there's new patch that specializes a type?
 structure Work where
   cost : Nat
   i : Nat
