@@ -1027,7 +1027,7 @@ def Option.toList : Option T -> List T
 
 structure Guide where
   env_tm : PHashMap Nat Ty
-  ty_exp : Ty
+  ty_expected : Ty
 deriving Repr
 
 structure Contract where
@@ -1151,6 +1151,7 @@ match t with
   List.foldr f_step init fs_typed 
 
 
+-- TODO: is inferred env_ty1 actually needed in unification? NO! expected types are not reused in unification
 | .proj t1 l =>
   List.bind (infer i env_ty env_tm aim t1 (Ty.field l ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
   let (i, ty') := (i + 1, Ty.fvar i)
@@ -1158,6 +1159,7 @@ match t with
     [⟨i, env_ty1 ; env_ty2, guides_t1, Tm.proj t1' l, ty'⟩]
   ))
 
+-- TODO: is inferred env_ty1 actually needed in unification? NO! expected types are not reused in unification
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
   let (i, ty') := (i + 1, Ty.fvar i)
@@ -1185,6 +1187,7 @@ match t with
     [ ⟨i, env_ty2, guides_t1 ++ guides_t, .letb ty1' t1' t', ty'⟩ ]
   ))
 
+-- TODO: is inferred env_ty1 actually needed in unification? NO! expected types are not reused in unification
 | .fix t1 =>
   List.bind (infer i (env_ty) env_tm Aim.cen t1 (Ty.case ty ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
   let (i, ty_prem) := (i + 1, Ty.fvar i) 
@@ -1284,9 +1287,35 @@ structure Hypoth where
   patch : Tm
 deriving Repr
 
--- TODO
-def enumerate (i : Nat) (guide : Guide) : List Hypoth :=
-  [] 
+-- TODO: consider eagerly substituting 
+partial def enumerate (i : Nat) (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) : Ty ->  List Hypoth
+| .bvar id => [] 
+| .fvar id => 
+  let x := (match env_ty.find? id with
+    | some ty => enumerate i env_ty env_tm ty 
+    | none => [] 
+  )
+  x
+-- | .unit => .unit
+-- | .bot => .bot
+-- | .top => .top
+-- | .tag l ty => .tag l (Ty.subst m ty) 
+-- | .field l ty => .field l (Ty.subst m ty)
+-- | .union ty1 ty2 => .union (Ty.subst m ty1) (Ty.subst m ty2)
+-- | .inter ty1 ty2 => .inter (Ty.subst m ty1) (Ty.subst m ty2)
+-- | .case ty1 ty2 => .case (Ty.subst m ty1) (Ty.subst m ty2)
+-- | .exis n ty_c1 ty_c2 ty => (.exis n
+--   (Ty.subst m ty_c1) (Ty.subst m ty_c2) 
+--   (Ty.subst m ty)
+-- )
+-- | .univ n ty_c1 ty_c2 ty => (.univ n 
+--   (Ty.subst m ty_c1) (Ty.subst m ty_c2)
+--   (Ty.subst m ty)
+-- )
+-- | .recur ty => .recur (Ty.subst m ty)
+-- | .corec ty => .corec (Ty.subst m ty)
+| _ => []
+
 
 #check BinomialHeap.ofList
 #check BinomialHeap.merge
@@ -1298,7 +1327,7 @@ partial def synthesize_loop (queue : Work.Queue) : Option Tm :=
     else 
       let queue_ext := BinomialHeap.ofList Work.le (
         List.bind work.guides.toList (fun (id, guide) =>
-          let hypotheses := enumerate work.i guide 
+          let hypotheses := enumerate work.i work.env_ty guide.env_tm guide.ty_expected
           List.bind hypotheses (fun ⟨cost, i, env_ty, guides, patch⟩ =>
             [
               {
