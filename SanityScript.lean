@@ -614,82 +614,28 @@ def test_let_poly : IO Unit :=
 
 -- -----
 
--- -- Widening
--- #eval infer_reduce [:
---   λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
---     (OUTPUT ; (y[0] hello;()))
--- :]
+-- Widening
+#eval infer_reduce [:
+  let y[0] : α[1] -> (α[1] -> (α[1] × α[1])) = _ => 
+  (y[0] hello;())
+:]
 
--- -- Widening
--- #eval infer_reduce [:
---   λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
---     (OUTPUT ; ((y[0] hello;()) world;()))
--- :]
+#eval infer_reduce [:
+  let y[0] : α[1] -> (α[1] -> (α[1] × α[1])) = _ => 
+  ((y[0] hello;()) world;())
+:]
 
+-- Narrowing
+#eval [:
+  λ y[0] : uno*@ -> @ => y[0]
+:]
 
--- -- Widening
--- #eval infer_reduce [:
---   λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
---   λ y[0] : hello*@ =>
---   λ y[0] : world*@ =>
---     OUTPUT ; ((y[2] y[1]) y[0])
--- :]
-
--- -- Widening
--- #eval infer_reduce [:
---   λ y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
---   λ y[0] : hello*@ =>
---   λ y[0] : world*@ =>
---     OUTPUT ; ((y[2] y[1]) y[0])
--- :]
-
--- #eval infer_reduce [:
---   λ y[0] : α[1] -> (α[1] -> (α[1] × α[1])) => 
---   let y[0] = ((y[0] hello;()) world;()) =>
---     OUTPUT ; y[0]
--- :]
-
-
--- #eval infer_reduce [:
---   λ y[0] : ∀ 1 => β[0] -> β[0] -> (β[0] × β[0]) => 
---   λ y[0] : int*@  =>
---   λ y[0] : str*@  =>
---   let y[0] = ((y[2] y[1]) y[0]) =>
---   OUTPUT ; y[0]
--- :]
-
--- #eval infer_reduce [:
---   let y[0] = (hello ; ()) =>
---   y[0]
--- :]
-
--- -- Narrowing
-
--- #eval [:
---   λ y[0] : uno*@ -> @ => y[0]
--- :]
--- #eval [:
---   λ y[0] : uno*@ -> @ => 
---   λ y[0] : dos*@ -> @ =>
---   λ y[0] =>
---     ((y[2] y[0]), (y[1] y[0]))
--- :]
--- #eval infer_reduce [:
---   λ y[0] : uno*@ -> @ => 
---   λ y[0] : dos*@ -> @ =>
---   OUTPUT ; (
---     λ y[0] => ((y[2] y[0]), (y[1] y[0]))
---   )
--- :]
--- #eval infer_reduce [:
---   λ y[0] : uno*@ -> @ => 
---   λ y[0] : dos*@ -> @ =>
---   OUTPUT ; (λ y[0] =>
---     ((y[2] y[0]), (y[1] y[0]))
---   )
--- :]
-
-
+#eval infer_reduce [:
+  let y[0] : uno*@ -> @ = _ => 
+  let y[0] : dos*@ -> @ = _ =>
+  (λ y[0] =>
+    ((y[2] y[0]), (y[1] y[0])))
+:]
 
 
 -- def repli := [:
