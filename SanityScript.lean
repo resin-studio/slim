@@ -3,461 +3,417 @@ import ProgramLib
 
 open Lean PersistentHashMap
 
+def nat_ := [: 
+  μ β[0] => zero*@ ∨ succ*β[0]
+:]
+#eval nat_
+
+def even := [: 
+  μ β[0] => zero*@ ∨ succ*succ*β[0]
+:]
+
+
+def weven := [: 
+  μ β[0] => 
+    zero*@ ∨ 
+    succ*dumb*β[0]
+:]
+
+
+def nat_list := [: 
+  μ β[0] => (
+    (zero*@ × nil*@) ∨ 
+    (∃ 2 :: β[0] × β[1] ≤ β[2] => 
+      (succ*β[0] × cons*β[1]))
+  )
+:]
+
+def even_list := [: 
+  μ β[0] => (
+    (zero*@ × nil*@) ∨ 
+    (∃ 2 :: β[0] × β[1] ≤ β[2] => 
+      (succ*succ*β[0] × cons*cons*β[1]))
+  )
+:]
+
+def nat_to_list := [: 
+  ν β[0] => 
+    (zero*@ -> nil*@) ∧ 
+    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
+      succ*β[0] -> cons*β[1])
+:]
+
+def plus := [: 
+  μ β[0] => 
+    (∃ 1 => 
+      (x ~ zero*@ ∧ y ~ β[0] ∧ z ~ β[0])) ∨ 
+
+    (∃ 3 :: (x ~ β[0] ∧ y ~ β[1] ∧ z ~ β[2]) ≤ β[3] => 
+      (x ~ succ*β[0] ∧ y ~ β[1] ∧ z ~ succ*β[2]))
+:]
+
+#eval unify_decide 0 weven nat_ -- == false
+#eval unify_decide 0 even nat_ -- == true 
+#eval unify_decide 0 nat_ even -- == false
+
+
+#eval unify_decide 0 
+[: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
+[: ⟨nat_⟩ -> ⟨nat_⟩ :]
+-- == true 
+
+#eval unify_decide 0 
+[: ⟨nat_⟩ -> ⟨nat_⟩ :]
+[: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
+-- == false 
+
+#eval unify_decide 0
+[: ∃ 2 :: β[0] ≤ ⟨even⟩ => β[0] × β[1]:] 
+[: ∃ 2 :: β[0] ≤ ⟨nat_⟩ => β[0] × β[1]:] 
+-- == true
+
+#eval unify_decide 0 
+[: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
+[: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
+-- == false
+
+#eval unify_decide 0 
+[: ∃ 2 :: β[0] ≤ ⟨nat_⟩ => β[0] × β[1]:] 
+[: ∃ 2 :: β[0] ≤ ⟨even⟩ => β[0] × β[1]:] 
+-- == false
+
+#eval unify_decide 0 
+[: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
+[: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
+-- == true
+
+#eval unify_decide 0 
+[: (zero*@) :] nat_ 
+-- == true
+
+#eval unify_decide 0 
+[: (succ*(zero*@)) :] nat_ 
+-- == true
+
+#eval unify_decide 0 
+[: ∀ 1 => (succ*(β[0])) :] 
+nat_ 
+-- == true
+
+#eval unify_decide 0 
+[: ∃ 1 => (succ*(β[0])) :] 
+nat_ 
+-- == false 
+
+
+#eval unify_reduce 0 
+[: (succ*(α[0])) :] 
+nat_ 
+[: α[0] :]
+-- == [: (μ β[0] => (zero*@ ∨ succ*β[0])) :]
+
+-- TODO: error
+#eval unify_decide 0 
+  even_list
+  nat_list
+-- == true
+
+#eval unify_decide 0 
+  nat_list
+  even_list
+-- == false
+
+
+#eval unify_decide 0 
+  [: (zero*@ × nil*@) :] 
+  nat_list
+-- == true
+
+#eval unify_decide 0 
+  [: zero*@ × dumb*@ :] 
+  nat_list
+-- == false
+
+-- this is record type is not wellformed 
+#eval unify_decide 2 
+  [: α[0] × α[1] :] 
+  nat_list
+-- == false
+
+
+#eval unify_reduce 1
+  [: zero*@ × α[0] :] 
+  nat_list
+  [: α[0] :]
+-- == [: nil*@ :]
+
+#eval unify_reduce 1
+  [: (succ*succ*zero*@ × cons*α[0]) :] 
+  nat_list
+  [: α[0]:]
+-- == [: cons*nil*@ :]
+
+
+#eval unify_decide 1 
+  [: (succ*zero*@ × cons*cons*α[0]) :] 
+  nat_list
+-- == false
+
+
+#eval unify_decide 0 
+  nat_to_list
+  [: (succ*zero*@) -> (cons*nil*@) :] 
+-- == true
+
+#eval unify_reduce 1
+  nat_to_list
+  [: (succ*zero*@ -> cons*α[0]) :] 
+  [: α[0] :]
+-- == [: nil*@ :]
+
+#eval unify_decide 1
+  nat_to_list
+  [: (succ*zero*@ -> cons*cons*α[0]) :] 
+-- == false
+
+#eval unify_reduce 1 
+[:
+    x ~ zero*@ ∧ 
+    y ~ α[0] ∧ 
+    z ~ zero*@
+:] plus [: α[0] :]
+-- == [: zero*@ :]
+
+
+#eval unify_reduce 1 [:
+  (
+    x ~ (succ*zero*@) ∧ 
+    y ~ (succ*zero*@) ∧ 
+    z ~ (α[0])
+  )
+:] plus [: α[0] :]
+-- == [: succ*succ*zero*@ :]
+
+
+#eval unify_reduce 1 [:
+  (
+    x ~ (succ*succ*zero*@) ∧ 
+    y ~ (succ*zero*@) ∧
+    z ~ (α[0])
+  )
+:] plus
+[: α[0] :]
+-- == [: succ*succ*succ*zero*@ :]
+
+#eval unify_reduce  1 [:
+  (
+    x ~ (succ*zero*@) ∧ 
+    y ~ (α[0]) ∧
+    z ~ (succ*succ*zero*@)
+  )
+:] plus
+[: α[0] :]
+-- == [: succ*zero*@ :]
 
 
 
--- #eval [: β[0] :]
--- #eval [: β[0] :]
-
--- #check [: β[0] ∨ α[0] :]
--- #check [: β[0] ∧ α[0] :]
--- #check [: β[0] × α[0] :]
--- #check [: β[0] + α[0] :]
--- def x := 0
--- #check [: ∀ 1 :: β[0] ≤ α[0] => β[⟨x⟩] :]
--- #check [: ∀ 1 :: β[0] ≤ α[0] => β[0] :]
--- #check [: ∀ 2 :: α[0] ≤ α[0] => β[0] :]
--- #check [: ∀ 2 => β[0] :]
--- #check [: @ :]
--- #check [: α[24] :]
--- #check [: foo * @ :]
--- #check [: foo * @ ∨ (boo * @) :]
--- #check [: μ β[0] => foo * @ :]
--- #check [: foo * boo * @ :]
--- #check [: μ β[0] => foo * boo * @ :]
--- #check [: μ β[0] => foo * β[0] :]
--- #check [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0]:]
--- #check [: β[3] ∧ α[0] -> α[1] ∨ α[2] :]
--- #check [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0] -> α[1] ∨ α[2] :]
--- #check [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0] :]
--- #check [: α[0] :]
-
--- #eval [: ∀ 2 :: α[0] ≤ α[0] => β[0] :]
--- #eval [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0] :]
+-- expected: α[0] ↦ succ*zero*@
+#eval unify_reduce 1 [:
+(
+  x ~ α[0] ∧
+  y ~ succ*zero*@ ∧
+  z ~ succ*succ*zero*@
+)
+:] plus
+[: α[0] :]
+-- == [: succ*zero*@ :]
 
 
-
--- #eval ({} : PHashMap Nat Ty)
-
--- def zero_ := [: 
---     zero * @
+#eval unify_reduce 2 [:
+(
+  x ~ (α[0]) ∧
+  y ~ (α[1]) ∧
+  z ~ (succ*succ*zero*@)
+)
+:] plus
+[: x ~ α[0] ∧ y ~ α[1] :]
+-- == [:
+-- (
+--   (x ~ succ*succ*zero*@ ∧ y ~ zero*@) ∨
+--   (x ~ succ*zero*@ ∧ y ~ succ*zero*@) ∨ 
+--   (x ~ zero*@ ∧ y ~ succ*succ*zero*@)
+-- )
 -- :]
 
+#eval unify_reduce 2 [:
+(
+  x ~ (succ*succ*zero*@) ∧
+  y ~ (α[1]) ∧
+  z ~ (α[0])
+)
+:] plus
+[: y ~ α[1] ∧ z ~ α[0] :]
+-- == [: (y ~ α[1] ∧ z ~ succ*succ*α[1]) :]
 
--- let-binding
-#eval infer_reduce [:
-  let y[0] = (λ y[0] : str*@ => hello ; y[0]) =>
+#eval infer_reduce 1 [:
+  let y[0] : (hello*@ -> α[0]) = (λ y[0] => y[0]) =>
   y[0]
 :]
+-- == [: hello*@ -> hello*@ :]
+
+#eval unify_reduce 1 
+[: α[0] -> α[0] :]
+[: (hello*@ -> α[0]) :]
+[: α[0] :]
+-- == [: hello*@ :]
 
 
--- type generalization 
--- exptected: (∀ 1 => (β[0] -> hello*β[0]))
--- actual   : (∀ 1 => (β[0] -> hello*β[0]))
-#eval infer_reduce [:
-  let y[0] = (λ y[0] => hello ; y[0]) =>
-  (
-    y[0]
-  )
-:]
 
--- type generalization; not overgeneralized  
--- expected: (α[0] -> (∀ 1 => (β[1] -> (α[0] × hello*β[0]))))
--- actual: (α[0] -> (∀ 1 => (β[1] -> (α[0] × hello*β[0]))))
-#eval infer_reduce [:
-  (λ y[0] : α[0] => 
-    let y[0] = (λ y[0] => (y[1], (hello ; y[0]))) =>
-    (
-      y[0]
-    )
-  )
-:]
-
--- expected: ((A*@ -> B*@) -> (A*@ -> ((∀ 1 => (β[0] -> (A*@ × hello*β[0]))) × B*@)))
--- actual: ((A*@ -> B*@) -> ((A*@ ∧ α[61]) -> ((∀ 1 :: ⊥ ≤ ⊤ => (β[0] -> ((A*@ ∧ α[61]) × hello*β[0]))) × B*@ ∨ α[62])))
-#eval infer_reduce [:
-  (λ y[0] : A*@ -> B*@ => 
-  (λ y[0] : α[0] => 
-    let y[0] = (λ y[0] => (y[1], (hello ; y[0]))) =>
-    (
-      y[0],
-      (y[2] y[1])
-    )
-  ))
-:]
-
-
--- type instatiation of applicator
--- expected: (hello*uno*@ × hello*dos*@)
--- actual  : (hello*uno*@ × hello*dos*@)
-#eval infer_reduce [:
-  let y[0] = (λ y[0] => hello ; y[0]) =>
-  (
-    (y[0] uno;()),
-    (y[0] dos;())
-  )
-:]
-
--- type of pair 
--- expected: (hello*@ × world*@)
--- actual  : (hello*@ × world*@)
-#eval infer_reduce [:
-  (hello;(), world;())
-:]
-
--- type instatiation of argument 
--- TODO
-
-
-def test_let_poly : IO Unit :=
-  test [
-    ("unfiy same tag ", unify_decide [: zero * @ :] [: zero * @ :] == true)
+def test_unify_tags : IO Unit :=
+  test "unify tags" [
+    ("same", unify_decide 0 [: zero * @ :] [: zero * @ :] == true),
+    ("diff", unify_decide 0 [: zero * @ :] [: one * @ :] == false)
   ]
 
--- def main : IO Unit :=
-  -- test_let_poly
-  -- test [
-  --   ("unfiy same tag ", unify_decide [: zero * @ :] [: zero * @ :] == true),
-  --   ("unify diff tag", unify_decide [: zero * @ :] [: one * @ :] == false)
-  -- ]
 
--- -- let-polymorphism: how generic?
-
--- -- not generic
--- #eval infer_reduce [:
---   ((λ y[0] : ⟨nat_⟩ => y[0]) zero;())
--- :]
-
--- -- not generic
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] : ⟨nat_⟩ => y[0]) =>
---   (y[0] zero;())
--- :]
-
--- -- not generic
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] : ⟨nat_⟩ => y[0]) =>
---   y[0]
--- :]
-
--- -- expected: ⊥ 
--- #eval infer_reduce [:
---   let y[0] : (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) = (λ y[0] : ⟨nat_⟩ => y[0]) =>
---   y[0]
--- :]
-
--- -- expected: true 
--- #eval unify_decide 
--- [: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
--- [: ⟨nat_⟩ -> ⟨nat_⟩ :]
-
--- -- expected: false 
--- #eval unify_decide 
--- [: ⟨nat_⟩ -> ⟨nat_⟩ :]
--- [: (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) :]
-
-
--- #eval infer_reduce [:
---   let y[0] : (∀ 1 :: ⟨nat_⟩ ≤ β[0] => β[0] -> β[0]) = (λ y[0] : ⟨nat_⟩ => y[0]) =>
---   y[0]
--- :]
-
--- -- generic enough
--- -- but too redundant
--- #eval infer_reduce [:
---   let y[0] : (∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> β[0]) = (λ y[0] => y[0]) =>
---   (y[0] zero;())
--- :]
-
-
-
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] => y[0]) =>
---   (y[0] zero;())
--- :]
-
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] => y[0]) =>
---   y[0]
--- :]
-
--- #eval infer_reduce [:
---   let y[0] = (λ y[0] : ⟨nat_⟩ => ()) =>
---   let y[0] = (λ y[0] => ((y[1] y[0]), y[0])) =>
---   (y[0] zero;())
--- :]
-
-
-
-
-
-
-
-
--- /-
---   μ nat .  zero*@ ∨ succ*nat 
--- -/
--- def nat_ := [: 
---   μ β[0] => zero*@ ∨ succ*β[0]
--- :]
--- #eval nat_
-
--- def even := [: 
---   μ β[0] => zero*@ ∨ succ*succ*β[0]
--- :]
-
-
--- def weven := [: 
---   μ β[0] => 
---     zero*@ ∨ 
---     succ*dumb*β[0]
--- :]
-
--- #eval unify_decide weven nat_ 
--- #eval unify_decide even nat_ 
--- #eval unify_decide nat_ even
-
-
--- #eval unify_decide
--- [: ∃ 2 :: β[0] ≤ ⟨even⟩ => β[0] × β[1]:] 
--- [: ∃ 2 :: β[0] ≤ ⟨nat_⟩ => β[0] × β[1]:] 
-
--- #eval unify_decide 
--- [: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
--- [: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
-
--- #eval unify_decide 
--- [: ∃ 2 :: β[0] ≤ ⟨nat_⟩ => β[0] × β[1]:] 
--- [: ∃ 2 :: β[0] ≤ ⟨even⟩ => β[0] × β[1]:] 
-
--- #eval unify_decide 
--- [: ∃ 2 :: ⟨nat_⟩ ≤ β[0] => β[0] × β[1]:] 
--- [: ∃ 2 :: ⟨even⟩ ≤ β[0] => β[0] × β[1]:] 
-
--- #eval unify_decide 
--- [: (zero*@) :] nat_ 
-
--- #eval unify_decide 
--- [: (succ*(zero*@)) :] nat_ 
-
--- #eval unify_decide 
--- [: (succ*(α[0])) :] 
--- nat_ 
-
--- #eval unify_reduce 
--- [: (succ*(α[0])) :] 
--- nat_ 
--- [: α[0] :]
-
--- def nat_list := [: 
---   μ β[0] => (
---     (l ~ zero*@ ∧ r ~ nil*@) ∨ 
---     (∃ 2 :: l ~ β[0] ∧ r ~ β[1] ≤ β[2] => 
---       (l ~ succ*β[0] ∧ r ~ cons*β[1]))
---   )
--- :]
--- --  ∧ / ∧  
--- def even_list := [: 
---   μ β[0] => (
---     (l ~ zero*@ ∧ r ~ nil*@) ∨ 
---     (∃ 2 :: l ~ β[0] ∧ r ~ β[1] ≤ β[2] => 
---       (l ~ succ*succ*β[0] ∧ r ~ cons*cons*β[1]))
---   )
--- :]
-
--- -- TODO
--- #eval unify_decide 
---   nat_list
---   even_list
-
--- #eval unify_decide 
---   even_list
---   nat_list
-
--- #eval unify_decide 
--- [: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
--- [: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
-
--- #eval unify_decide 
--- [: ∃ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
--- [: ∃ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
-
--- #eval unify_decide 
---   [: (l ~ zero*@ ∧ r ~ nil*@) :] 
---   nat_list
-
--- #eval unify_decide 
---   [: (l ~ zero*@ ∧ r ~ dumb*@) :] 
---   nat_list
-
--- -- this is record type is not wellformed 
--- #eval unify_decide 
---   [: (l ~ α[0] ∧ r ~ α[1]) :] 
---   nat_list
-
--- -- this is record type is not wellformed 
--- #eval unify_reduce
---   [: (l ~ α[0] ∧ r ~ α[1]) :] 
---   nat_list
---   [: ⊤ :]
-
--- #eval unify_decide 
---   [: (l ~ zero*@ ∧ r ~ α[0]) :] 
---   nat_list
-
--- -- expected α[0] → /nil
--- #eval unify_decide 
---   [: (l ~ succ*zero*@ ∧ r ~ cons*α[0]) :] 
---   nat_list
-
--- #eval unify_decide 
---   [: (l ~ succ*succ*zero*@ ∧ r ~ cons*α[0]) :] 
---   nat_list
-
-
--- #eval unify_reduce 
---   [: (l ~ succ*succ*zero*@ ∧ r ~ cons*α[0]) :] 
---   nat_list
---   [: α[0]:]
-
-
--- #eval unify_decide 
---   [: (l ~ succ*zero*@ ∧ r ~ cons*cons*α[0]) :] 
---   nat_list
-
-
-
--- def nat_to_list := [: 
---   ν β[0] => 
---     (zero*@ -> nil*@) ∧ 
---     (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
---       succ*β[0] -> cons*β[1])
--- :]
-
--- #eval unify_decide 
---   nat_to_list
---   [: (succ*zero*@) -> (cons*nil*@) :] 
-
--- #eval unify_reduce 
---   nat_to_list
---   [: (succ*zero*@) -> (cons*nil*@) :] 
---   [: ⊤ :]
-
--- #eval unify_reduce
---   nat_to_list
---   [: (succ*zero*@ -> cons*α[0]) :] 
---   [: α[0] :]
-
--- #eval unify_reduce
---   nat_to_list
---   [: (succ*zero*@ -> cons*cons*α[0]) :] 
---   [: α[0] :]
-
-
--- /-
---   μ plus .
---     ∃ N .  
---       zero*@ × N × N | 
-
---     ∃ X Y Z :: X, Y, Z ≤ plus .  
---       succ*X × Y × succ*Z
--- -/
--- def plus := [: 
---   μ β[0] => 
---     (∃ 1 => 
---       (x ~ zero*@ ∧ y ~ β[0] ∧ z ~ β[0])) ∨ 
-
---     (∃ 3 :: (x ~ β[0] ∧ y ~ β[1] ∧ z ~ β[2]) ≤ β[3] => 
---       (x ~ succ*β[0] ∧ y ~ β[1] ∧ z ~ succ*β[2]))
--- :]
-
--- -- /print plus
-
--- -- #eval [: (x ~ zero*@ ∧ y ~ zero*@ ∧ z ~ zero*@) :]  
--- -- #eval [: succ*succ*zero*@ :]  
-
-
--- #eval unify_reduce [:
---     x ~ zero*@ ∧ 
---     y ~ α[0] ∧ 
---     z ~ zero*@
--- :] plus [: α[0] :]
-
-
--- #eval unify_reduce [:
---   (
---     x ~ (succ*zero*@) ∧ 
---     y ~ (succ*zero*@) ∧ 
---     z ~ (α[0])
---   )
--- :] plus [: α[0] :]
-
-
--- #eval unify_reduce [:
---   (
---     x ~ (succ*succ*zero*@) ∧ 
---     y ~ (succ*zero*@) ∧
---     z ~ (α[0])
---   )
--- :] plus
--- [: α[0] :]
-
--- #eval unify_reduce [:
---   (
---     x ~ (succ*zero*@) ∧ 
---     y ~ (α[0]) ∧
---     z ~ (succ*succ*zero*@)
---   )
--- :] plus
--- [: α[0] :]
-
--- #eval unify_reduce [:
---   (
---     x ~ (succ*zero*@) ∧
---     y ~ (succ*succ*zero*@) ∧
---     z ~ (α[0])
---   )
--- :] plus [: α[0] :]
-
-
--- -- expected: α[0] ↦ succ*zero*@
--- #eval unify_reduce [:
--- (
---   x ~ α[0] ∧
---   y ~ succ*zero*@ ∧
---   z ~ succ*succ*zero*@
--- )
--- :] plus
--- [: α[0] :]
-
-
--- #eval unify_reduce [:
--- (
---   x ~ succ*zero*@ ∧
---   y ~ α[0] ∧
---   z ~ succ*succ*zero*@
--- )
--- :] plus
--- [: α[0] :]
-
-
--- #eval unify_reduce [:
--- (
---   x ~ (α[0]) ∧
---   y ~ (α[1]) ∧
---   z ~ (succ*succ*zero*@)
--- )
--- :] plus
--- [: x ~ α[0] ∧ y ~ α[1] :]
-
--- #eval unify_reduce [:
--- (
---   x ~ (succ*succ*zero*@) ∧
---   y ~ (α[1]) ∧
---   z ~ (α[0])
--- )
--- :] plus
--- [: y ~ α[1] ∧ z ~ α[0] :]
+def test_introduction : IO Unit :=
+  test "introduction" [
+    ("hello world", 
+      infer_reduce 0 
+      [: (hello;(), world;()) :]
+      ==
+      [: (hello*@ × world*@) :]
+    )
+  ]
+
+def test_elimination : IO Unit :=
+  test "elimination" [
+    ("1", 
+      infer_reduce 0 
+      [: ((λ y[0] => y[0]) zero;()) :]
+      ==
+      [: zero*@ :]
+    )
+  ]
+
+
+def test_generalization : IO Unit :=
+  test "generalization" [
+    ("annotated", 
+      infer_reduce 1 [:
+        let y[0] : str*@ -> ⊤ = (λ y[0] => hello ; y[0]) =>
+        y[0]
+      :]
+      == 
+      [: (∀ 1 => ((str*@ ∨ β[0]) -> hello*(str*@ ∨ β[0]))) :]
+    ),
+    ("existentially annotated", 
+      infer_reduce 1 [:
+        let y[0] : ∃ 1 => β[0] = (λ y[0] => hello ; y[0]) =>
+        y[0]
+      :]
+      == 
+      [: (∀ 1 => (β[0] -> hello*β[0])) :]
+    ),
+    ("universally annotated", 
+      infer_reduce 1 [:
+        let y[0] : ∀ 2 => β[0] -> β[1] = (λ y[0] => hello ; y[0]) =>
+        y[0]
+      :]
+      == 
+      [: (∀ 1 => (β[0] -> hello*β[0])) :]
+    ),
+    ("unannotated", 
+      infer_reduce 0 [:
+        let y[0] = (λ y[0] => hello ; y[0]) =>
+        (
+          y[0]
+        )
+      :]
+      == 
+      [: (∀ 1 => (β[0] -> hello*β[0])) :]
+    ),
+    ("nested scopes 1", 
+      infer_reduce 0 [:
+        (λ y[0] => 
+          let y[0] = (λ y[0] => (y[1], (hello ; y[0]))) =>
+          (
+            y[0]
+          )
+        )
+      :]
+      == 
+      [: (∀ 1 => (β[0] -> (∀ 1 => (β[0] -> (β[1] × hello*β[0]))))) :]
+    ),
+
+    ("nested scopes 2", 
+      infer_reduce 0 [:
+        (λ y[0] => 
+          let y[0] = (λ y[0] => y[0]) =>
+          let y[0] = (λ y[0] => ((y[1] y[2]), (hello ; y[0]))) =>
+          (
+            y[0]
+          )
+        )
+      :]
+      == 
+      [: (∀ 1 => (β[0] -> (∀ 1 => (β[0] -> (β[1] × hello*β[0]))))) :]
+    )
+  ]
+
+
+def test_widening : IO Unit :=
+  test "widening" [
+    ("1", 
+      infer_reduce 0 [:
+        let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+        (y[0] hello;())
+      :]
+      == 
+      [: (∀ 1 => ((hello*@ ∨ β[0]) -> ((hello*@ ∨ β[0]) × (hello*@ ∨ β[0])))) :]
+    ),
+    ("2", 
+      infer_reduce 0 [:
+        let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+        ((y[0] hello;()) world;())
+      :]
+      ==
+      [: ((hello*@ ∨ world*@) × (hello*@ ∨ world*@)) :]
+    )
+  ]
+
+def test_narrowing : IO Unit :=
+  test "narrowing" [
+    ("1", 
+      infer_reduce 0 [:
+        let y[0] : uno*@ -> @ = _ => 
+        (λ y[0] =>
+          ((y[1] y[0])))
+      :]
+      ==
+      [: (∀ 1 => ((uno*@ ∧ β[0]) -> @)) :]
+    ),
+    ("2",
+      infer_reduce 0 [:
+        let y[0] : uno*@ -> @ = _ => 
+        let y[0] : dos*@ -> @ = _ =>
+        (λ y[0] =>
+          ((y[2] y[0]), (y[1] y[0])))
+      :]
+      ==
+      [: (∀ 1 => ((dos*@ ∧ (uno*@ ∧ β[0])) -> (@ × @))) :]
+    )
+  ]
+
+
+def main : IO Unit := do
+  test_unify_tags
+  test_introduction
+  test_generalization
+  test_widening
+  test_narrowing
+
+------------------------------------------------------------
 
 
 -- -- term testing
@@ -482,7 +438,7 @@ def test_let_poly : IO Unit :=
 
 
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   succ;zero;()
 -- :]
 
@@ -494,7 +450,7 @@ def test_let_poly : IO Unit :=
 --   x[0]/hello
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   _ 
 -- :]
 
@@ -512,15 +468,15 @@ def test_let_poly : IO Unit :=
 -- :]
 
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   λ [for y[0] => y[0]]
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   λ [for y[0] : abc*@ => y[0]]
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   λ [for y[0] : inp*@ -> out*@ =>
 --   Out ; λ [for y[0] => 
 --       cons ; ((y[1] y[0]), nil ; ())
@@ -528,7 +484,7 @@ def test_let_poly : IO Unit :=
 --   ]
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   ((), nil ; ())
 -- :]
 
@@ -538,104 +494,8 @@ def test_let_poly : IO Unit :=
   
 -- :]
 
--- #eval infer_reduce [:
---   λ y[0] : nat*@ =>
---     let y[0] = (λ (y[0], y[1]) : (str*@ × str*@) => y[0]) =>
---     (y[0] (str;(), str;()))
--- :]
-
--- #eval infer_reduce [:
---   λ y[0] : nat*@ =>
---     let y[0] = (λ (y[0], y[1]) : (str*@ × str*@) => y[0]) =>
---     (y[0] (_, str;()))
--- :]
-
--- #eval infer_reduce [:
---   λ y[0] : nat*@ =>
---     let y[0] = λ[for (y[0], y[1]) : (str*@ × str*@) => y[0]] =>
---     (y[0] (y[1], _))
--- :]
-
--- -- Propagation: Down 
--- -- even though, there is a hole in the program,
--- -- the type of α[0] can be inferred to be uno*@  
--- -- due to the application and downward propagation
--- #eval infer_reduce [:
---   λ y[0] : α[0] =>
---     let y[0] = (λ (y[0], y[1]) : (uno*@ × dos*@) => y[1]) =>
---     (y[0] (y[1], _))
--- :]
-
--- -- Propagation: Up
--- #eval infer_reduce [:
---   λ y[0] : hello*@ -> world*@ =>
---   λ y[0] => 
---     (cons ; ((y[1] y[0]), nil ; ()))
--- :]
-
--- #eval infer_reduce [:
---   λ y[0] : int*@ -> str*@ => 
---   λ y[0] : int*@  =>
---     (y[1] y[0])
--- :]
-
-
--- #eval infer_reduce [:
---   λ y[0] : str*@ -> @ => 
---   λ y[0] : str*@ => 
---      (OUTPUT ; (y[1] y[0]))
--- :]
-
--- #eval infer_reduce [:
---   λ y[0] : int*@ -> @ => 
---   λ y[0] : str*@ => 
---      (y[1] y[0]) 
--- :]
-
--- #eval infer_reduce [:
---   λ y[0] : (int*@ ∨ str*@) -> @ => 
---   λ y[0] : str*@ => 
---      (y[1] y[0]) 
--- :]
-
--- #eval infer_reduce [:
---   λ y[0] : (int*@ ∨ α[1]) -> α[1] => 
---   λ y[0] : str*@ => 
---      (y[1] y[0]) 
--- :]
-
--- #eval infer_reduce [:
---   λ y[0] : ∀ 1 => (β[0] -> β[0]) => 
---   λ y[0] : int*@  =>
---     (y[1] y[0])
--- :]
-
-
-
 -- -----
 
--- Widening
-#eval infer_reduce [:
-  let y[0] : α[1] -> (α[1] -> (α[1] × α[1])) = _ => 
-  (y[0] hello;())
-:]
-
-#eval infer_reduce [:
-  let y[0] : α[1] -> (α[1] -> (α[1] × α[1])) = _ => 
-  ((y[0] hello;()) world;())
-:]
-
--- Narrowing
-#eval [:
-  λ y[0] : uno*@ -> @ => y[0]
-:]
-
-#eval infer_reduce [:
-  let y[0] : uno*@ -> @ = _ => 
-  let y[0] : dos*@ -> @ = _ =>
-  (λ y[0] =>
-    ((y[2] y[0]), (y[1] y[0])))
-:]
 
 
 -- def repli := [:
@@ -650,60 +510,60 @@ def test_let_poly : IO Unit :=
 
 -- -----
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
 -- [: uno ~ @ ∧ tres ~ @:]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
 -- [: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
 -- [: uno ~ @ ∧ dos ~ @ ∧ tres ~ @:]
 
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: uno ~ @ ∨ dos ~ @ ∨ tres ~ @ :]
 -- [:dos ~ @ ∧ tres ~ @ :]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [:dos ~ @ ∧ tres ~ @ ∧ four ~ @:]
 -- [: uno ~ @ ∨ dos ~ @ ∨ tres ~ @ :]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: ∀ 1 :: β[0] ≤ uno ~ @ ∨ dos ~ @ ∨ tres ~ @ => β[0]:]
 -- [:dos ~ @ ∧ tres ~ @ ∧ four ~ @:]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 -- [:dos ~ @ ∧ tres ~ @ :]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 -- [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ≤ β[0] => β[0]:]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ≤ β[0] => β[0]:]
 -- [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 -- [: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => hello * β[0] :]
 -- [: ∀ 1 :: β[0] ≤ ⟨even⟩ => hello * β[0] :]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ tres ~ @ ≤ β[0] => β[0]:]
 -- [: ∀ 1 :: uno ~ @ ∧ dos ~ @ ∧ four ~ @ ≤ β[0] => β[0]:]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: ∀ 1 :: β[0] ≤ uno ~ @ => β[0]:]
 -- [:uno ~ @ ∧ four ~ @:]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [: ∀ 1 :: uno ~ @ ≤ β[0] => β[0]:]
 -- [:uno ~ @ ∧ four ~ @:]
 
@@ -724,23 +584,23 @@ def test_let_poly : IO Unit :=
 --       (succ*succ*β[0]) -> @)
 -- :]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- nat_to_unit
 -- [: (zero*@ -> @) :]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- nat_to_unit
 -- nat_to_unit
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- nat_to_unit
 -- [: (succ*zero*@ -> @) :]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- even_to_unit
 -- [: (succ*succ*zero*@ -> @) :]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- even_to_unit
 -- [: (succ*zero*@ -> @) :]
 
@@ -779,7 +639,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), ()) 
@@ -794,7 +654,7 @@ def test_let_poly : IO Unit :=
 -- [: α[0] -> α[0] :]
 -- [: α[0] :]
 
--- #eval infer_reduce_wt 
+-- #eval infer_reduce 0_wt 
 -- [:
 --   (λ y[0] => λ[
 --   for zero;() => nil;(),
@@ -819,14 +679,14 @@ def test_let_poly : IO Unit :=
 -- [: α[20] :]
 
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   fix (λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
 --   ]) 
 -- :]
 
--- #eval infer_reduce_wt [:
+-- #eval infer_reduce 0_wt [:
 --   fix (λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
@@ -837,7 +697,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 
--- #eval infer_reduce_wt [:
+-- #eval infer_reduce 0_wt [:
 --   (λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
@@ -849,7 +709,7 @@ def test_let_poly : IO Unit :=
 --   (zero*@ -> nil*@)
 -- :]
 
--- #eval infer_reduce_wt [:
+-- #eval infer_reduce 0_wt [:
 --   fix (λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
@@ -864,7 +724,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 
--- #eval infer_reduce_wt [:
+-- #eval infer_reduce 0_wt [:
 --   fix (λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
@@ -881,7 +741,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 
--- #eval infer_reduce
+-- #eval infer_reduce 0
 -- [:
 --   λ y[0] : (ν β[0] => 
 --     (
@@ -891,7 +751,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 
--- #eval infer_reduce
+-- #eval infer_reduce 0
 -- [:
 --   λ y[0] : (ν β[0] => 
 --     (
@@ -903,7 +763,7 @@ def test_let_poly : IO Unit :=
 --   ) => (y[0] (succ;zero;()))
 -- :]
 
--- #eval infer_reduce
+-- #eval infer_reduce 0
 -- [:
 --   λ y[0] : (ν β[0] => 
 --     (
@@ -915,7 +775,7 @@ def test_let_poly : IO Unit :=
 --   ) => (y[0] (succ;_))
 -- :]
 
--- #eval infer_reduce
+-- #eval infer_reduce 0
 -- [:
 --   λ y[0] : (ν β[0] => 
 --     (
@@ -927,21 +787,21 @@ def test_let_poly : IO Unit :=
 --   ) => (y[0] (succ;succ;_))
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   λ y[0] : (
 --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 --   ) => (y[0] (succ;_))
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   λ y[0] : (
 --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 --   ) => (y[0] (succ;succ;_))
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   λ y[0] : (
 --     ∀ 0 :: ⊥ ≤ ⊤ => (
 --       ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
@@ -952,28 +812,28 @@ def test_let_poly : IO Unit :=
 
 -- ---------
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] : (
 --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 --   ) = _ => (y[0] (zero;()))
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] : (
 --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 --   ) = _ => (y[0] (succ;succ;zero;()))
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] : (
 --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 --   ) = _ => (y[0] (succ;succ;_))
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] : (
 --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
@@ -981,7 +841,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] : (
 --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --       ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
@@ -989,7 +849,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [:
 --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --     ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
@@ -998,7 +858,7 @@ def test_let_poly : IO Unit :=
 --   α[0] -> α[1]
 -- :]
 
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [:
 --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --     (zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ r ~ β[0])))
@@ -1007,7 +867,7 @@ def test_let_poly : IO Unit :=
 --   α[0] -> α[1]
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] = fix(λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
@@ -1016,7 +876,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] = fix(λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
@@ -1041,7 +901,7 @@ def test_let_poly : IO Unit :=
 -- :]
 -- [: α[30] :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] = fix(λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
@@ -1051,7 +911,7 @@ def test_let_poly : IO Unit :=
 
 
 -- -- TODO: why does this fail?
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] : ⟨nat_⟩ = _ =>
 --   let y[0] = fix(λ y[0] => λ[
 --   for zero;() => nil;(),
@@ -1060,7 +920,7 @@ def test_let_poly : IO Unit :=
 --   (y[0] y[1])
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] : ⟨nat_⟩ = _ =>
 --   let y[0] = fix(λ y[0] => λ[
 --   for zero;() => nil;(),
@@ -1074,7 +934,7 @@ def test_let_poly : IO Unit :=
 --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 -- :])
 
--- #eval unify_decide
+-- #eval unify_decide 0
 -- nat_
 -- [:
 -- μ β[0] => ∃ 2 :: β[1] ≤ β[2] =>
@@ -1094,7 +954,7 @@ def test_let_poly : IO Unit :=
 --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 -- :]
 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 -- :] [:
@@ -1103,7 +963,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 -- -- TODO: why does this fail?
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 -- :] [:
@@ -1111,7 +971,7 @@ def test_let_poly : IO Unit :=
 --     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
 -- :]
 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
 --     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
 -- :] [:
@@ -1121,7 +981,7 @@ def test_let_poly : IO Unit :=
 
 
 -- -- TODO: figure out why this fails
--- #eval infer_reduce_wt [:
+-- #eval infer_reduce 0_wt [:
 --   (λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
@@ -1138,14 +998,14 @@ def test_let_poly : IO Unit :=
 -- :]
 
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   fix(λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
 --   ]) 
 -- :]
 
--- #eval infer_reduce [:
+-- #eval infer_reduce 0 [:
 --   let y[0] = fix(λ y[0] => λ[
 --   for zero;() => nil;(),
 --   for succ;y[0] => cons;((), (y[1] y[0])) 
@@ -1208,10 +1068,11 @@ def test_let_poly : IO Unit :=
 -- [: α[0] -> α[1] :]
 -- [: α[1] :]
 
+-- -- TODO
 -- -- false: why does this fail?
 -- -- ∀ can't be instantiated 
 -- -- safe to fail, but not lenient
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
 --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 -- :] [:
@@ -1219,10 +1080,11 @@ def test_let_poly : IO Unit :=
 --     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
 -- :]
 
+-- -- TODO
 -- -- false: why does this fail?
 -- -- ν can't be unrolled
 -- -- safe to fail, but not lenient
--- #eval unify_decide 
+-- #eval unify_decide 0 
 -- [:
 --   ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
 --     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
@@ -1232,7 +1094,7 @@ def test_let_poly : IO Unit :=
 --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
 -- :] 
 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: β[0] ≤ (μ β[0] => zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0])) =>
 --     (β[0] ->
 --       (∃ 1 :: 
@@ -1259,7 +1121,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 -- -- TODO: why does this fail?
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
 --     (β[0] ->
 --       (∃ 1 :: 
@@ -1279,16 +1141,16 @@ def test_let_poly : IO Unit :=
 --   )
 -- :]
 
--- #eval unify_decide even nat_
+-- #eval unify_decide 0 even nat_
 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   ⟨nat_⟩ -> @
 -- :] [:
 --   ⟨even⟩ -> @ 
 -- :]
 
 -- -- expected: true
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
 --     (β[0] -> @)
 --   )
@@ -1299,7 +1161,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 -- -- expected: false 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
 --     (β[0] -> @)
 --   )
@@ -1310,7 +1172,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 -- -- expected: true
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
 --     (β[0])
 --   )
@@ -1323,7 +1185,7 @@ def test_let_poly : IO Unit :=
 -- -- expected: false 
 -- -- this is overly strict, but safe 
 -- -- there is no way for the LHS to know to instantiate with ⊥ vs nat_
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
 --     (β[0])
 --   )
@@ -1334,7 +1196,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 -- -- expected: true 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: ⟨even⟩ ≤ β[0] =>
 --     (β[0])
 --   )
@@ -1347,7 +1209,7 @@ def test_let_poly : IO Unit :=
 
 -- -- expected: false 
 -- -- RHS could be ⊥, but LHS must be > ⊥
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: ⟨even⟩ ≤ β[0] =>
 --     (β[0])
 --   )
@@ -1355,13 +1217,13 @@ def test_let_poly : IO Unit :=
 --   (∀ 1 => (β[0]))
 -- :]
 
--- #eval unify_decide even [: ⊥ :]
+-- #eval unify_decide 0 even [: ⊥ :]
 
 -- -- expected: false 
 -- -- RHS could be ⊤ -> @, but LHS must be > even -> @ 
 -- -- must give negative positions ⊤, and positive positions ⊥
 -- -- bound flips based on negative/positive position
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
 --     (β[0] -> @)
 --   )
@@ -1370,7 +1232,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 -- -- expected: true 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
 --     (β[0] -> @)
 --   )
@@ -1381,7 +1243,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 -- -- expected: false
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
 --     (β[0] -> @)
 --   )
@@ -1392,7 +1254,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 -- -- expected: true 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
 --     (β[0])
 --   )
@@ -1403,7 +1265,7 @@ def test_let_poly : IO Unit :=
 -- :]
 
 -- -- expected: false 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∃ 2 :: β[0] × β[1] ≤ ⟨nat_⟩ × ⟨nat_⟩ =>
 --     β[0] × β[1]
 --   )
@@ -1414,19 +1276,19 @@ def test_let_poly : IO Unit :=
 -- :]
 
 -- -- expected: true 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
 --     (β[0])
 --   )
 -- :] nat_
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∃ 1 =>
 --     (β[0])
 --   )
 -- :] nat_
 
 -- -- expected: false 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
 --     (β[0])
 --   )
@@ -1439,7 +1301,7 @@ def test_let_poly : IO Unit :=
 
 -- -- expected: false
 -- -- β[0] could be TOP
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   (∃ 1 :: ⟨even⟩ ≤ β[0] =>
 --     (β[0])
 --   )
@@ -1449,7 +1311,7 @@ def test_let_poly : IO Unit :=
 --   )
 -- :]
 
--- #eval unify_decide [:
+-- #eval unify_decide 0 [:
 --   ⊤ 
 -- :] [:
 --   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
@@ -1507,3 +1369,60 @@ def test_let_poly : IO Unit :=
 --   0 -> [] ∧ 
 --   N + 1 -> () :: L  
 -- -/
+
+-- #eval [: β[0] :]
+-- #eval [: β[0] :]
+
+-- #check [: β[0] ∨ α[0] :]
+-- #check [: β[0] ∧ α[0] :]
+-- #check [: β[0] × α[0] :]
+-- #check [: β[0] + α[0] :]
+-- def x := 0
+-- #check [: ∀ 1 :: β[0] ≤ α[0] => β[⟨x⟩] :]
+-- #check [: ∀ 1 :: β[0] ≤ α[0] => β[0] :]
+-- #check [: ∀ 2 :: α[0] ≤ α[0] => β[0] :]
+-- #check [: ∀ 2 => β[0] :]
+-- #check [: @ :]
+-- #check [: α[24] :]
+-- #check [: foo * @ :]
+-- #check [: foo * @ ∨ (boo * @) :]
+-- #check [: μ β[0] => foo * @ :]
+-- #check [: foo * boo * @ :]
+-- #check [: μ β[0] => foo * boo * @ :]
+-- #check [: μ β[0] => foo * β[0] :]
+-- #check [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0]:]
+-- #check [: β[3] ∧ α[0] -> α[1] ∨ α[2] :]
+-- #check [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0] -> α[1] ∨ α[2] :]
+-- #check [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0] :]
+-- #check [: α[0] :]
+
+-- #eval [: ∀ 2 :: α[0] ≤ α[0] => β[0] :]
+-- #eval [: μ β[0] => foo * β[0] ∧ α[0] ∨ α[2] ∧ α[0] :]
+
+
+
+-- #eval ({} : PHashMap Nat Ty)
+
+-- def zero_ := [: 
+--     zero * @
+-- :]
+
+
+#eval synth_reduce [:
+  let y[0] : (
+    (zero*@ -> nil*@) ∧
+    (succ*zero*@ -> cons*nil*@) ∧
+    (succ*succ*zero*@ -> cons*cons*nil*@)
+  ) = _ => 
+  y[0]
+:]
+
+
+-- #check synthesize [:
+--   ∀ 1 => β[0] -> (ν β[0] =>
+--     (zero*@ -> nil*@) ∧
+--     (∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
+--       succ*β[0] -> cons*(β[3] × β[1])
+--     )
+--   )
+-- :]
