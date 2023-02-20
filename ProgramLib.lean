@@ -435,28 +435,28 @@ partial def Ty.free_vars: Ty -> PHashMap Nat Unit
 | .corec ty => (Ty.free_vars ty)
 
 
-def Ty.negative_free_vars (posi : Bool) : Ty -> PHashMap Nat Unit
+def Ty.signed_free_vars (posi : Bool) : Ty -> PHashMap Nat Unit
 | .bvar id => {} 
 | .fvar id => 
   if posi then
-    {}
-  else
     let u : Unit := Unit.unit
     PHashMap.from_list [(id, u)] 
+  else
+    {}
 | .unit => {} 
 | .bot => {} 
 | .top => {} 
-| .tag l ty => (Ty.negative_free_vars posi ty) 
-| .field l ty => (Ty.negative_free_vars posi ty)
-| .union ty1 ty2 => Ty.negative_free_vars posi ty1 ; Ty.negative_free_vars posi ty2
-| .inter ty1 ty2 => Ty.negative_free_vars posi ty1 ; Ty.negative_free_vars posi ty2
-| .case ty1 ty2 => (Ty.negative_free_vars (!posi) ty1) ; Ty.negative_free_vars posi ty2
+| .tag l ty => (Ty.signed_free_vars posi ty) 
+| .field l ty => (Ty.signed_free_vars posi ty)
+| .union ty1 ty2 => Ty.signed_free_vars posi ty1 ; Ty.signed_free_vars posi ty2
+| .inter ty1 ty2 => Ty.signed_free_vars posi ty1 ; Ty.signed_free_vars posi ty2
+| .case ty1 ty2 => (Ty.signed_free_vars (!posi) ty1) ; Ty.signed_free_vars posi ty2
 | .univ n ty_c1 ty_c2 ty => 
-  (Ty.negative_free_vars posi ty)
+  (Ty.signed_free_vars posi ty)
 | .exis n ty_c1 ty_c2 ty =>
-  (Ty.negative_free_vars posi ty)
-| .recur ty => (Ty.negative_free_vars posi ty)
-| .corec ty => (Ty.negative_free_vars posi ty)
+  (Ty.signed_free_vars posi ty)
+| .recur ty => (Ty.signed_free_vars posi ty)
+| .corec ty => (Ty.signed_free_vars posi ty)
 
 
 def Ty.generalize (fids : List Nat) (start : Nat) : Ty -> Ty
@@ -772,7 +772,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   ).isEmpty then
     .nil
   else (
-    List.bind (unify i (env_ty) aim ty_c1 ty_c2) (fun (i, env_ty1) =>
+    List.bind (unify i (env_ty) Aim.cen ty_c1 ty_c2) (fun (i, env_ty1) =>
     List.bind (unify i (env_ty;env_ty1) aim ty1 ty2) (fun (i, env_ty2) =>
       [(i, env_ty1;env_ty2)]
     ))
@@ -785,7 +785,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty := Ty.instantiate 0 args ty
   List.bind (unify i env_ty aim ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ; env_ty1) aim ty_c1 ty_c2) (fun (i, env_ty2) => 
+  List.bind (unify i (env_ty ; env_ty1) Aim.cen ty_c1 ty_c2) (fun (i, env_ty2) => 
     [ (i, env_ty1 ; env_ty2) ]
   ))
 
@@ -813,7 +813,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   ).isEmpty then
     .nil
   else (
-    List.bind (unify i (env_ty) aim ty_c1 ty_c2) (fun (i, env_ty1) =>
+    List.bind (unify i (env_ty) Aim.cen ty_c1 ty_c2) (fun (i, env_ty1) =>
     List.bind (unify i (env_ty;env_ty1) aim ty1 ty2) (fun (i, env_ty2) =>
       [(i, env_ty1;env_ty2)]
     ))
@@ -825,7 +825,7 @@ Ty -> Ty -> List (Nat × PHashMap Nat Ty)
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty' := Ty.instantiate 0 args ty'
   List.bind (unify i env_ty aim ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ; env_ty1) aim ty_c1 ty_c2) (fun (i, env_ty2) => 
+  List.bind (unify i (env_ty ; env_ty1) Aim.cen ty_c1 ty_c2) (fun (i, env_ty2) => 
     [ (i, env_ty1 ; env_ty2) ]
   ))
 
@@ -978,6 +978,42 @@ partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
 
 partial def unify_decide (i : Nat) (ty1) (ty2) :=
   not (unify i {} Aim.cen ty1 ty2).isEmpty
+
+
+-- def nat_ := [: 
+--   μ β[0] => zero*@ ∨ succ*β[0]
+-- :]
+
+-- def nat_list := [: 
+--   μ β[0] => (
+--     (zero*@ × nil*@) ∨ 
+--     (∃ 2 :: β[0] × β[1] ≤ β[2] => 
+--       (succ*β[0] × cons*β[1]))
+--   )
+-- :]
+
+-- def even_list := [: 
+--   μ β[0] => (
+--     (zero*@ × nil*@) ∨ 
+--     (∃ 2 :: β[0] × β[1] ≤ β[2] => 
+--       (succ*succ*β[0] × cons*cons*β[1]))
+--   )
+-- :]
+
+-- #eval unify_decide 0 
+-- [: 
+--   (∃ 2 :: β[0] × β[1] ≤ ⟨nat_list⟩ => 
+--     (succ*succ*β[0] × cons*cons*β[1]))
+-- :]
+-- [: 
+--   (∃ 2 :: β[0] × β[1] ≤ ⟨nat_list⟩ => 
+--     (succ*β[0] × cons*β[1]))
+-- :]
+
+
+-- #eval unify_decide 0 
+-- [: succ*succ*⟨nat_⟩ :]
+-- [: succ*⟨nat_⟩ :]
 
 
 
@@ -1215,7 +1251,7 @@ match t with
           env_ty_acc;env_ty_p;env_ty_b,
           guides_acc ++ guides_b,
           Tm.func ((p, Tm.generalize fids 0 b') :: cases_acc),
-          Ty.inter (Ty.case ty_p' ty_b') ty_acc
+          Ty.simplify (Ty.inter (Ty.case ty_p' ty_b') ty_acc)
         ⟩]
       | _ => .nil
     ))))
@@ -1279,16 +1315,22 @@ match t with
     [ ⟨i, env_ty1;env_ty2, guides_t1, Tm.fix t1', ty'⟩ ]
   ))
 
+partial def PHashMap.intersect (m1 : PHashMap Nat Unit) (m2 : PHashMap Nat Unit) :=
+  PHashMap.from_list (m1.toList.filter (fun (id, _) => m2.contains id))
 
 partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
-  let ty' := (infer i {} {} Aim.adj t ty).foldl (fun acc => fun  ⟨_, env_ty, _, _, ty⟩ =>
-    Ty.simplify ((Ty.subst env_ty (Ty.union acc ty)))
+  (infer i {} {} Aim.adj t ty).foldl (fun acc => fun  ⟨_, env_ty, _, _, ty'⟩ =>
+
+    let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union acc ty')))
+    let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
+
+    let fvs := pos_neg_set.toList.reverse.bind (fun (k, _) => [k])
+    if fvs.isEmpty then
+      Ty.simplify (Ty.subst_default true ty')
+    else
+      Ty.simplify (Ty.subst_default true [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :])
+
   ) (Ty.bot)
-  let fvs := (Ty.negative_free_vars true ty').toList.reverse.bind (fun (k, _) => [k])
-  if fvs.isEmpty then
-    Ty.simplify (Ty.subst_default true ty')
-  else
-    Ty.simplify (Ty.subst_default true [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :])
 
 
 

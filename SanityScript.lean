@@ -112,11 +112,31 @@ nat_
 [: α[0] :]
 -- == [: (μ β[0] => (zero*@ ∨ succ*β[0])) :]
 
+#eval unify_decide 0 
+  even
+  nat_
+
 -- TODO: error
 #eval unify_decide 0 
   even_list
   nat_list
 -- == true
+
+#eval unify_decide 0 
+[: 
+  μ β[0] => (
+    (zero*@ × nil*@) ∨ 
+    (∃ 2 :: β[0] × β[1] ≤ β[2] => 
+      (succ*succ*β[0] × cons*cons*β[1]))
+  )
+:]
+[: 
+  μ β[0] => (
+    (zero*@ × nil*@) ∨ 
+    (∃ 2 :: β[0] × β[1] ≤ β[2] => 
+      (succ*β[0] × cons*β[1]))
+  )
+:]
 
 #eval unify_decide 0 
   nat_list
@@ -305,7 +325,7 @@ def test_generalization : IO Unit :=
         y[0]
       :]
       == 
-      [: (∀ 1 => ((str*@ ∨ β[0]) -> hello*(str*@ ∨ β[0]))) :]
+      [: (str*@ -> hello*str*@) :]
     ),
     ("existentially annotated", 
       infer_reduce 1 [:
@@ -391,7 +411,7 @@ def test_narrowing : IO Unit :=
           ((y[1] y[0])))
       :]
       ==
-      [: (∀ 1 => ((uno*@ ∧ β[0]) -> @)) :]
+      [: (uno*@ -> @) :]
     ),
     ("2",
       infer_reduce 0 [:
@@ -401,10 +421,9 @@ def test_narrowing : IO Unit :=
           ((y[2] y[0]), (y[1] y[0])))
       :]
       ==
-      [: (∀ 1 => ((dos*@ ∧ (uno*@ ∧ β[0])) -> (@ × @))) :]
+      [: (((uno*@ ∧ dos*@) -> (@ × @)) ∨ ((dos*@ ∧ uno*@) -> (@ × @))) :]
     )
   ]
-
 
 def main : IO Unit := do
   test_unify_tags
