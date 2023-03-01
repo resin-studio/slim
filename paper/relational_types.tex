@@ -1,11 +1,17 @@
 % \documentclass{article}
 % \documentclass[]{acmart}
-\documentclass[sigplan,screen]{acmart}
+\documentclass[manuscript]{acmart}
+% \documentclass[manuscript,screen,review]{acmart}
+% \documentclass[manuscript]
 \usepackage{mathpartir}
 \usepackage{hyperref}
 \usepackage{mathtools}
 \usepackage{stmaryrd}
 \usepackage{listings}
+
+\makeatletter % allow us to mention @-commands
+\def\arcr{\@arraycr}
+\makeatother
 
 \lstset{
     identifierstyle=\color{violet},
@@ -15,7 +21,7 @@
     basicstyle=\ttfamily,
     mathescape=true,
     showspaces=false,
-    morekeywords={let, fix}
+    morekeywords={let, fix, in}
 }
 \usepackage[utf8]{inputenc}
 % \usepackage[T1]{fontenc}
@@ -132,7 +138,7 @@ The contributions of the relational type system include:
 \begin{enumerate}
   \item A synthesis algorithm capable of generating local constraints for incomplete programs. 
   \item A unification algorithm capable of preserving the flexibility of dynamically typed programming. 
-  \item A type level language capable of expressing (co)inductive relations without the complexity of dependent types or propositional syntax.  
+  \item A type level language capable of expressing subtyping of (co)inductive relations. 
 \end{enumerate}
 
 % half baked idea: by removing terms from type language,  
@@ -154,7 +160,7 @@ dynamically typed programs easier to write with fewer errors.
 \begin{enumerate}
   \item propagating types (downward/upward) 
   \item adjusting types (wider/narrower) 
-  \item relating types (recursive/corecursive) 
+  \item relating types (inductive/coinductive) 
 \end{enumerate}
 We introduce a programming language with a specification language to indicate static bounds. 
 As is common these days, the static bounds are represented in a language of types.
@@ -323,92 +329,514 @@ The external parameter type for ends up as \lstinline{(int $\wedge$ str)}.
 
 \subsection{Relating types}
 In order to thoroughly catch errors and guide programming, 
-the specification language must be able to relations
-between values. Rather than adding a second syntactic layer 
+the specification language must be able to describe the semantic relation
+between structures. Rather than adding a second syntactic layer 
 of predicates and propositions to our specification language,
-we build on the notions of type variables, union, and 
-intersection operators already present in the system, 
-yielding a novel system of relational types.
-
-The key insight is to allow (co)recursion to occur through subtyping
-constraints specified in quantified types. 
-That is, least (or greatest) fixed points are allowed to occur
-in the subtyping constraints of quantified types.
-
-
-\subsection{Relating recursively}
+we build on the notions of type abstraction -  
+union/intersection types, second order quantified types, and (co)inductive types 
+- already prevalent in type systems, yielding a novel system of relational types.
 
 \hfill \\
-For example, types can also specify a pair of a list and its length.
+Consider the type for a list.
 
-\begin{lstlisting}[]
-let measurement : $\mu$ (nat $\times$ list) .
-  zero*unit $\times$ nil*unit $\vee$
-  succ*nat $\times$ cons*(? $\times$ list)
-\end{lstlisting} 
+% \begin{lstlisting}[]
+% $\mu$ list .
+%   nil*unit $\vee$
+%   $\exists$ $\alpha$ . cons*($\alpha$ $\times$ list)
+% \end{lstlisting} 
+
+\[
+\begin{array}[t]{@{} l}
+  \exists\ \text{X}\ .\ \mu\ \text{XS}\ .\ 
+  \arcr
+  \hspace{4mm}\text{nil}*\text{unit}\ \vee
+  \arcr
+  \hspace{4mm}\text{cons}*(\text{X} \times \text{XS})
+\end{array}
+\]
+
+\hfill \\
+This list type contains three kinds of type abstraction: 
+union, existential quantification, and induction.
+Using these three forms of type abstraction, we are able to define 
+a set of lists of arbitrary length with arbitrary items. 
+
+We abbreviate the inductive part of the list type.
+\[
+list(\alpha) = 
+\begin{array}[t]{@{} l}
+  \mu\ \text{XS}\ .\ 
+  \arcr
+  \hspace{4mm}\text{nil}*\text{unit}\ \vee
+  \arcr
+  \hspace{4mm}\text{cons}*(\alpha \times \text{XS})
+\end{array}
+\]
+
+Now suppose we wish to validate a function that expects $list$ to an argument. 
+\[
+  \begin{array}[]{@{} l}
+  \text{let}\ \text{foo} : (\exists\ \text{X}\ .\ list(\text{X})) \rightarrow \text{unit} = \_\ \text{in}
+  \arcr
+  (\text{foo}\ (\text{cons};((),\text{nil};())))
+  \end{array}
+\]
+
+This function application generates a subtyping constraint which we decide by unrolling
+the the inductive types. The successful trace of the decision algorithm corresponds To
+the following derivation. 
+
+\[
+  \Delta_l = \cdot, \text{X} \mapsto \text{unit}
+\]
+
+\begin{mathpar}
+\inferrule* {
+  \inferrule* {
+    \inferrule* {
+      \inferrule* {
+        \inferrule* {
+          \Delta_l(\text{X}) = \text{unit}
+        } { 
+          \Delta_l \vdash
+          \text{unit}
+          \leq
+          \text{X}
+        }
+        \\
+        \inferrule* {
+          \inferrule* {
+            \inferrule* {
+              \vdots
+            } { 
+              \Delta_l \vdash
+              \text{nil}*\text{unit}
+              \leq
+              \text{nil}*\text{unit}
+            }
+          } { 
+            \Delta_l \vdash
+            \text{nil}*\text{unit}
+            \leq
+            \begin{array}[]{@{} l}
+              \text{nil}*\text{unit}\ \vee
+              \arcr
+              \text{cons}*(\text{X} \times list(\text{X}))
+            \end{array}
+          }
+        } { 
+          \Delta_l \vdash
+          (\text{nil}*\text{unit})
+          \leq
+          list
+        }
+      } { 
+        \Delta_l \vdash
+        (\text{unit} \times \text{nil}*\text{unit})
+        \leq
+        (\text{X} \times list(\text{X}))
+      }
+    } { 
+      \Delta_l \vdash
+      (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
+      \leq
+      \text{cons}*(\text{X} \times list(\text{X}))
+    }
+  } { 
+    \Delta_l \vdash
+    (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
+    \leq
+    \begin{array}[]{@{} l}
+      \text{nil}*\text{unit}\ \vee
+      \arcr
+      \text{cons}*(\text{X} \times list(\text{X}))
+    \end{array}
+  }
+} { 
+  \cdot \vdash
+  (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
+  \leq
+  \exists\ \text{X}\ .\ list(\text{X})
+}
+\end{mathpar}
+
+In addition to deciding if a \emph{singleton type}, a type containing exactly one element, 
+we can, we can also compare two inductive types. 
+Consider the natural numbers and even numbers.
+\[
+nat = 
+\begin{array}[t]{@{} l}
+  \mu\ \text{N}\ .\ 
+  \text{zero}*\text{unit}\ \vee
+  \text{succ}*\text{N}
+\end{array}
+\]
+\[
+even = 
+\begin{array}[t]{@{} l}
+  \mu\ \text{N}\ .\ 
+  \text{zero}*\text{unit}\ \vee
+  \text{succ}*\text{succ}*\text{N}
+\end{array}
+\]
+
+We can decide that even numbers are included in the natural numbers, 
+by unrolling with the induction hypothesis. 
+The successful trace of the decision algorithm corresponds to a subtyping derivation.   
+
+\begin{mathpar}
+\inferrule* {
+  \inferrule* {
+    \inferrule* {
+      \inferrule* {
+        \vdots
+      } { 
+        \cdot \vdash
+        \text{zero}*\text{unit}
+        \leq
+        \text{zero}*\text{unit}
+      }
+    } { 
+      \cdot \vdash
+      \text{zero}*\text{unit}
+      \leq
+      \begin{array}[]{@{} l}
+        \text{zero}*\text{unit}\ \vee
+        \arcr
+        \text{succ}*nat
+      \end{array}
+    }
+    \\
+    \inferrule* {
+      \inferrule* {
+        \inferrule* {
+          \inferrule* {
+            \inferrule* {
+              \vdots
+            } { 
+              \cdot \vdash
+              \text{succ}*nat 
+              \leq
+              \text{succ}*nat 
+            }
+          } { 
+            \cdot \vdash
+            \text{succ}*nat 
+            \leq
+            \begin{array}[]{@{} l}
+              \text{zero}*\text{unit}\ \vee
+              \arcr
+              \text{succ}*nat
+            \end{array}
+          }
+        } { 
+          \cdot \vdash
+          \text{succ}*nat
+          \leq
+          nat
+        }
+      } { 
+        \cdot \vdash
+        \text{succ}*\text{succ}*nat
+        \leq
+        \text{succ}*nat
+      }
+    } { 
+      \cdot \vdash
+      \text{succ}*\text{succ}*nat
+      \leq
+      \begin{array}[]{@{} l}
+        \text{zero}*\text{unit}\ \vee
+        \arcr
+        \text{succ}*nat
+      \end{array}
+    }
+  } { 
+    \cdot \vdash
+    \begin{array}[]{@{} l @{}}
+      \text{zero}*\text{unit}\ \vee
+      \arcr
+      \text{succ}*\text{succ}*nat
+    \end{array}
+    \leq
+    \begin{array}[]{@{} l}
+      \text{zero}*\text{unit}\ \vee
+      \arcr
+      \text{succ}*nat
+    \end{array}
+  }
+} { 
+  \cdot \vdash
+  even \leq nat
+}
+\end{mathpar}
+
+Notice that the natural numbers are substituted in for the inductively bound variable  
+for both the even number type and the natural number type.
+We justify this manipulation by the induction hypothesis $even \leq nat$. 
+
+
+By augmenting quantified types with fairly general constraints, 
+we will be able to express relational types, using the same three forms
+of type abstraction.  
 
 \hfill
 
-\noindent This is syntactic sugar for:
+\subsection{Relating inductively}
 
-\begin{lstlisting}[]
-let measurement : 
-$\exists$ $\alpha$ . $\mu$ nat_and_list .
-  zero*unit $\times$ nil*unit $\vee$ 
-  $\exists$ nat list :: 
-    (nat $\times$ list) $\leq$ nat_and_list .
-    succ*nat $\times$ cons*($\alpha$ $\times$ list)
-\end{lstlisting}
+The key insight that enables relations to be defined with existing type constructs,
+is to constrain bound variables of quantified types using subtyping constraints,
+such that those subtyping constraints may refer to (co)inductive variables.
+For example, consider the specification of pairs of a list and a number, such that
+the number equals the length of its corresponding list.
 
-\subsection{Relating corecursively}
+\[
+nat\_and\_list(\alpha) =  
+\begin{array}[t]{@{} l}
+\mu\ \text{P}\ . 
+\\
+\hspace{4mm}\text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
+\\
+\hspace{4mm}\exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \leq \text{P}\ .\ 
+\\
+\hspace{8mm}\text{succ}*\text{N} \times \text{cons}*(\alpha \times \text{XS})
+\end{array}
+\]
 
-\noindent Correspondingly, the types are expressive enough to precisely specify
-a function that takes a natural number \lstinline{n} 
-and an element, and returns a list of \lstinline{n} elements.
+Now suppose we have a function that expects a list and number satisfying a list-number relation.
+\[
+  \begin{array}[]{@{} l}
+  \text{let}\ \text{foo} : (\exists\ \text{X}\ .\ nat\_and\_list(\text{X})) \rightarrow \text{unit} = \lambda\ (\text{n}, \text{l})\ .\ \_\ \text{in}
+  \arcr
+  (\text{foo}\ (\text{succ};\text{zero};(), \text{cons};((),\text{nil};())))
+  \end{array}
+\]
 
-\begin{lstlisting}[]
-let replicate : 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ (nat $\rightarrow$ list) .
-  zero*unit $\rightarrow$ nil*unit $\wedge$
-  succ*nat $\rightarrow$ cons*($\alpha$ $\times$ list)
-\end{lstlisting}
+\noindent
+Applying the function that expects the relation between lists and numbers 
+to the argument generates a corresponding subtyping constraint, 
+which the system attempts to solve. We define the type environment a type environment abbreviation.
+\[
+\Delta_{nl} = \cdot, 
+  \text{X} \mapsto \text{unit},
+  \text{N} \mapsto \text{zero}*\text{unit}, 
+  \text{XS} \mapsto \text{nil}*\text{unit}
+\]
+\noindent
+A successful trace of the decision algorithm corresponds to the following subtyping derivation.  
+
+\noindent
+\begin{mathpar}
+\inferrule* {
+  \inferrule* { 
+    \inferrule* { 
+      \inferrule* { 
+        \vdots
+      } {
+        \Delta_{nl} \vdash
+        \begin{array}[]{@{} l @{}}
+        (\text{succ}*\text{zero}*\text{unit})\ \times 
+        \arcr
+        (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
+        \end{array}
+        \leq
+        \begin{array}[]{@{} l @{}}
+        \text{succ}*\text{N}\ \times 
+        \arcr
+        \text{cons}*(\text{X} \times \text{XS})
+        \end{array}
+      }
+      \\
+      \inferrule* { 
+        \inferrule* { 
+          \vdots
+        } {
+          \Delta_{nl} \vdash
+          \text{N} \times \text{XS} \leq 
+          \text{zero}*\text{unit} \times \text{nil}*\text{unit}
+        }
+      } {
+        \Delta_{nl} \vdash
+        \text{N} \times \text{XS} \leq nat\_and\_list(\text{X})
+      }
+    } {
+      \cdot, \text{X} \mapsto \text{unit} \vdash
+      \begin{array}[]{@{} l @{}}
+        (\text{succ}*\text{zero}*\text{unit})\ \times 
+        \arcr
+        (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
+      \end{array}
+      \leq
+      \begin{array}[]{@{} l}
+        \exists\ \text{N}\ \text{XS} :: (\text{N} \times \text{XS}) \leq nat\_and\_list(\text{X}) 
+        \arcr
+        \hspace{4mm}\text{succ}*\text{N} \times \text{cons}*(\text{X} \times \text{XS})
+      \end{array}
+      }
+  } { 
+    \cdot, \text{X} \mapsto \text{unit} \vdash
+    \begin{array}[]{@{} l @{}}
+      (\text{succ}*\text{zero}*\text{unit})\ \times 
+      \arcr
+      (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
+    \end{array}
+    \leq
+    \begin{array}[]{@{} l}
+      \text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
+      \arcr
+      \exists\ \text{N}\ \text{XS} :: (\text{N} \times \text{XS}) \leq nat\_and\_list(\text{X})
+      \arcr
+      \hspace{4mm}\text{succ}*\text{N} \times \text{cons}*(\text{X} \times \text{XS})
+    \end{array}
+  }
+} { 
+  \cdot \vdash
+  (\text{succ}*\text{zero}*\text{unit}) \times (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
+  \leq
+  \exists\ \text{X}\ .\ nat\_and\_list(\text{X})
+}
+\end{mathpar}
+
+We can also specify a relation between even numbers and lists.  
+
+\[
+even\_and\_list(\alpha) =  
+\begin{array}[t]{@{} l}
+  \mu\ \text{P}\ .\ 
+  \\
+  \hspace{4mm}\text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
+  \\
+  \hspace{4mm}\exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \leq \text{P}\ .\ 
+  \\
+  \hspace{8mm}\text{succ}*\text{succ}*\text{N} \times \text{cons}*(\alpha \times \text{cons}*(\alpha \times \text{XS}))
+\end{array}
+\]
+
+We verify that the even relation is included in the natural number relation to lists.  
+
+\[
+\Delta_{enl} = \cdot,\ 
+  \text{N} \times \text{XS} \mapsto nat\_and\_list(\text{X}),\ 
+  \text{XS'} \mapsto \text{cons}*(\text{X} \times \text{XS}),\ 
+  \text{N'} \mapsto \text{succ}*\text{N}
+\]
+
+\begin{mathpar}
+\inferrule* {
+  \inferrule* {
+    \vdots
+    \\
+    \inferrule* {
+      \inferrule* {
+        \inferrule* {
+          \inferrule* {
+            \Delta_{enl}(\text{N} \times \text{XS}) = nat\_and\_list(\text{X})
+          } {
+            \Delta_{enl} \vdash
+            \text{N} \times \text{XS} \leq nat\_and\_list(\text{X})
+          }
+        } {
+          \vdots
+        }
+      } {
+        \Delta_{enl} \vdash
+        \text{succ}*\text{N} \times \text{cons}*\text{XS} \leq nat\_and\_list(\text{X})
+      }
+      \\
+      \Delta_{enl}(\text{N'}) = \text{succ}*\text{N}
+      \\
+      \Delta_{enl}(\text{XS'}) = \text{cons}*(\text{X} \times \text{XS})
+    } {
+      \Delta_{enl} \vdash
+      \text{N'} \times \text{XS'} \leq nat\_and\_list(\text{X})
+    }
+  } {
+    \cdot \vdash
+    \begin{array}[]{@{} l @{}}
+      \text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
+      \arcr
+      \exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \leq nat\_and\_list(\text{X})\ .\ 
+      \arcr
+      \hspace{4mm}\text{succ}*\text{succ}*\text{N} \times \text{cons}*(\text{X} \times \text{cons}*(\text{X} \times \text{XS}))
+    \end{array}
+    \leq
+    \begin{array}[]{@{} l @{} }
+      \text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
+      \arcr
+      \exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \leq nat\_and\_list(\text{X})\ .\ 
+      \arcr
+      \hspace{4mm}\text{succ}*\text{N} \times \text{cons}*(\text{X} \times \text{XS})
+    \end{array}
+  }
+} { 
+  \cdot \vdash
+  even\_and\_list(\text{X})
+  \leq
+  nat\_and\_list(\text{X})
+}
+\end{mathpar}
 
 
 
-\hfill
 
-\noindent This is syntactic sugar for:
 
-\begin{lstlisting}[]
-let replicate : 
-$\forall$ $\alpha$ . $\alpha$ $\rightarrow$ $\nu$ nat_to_list .
-  zero*unit $\rightarrow$ nil*unit $\wedge$
-  $\forall$ nat list :: 
-    nat_to_list $\leq$ (nat $\rightarrow$ list) .
-    succ*nat $\rightarrow$ cons*($\alpha$ $\times$ list)
-\end{lstlisting}
+\subsection{Relating co-inductively}
+The system of type is also expressive enough to precisely specify
+sets of functions, where each function's output depends on its input.
 
-\hfill
+Consider the set of functions, where each function takes as input a natural number $n$
+and an element, and returns a list of $n$ elements.
 
-\noindent The type of \lstinline{replicate} is co-recursive rather than recursive. 
-When expanded to the type with a universal type and constraint, 
-the universally typed variables appear on the right hand side 
-of the subtyping constraint, while the co-recursive variable
-appears on the left hand side. This is consistent with the notion
-that a intersection of types is a subtype of any one of its parts.
+\[
+  nat\_to\_list = 
+  \begin{array}[t]{@{} l}
+    \forall\ \text{X}\ .\ \text{X} \rightarrow \nu\ \text{I}\ .\ 
+    \arcr
+    \hspace*{4mm}\text{zero}*\text{unit} \rightarrow \text{nil}*\text{unit}\ \wedge
+    \arcr
+    \hspace*{4mm}\forall\ \text{N}\ \text{XS} :: \text{I} \leq \text{N} \rightarrow \text{XS}\ .\ 
+    \arcr
+    \hspace*{8mm}\text{succ}*\text{N} \rightarrow \text{cons}*(\text{X} \times \text{XS})
+  \end{array}
+\]
 
-\hfill
 
-\noindent Semantically, the type of \lstinline{replicate} is similar to the definition of 
-\lstinline{replicate} in Synquid \cite{}    
+\noindent The type $nat\_to\_list$ uses three forms of type abstraction: 
+universal types, intersection types, and co-inductive types. 
+These three forms of type abstraction
+are respectively the duals of existential types, union types, and inductive types. 
 
-\begin{lstlisting}[keywords={termination, measure, data, where}]
-replicate :: n:Nat $\rightarrow$ x:$\alpha$ $\rightarrow$ 
-  {v: List $\alpha$ | len v = n}
+Universal and co-inductive types are ways to specify the infinite intersection
+of types indexed by some variable. Although, it is technically possible to specify
+the infinite intersection of arbitrary types, it is only the function types
+that can represent meaningful non-empty sets of values across infinite intersections.
+Thus, in practice, we are only considered with universal and co-inductive types, when
+they compose implication types.
+In order to propagate types top-down and also reuse mechanisms for the dual concepts of type abstraction,
+the decision algorithm rewrites inductive types into \emph{implication-normal-form}.
+We define an abbreviation for the natural numbers.
+\[
+nat = 
+\begin{array}[t]{@{} l}
+  \mu\ \text{N}\ .\ 
+  \arcr
+  \hspace{4mm}\text{zero}*\text{unit}\ \vee
+  \arcr
+  \hspace{4mm}\exists\ \text{X}\ .\ \text{succ}*\text{N}
+\end{array}
+\]
+Using natural numbers and the relation between numbers and lists,
+we redefine set of functions from numbers to lists.
+\[
+  nat\_to\_list' = 
+  \begin{array}[t]{@{} l}
+    \forall\ \text{X}\ .\ \text{X} \rightarrow \forall\ \text{N}\ :: \text{N} \leq nat\ .\ 
+    \arcr
+    \hspace*{4mm}\text{N} \rightarrow 
+    (\exists\ \text{XS} :: \text{N} \times \text{XS} \leq nat\_and\_list\ .\ \text{XS})
+  \end{array}
+\]
 
-\end{lstlisting}
-
-\hfill
 
 \noindent The term for \lstinline{replicate} could be represented by a recursive function built using \lstinline{fix} 
 
@@ -1558,7 +1986,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 %         all terms being accepted by typing rules (i.e. everything typing)
 %     \end{enumerate}
 %   \item an expressive type system 
-%     based on intersection, union, recursive, and co-recursive types
+%     based on intersection/union, (co)inductive, and quantified types
 %     \begin{enumerate}
 %       \item without dependent types 
 %       \item comparable to prolog 
@@ -1752,7 +2180,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % we need to compare types that have varying degrees of variable generalization 
 % additionally, the subtyping constraints in quantified types are more general than system F
 % variables are not restricted to be alone on the left side of subtyping. 
-% this generality allows for concise descriptions of recursive function types.
+% this generality allows for concise descriptions of inductive function types.
 
 % Remy's ML-calc uses quantified constraint for a similar goal, but technically quite different.
 % Remy's ML-calc makes a distinction between subtyping and instantiating relation of universal
@@ -1824,7 +2252,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % --- 
 % by second order quantification with subtyping rather than first order with membership,
 % we avoid mapping between terms and types in unification procedure.
-% We also enable the succient corecursive definitions of functions.
+% We also enable the succient coinductive definitions of functions.
 
 % -/
 
@@ -1879,7 +2307,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % 2. outcome: inference of expressive types
     % sota: refinement types require base type 
     % contribution: relational types
-      % relating types (recursive/corecursive) 
+      % relating types (inductive/coinductive) 
       % A type level language capable of expressing (co)inductive relations without the complexity of dependent types or propositional syntax.  
   % 3. outcome: safe but lenient type inference without prescription
     % sota: datatypes/ML languages prescribe upper bound 
@@ -2014,9 +2442,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     % abstract away relation type details
     % includes propagation of types
   % - 4. unification / subtyping / relational typing
-    % including recursion over intersection and functions
+    % including induction over intersection and implication types
 % find decision procedure for relational types (subtyping over induction on compound types)
-  % terminate if one side is compound with all variables and other is recursive? 
+  % terminate if one side is compound with all variables and other is inductive? 
   % Banach fixed-point theorem?
   % contraction maps?
   % metric spaces?
