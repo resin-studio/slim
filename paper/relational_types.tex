@@ -2228,7 +2228,28 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % RT's subtyping subsumes both Synquid's refinement subtyping and existential instantiation
 % RT's existential generalizes subpart irrelevance and subpart refinement 
 
+% -- learning inductive invariant:
+% -- conjecture: downward propagation prunes search space just like counter-example-driven refinement
+%     swap: (x0 : nat * y0 : nat) -> (x' : nat * y' : nat) 
+%     -- pre condition: 
+%     -- x0 >= y0
+%     -- t = x0 - y0
 
+%     -- post condition:
+%     -- y' = x0 /\ x' = y0  
+%     fun swap (x0, y0) =
+
+%         -- invariant
+%         -- t >= 0 /\ x = x0 - t /\ y = y0 + t  
+%         -- type inference infers strongest post condition of premise here
+%         fun loop (x, y, t) =
+%             if (t > 0) then
+%                 loop (x - 1, y + 1, t - 1)
+%             else 
+%                 (x, y)
+
+%         -- type inference finds pre condition that strengthens loop's post-condition invariant  
+%         loop (x0, y0, x0 - y0)
 
 
 % /-
