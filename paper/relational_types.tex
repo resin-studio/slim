@@ -2228,6 +2228,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % RT's subtyping subsumes both Synquid's refinement subtyping and existential instantiation
 % RT's existential generalizes subpart irrelevance and subpart refinement 
 
+
+% learning inductive invariant by counter-example guided vs downward propagation 
+% counter-example method 
+  % notice that return type can't be satisfied 
+  % use proof of unsat to construct new invariant
+  % update premise with invariant (formula over parameters of recursive function)
+  % repeat
+% propagation method
+  % infer loop parameters from downward prop and unification with adjustment 
+
+
 % -- learning inductive invariant:
 % -- conjecture: downward propagation prunes search space just like counter-example-driven refinement
 %     swap: (x0 : nat * y0 : nat) -> (x' : nat * y' : nat) 
