@@ -848,7 +848,7 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
     )
     [ 
       (i, PHashMap.from_list [
-        (.fvar id, roll_corec id env_ty ty_low)
+        (.fvar id, roll_recur id env_ty ty_low)
       ]) 
     ]
   | some ty => unify i env_ty aim ty' ty 
@@ -1412,6 +1412,8 @@ match t with
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
   let (i, ty') := (i + 1, Ty.fvar i)
+  -- infer i env_ty env_tm aim t1 [: ⊤ :]
+  -- infer i env_ty env_tm aim t1 (Ty.case ty2 ty)
   List.bind (infer i env_ty env_tm aim t1 (Ty.case ty2 ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1⟩ =>
   List.bind (infer i (env_ty;env_ty1) env_tm aim t2 ty2) (fun ⟨i, env_ty2, guides_t2, t2', ty2'⟩ =>
   List.bind (unify i (env_ty;env_ty1;env_ty2) aim ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
@@ -1441,20 +1443,20 @@ match t with
   List.bind (infer i env_ty env_tm Aim.adj t1 (Ty.case [: ⊥ :] ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
   let (i, ty_prem) := (i + 1, Ty.fvar i) 
   let (i, ty_conc) := (i + 1, Ty.fvar i) 
-  List.bind (unify i (env_ty;env_ty1) Aim.cen ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
+  List.bind (unify i (env_ty;env_ty1) Aim.adj ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
+
     let ty_prem := Ty.reduce (env_ty;env_ty1;env_ty2) ty_prem 
     let ty_conc := Ty.reduce (env_ty;env_ty1;env_ty2) ty_conc
 
     let fvs := (Ty.free_vars ty_prem).toList.bind (fun (k, _) => [k])
 
-    -- TODO: find a way to construct the inductive type via unification
     let ty' := [: ν β[0] => 
       (∀ ⟨fvs.length⟩ :: 
         β[⟨fvs.length⟩] ≤ ⟨Ty.generalize fvs 0 ty_prem⟩ => 
         ⟨Ty.generalize fvs 0 ty_conc⟩ 
       )
     :]
-
+    -- constrain that ty' <= ty_prem is built into inductive type
     [ ⟨i, env_ty1;env_ty2, guides_t1, Tm.fix t1', ty'⟩ ]
   ))
 
@@ -1487,15 +1489,7 @@ structure Work where
   t : Tm
 deriving Repr
 
-#eval infer_reduce 0 [:
-  (λ y[0] => λ[
-  for zero;() => nil;(),
-  for succ;y[0] => cons;(y[1] y[0])
-  ])
-:]
-
 -- ooga
--- TODO: figure out why this fails
 #eval infer_reduce 0 [:
   fix(λ y[0] => λ[
   for zero;() => nil;(),
@@ -1503,21 +1497,39 @@ deriving Repr
   ])
 :]
 
-#eval infer_reduce 0 [:
-  let y[0] = fix(λ y[0] => λ[
-  for zero;() => nil;(),
-  for succ;y[0] => cons;(y[1] y[0])
-  ]) =>
-  y[0]
+-- #eval infer_reduce 0 [:
+--   let y[0] = fix(λ y[0] => λ[
+--   for zero;() => nil;(),
+--   for succ;y[0] => cons;(y[1] y[0])
+--   ]) =>
+--   y[0]
+-- :]
+
+-- #eval infer_reduce 0 [:
+--   let y[0] = fix(λ y[0] => λ[
+--   for zero;() => nil;(),
+--   for succ;y[0] => cons;(y[1] y[0])
+--   ]) =>
+--   (y[0] (zero;()))
+-- :]
+
+
+-- booga
+def nat_to_list := [: 
+  ν β[0] => 
+    (zero*@ -> nil*@) ∧ 
+    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
+      succ*β[0] -> cons*β[1])
 :]
 
+-- TODO
+-- expected: cons;()
 #eval infer_reduce 0 [:
-  let y[0] = fix(λ y[0] => λ[
-  for zero;() => nil;(),
-  for succ;y[0] => cons;(y[1] y[0])
-  ]) =>
+  let y[0] : ⟨nat_to_list⟩ = _ =>
   (y[0] (zero;()))
 :]
+
+----------------------------------------
 
 
 def Work.le (x y: Work): Bool := x.cost <= y.cost
