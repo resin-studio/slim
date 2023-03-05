@@ -1438,7 +1438,7 @@ match t with
   ))
 
 | .fix t1 =>
-  List.bind (infer i env_ty env_tm Aim.cen t1 (Ty.case ty ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
+  List.bind (infer i env_ty env_tm Aim.adj t1 (Ty.case [: ⊥ :] ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
   let (i, ty_prem) := (i + 1, Ty.fvar i) 
   let (i, ty_conc) := (i + 1, Ty.fvar i) 
   List.bind (unify i (env_ty;env_ty1) Aim.cen ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
@@ -1447,6 +1447,7 @@ match t with
 
     let fvs := (Ty.free_vars ty_prem).toList.bind (fun (k, _) => [k])
 
+    -- TODO: find a way to construct the inductive type via unification
     let ty' := [: ν β[0] => 
       (∀ ⟨fvs.length⟩ :: 
         β[⟨fvs.length⟩] ≤ ⟨Ty.generalize fvs 0 ty_prem⟩ => 
@@ -1485,6 +1486,38 @@ structure Work where
   patches : PHashMap Nat Tm 
   t : Tm
 deriving Repr
+
+#eval infer_reduce 0 [:
+  (λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ])
+:]
+
+-- ooga
+-- TODO: figure out why this fails
+#eval infer_reduce 0 [:
+  fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ])
+:]
+
+#eval infer_reduce 0 [:
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ]) =>
+  y[0]
+:]
+
+#eval infer_reduce 0 [:
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ]) =>
+  (y[0] (zero;()))
+:]
 
 
 def Work.le (x y: Work): Bool := x.cost <= y.cost

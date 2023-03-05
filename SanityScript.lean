@@ -131,7 +131,6 @@ def plus := [:
 --   even
 --   nat_
 
--- -- TODO: error
 #eval unify_decide 0 
   even_list
   nat_list
@@ -609,19 +608,19 @@ def plus := [:
 
 -- -- ----- 
 
--- -- def nat_to_unit := [: 
--- --   ν β[0] => 
--- --     (zero*@ -> @) ∧ 
--- --     (∀ 1 :: β[1] ≤ β[0] -> @ => 
--- --       (succ*β[0]) -> @) 
--- -- :]
+def nat_to_unit := [: 
+  ν β[0] => 
+    (zero*@ -> @) ∧ 
+    (∀ 1 :: β[1] ≤ β[0] -> @ => 
+      (succ*β[0]) -> @) 
+:]
 
--- -- def even_to_unit := [: 
--- --   ν β[0] => 
--- --     (zero*@ -> @) ∧ 
--- --     (∀ 1 :: β[1] ≤ β[0] -> @ => 
--- --       (succ*succ*β[0]) -> @)
--- -- :]
+def even_to_unit := [: 
+  ν β[0] => 
+    (zero*@ -> @) ∧ 
+    (∀ 1 :: β[1] ≤ β[0] -> @ => 
+      (succ*succ*β[0]) -> @)
+:]
 
 -- -- #eval unify_decide 0 
 -- -- nat_to_unit
@@ -662,720 +661,174 @@ def plus := [:
 -- [: ∀ 1 :: β[0] ≤ ⟨nat_⟩ => β[0] -> @ :]
 
 
--- -- -- -- TODO: why does this diverge?
--- -- -- #eval unify 3 {} Ty.top 
--- -- -- [: 
--- -- --     (zero*@ -> @) ∧ 
--- -- --     (∀ 1 :: ⟨nat_to_unit⟩ ≤ β[0] -> @ => 
--- -- --       (succ*β[0]) -> @) 
--- -- -- :]
--- -- -- [: 
--- -- --     (zero*@ -> @) ∧ 
--- -- --     (∀ 1 :: ⟨nat_to_unit⟩ ≤ β[0] -> @ => 
--- -- --       (succ*succ*β[0]) -> @)
--- -- -- :]
 
--- -- -- #eval unify 3 {} Ty.top 
--- -- -- nat_to_unit
--- -- -- even_to_unit
-
--- -- -- #eval unify 3 {} Ty.top 
--- -- -- even_to_unit
--- -- -- nat_to_unit
-
--- -- -- #eval unify 3 {} Ty.top 
--- -- -- nat_
--- -- -- even
-
--- -- #eval repli
-
--- -- #eval [:
--- --   λ y[0] => fix (λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;(y[2], (y[1] y[0])) 
--- --   ]) 
--- -- :]
-
-
--- -- #eval infer_reduce 0 [:
--- --   λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), ()) 
--- --   ] 
--- -- :]
-
-
--- -- #eval [: (zero*@ -> nil*@) ∧ (succ*⊤ -> cons*(@ × ⊥)) :]
-
--- -- #eval unify_reduce
--- -- [: α[2] -> ((zero*@ -> nil*@) ∧ (succ*⊤ -> cons*(@ × @))) :]
--- -- [: α[0] -> α[0] :]
--- -- [: α[0] :]
-
--- -- #eval infer_reduce 0_wt 
--- -- [:
--- --   (λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) 
--- -- :]
--- -- [: α[20] -> α[20] :]
-
-
--- -- #eval [:
--- --   ∀ 1 => β[0] -> (ν β[0] =>
--- --     (zero*@ -> nil*@) ∧
--- --     (∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
--- --       succ*β[0] -> cons*(β[3] × β[1])
--- --     )
--- --   )
--- -- :]
-
--- -- #eval unify_reduce
--- -- [: (α[0] -> α[1]) -> ((zero*@ -> nil*@) ∧ (succ*α[0] -> cons*(@ × α[1]))) :]
--- -- [: α[20] -> α[20] :]
--- -- [: α[20] :]
-
-
--- -- #eval infer_reduce 0 [:
--- --   fix (λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) 
--- -- :]
-
--- -- #eval infer_reduce 0_wt [:
--- --   fix (λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) 
--- -- :]
--- -- [:
--- --   (zero*@ -> nil*@)
--- -- :]
-
-
--- -- #eval infer_reduce 0_wt [:
--- --   (λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) 
--- -- :]
--- -- [:
--- --   (zero*@ -> nil*@)
--- --   ->
--- --   (zero*@ -> nil*@)
--- -- :]
-
--- -- #eval infer_reduce 0_wt [:
--- --   fix (λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) 
--- -- :]
--- -- [:
--- --   ν β[0] => 
--- --   (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
--- --     (zero*@ -> nil*@) ∧ 
--- --     (succ*β[0] -> cons*(@ × β[1]))
--- --   )
--- -- :]
-
-
--- -- #eval infer_reduce 0_wt [:
--- --   fix (λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) 
--- -- :]
--- -- [:
--- --   ν β[0] => 
--- --   (
--- --     (zero*@ -> nil*@) ∧ 
--- --     (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
--- --       (succ*β[0] -> cons*(@ × β[1]))
--- --     )
--- --   )
--- -- :]
-
-
--- -- #eval infer_reduce 0
--- -- [:
--- --   λ y[0] : (ν β[0] => 
--- --     (
--- --       (zero*@ -> nil*@)
--- --     )
--- --   ) => (y[0] (zero;()))
--- -- :]
-
-
--- -- #eval infer_reduce 0
--- -- [:
--- --   λ y[0] : (ν β[0] => 
--- --     (
--- --       (zero*@ -> nil*@) ∧ 
--- --       (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
--- --         (succ*β[0] -> cons*(@ × β[1]))
--- --       )
--- --     )
--- --   ) => (y[0] (succ;zero;()))
--- -- :]
-
--- -- #eval infer_reduce 0
--- -- [:
--- --   λ y[0] : (ν β[0] => 
--- --     (
--- --       (zero*@ -> nil*@) ∧ 
--- --       (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
--- --         (succ*β[0] -> cons*(@ × β[1]))
--- --       )
--- --     )
--- --   ) => (y[0] (succ;_))
--- -- :]
-
--- -- #eval infer_reduce 0
--- -- [:
--- --   λ y[0] : (ν β[0] => 
--- --     (
--- --       (zero*@ -> nil*@) ∧ 
--- --       (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
--- --         (succ*β[0] -> cons*(@ × β[1]))
--- --       )
--- --     )
--- --   ) => (y[0] (succ;succ;_))
--- -- :]
-
--- -- #eval infer_reduce 0 [:
--- --   λ y[0] : (
--- --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- --   ) => (y[0] (succ;_))
--- -- :]
-
--- -- #eval infer_reduce 0 [:
--- --   λ y[0] : (
--- --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- --   ) => (y[0] (succ;succ;_))
--- -- :]
-
--- -- #eval infer_reduce 0 [:
--- --   λ y[0] : (
--- --     ∀ 0 :: ⊥ ≤ ⊤ => (
--- --       ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --       ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- --     )
--- --   ) => (y[0] (zero;()))
--- -- :]
-
--- -- ---------
-
--- -- #eval infer_reduce 0 [:
--- --   let y[0] : (
--- --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- --   ) = _ => (y[0] (zero;()))
--- -- :]
-
--- -- #eval infer_reduce 0 [:
--- --   let y[0] : (
--- --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- --   ) = _ => (y[0] (succ;succ;zero;()))
--- -- :]
-
--- -- #eval infer_reduce 0 [:
--- --   let y[0] : (
--- --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- --   ) = _ => (y[0] (succ;succ;_))
--- -- :]
-
--- -- #eval infer_reduce 0 [:
--- --   let y[0] : (
--- --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- --   ) = _ => y[0]
--- -- :]
-
-
--- -- #eval infer_reduce 0 [:
--- --   let y[0] : (
--- --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --       ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
--- --   ) = _ => (y[0] (succ;succ;zero;()))
--- -- :]
-
-
--- -- #eval unify_decide 0 
--- -- [:
--- --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --     ((zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ (r ~ β[0] ∧ ⊤))) ∧ ⊤))
--- -- :]
--- -- [:
--- --   α[0] -> α[1]
--- -- :]
-
--- -- #eval unify_decide 0 
--- -- [:
--- --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --     (zero*@ -> nil*@) ∧ ((succ*β[1] -> cons*(l ~ @ ∧ r ~ β[0])))
--- -- :]
--- -- [:
--- --   α[0] -> α[1]
--- -- :]
-
--- -- #eval infer_reduce 0 [:
--- --   let y[0] = fix(λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) => 
--- --   (y[0] succ;zero;())
--- -- :]
-
-
--- -- #eval infer_reduce 0 [:
--- --   let y[0] = fix(λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) => 
--- --   y[0]
--- -- :]
-
--- -- #eval infer_test [:
--- --   let y[0] = fix(λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) => 
--- --   y[0]
--- -- :]
--- -- [: α[30] :]
-
--- -- #eval infer_test [:
--- --   let y[0] : (
--- --     ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- --   ) = _ => y[0]
--- -- :]
--- -- [: α[30] :]
-
--- -- #eval infer_reduce 0 [:
--- --   let y[0] = fix(λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) => 
--- --   (y[0] (zero;()))
--- -- :]
-
-
--- -- -- TODO: why does this fail?
--- -- #eval infer_reduce 0 [:
--- --   let y[0] : ⟨nat_⟩ = _ =>
--- --   let y[0] = fix(λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) => 
--- --   (y[0] y[1])
--- -- :]
-
--- -- #eval infer_reduce 0 [:
--- --   let y[0] : ⟨nat_⟩ = _ =>
--- --   let y[0] = fix(λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) => 
--- --   y[1]
--- -- :]
-
--- -- #eval (extract_premise 0 [: 
--- --     ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --     ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- -- :])
-
--- -- #eval unify_decide 0
--- -- nat_
--- -- [:
--- -- μ β[0] => ∃ 2 :: β[1] ≤ β[2] =>
--- -- zero*@ ∨ 
--- -- succ*β[1]
--- -- :]
-
-
--- -- -- TODO: figure out why this fails
--- -- #eval infer_test [:
--- --   fix(λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) 
--- -- :] [:
--- --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- -- :]
-
--- -- #eval unify_decide 0 [:
--- --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- -- :] [:
--- --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- -- :]
-
--- -- -- TODO: why does this fail?
--- -- #eval unify_decide 0 [:
--- --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- -- :] [:
--- --   ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
--- --     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
--- -- :]
-
--- -- #eval unify_decide 0 [:
--- --   ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
--- --     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
--- -- :] [:
--- --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- -- :]
-
-
--- -- -- TODO: figure out why this fails
--- -- #eval infer_reduce 0_wt [:
--- --   (λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) 
--- -- :]
--- -- [:
--- --   (ν β[0] => ∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
--- --     ((zero*@ -> nil*@) ∧ (succ*β[0] -> cons*(@ × β[1])))
--- --   )
--- --   ->
--- --   (ν β[0] => ∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
--- --     ((zero*@ -> nil*@) ∧ (succ*β[0] -> cons*(@ × β[1])))
--- --   )
--- -- :]
-
-
--- -- #eval infer_reduce 0 [:
--- --   fix(λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) 
--- -- :]
-
--- -- #eval infer_reduce 0 [:
--- --   let y[0] = fix(λ y[0] => λ[
--- --   for zero;() => nil;(),
--- --   for succ;y[0] => cons;((), (y[1] y[0])) 
--- --   ]) => 
--- --   y[0]
--- -- :]
-
--- -- #eval unify_reduce 
--- -- [:
--- --   (ν β[0] => 
--- --     (
--- --       (zero*@ -> nil*@) ∧ 
--- --       (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
--- --         (succ*β[0] -> cons*(@ × β[1]))
--- --       )
--- --     )
--- --   )
--- -- :]
--- -- [:
--- --   α[0] -> α[1]
--- -- :]
--- -- [: α[0] :]
-
-
-
--- -- #eval extract_premise 0 [:
--- --     (
--- --       (zero*@ -> nil*@) ∧ 
--- --       (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
--- --         (succ*β[0] -> cons*(@ × β[1]))
--- --       )
--- --     )
--- -- :]
-
--- -- #eval rewrite_function_type [:
--- --   ν β[0] =>
--- --     (
--- --       (zero*@ -> nil*@) ∧ 
--- --       (∀ 2 :: β[2] ≤ (β[0] -> β[1]) => 
--- --         (succ*β[0] -> cons*(@ × β[1]))
--- --       )
--- --     )
--- -- :]
-
-
--- -- #eval unify_reduce
--- -- [:
--- --   (∀ 1 :: β[0] ≤ (μ β[0] => zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0])) =>
--- --     (β[0] ->
--- --       (∃ 1 :: 
--- --         (β[1] × β[0]) ≤ (μ β[0] => 
--- --           (zero*@ × nil*@) ∨
--- --           (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*(@ × β[1])))
--- --         ) =>
--- --         β[0]
--- --       )
--- --     )
--- --   )
--- -- :]
--- -- [: α[0] -> α[1] :]
--- -- [: α[1] :]
-
--- -- -- TODO
--- -- -- false: why does this fail?
--- -- -- ∀ can't be instantiated 
--- -- -- safe to fail, but not lenient
--- -- #eval unify_decide 0 [:
--- --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- -- :] [:
--- --   ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
--- --     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
--- -- :]
-
--- -- -- TODO
--- -- -- false: why does this fail?
--- -- -- ν can't be unrolled
--- -- -- safe to fail, but not lenient
--- -- #eval unify_decide 0 
--- -- [:
--- --   ∀ 1 :: β[0] ≤ (⟨nat_⟩) =>
--- --     (β[0] -> (∃ 1 :: (β[1] × β[0]) ≤ ⟨nat_list⟩ => β[0]))
--- -- :]
--- -- [:
--- --   ν β[0] => ∀ 2 :: β[2] ≤ (β[1] -> β[0]) =>
--- --   ((zero*@ -> nil*@) ∧ (succ*β[1] -> cons*(@ × β[0])))
--- -- :] 
-
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: β[0] ≤ (μ β[0] => zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0])) =>
--- --     (β[0] ->
--- --       (∃ 1 :: 
--- --         (β[1] × β[0]) ≤ (μ β[0] => 
--- --           (zero*@ × nil*@) ∨
--- --           (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*(@ × β[1])))
--- --         ) =>
--- --         β[0]
--- --       )
--- --     )
--- --   )
--- -- :] [:
--- --   (∀ 1 :: β[0] ≤ (μ β[0] => zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0])) =>
--- --     (β[0] ->
--- --       (∃ 1 :: 
--- --         (β[1] × β[0]) ≤ (μ β[0] => 
--- --           (zero*@ × nil*@) ∨
--- --           (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*(@ × β[1])))
--- --         ) =>
--- --         β[0]
--- --       )
--- --     )
--- --   )
--- -- :]
-
--- -- -- TODO: why does this fail?
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (β[0] ->
--- --       (∃ 1 :: 
--- --         (β[1] × β[0]) ≤ ⟨nat_list⟩ =>
--- --         β[0]
--- --       )
--- --     )
--- --   )
--- -- :] [:
--- --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (β[0] ->
--- --       (∃ 1 :: 
--- --         (β[1] × β[0]) ≤ ⟨nat_list⟩ =>
--- --         β[0]
--- --       )
--- --     )
--- --   )
--- -- :]
-
--- -- #eval unify_decide 0 even nat_
-
--- -- #eval unify_decide 0 [:
--- --   ⟨nat_⟩ -> @
--- -- :] [:
--- --   ⟨even⟩ -> @ 
--- -- :]
-
--- -- -- expected: true
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (β[0] -> @)
--- --   )
--- -- :] [:
--- --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0] -> @)
--- --   )
--- -- :]
-
--- -- -- expected: false 
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0] -> @)
--- --   )
--- -- :] [:
--- --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (β[0] -> @)
--- --   )
--- -- :]
-
--- -- -- expected: true
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (β[0])
--- --   )
--- -- :] [:
--- --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0])
--- --   )
--- -- :]
-
--- -- -- expected: false 
--- -- -- this is overly strict, but safe 
--- -- -- there is no way for the LHS to know to instantiate with ⊥ vs nat_
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0])
--- --   )
--- -- :] [:
--- --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (β[0])
--- --   )
--- -- :]
-
--- -- -- expected: true 
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: ⟨even⟩ ≤ β[0] =>
--- --     (β[0])
--- --   )
--- -- :] [:
--- --   (∀ 1 :: ⟨nat_⟩ ≤ β[0] =>
--- --     (β[0])
--- --   )
--- -- :]
-
-
--- -- -- expected: false 
--- -- -- RHS could be ⊥, but LHS must be > ⊥
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: ⟨even⟩ ≤ β[0] =>
--- --     (β[0])
--- --   )
--- -- :] [:
--- --   (∀ 1 => (β[0]))
--- -- :]
-
--- -- #eval unify_decide 0 even [: ⊥ :]
-
--- -- -- expected: false 
--- -- -- RHS could be ⊤ -> @, but LHS must be > even -> @ 
--- -- -- must give negative positions ⊤, and positive positions ⊥
--- -- -- bound flips based on negative/positive position
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0] -> @)
--- --   )
--- -- :] [:
--- --   (∀ 1 => (β[0] -> @))
--- -- :]
-
--- -- -- expected: true 
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (β[0] -> @)
--- --   )
--- -- :] [:
--- --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0] -> @)
--- --   )
--- -- :]
-
--- -- -- expected: false
--- -- #eval unify_decide 0 [:
--- --   (∀ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0] -> @)
--- --   )
--- -- :] [:
--- --   (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (β[0] -> @)
--- --   )
--- -- :]
-
--- -- -- expected: true 
--- -- #eval unify_decide 0 [:
--- --   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0])
--- --   )
--- -- :] [:
--- --   (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (β[0])
--- --   )
--- -- :]
-
--- -- -- expected: false 
--- -- #eval unify_decide 0 [:
--- --   (∃ 2 :: β[0] × β[1] ≤ ⟨nat_⟩ × ⟨nat_⟩ =>
--- --     β[0] × β[1]
--- --   )
--- -- :] [:
--- --   (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (succ*@ × β[0])
--- --   )
--- -- :]
-
--- -- -- expected: true 
--- -- #eval unify_decide 0 [:
--- --   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0])
--- --   )
--- -- :] nat_
--- -- #eval unify_decide 0 [:
--- --   (∃ 1 =>
--- --     (β[0])
--- --   )
--- -- :] nat_
-
--- -- -- expected: false 
--- -- #eval unify_decide 0 [:
--- --   (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
--- --     (β[0])
--- --   )
--- -- :] [:
--- --   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0])
--- --   )
--- -- :]
-
-
--- -- -- expected: false
--- -- -- β[0] could be TOP
--- -- #eval unify_decide 0 [:
--- --   (∃ 1 :: ⟨even⟩ ≤ β[0] =>
--- --     (β[0])
--- --   )
--- -- :] [:
--- --   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0])
--- --   )
--- -- :]
-
--- -- #eval unify_decide 0 [:
--- --   ⊤ 
--- -- :] [:
--- --   (∃ 1 :: β[0] ≤ ⟨even⟩ =>
--- --     (β[0])
--- --   )
--- -- :]
+#eval unify_decide 5
+nat_to_unit
+even_to_unit
+-- == true
+
+#eval unify_decide 5
+even_to_unit
+nat_to_unit
+-- == false
+
+
+#eval infer_reduce 5 [:
+  (λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ]) 
+:]
+
+-- TODO: figure out why this fails
+#eval infer_reduce 0 [:
+  fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ])
+:]
+
+
+
+-- expected: false 
+-- this is overly strict, but safe 
+-- there is no way for the LHS to know to instantiate with ⊥ vs nat_
+#eval unify_decide 0 [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0])
+  )
+:]
+
+-- expected: true 
+#eval unify_decide 0 [:
+  (∀ 1 :: ⟨even⟩ ≤ β[0] =>
+    (β[0])
+  )
+:] [:
+  (∀ 1 :: ⟨nat_⟩ ≤ β[0] =>
+    (β[0])
+  )
+:]
+
+
+-- TODO
+-- expected: false 
+-- RHS could be ⊥, but LHS must be > ⊥
+#eval unify_decide 0 [:
+  (∀ 1 :: ⟨even⟩ ≤ β[0] =>
+    (β[0])
+  )
+:] [:
+  (∀ 1 => (β[0]))
+:]
+
+-- TODO
+-- expected: false 
+-- RHS could be ⊤ -> @, but LHS must be > even -> @ 
+-- must give negative positions ⊤, and positive positions ⊥
+-- bound flips based on negative/positive position
+#eval unify_decide 0 [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0] -> @)
+  )
+:] [:
+  (∀ 1 => (β[0] -> @))
+:]
+
+-- expected: true 
+#eval unify_decide 0 [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0] -> @)
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0] -> @)
+  )
+:]
+
+-- expected: false
+#eval unify_decide 0 [:
+  (∀ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0] -> @)
+  )
+:] [:
+  (∀ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0] -> @)
+  )
+:]
+
+-- expected: true 
+#eval unify_decide 0 [:
+  (∃ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:] [:
+  (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0])
+  )
+:]
+
+-- TODO
+-- expected: false 
+#eval unify_decide 0 [:
+  (∃ 2 :: β[0] × β[1] ≤ ⟨nat_⟩ × ⟨nat_⟩ =>
+    β[0] × β[1]
+  )
+:] [:
+  (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (succ*@ × β[0])
+  )
+:]
+
+-- expected: true 
+#eval unify_decide 0 [:
+  (∃ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:] nat_
+#eval unify_decide 0 [:
+  (∃ 1 =>
+    (β[0])
+  )
+:] nat_
+
+-- expected: false 
+#eval unify_decide 0 [:
+  (∃ 1 :: β[0] ≤ ⟨nat_⟩ =>
+    (β[0])
+  )
+:] [:
+  (∃ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:]
+
+
+-- TODO
+-- expected: false
+-- β[0] could be TOP
+#eval unify_decide 0 [:
+  (∃ 1 :: ⟨even⟩ ≤ β[0] =>
+    (β[0])
+  )
+:] [:
+  (∃ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:]
+
+-- expected: false
+#eval unify_decide 0 [:
+  ⊤ 
+:] [:
+  (∃ 1 :: β[0] ≤ ⟨even⟩ =>
+    (β[0])
+  )
+:]
 
 
 
