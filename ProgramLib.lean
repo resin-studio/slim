@@ -856,17 +856,14 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
     ]
   | some ty => unify i env_ty aim ty' ty 
 
------------------------------------------------------
-
-
-
+-- opaquely quantified 
 -- TODO: consider requiring normal form check to ensure safety
 -- or using min/max to check both extremes
 | .exis n ty_c1 ty_c2 ty1, ty2 =>
   let bound_start := i
   let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
   let bound_end := i
-  let is_old_var := (fun i' => i' < bound_start)
+  -- let is_old_var := (fun i' => i' < bound_start)
   let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
 
   let args := ids.map (fun id => Ty.fvar id)
@@ -895,11 +892,12 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
     | none => (unify i (env_ty) Aim.cen ty_c1 ty_c2)
   )
 
-  -- TODO: ensure that vacuous truth is sound
   -- given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
   if contexts.isEmpty then
     -- vacuous truth; lhs constraint makes lhs empty
-    [(i, {})]
+    -- [(i, {})]
+    -- should fail to ensure soundness
+    []
   else
     List.bind contexts (fun (i, env_ty1) => 
     List.bind (unify i (env_ty;env_ty1) aim ty1 ty2) (fun (i, env_ty2) =>
@@ -909,11 +907,11 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
         let var_keys := Ty.free_vars ty_key
         let var_values := Ty.free_vars ty_value
         (
-          ( -- old vars can only bind to old vars or non-vars 
-            not (var_keys.toList.any (fun (i, Unit.unit) => is_old_var i)) || 
-            (var_values.toList.all (fun (i, Unit.unit) => is_old_var i))
-          ) && 
-          ( -- bound vars can only bind to bind vars or non-vars
+          -- ( -- old vars can only bind to old vars or non-vars 
+          --   not (var_keys.toList.any (fun (i, Unit.unit) => is_old_var i)) || 
+          --   (var_values.toList.all (fun (i, Unit.unit) => is_old_var i))
+          -- ) && 
+          ( -- bound vars can only bind to bound vars or non-vars
             not (var_keys.toList.any (fun (i, Unit.unit) => is_bound_var i)) || 
             (var_values.toList.all (fun (i, Unit.unit) => is_bound_var i))
           )
@@ -925,17 +923,6 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
       else
         []
     ))
-
-| ty', .exis n ty_c1 ty_c2 ty =>
-  let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
-
-  let ty_c1 := Ty.instantiate 0 args ty_c1
-  let ty_c2 := Ty.instantiate 0 args ty_c2
-  let ty := Ty.instantiate 0 args ty
-  List.bind (unify i env_ty aim ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ; env_ty1) Aim.cen ty_c1 ty_c2) (fun (i, env_ty2) => 
-    [ (i, env_ty1 ; env_ty2) ]
-  ))
 
 | ty1, .univ n ty_c1 ty_c2 ty2 =>
   let bound_start := i
@@ -980,6 +967,18 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
         []
     ))
 
+-- liberally quantified 
+| ty', .exis n ty_c1 ty_c2 ty =>
+  let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
+
+  let ty_c1 := Ty.instantiate 0 args ty_c1
+  let ty_c2 := Ty.instantiate 0 args ty_c2
+  let ty := Ty.instantiate 0 args ty
+  List.bind (unify i env_ty aim ty' ty) (fun (i, env_ty1) =>
+  List.bind (unify i (env_ty ; env_ty1) Aim.cen ty_c1 ty_c2) (fun (i, env_ty2) => 
+    [ (i, env_ty1 ; env_ty2) ]
+  ))
+
 | .univ n ty_c1 ty_c2 ty', ty =>
   let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
   let ty_c1 := Ty.instantiate 0 args ty_c1
@@ -989,6 +988,9 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
   List.bind (unify i (env_ty ; env_ty1) Aim.cen ty_c1 ty_c2) (fun (i, env_ty2) => 
     [ (i, env_ty1 ; env_ty2) ]
   ))
+
+-----------------------------------------------------
+
 
 | .bvar id1, .bvar id2  =>
   if id1 = id2 then 
@@ -1522,7 +1524,6 @@ deriving Repr
 -- :]
 
 
--- booga
 def nat_to_list := [: 
   ν β[0] => 
     (zero*@ -> nil*@) ∧ 
@@ -1532,28 +1533,83 @@ def nat_to_list := [:
 
 #eval rewrite_function_type nat_to_list
 
-#eval [:
-(∃ 1 :: (β[1] × β[0]) ≤ (μ β[0] => 
-((zero*@ × nil*@) ∨ (∃ 2 :: (β[0] × β[1]) ≤ β[2] => 
-(succ*β[0] × cons*β[1])))) =>
-β[0])
+
+
+-- TODO: deconstructing function type does erases variable that would be used for unification.
+-- need to unify a second time to get the substitution
+#eval unify_reduce 10 [:
+(∀ 1 :: β[0] ≤ (μ β[0] => (zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0]))) =>
+ (β[0] ->
+  (∃ 1 :: (β[1] × β[0]) ≤ (μ β[0] => ((zero*@ × nil*@) ∨ (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*β[1])))) =>
+   β[0])))
+:]
+[:
+  α[0] -> α[1]
+:]
+[:
+  α[0]
 :]
 
-
-#eval [:
-(∃ 1 :: ((succ*zero*@ ∨ (zero*@ ∨ (∃ 2 :: β[0] ≤ (μ β[0] => 
-(zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0]))) => succ*β[0]))) × β[0]) ≤ (μ β[0] => 
-((zero*@ × nil*@) ∨ (∃ 2 :: (β[0] × β[1]) ≤ β[2] => 
-(succ*β[0] × cons*β[1])))) =>
-β[0])
+#eval unify_reduce 10 [:
+(∀ 1 :: β[0] ≤ (μ β[0] => (zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0]))) =>
+ (β[0] ->
+  (∃ 1 :: (β[1] × β[0]) ≤ (μ β[0] => ((zero*@ × nil*@) ∨ (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*β[1])))) =>
+   β[0])))
+:]
+[:
+  α[0] -> α[1]
+:]
+[:
+  α[1]
 :]
 
+-- this is it! need to substitute in the argument's type!!
+#eval unify_reduce 10 [:
+(∀ 1 :: β[0] ≤ (μ β[0] => (zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0]))) =>
+ (β[0] ->
+  (∃ 1 :: (β[1] × β[0]) ≤ (μ β[0] => ((zero*@ × nil*@) ∨ (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*β[1])))) =>
+   β[0])))
+:]
+[:
+  succ*zero*@ -> α[1]
+:]
+[:
+  α[1]
+:]
+
+#eval unify_decide 0 [:
+succ*zero*@
+:]
+[:
+(μ β[0] => (zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0])))
+:]
 
 -- TODO
 -- expected: cons*nil*@
+-- booga
 #eval infer_reduce 0 [:
   let y[0] : ⟨nat_to_list⟩ = _ =>
   (y[0] (succ;zero;()))
+:]
+
+
+#eval unify_decide 5 
+[:
+((succ*zero*@ ∨
+   (zero*@ ∨
+    (∃ 2 :: β[0] ≤ (μ β[0] => (zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0]))) =>
+     succ*β[0]))) × α[0])
+:]
+[:
+(μ β[0] => ((zero*@ × nil*@) ∨ (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*β[1]))))
+:]
+
+
+#eval [:
+(∀ 1 :: β[0] ≤ (μ β[0] => (zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0]))) =>
+ (β[0] ->
+  (∃ 1 :: (β[1] × β[0]) ≤ (μ β[0] => ((zero*@ × nil*@) ∨ (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*β[1])))) =>
+   β[0])))
 :]
 
 #eval infer_reduce 0 [:
