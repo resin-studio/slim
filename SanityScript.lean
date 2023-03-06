@@ -37,12 +37,12 @@ def even_list := [:
   )
 :]
 
-def nat_to_list := [: 
-  ν β[0] => 
-    (zero*@ -> nil*@) ∧ 
-    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
-      succ*β[0] -> cons*β[1])
-:]
+-- def nat_to_list := [: 
+--   ν β[0] => 
+--     (zero*@ -> nil*@) ∧ 
+--     (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
+--       succ*β[0] -> cons*β[1])
+-- :]
 
 def lte := [: 
   μ β[0] => 
@@ -420,6 +420,16 @@ def plus := [:
 --       [: ((hello*@ ∨ world*@) × (hello*@ ∨ world*@)) :]
 --     )
 --   ]
+
+      #eval infer_reduce 0 [:
+        let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+        (y[0] hello;())
+      :]
+
+      #eval infer_reduce 0 [:
+        let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+        ((y[0] hello;()) world;())
+      :]
 
 -- def test_narrowing : IO Unit :=
 --   test "narrowing" [

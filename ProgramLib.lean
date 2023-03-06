@@ -155,7 +155,7 @@ inductive Tm : Type
 | func : List (Tm × Tm) -> Tm
 | proj : Tm -> String -> Tm
 | app : Tm -> Tm -> Tm
-| letb : Ty -> Tm -> Tm -> Tm
+| letb : Option Ty -> Tm -> Tm -> Tm
 | fix : Tm -> Tm
 deriving Repr, Inhabited, BEq
 
@@ -255,8 +255,8 @@ macro_rules
 | `([: λ $a :]) => `(Tm.func [: $a :])
 | `([: $a / $b :]) => `(Tm.proj [: $a :] [: $b :])
 | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
-| `([: let y[0] : $a = $b => $c :]) => `(Tm.letb [: $a :] [: $b :] [: $c :])
-| `([: let y[0] = $b => $c :]) => `(Tm.letb [: ∃ 1 => β[0] :] [: $b :] [: $c :])
+| `([: let y[0] : $a = $b => $c :]) => `(Tm.letb (Option.some [: $a :]) [: $b :] [: $c :])
+| `([: let y[0] = $b => $c :]) => `(Tm.letb Option.none [: $b :] [: $c :])
 | `([: fix $a :]) => `(Tm.fix [: $a :])
 
 -- generic
@@ -296,12 +296,12 @@ match t with
   Tm.repr t1 n ++ "/" ++ l
 | .app t1 t2 =>
   Format.bracket "(" (Tm.repr t1 n) ") " ++ "(" ++ Tm.repr t2 n ++ ")"
-| .letb ty1 t1 t2 =>
-  match ty1 with
-  | .univ 1 Ty.bot Ty.top (Ty.bvar 0) =>
+| .letb op_ty1 t1 t2 =>
+  match op_ty1 with
+  | some ty1 =>
     "let y[0] : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
     Format.line  ++ (Tm.repr t2 n) 
-  | _ =>
+  | none =>
     "let y[0] = " ++  (Tm.repr t1 n) ++ " =>" ++
     Format.line  ++ (Tm.repr t2 n) 
 | .fix t1 =>
@@ -789,6 +789,9 @@ Aim.max and Aim.min is necessary when the variables are fixed but unknown; they 
 -/
 partial def unify (i : Nat) (env_ty : PHashMap Ty Ty) (aim : Aim) :
 Ty -> Ty -> List (Nat × PHashMap Ty Ty)
+
+-- free variables
+---------------------------------------------------------------
 | (.fvar id1), (.fvar id2) => 
   match (env_ty.find? (.fvar id1), env_ty.find? (.fvar id2)) with 
   | (.none, .none) => 
@@ -852,6 +855,10 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
       ]) 
     ]
   | some ty => unify i env_ty aim ty' ty 
+
+-----------------------------------------------------
+
+
 
 -- TODO: consider requiring normal form check to ensure safety
 -- or using min/max to check both extremes
@@ -1412,8 +1419,6 @@ match t with
 | .app t1 t2 =>
   let (i, ty2) := (i + 1, Ty.fvar i)
   let (i, ty') := (i + 1, Ty.fvar i)
-  -- infer i env_ty env_tm aim t1 [: ⊤ :]
-  -- infer i env_ty env_tm aim t1 (Ty.case ty2 ty)
   List.bind (infer i env_ty env_tm aim t1 (Ty.case ty2 ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1⟩ =>
   List.bind (infer i (env_ty;env_ty1) env_tm aim t2 ty2) (fun ⟨i, env_ty2, guides_t2, t2', ty2'⟩ =>
   List.bind (unify i (env_ty;env_ty1;env_ty2) aim ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
@@ -1421,7 +1426,12 @@ match t with
   )))
 
 
-| .letb ty1 t1 t => 
+| .letb op_ty1 t1 t => 
+
+  let (i, ty1) := match op_ty1 with
+  | some ty1 => (i, ty1)
+  | none => (i + 1, Ty.fvar i)
+
   let free_var_boundary := i
   List.bind (infer i env_ty env_tm Aim.cen t1 ty1) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
 
@@ -1443,7 +1453,8 @@ match t with
   List.bind (infer i env_ty env_tm Aim.adj t1 (Ty.case [: ⊥ :] ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
   let (i, ty_prem) := (i + 1, Ty.fvar i) 
   let (i, ty_conc) := (i + 1, Ty.fvar i) 
-  List.bind (unify i (env_ty;env_ty1) Aim.adj ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
+  -- use Aim.cen when deconstructing type into subcomponents
+  List.bind (unify i (env_ty;env_ty1) Aim.cen ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
 
     let ty_prem := Ty.reduce (env_ty;env_ty1;env_ty2) ty_prem 
     let ty_conc := Ty.reduce (env_ty;env_ty1;env_ty2) ty_conc
@@ -1465,7 +1476,6 @@ partial def PHashMap.intersect (m1 : PHashMap Nat Unit) (m2 : PHashMap Nat Unit)
 
 partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
   (infer i {} {} Aim.adj t ty).foldl (fun acc => fun  ⟨_, env_ty, _, _, ty'⟩ =>
-
     let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union acc ty')))
     let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
 
@@ -1474,12 +1484,10 @@ partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
       Ty.simplify (Ty.subst_default true ty')
     else
       Ty.simplify (Ty.subst_default true [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :])
-
   ) (Ty.bot)
 
 
-
-partial def infer_reduce (i : Nat) (t : Tm) : Ty := infer_reduce_wt i t [: ⊤ :]
+partial def infer_reduce (i : Nat) (t : Tm) : Ty := infer_reduce_wt (i + 1) t [: α[⟨i⟩] :]
 
 structure Work where
   cost : Nat
@@ -1522,11 +1530,35 @@ def nat_to_list := [:
       succ*β[0] -> cons*β[1])
 :]
 
+#eval rewrite_function_type nat_to_list
+
+#eval [:
+ (∃ 1 :: (β[1] × β[0]) ≤ (μ β[0] => 
+  ((zero*@ × nil*@) ∨ (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*β[1])))) =>
+    β[0])
+:]
+
+
+#eval [:
+ (∃ 1 :: (
+  (zero*@ ∨
+    (∃ 2 :: β[0] ≤ (μ β[0] => (zero*@ ∨ (∃ 2 :: β[0] ≤ β[2] => succ*β[0]))) =>
+  succ*β[0])) × β[0]) ≤ 
+    (μ β[0] => ((zero*@ × nil*@) ∨ (∃ 2 :: (β[0] × β[1]) ≤ β[2] => (succ*β[0] × cons*β[1])))) =>
+  β[0])
+:]
+
+
 -- TODO
--- expected: cons;()
+-- expected: cons*nil*@
 #eval infer_reduce 0 [:
   let y[0] : ⟨nat_to_list⟩ = _ =>
-  (y[0] (zero;()))
+  (y[0] (succ;zero;()))
+:]
+
+#eval infer_reduce 0 [:
+  let y[0] : (zero*@ -> nil*@) ∧ (succ*zero*@ -> cons*nil*@) = _ =>
+  (y[0] (succ;zero;()))
 :]
 
 ----------------------------------------
