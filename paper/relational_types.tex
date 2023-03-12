@@ -991,6 +991,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     t[x \mapsto \text{fix}\ \lambda [x:\tau \Rightarrow t]]
   } 
 
+  \inferrule { 
+    e \longrightarrow e' 
+  } {
+    e \longrightarrow^* e'
+  } 
+
+  \inferrule { 
+    e \longrightarrow e' 
+    \\
+    e' \longrightarrow^* e''
+  } {
+    e \longrightarrow^* e''
+  } 
+
 \end{mathpar}
 
 \[
@@ -1028,8 +1042,23 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \end{array}
 \]
 
+\subsection{Standard collecting semantics}
+\begin{mathpar}
+  \inferrule { 
+    e \longrightarrow^* v 
+  } {
+    v \in \left< \Downarrow e \right>
+  } 
 
-\subsection{Typing}
+  \inferrule { 
+    e \not\longrightarrow^* v 
+  } {
+    \_ \in \left< \Downarrow e \right>
+  } 
+\end{mathpar}
+
+
+\subsection{Type collecting semantics}
 \begin{mathpar}
   \inferrule { 
   } {
@@ -1156,14 +1185,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 \end{mathpar}
 
-\subsection{Subtyping}
+\subsection{Subtype collecting semantics}
 
 \begin{mathpar}
-  \inferrule {
-  } {
-      \tau \in \left< \Delta \Vdash \tau \right>
-  }
-
   \inferrule {
   } {
     \tau \in \left< \Delta \Vdash \bot \right>
@@ -1183,7 +1207,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule {
      \leq \tau_2 \in \left< \Delta \Vdash \tau_1 \right>
   } {
-    l\sim\tau_2 \in \left< \Delta \vdash l\sim\tau_1 \right>
+    l\sim\tau_2 \in \left< \Delta \Vdash l\sim\tau_1 \right>
   } 
 
   \inferrule {
@@ -1212,146 +1236,179 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \right>
   }
 
-  \inferrule[exis-rhs] { 
-    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_4
-    \\
-    \text{freevars } \Delta \cap \widebar{\alpha} = \emptyset 
+  \inferrule { 
+    \text{freevars}(\Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
-    \Delta;\Delta_1 \vdash 
-      \tau_2 \leq \tau_3
+    \tau_4
+    \in
+    \left< \Delta;\Delta' \Vdash \tau_1 \right>
+    \\
+    \tau_3
+    \in
+    \left< \Delta;\Delta' \Vdash \tau_2 \right>
   } { 
-    \Delta \vdash 
-      \tau_1
-      \leq 
-      (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-  }
-  
-  \\\\
-
-  \inferrule[univ-rhs] { 
-    \Delta;\Delta_1 \vdash \tau_2 \leq \tau_3
-    \\
-    \forall \Delta_1'\ .\ \Delta_1' < \Delta_1 \longrightarrow \Delta;\Delta_1' \not\vdash \tau_2 \leq \tau_3
-    \\
-    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_4
-    \\\\
-    \Delta;\Delta_2 \vdash \tau_2 \leq \tau_3
-    \\
-    \forall \Delta_2'\ .\ \Delta_2 < \Delta_2' \longrightarrow \Delta;\Delta_2' \not\vdash \tau_2 \leq \tau_3
-    \\
-    \Delta;\Delta_2 \vdash \tau_1 \leq \tau_4
-    \\\\
-    \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
-    \\
-    \text{dom}(\Delta_1) \subseteq \widebar{\alpha_i}
-    \\
-    \text{dom}(\Delta_2) \subseteq \widebar{\alpha_i}
-  } { 
-    \Delta \vdash 
-      \tau_1
-      \leq 
-      (\forall \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+    (\exists \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+    \in
+    \left< \Delta \Vdash \tau_1 \right>
   }
 
-  \inferrule[univ-lhs] { 
-    \Delta;\Delta_1 \vdash \tau_3 \leq \tau_4
-    \\
-    \text{freevars } \Delta \cap \widebar{\alpha} = \emptyset 
+  \inferrule { 
+    \text{freevars}(\Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
-    \Delta;\Delta_1 \vdash 
-      \tau_1 \leq \tau_2
+    \forall\ \Delta'\ .\
+    \tau_3
+    \in
+    \left< \Delta;\Delta' \Vdash \tau_2 \right>
+    \Longrightarrow
+    \tau_4 \in
+    \left< \Delta;\Delta' \Vdash \tau_1 \right>
   } { 
-    \Delta \vdash 
-      (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
-      \leq 
-      \tau_4
+    (\forall \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+    \in
+    \left< \Delta \Vdash \tau_1 \right>
+  }
+
+  \inferrule { 
+    \text{freevars}(\Delta) \cap \widebar{\alpha} \subseteq \emptyset 
+    \\\\
+    \tau_4
+    \in
+    \left<
+    \Delta;\Delta' \Vdash \tau_3
+    \right>
+    \\
+    \tau_2
+    \in
+    \left< \Delta;\Delta' \Vdash \tau_1 \right>
+  } { 
+    \tau_4
+    \in
+    \left<
+    \Delta \Vdash \forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3
+    \right>
   }
 
   \\\\
 
-  \inferrule[recur-symm] { 
-    \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] \leq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
-  } {
-    \Delta \vdash \mu \alpha_1 . \tau_1 \leq \mu \alpha_2 . \tau_2
+  \inferrule { 
+    \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
+    \in
+    \left<
+    \Delta \Vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
+    \right>
+  } { 
+    \mu \alpha_2 . \tau_2
+    \in
+    \left<
+    \Delta \Vdash \mu \alpha_1 . \tau_1
+    \right>
   }
 
-  \inferrule[recur-roll] {
+  \inferrule {
   } {
-      \Delta \vdash \tau[\alpha\mapsto\mu \alpha . \tau] \leq\mu \alpha . \tau
+    \mu \alpha . \tau
+    \in
+    \left< \Delta \Vdash \tau[\alpha\mapsto\mu \alpha . \tau] \right>
   }
 
-  \inferrule[recur-unroll] {
+  \inferrule {
   } {
-      \Delta \vdash \mu\alpha.\tau \leq \tau[\alpha\mapsto\mu \alpha . \tau]
+    \tau[\alpha\mapsto\mu \alpha . \tau]
+    \in
+    \left< \Delta \Vdash \mu\alpha.\tau \right>
   }
 
-  \inferrule[corec-symm] { 
-    \Delta \vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] \leq \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+  \inferrule { 
+    \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+    \in
+    \left<
+    \Delta \Vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
+    \right>
   } {
-    \Delta \vdash \nu \alpha_1 . \tau_1 \leq \nu \alpha_2 . \tau_2
+    \nu \alpha_2 . \tau_2
+    \in
+    \left<
+    \Delta \Vdash \nu \alpha_1 . \tau_1 
+    \right>
   }
 
-  \inferrule[corec-roll] {
+  \inferrule {
   } {
-      \Delta \vdash \tau[\alpha\mapsto\nu \alpha . \tau] \leq\nu \alpha . \tau
+    \nu \alpha . \tau
+    \in
+    \left< \Delta \Vdash \tau[\alpha\mapsto\nu \alpha . \tau] \right>
   }
 
-  \inferrule[corec-unroll] {
+  \inferrule {
   } {
-      \Delta \vdash \nu\alpha.\tau \leq \tau[\alpha\mapsto\nu \alpha . \tau]
+   \tau[\alpha\mapsto\nu \alpha . \tau]
+   \in
+   \left< \Delta \Vdash \nu\alpha.\tau \right>
   }
 
-
-  \inferrule[union-left] {
-    \Delta \vdash \tau_1 \leq \tau_3
+  \inferrule {
+    \tau_3
+    \in
+    \left< \Delta \Vdash \tau_1 \right>
     \\
-    \Delta \vdash \tau_2 \leq \tau_3
+    \tau_3
+    \in
+    \left< \Delta \Vdash \tau_2 \right>
   } {
-    \Delta \vdash \tau_1 \vee \tau_2 \leq \tau_3
+    \tau_3
+    \in
+    \left< \Delta \Vdash \tau_1 \vee \tau_2 \right>
   }
 
-  \inferrule[union-rght-left] {
+  \inferrule {
   } {
-    \Delta \vdash \tau_1 \leq \tau_1 \vee \tau_2
+    \tau_1 \vee \tau_2
+    \in
+    \left< \Delta \Vdash \tau_1 \right>
   }
 
-  \inferrule[union-rght-rght] {
+  \inferrule {
   } {
-    \Delta \vdash \tau_2 \leq \tau_1 \vee \tau_2
+    \tau_1 \vee \tau_2
+    \in
+    \left< \Delta \Vdash \tau_2 \right>
   }
 
-  \\\\
-
-  \inferrule[inter-right] {
-    \Delta \vdash \tau \leq \tau_1
+  \inferrule {
+    \tau_1
+    \in
+    \left< \Delta \Vdash \tau \right>
     \\
-    \Delta \vdash \tau \leq \tau_2
+    \tau_2
+    \in
+    \left< \Delta \Vdash \tau \right>
   } {
-    \Delta \vdash \tau \leq \tau_1 \wedge \tau_2
+    \tau_1 \wedge \tau_2
+    \in
+    \left< \Delta \Vdash \tau \right>
   }
 
-  \inferrule[inter-left-left] {
+  \inferrule {
   } {
-    \Delta \vdash \tau_1 \wedge \tau_2 \leq \tau_1
+    \tau_1
+    \in
+    \left< \Delta \Vdash \tau_1 \wedge \tau_2 \right>
   }
 
-  \inferrule[inter-left-rght] {
+  \inferrule {
   } {
-    \Delta \vdash \tau_1 \wedge \tau_2 \leq \tau_2
+    \tau_2
+    \in
+    \left< \Delta \Vdash \tau_1 \wedge \tau_2 \right>
+  }
+
+  \inferrule {
+  } {
+      \tau \in \left< \Delta \Vdash \tau \right>
   }
 \end{mathpar}
 
-\begin{enumerate}
-  \item typing and subtyping rules 
-  \item soundness proof 
-\end{enumerate}
-
-\section{Language algorithms}
-\begin{enumerate}
-  \item english statement 
-\end{enumerate}
-\subsection{Program synthesis}
-\subsection{Type inference}
+\subsection*{Type inference analysis}
 
 \[
   \begin{array}{l @{} l}
@@ -1528,12 +1585,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \]
 
 
-\begin{enumerate}
-  \item definition 
-  \item lemmas and proofs 
-\end{enumerate}
-
-\subsection{Subtype unification}
+\subsection{Subtype unification analysis}
 
 \[
   \begin{array}{l @{} l}
