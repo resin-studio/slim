@@ -1030,59 +1030,52 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 \subsection{Typing}
-
 \begin{mathpar}
-
-  \inferrule[TypeEnvBase] { 
+  \inferrule { 
   } {
     (\Gamma, x \mapsto \tau)(x) = \tau 
   } 
 
-
-  \inferrule[TypeEnvStep] { 
-    x \neq 'x 
+  \inferrule { 
+    x \neq x' 
     \\
     \Gamma(x) = \tau
   } {
     (\Gamma, x' \mapsto \tau')(x') = \tau 
   } 
 
-  \inferrule[DomTypeEnvLeaf] { 
+  \inferrule { 
   } {
     x \in \text{dom}(\Gamma, x \mapsto \tau)
   } 
 
-  \inferrule[DomTypeEnvStep] { 
-    x \neq 'x 
+  \inferrule { 
+    x \neq x'
     \\
     x \in \text{dom}(\Gamma)
   } {
     x \in \text{dom}(\Gamma, x' \mapsto \tau')
   } 
-
-
 \end{mathpar}
 
 \begin{mathpar}
-  \inferrule[Hole] { 
+  \inferrule { 
   } {
     \bot \in \left< \Gamma \vdash \_ \right>
   } 
 
-  \inferrule[Unit] { 
+  \inferrule { 
   } {
     \text{unit} \in \left< \Gamma \vdash () \right>
   } 
 
-  \inferrule[Var] { 
+  \inferrule { 
     \Gamma(x) = \tau
   } {
     \tau \in \left< \Gamma \vdash x \right>
   } 
 
-  \\\\
-
-  \inferrule[Tag] { 
+  \inferrule { 
     \tau \in \left< \Gamma \vdash t \right>
   } {
      l*\tau \in \left< \Gamma \vdash l;t \right>  
@@ -1097,7 +1090,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \left< \Gamma \vdash \omega\ (\widebar{l_i \approx t_i}) \right>  
   } 
 
-  \inferrule[Function] {
+  \inferrule {
     \bigwedge
     \tau_i \in \left< \Gamma_i \vdash p_i \right>
     \ \wedge\
@@ -1108,15 +1101,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \left< \Gamma \vdash \lambda\ (\widebar{p_i \Rightarrow t_i}) \right>
   } 
 
-  \\\\
-
-  \inferrule[Proj] {
+  \inferrule {
     l\sim\tau \in \left< \Gamma \vdash t \right>
   } {
     \tau \in \left< \Gamma \vdash t/l \right> 
   } 
 
-  \inferrule[App] { 
+  \inferrule { 
     \tau' \rightarrow \tau \in \left< \Gamma \vdash t_1 \right>
     \\
     \tau' \in \left< \Gamma \vdash t_2 \right>
@@ -1124,13 +1115,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \tau \in \left< \Gamma \vdash (t_1\ t_2) \right>
   } 
 
-  \\\\
-
-  \inferrule[Let] { 
-    \cdot \vdash 
-    (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5)
-    \leq 
+  \inferrule { 
     \tau_1
+    \in
+    \left<
+    \cdot \Vdash 
+    \forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5
+    \right>
     \\
     \tau_1
     \in
@@ -1150,16 +1141,16 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \right>
   } 
 
-  \inferrule[Fix] { 
+  \inferrule { 
     \tau \rightarrow \tau \in \left< \Gamma \vdash t \right>
   } {
     \tau \in \left< \Gamma \vdash \text{fix}\ t \right>
   } 
 
-  \inferrule[Subsump] { 
+  \inferrule { 
     \tau' \in \left< \Gamma \vdash t \right> 
     \\
-    \cdot \vdash \tau' \leq \tau
+    \tau \in \left< \cdot \Vdash \tau' \right>
   } {
     \tau \in \left< \Gamma \vdash t \right> 
   } 
