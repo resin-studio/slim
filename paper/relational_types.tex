@@ -1088,12 +1088,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
      l*\tau \in \left< \Gamma \vdash l;t \right>  
   }
 
-  \inferrule[Record] { 
+  \inferrule { 
     \bigwedge
     \tau_i \in \left<  \Gamma \vdash t_i \right>
   } {
     (\text{reduce} \wedge \widebar{l_i\sim\tau_i})
-    \in \left< \Gamma \vdash \omega\ (\widebar{l_i \approx t_i}) \right>  
+    \in 
+    \left< \Gamma \vdash \omega\ (\widebar{l_i \approx t_i}) \right>  
   } 
 
   \inferrule[Function] {
