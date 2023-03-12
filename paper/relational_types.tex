@@ -849,505 +849,521 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{lstlisting}
 
 
-\section{Language specification}
+\section{Language}
 \begin{enumerate}
   \item english statement 
 \end{enumerate}
 \subsection{Syntax}
 
-
-\begin{figure*}[h]
-  \[
-    \begin{array}{l @{} l}
-      t 
-      &{} ::=
-      \begin{array}[t]{@{} l}
-        \_ 
-        \ |\ 
-        () 
-        \ |\ 
-        x
-        \ |\ 
-        l;t 
-        \ |\ 
-        \omega\ \widebar{l \approx t}
-        \ |\ 
-        \lambda\ \widebar{p : \tau \Rightarrow t} 
-        \ |\ 
-        t/l
-        \ |\ 
-        t\ t
-        \ |\ 
-        \text{let } x : \tau = t\ \text{in } t
-        \ |\ 
-        \text{fix } t
-      \end{array}
-      \\
-      p 
-      &{} ::=
-      \begin{array}[t]{@{} l}
-        x 
-        \ |\ 
-        () 
-        \ |\ 
-        l;p
-        \ |\ 
-        \omega\ \widebar{l \approx p}
-      \end{array}
-      \\
-      \tau
-      &{} ::=
-      \begin{array}[t]{@{} l}
-        \text{unit} 
-        \ |\ 
-        \alpha 
-        \ |\ 
-        \bot 
-        \ |\ 
-        \top 
-        \ |\ 
-        l*\tau 
-        \ |\ 
-        l\sim\tau 
-        \ |\ 
-        \tau\rightarrow\tau 
-        \ |\ 
-        \exists \widebar{\alpha} :: \tau \leq \tau \ .\ \tau 
-        \ |\ 
-        \forall \widebar{\alpha} :: \tau \leq \tau \ .\ \tau 
-        \ |\ 
-        \mu \alpha.\tau 
-        \ |\ 
-        \nu \alpha.\tau 
-        \ |\ 
-        \tau \vee \tau
-        \ |\ 
-        \tau \wedge \tau
-      \end{array}
-      \\
-      E 
-      &{} ::=
-      []
+\[
+  \begin{array}{l @{} l}
+    t 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      \_ 
       \ |\ 
-      l;E 
+      () 
       \ |\ 
-      \omega\ \widebar{l \approx E}
+      x
       \ |\ 
-      E/l
+      l;t 
       \ |\ 
-      E\ t
+      \omega\ \widebar{l \approx t}
       \ |\ 
-      v\ E
+      \lambda\ \widebar{p : \tau \Rightarrow t} 
       \ |\ 
-      \text{let } x : \tau = E\ \text{in } t
+      t/l
       \ |\ 
-      \text{fix } E 
-      \\
-      v 
-      &{} ::=
-      \begin{array}[t]{@{} l}
-        () 
-        \ |\ 
-        l;v
-        \ |\ 
-        \omega\ \widebar{l \approx v}
-        \ |\ 
-        \lambda\ \widebar{p : \tau \Rightarrow t} 
-      \end{array}
+      t\ t
+      \ |\ 
+      \text{let } x : \tau = t\ \text{in } t
+      \ |\ 
+      \text{fix } t
     \end{array}
-  \]
-  \caption{Syntax}
-\end{figure*}
+    \\
+    p 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      x 
+      \ |\ 
+      () 
+      \ |\ 
+      l;p
+      \ |\ 
+      \omega\ \widebar{l \approx p}
+    \end{array}
+    \\
+    \tau
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      \text{unit} 
+      \ |\ 
+      \alpha 
+      \ |\ 
+      \bot 
+      \ |\ 
+      \top 
+      \ |\ 
+      l*\tau 
+      \ |\ 
+      l\sim\tau 
+      \ |\ 
+      \tau\rightarrow\tau 
+      \ |\ 
+      \exists \widebar{\alpha} :: \tau \leq \tau \ .\ \tau 
+      \ |\ 
+      \forall \widebar{\alpha} :: \tau \leq \tau \ .\ \tau 
+      \ |\ 
+      \mu \alpha.\tau 
+      \ |\ 
+      \nu \alpha.\tau 
+      \ |\ 
+      \tau \vee \tau
+      \ |\ 
+      \tau \wedge \tau
+    \end{array}
+    \\
+    E 
+    &{} ::=
+    []
+    \ |\ 
+    l;E 
+    \ |\ 
+    \omega\ \widebar{l \approx E}
+    \ |\ 
+    E/l
+    \ |\ 
+    E\ t
+    \ |\ 
+    v\ E
+    \ |\ 
+    \text{let } x : \tau = E\ \text{in } t
+    \ |\ 
+    \text{fix } E 
+    \\
+    v 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      () 
+      \ |\ 
+      l;v
+      \ |\ 
+      \omega\ \widebar{l \approx v}
+      \ |\ 
+      \lambda\ \widebar{p : \tau \Rightarrow t} 
+    \end{array}
+  \end{array}
+\]
 
-
-
-
-
-
-\begin{enumerate}
-  \item rules 
-\end{enumerate}
 
 \subsection{Operational semantics}
-\begin{figure*}[h]
-  \begin{mathpar}
+\begin{mathpar}
 
-    \inferrule[PopPush] { 
-      t \longrightarrow t' 
-    } {
-      E[t] \longrightarrow E[t']  
-    }
+  \inferrule[PopPush] { 
+    t \longrightarrow t' 
+  } {
+    E[t] \longrightarrow E[t']  
+  }
 
-    \inferrule[Proj] {
-    } {
-      (\omega\ \widebar{l_i \approx v_i})/l_j \longrightarrow v_j
-    } 
+  \inferrule[Proj] {
+  } {
+    (\omega\ \widebar{l_i \approx v_i})/l_j \longrightarrow v_j
+  } 
 
-    \inferrule[App] { 
-    } {
-      (\lambda\ \widebar{p : \tau \Rightarrow t})\ v 
-      \longrightarrow 
-      (\text{match } v\ \widebar{p : \tau \Rightarrow t})
-    } 
+  \inferrule[App] { 
+  } {
+    (\lambda\ \widebar{p : \tau \Rightarrow t})\ v 
+    \longrightarrow 
+    (\text{match } v\ \widebar{p : \tau \Rightarrow t})
+  } 
 
-    \inferrule[Let] { 
-    } {
-      \text{let}\ x : \tau = v \text{ in } t
-      \longrightarrow 
-      t[x \mapsto v]
-    } 
+  \inferrule[Let] { 
+  } {
+    \text{let}\ x : \tau = v \text{ in } t
+    \longrightarrow 
+    t[x \mapsto v]
+  } 
 
-    \inferrule[Fix] { 
-    } {
-      \text{fix}\ \lambda [x:\tau \Rightarrow t]
-      \longrightarrow 
-      t[x \mapsto \text{fix}\ \lambda [x:\tau \Rightarrow t]]
-    } 
+  \inferrule[Fix] { 
+  } {
+    \text{fix}\ \lambda [x:\tau \Rightarrow t]
+    \longrightarrow 
+    t[x \mapsto \text{fix}\ \lambda [x:\tau \Rightarrow t]]
+  } 
 
-  \end{mathpar}
-  \caption{Operational semantics}
-\end{figure*}
+\end{mathpar}
 
-\begin{figure*}[h]
-  \[
-    \begin{array}{l @{} l}
-      \text{match}\ v\ ((p : \tau \Rightarrow t) :: cs)
-      &{} =
-      \begin{cases}
-        t[H]
-        &\text{if }
-        \text{unify}\ v\ p = H 
-        \\
-        
-        \text{match}\ v\ cs
-        &\text{otherwise}
-      \end{cases}
-    \end{array}
-  \]
-  \[
-    \begin{array}{l @{} l}
-      \text{unify}\ v\ x 
-      &{} =
-      \cdot, x \mapsto v
+\[
+  \begin{array}{l @{} l}
+    \text{match}\ v\ ((p : \tau \Rightarrow t) :: cs)
+    &{} =
+    \begin{cases}
+      t[H]
+      &\text{if }
+      \text{unify}\ v\ p = H 
       \\
-      \text{unify}\ ()\ () 
-      &{} =
-      \cdot
-      \\
-      \text{unify}\ l;v\ l;p 
-      &{} =
-      \text{unify}\ v\ p
-      \\
-      \text{unify}\ (\omega\ \widebar{l \approx v})\ (\omega\ \widebar{l \approx p}) 
-      &{} =
-      \text{reduce } ; \widebar{\text{unify}\ v\ p}
-    \end{array}
-  \]
-  \caption{Pattern matching}
-\end{figure*}
+      
+      \text{match}\ v\ cs
+      &\text{otherwise}
+    \end{cases}
+  \end{array}
+\]
+\[
+  \begin{array}{l @{} l}
+    \text{unify}\ v\ x 
+    &{} =
+    \cdot, x \mapsto v
+    \\
+    \text{unify}\ ()\ () 
+    &{} =
+    \cdot
+    \\
+    \text{unify}\ l;v\ l;p 
+    &{} =
+    \text{unify}\ v\ p
+    \\
+    \text{unify}\ (\omega\ \widebar{l \approx v})\ (\omega\ \widebar{l \approx p}) 
+    &{} =
+    \text{reduce } ; \widebar{\text{unify}\ v\ p}
+  \end{array}
+\]
 
 
 \subsection{Typing}
 
-\begin{figure*}[h]
-  \begin{mathpar}
-    \inferrule[Hole] { 
-    } {
-      \Gamma \vdash \_ : \tau
-    } 
+\begin{mathpar}
 
-    \inferrule[Unit] { 
-    } {
-      \Gamma \vdash () : \text{unit} 
-    } 
+  \inferrule[TypeEnvBase] { 
+  } {
+    (\Gamma, x \mapsto \tau)(x) = \tau 
+  } 
 
-    \inferrule[Var] { 
-      (x \mapsto \tau) \in \Gamma
-    } {
-      \Gamma \vdash x : \tau  
-    } 
 
+  \inferrule[TypeEnvStep] { 
+    x \neq 'x 
+    \\
+    \Gamma(x) = \tau
+  } {
+    (\Gamma, x' \mapsto \tau')(x') = \tau 
+  } 
+
+  \inferrule[DomTypeEnvLeaf] { 
+  } {
+    x \in \text{dom}(\Gamma, x \mapsto \tau)
+  } 
+
+  \inferrule[DomTypeEnvStep] { 
+    x \neq 'x 
+    \\
+    x \in \text{dom}(\Gamma)
+  } {
+    x \in \text{dom}(\Gamma, x' \mapsto \tau')
+  } 
+
+
+\end{mathpar}
+
+\begin{mathpar}
+  \inferrule[Hole] { 
+  } {
+    \bot \in \left< \Gamma \vdash \_ \right>
+  } 
+
+  \inferrule[Unit] { 
+  } {
+    \text{unit} \in \left< \Gamma \vdash () \right>
+  } 
+
+  \inferrule[Var] { 
+    \Gamma(x) = \tau
+  } {
+    \tau \in \left< \Gamma \vdash x \right>
+  } 
+
+  \\\\
+
+  \inferrule[Tag] { 
+    \tau \in \left< \Gamma \vdash t \right>
+  } {
+     l*\tau \in \left< \Gamma \vdash l;t \right>  
+  }
+
+  \inferrule[Record] { 
+    \bigwedge
+    \tau_i \in \left<  \Gamma \vdash t_i \right>
+  } {
+    (\text{reduce} \wedge \widebar{l_i\sim\tau_i})
+    \in \left< \Gamma \vdash \omega\ (\widebar{l_i \approx t_i}) \right>  
+  } 
+
+  \inferrule[Function] {
+    \bigwedge
+    \tau_i \in \left< \Gamma_i \vdash p_i \right>
+    \ \wedge\
+    \tau'_i \in \left< \Gamma;\Gamma_i \vdash t_i \right>
+  } {
+    (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
+    \in
+    \left< \Gamma \vdash \lambda\ (\widebar{p_i \Rightarrow t_i}) \right>
+  } 
+
+  \\\\
+
+  \inferrule[Proj] {
+    l\sim\tau \in \left< \Gamma \vdash t \right>
+  } {
+    \tau \in \left< \Gamma \vdash t/l \right> 
+  } 
+
+  \inferrule[App] { 
+    \tau' \rightarrow \tau \in \left< \Gamma \vdash t_1 \right>
+    \\
+    \tau' \in \left< \Gamma \vdash t_2 \right>
+  } {
+    \tau \in \left< \Gamma \vdash (t_1\ t_2) \right>
+  } 
+
+  \\\\
+
+  \inferrule[Let] { 
+    \cdot \vdash 
+    (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5)
+    \leq 
+    \tau_1
+    \\
+    \tau_1
+    \in
+    \left< \Gamma \vdash t_1 \right>
     \\\\
+    \tau_2
+    \in
+    \left<  
+    \Gamma,x \mapsto (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5) 
+      \vdash t_2 
+    \right>
+  } {
+    \tau_2
+    \in
+    \left< 
+    \Gamma \vdash \text{let}\ x : \tau_1 = t_1 \text{ in } t_2 
+    \right>
+  } 
 
-    \inferrule[Tag] { 
-      \Gamma \vdash t : \tau
-    } {
-      \Gamma \vdash l;t : l*\tau  
-    }
+  \inferrule[Fix] { 
+    \tau \rightarrow \tau \in \left< \Gamma \vdash t \right>
+  } {
+    \tau \in \left< \Gamma \vdash \text{fix}\ t \right>
+  } 
 
-    \inferrule[Record] { 
-      \bigwedge_{i} 
-      \Gamma \vdash t_i : \tau_i
-    } {
-      \Gamma \vdash \omega\ (\widebar{l_i \approx t_i}) : (\text{reduce} \wedge \widebar{l_i\sim\tau_i})  
-    } 
-
-    \inferrule[Function] {
-      \bigwedge_{i} 
-      \Gamma_1 \vdash p_i : \tau_i
-      \ \wedge\
-      \Gamma;\Gamma_1 \vdash t_i : \tau'_i
-    } {
-      \Gamma \vdash \lambda\ (\widebar{p_i : \tau_i\Rightarrow t_i}) 
-      : (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
-    } 
-
-    \\\\
-
-    \inferrule[Proj] {
-      \Gamma \vdash t : l\sim\tau 
-    } {
-      \Gamma \vdash t/l : \tau 
-    } 
-
-    \inferrule[App] { 
-      \Gamma \vdash t_1 : \tau_1 \rightarrow \tau
-      \\
-      \Gamma \vdash t_2 : \tau_1
-    } {
-      \Gamma \vdash (t_1\ t_2) : \tau 
-    } 
-
-    \\\\
-
-    \inferrule[Let] { 
-      \cdot \vdash 
-      (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5)
-      \leq 
-      \tau_1
-      \\\\
-      \Gamma \vdash t_1 : (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5)  
-      \\\\
-      \Gamma,x \mapsto (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5) 
-        \vdash t_2 : \tau_2
-    } {
-      \Gamma \vdash 
-        (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) 
-        : \tau_2
-    } 
-
-    \inferrule[Fix] { 
-      \Gamma \vdash t : \tau \rightarrow \tau 
-    } {
-      \Gamma \vdash \text{fix}\ t : \tau 
-    } 
-
-    \inferrule[Subsump] { 
-      \Gamma \vdash t : \tau'
-      \\
-      \cdot \vdash \tau' \leq \tau
-      \
-    } {
-      \Gamma \vdash 
-        t : \tau
-    } 
-  \end{mathpar}
-  \caption{Typing}
-\end{figure*}
+  \inferrule[Subsump] { 
+    \tau' \in \left< \Gamma \vdash t \right> 
+    \\
+    \cdot \vdash \tau' \leq \tau
+  } {
+    \tau \in \left< \Gamma \vdash t \right> 
+  } 
+\end{mathpar}
 
 
 \subsection{Subtyping}
 
-\begin{figure*}[h]
-  \begin{mathpar}
-    \inferrule[refl] {
-    } {
-       \Delta \vdash \tau \leq \tau
-    }
+\begin{mathpar}
+  \inferrule[refl] {
+  } {
+      \Delta \vdash \tau \leq \tau
+  }
 
-    \inferrule[bottom] {
-    } {
-      \Delta \vdash \bot \leq \tau
-    }
+  \inferrule[bottom] {
+  } {
+    \Delta \vdash \bot \leq \tau
+  }
 
-    \inferrule[top] {
-    } {
-      \Delta \vdash \tau \leq \top
-    } 
+  \inferrule[top] {
+  } {
+    \Delta \vdash \tau \leq \top
+  } 
+  \\\\
+
+  \inferrule[tag] {
+    \Delta \vdash \tau_1 \leq \tau_2
+  } {
+    \Delta \vdash 
+      l*\tau_1 \leq l*\tau_2
+  } 
+
+  \inferrule[field] {
+    \Delta \vdash 
+      \tau_1 \leq \tau_2
+  } {
+    \Delta \vdash 
+      l\sim\tau_1 \leq l\sim\tau_2
+  } 
+
+  \inferrule[case] {
+    \Delta \vdash \tau_3 \leq \tau_1 
+    \\
+    \Delta \vdash 
+      \tau_2 \leq \tau_4
+  } {
+    \Delta \vdash 
+      \tau_1 \rightarrow \tau_2 \leq \tau_3 \rightarrow \tau_4
+  } 
+
+  \\\\
+
+  \inferrule[exis-lhs] { 
+    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2
+    \\
+    \forall \Delta_1'\ .\ \Delta_1' < \Delta_1 \longrightarrow \Delta;\Delta_1' \not\vdash \tau_1 \leq \tau_2
+    \\
+    \Delta;\Delta_1 \vdash \tau_3 \leq \tau_4
     \\\\
-
-    \inferrule[tag] {
-      \Delta \vdash \tau_1 \leq \tau_2
-    } {
-      \Delta \vdash 
-        l*\tau_1 \leq l*\tau_2
-    } 
-
-    \inferrule[field] {
-      \Delta \vdash 
-        \tau_1 \leq \tau_2
-    } {
-      \Delta \vdash 
-        l\sim\tau_1 \leq l\sim\tau_2
-    } 
-
-    \inferrule[case] {
-      \Delta \vdash \tau_3 \leq \tau_1 
-      \\
-      \Delta \vdash 
-        \tau_2 \leq \tau_4
-    } {
-      \Delta \vdash 
-        \tau_1 \rightarrow \tau_2 \leq \tau_3 \rightarrow \tau_4
-    } 
-
+    \Delta;\Delta_2 \vdash \tau_1 \leq \tau_2
+    \\
+    \forall \Delta_2'\ .\ \Delta_2 < \Delta_2' \longrightarrow \Delta;\Delta_2' \not\vdash \tau_1 \leq \tau_2
+    \\
+    \Delta;\Delta_2 \vdash \tau_3 \leq \tau_4
     \\\\
+    \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
+    \\
+    \text{dom}(\Delta_1) \subseteq \widebar{\alpha_i}
+    \\
+    \text{dom}(\Delta_2) \subseteq \widebar{\alpha_i}
+  } { 
+    \Delta \vdash 
+      (\exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+      \leq 
+      \tau_4
+  }
 
-    \inferrule[exis-lhs] { 
-      \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2
-      \\
-      \forall \Delta_1'\ .\ \Delta_1' < \Delta_1 \longrightarrow \Delta;\Delta_1' \not\vdash \tau_1 \leq \tau_2
-      \\
-      \Delta;\Delta_1 \vdash \tau_3 \leq \tau_4
-      \\\\
-      \Delta;\Delta_2 \vdash \tau_1 \leq \tau_2
-      \\
-      \forall \Delta_2'\ .\ \Delta_2 < \Delta_2' \longrightarrow \Delta;\Delta_2' \not\vdash \tau_1 \leq \tau_2
-      \\
-      \Delta;\Delta_2 \vdash \tau_3 \leq \tau_4
-      \\\\
-      \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
-      \\
-      \text{dom}(\Delta_1) \subseteq \widebar{\alpha_i}
-      \\
-      \text{dom}(\Delta_2) \subseteq \widebar{\alpha_i}
-    } { 
-      \Delta \vdash 
-        (\exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3)
-        \leq 
-        \tau_4
-    }
-
-    \inferrule[exis-rhs] { 
-      \Delta;\Delta_1 \vdash \tau_1 \leq \tau_4
-      \\
-      \text{freevars } \Delta \cap \widebar{\alpha} = \emptyset 
-      \\\\
-      \Delta;\Delta_1 \vdash 
-        \tau_2 \leq \tau_3
-    } { 
-      \Delta \vdash 
-        \tau_1
-        \leq 
-        (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-    }
-    
+  \inferrule[exis-rhs] { 
+    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_4
+    \\
+    \text{freevars } \Delta \cap \widebar{\alpha} = \emptyset 
     \\\\
+    \Delta;\Delta_1 \vdash 
+      \tau_2 \leq \tau_3
+  } { 
+    \Delta \vdash 
+      \tau_1
+      \leq 
+      (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+  }
+  
+  \\\\
 
-    \inferrule[univ-rhs] { 
-      \Delta;\Delta_1 \vdash \tau_2 \leq \tau_3
-      \\
-      \forall \Delta_1'\ .\ \Delta_1' < \Delta_1 \longrightarrow \Delta;\Delta_1' \not\vdash \tau_2 \leq \tau_3
-      \\
-      \Delta;\Delta_1 \vdash \tau_1 \leq \tau_4
-      \\\\
-      \Delta;\Delta_2 \vdash \tau_2 \leq \tau_3
-      \\
-      \forall \Delta_2'\ .\ \Delta_2 < \Delta_2' \longrightarrow \Delta;\Delta_2' \not\vdash \tau_2 \leq \tau_3
-      \\
-      \Delta;\Delta_2 \vdash \tau_1 \leq \tau_4
-      \\\\
-      \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
-      \\
-      \text{dom}(\Delta_1) \subseteq \widebar{\alpha_i}
-      \\
-      \text{dom}(\Delta_2) \subseteq \widebar{\alpha_i}
-    } { 
-      \Delta \vdash 
-        \tau_1
-        \leq 
-        (\forall \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-    }
-
-    \inferrule[univ-lhs] { 
-      \Delta;\Delta_1 \vdash \tau_3 \leq \tau_4
-      \\
-      \text{freevars } \Delta \cap \widebar{\alpha} = \emptyset 
-      \\\\
-      \Delta;\Delta_1 \vdash 
-        \tau_1 \leq \tau_2
-    } { 
-      \Delta \vdash 
-        (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
-        \leq 
-        \tau_4
-    }
-
+  \inferrule[univ-rhs] { 
+    \Delta;\Delta_1 \vdash \tau_2 \leq \tau_3
+    \\
+    \forall \Delta_1'\ .\ \Delta_1' < \Delta_1 \longrightarrow \Delta;\Delta_1' \not\vdash \tau_2 \leq \tau_3
+    \\
+    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_4
     \\\\
-
-    \inferrule[recur-symm] { 
-      \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] \leq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
-    } {
-      \Delta \vdash \mu \alpha_1 . \tau_1 \leq \mu \alpha_2 . \tau_2
-    }
-
-    \inferrule[recur-roll] {
-    } {
-       \Delta \vdash \tau[\alpha\mapsto\mu \alpha . \tau] \leq\mu \alpha . \tau
-    }
-
-    \inferrule[recur-unroll] {
-    } {
-       \Delta \vdash \mu\alpha.\tau \leq \tau[\alpha\mapsto\mu \alpha . \tau]
-    }
-
-    \inferrule[corec-symm] { 
-      \Delta \vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] \leq \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
-    } {
-      \Delta \vdash \nu \alpha_1 . \tau_1 \leq \nu \alpha_2 . \tau_2
-    }
-
-    \inferrule[corec-roll] {
-    } {
-       \Delta \vdash \tau[\alpha\mapsto\nu \alpha . \tau] \leq\nu \alpha . \tau
-    }
-
-    \inferrule[corec-unroll] {
-    } {
-       \Delta \vdash \nu\alpha.\tau \leq \tau[\alpha\mapsto\nu \alpha . \tau]
-    }
-
-
-    \inferrule[union-left] {
-      \Delta \vdash \tau_1 \leq \tau_3
-      \\
-      \Delta \vdash \tau_2 \leq \tau_3
-    } {
-      \Delta \vdash \tau_1 \vee \tau_2 \leq \tau_3
-    }
-
-    \inferrule[union-rght-left] {
-    } {
-      \Delta \vdash \tau_1 \leq \tau_1 \vee \tau_2
-    }
-
-    \inferrule[union-rght-rght] {
-    } {
-      \Delta \vdash \tau_2 \leq \tau_1 \vee \tau_2
-    }
-
+    \Delta;\Delta_2 \vdash \tau_2 \leq \tau_3
+    \\
+    \forall \Delta_2'\ .\ \Delta_2 < \Delta_2' \longrightarrow \Delta;\Delta_2' \not\vdash \tau_2 \leq \tau_3
+    \\
+    \Delta;\Delta_2 \vdash \tau_1 \leq \tau_4
     \\\\
+    \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
+    \\
+    \text{dom}(\Delta_1) \subseteq \widebar{\alpha_i}
+    \\
+    \text{dom}(\Delta_2) \subseteq \widebar{\alpha_i}
+  } { 
+    \Delta \vdash 
+      \tau_1
+      \leq 
+      (\forall \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+  }
 
-    \inferrule[inter-right] {
-      \Delta \vdash \tau \leq \tau_1
-      \\
-      \Delta \vdash \tau \leq \tau_2
-    } {
-      \Delta \vdash \tau \leq \tau_1 \wedge \tau_2
-    }
+  \inferrule[univ-lhs] { 
+    \Delta;\Delta_1 \vdash \tau_3 \leq \tau_4
+    \\
+    \text{freevars } \Delta \cap \widebar{\alpha} = \emptyset 
+    \\\\
+    \Delta;\Delta_1 \vdash 
+      \tau_1 \leq \tau_2
+  } { 
+    \Delta \vdash 
+      (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+      \leq 
+      \tau_4
+  }
 
-    \inferrule[inter-left-left] {
-    } {
-      \Delta \vdash \tau_1 \wedge \tau_2 \leq \tau_1
-    }
+  \\\\
 
-    \inferrule[inter-left-rght] {
-    } {
-      \Delta \vdash \tau_1 \wedge \tau_2 \leq \tau_2
-    }
-  \end{mathpar}
-  \caption{Subtyping}
-\end{figure*}
+  \inferrule[recur-symm] { 
+    \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] \leq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
+  } {
+    \Delta \vdash \mu \alpha_1 . \tau_1 \leq \mu \alpha_2 . \tau_2
+  }
+
+  \inferrule[recur-roll] {
+  } {
+      \Delta \vdash \tau[\alpha\mapsto\mu \alpha . \tau] \leq\mu \alpha . \tau
+  }
+
+  \inferrule[recur-unroll] {
+  } {
+      \Delta \vdash \mu\alpha.\tau \leq \tau[\alpha\mapsto\mu \alpha . \tau]
+  }
+
+  \inferrule[corec-symm] { 
+    \Delta \vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] \leq \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+  } {
+    \Delta \vdash \nu \alpha_1 . \tau_1 \leq \nu \alpha_2 . \tau_2
+  }
+
+  \inferrule[corec-roll] {
+  } {
+      \Delta \vdash \tau[\alpha\mapsto\nu \alpha . \tau] \leq\nu \alpha . \tau
+  }
+
+  \inferrule[corec-unroll] {
+  } {
+      \Delta \vdash \nu\alpha.\tau \leq \tau[\alpha\mapsto\nu \alpha . \tau]
+  }
+
+
+  \inferrule[union-left] {
+    \Delta \vdash \tau_1 \leq \tau_3
+    \\
+    \Delta \vdash \tau_2 \leq \tau_3
+  } {
+    \Delta \vdash \tau_1 \vee \tau_2 \leq \tau_3
+  }
+
+  \inferrule[union-rght-left] {
+  } {
+    \Delta \vdash \tau_1 \leq \tau_1 \vee \tau_2
+  }
+
+  \inferrule[union-rght-rght] {
+  } {
+    \Delta \vdash \tau_2 \leq \tau_1 \vee \tau_2
+  }
+
+  \\\\
+
+  \inferrule[inter-right] {
+    \Delta \vdash \tau \leq \tau_1
+    \\
+    \Delta \vdash \tau \leq \tau_2
+  } {
+    \Delta \vdash \tau \leq \tau_1 \wedge \tau_2
+  }
+
+  \inferrule[inter-left-left] {
+  } {
+    \Delta \vdash \tau_1 \wedge \tau_2 \leq \tau_1
+  }
+
+  \inferrule[inter-left-rght] {
+  } {
+    \Delta \vdash \tau_1 \wedge \tau_2 \leq \tau_2
+  }
+\end{mathpar}
 
 \begin{enumerate}
   \item typing and subtyping rules 
@@ -1361,182 +1377,179 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \subsection{Program synthesis}
 \subsection{Type inference}
 
-\begin{figure*}[h]
-  \[
-    \begin{array}{l @{} l}
-      \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      \_ : \tau
-      &{} =
-      \{\cdot.\tau\}
-      \\
+\[
+  \begin{array}{l @{} l}
+    \text{infer } \iota\ \Delta\ \Gamma \vdash 
+    \_ : \tau
+    &{} =
+    \{\cdot.\tau\}
+    \\
 
-      \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      () : \tau
-      &{} =
-      \begin{array}[t]{@{} l}
-        \{\Delta_1.\text{unit}\ |
-        \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \text{unit} \leq \tau
-        \}
-      \end{array}
-      \\
-
-      \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      x : \tau
-      &{} =
-      \begin{cases}  
-        \{\Delta_1.\tau_1\ |
-        \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau
-        \}
-        &\text{if } \Gamma(x) = \tau_1
-        \\
-        \emptyset
-        &\text{otherwise}
-      \end{cases}
-      \\
-
-      \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      l ; t : \tau
-      &{} =
-      \begin{array}[t]{@{} l}
-        \text{let } \alpha = \text{typevar}() 
-        \\
-        \{\Delta_1;\Delta_2\ .\ l ; \tau_1 \ |
-        \\
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash l ; \alpha \leq \tau
-        \\
-        \ \ \ \ (\Delta_2.\tau_1) \in \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t : \alpha
-        \\
-        \}
-      \end{array}
-      \\
-
-      \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      \omega\ \widebar{l_i \approx t_i} : \tau
-      &{} =
-      \begin{array}[t]{@{} l}
-        \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
-        \\
-        \text{let } \tau' = \text{reduce} \wedge \widebar{l_i \sim \alpha_i}
-        \\
-        \text{reduce} * \{
-        \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_i : \alpha_i\ |\ 
-        \\
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau' \leq \tau
-        \\
-        \}
-        \\
-      \end{array}
-      \\
-
-      \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      \lambda\ \widebar{p_i : \tau_i \Rightarrow t_i} : \tau
-      &{} =
-      \begin{array}[t]{@{} l}
-        \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
-        \\
-        \text{let } \tau' = \text{reduce} \wedge 
-        \widebar{\tau_i \rightarrow \alpha_i }
-        \\
-        \text{reduce} * \{
-        \text{infer } \iota\ \Delta;\Delta_1;\Delta_2\ \Gamma;\Gamma_1 \vdash t_i : \alpha_i\ |\ 
-        \\
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau' \leq \tau
-        \\
-        \ \ \ \ \Gamma_1 \in \{\text{patenv } p_i\}
-        \\
-        \ \ \ \ \Delta_2.\tau' \in \text{infer } \blacksquare\ \Delta;\Delta_1\ \Gamma;\Gamma_1\ \vdash p_i : \tau_i
-        \\
-        \}
-        \\
-      \end{array}
-      \\
-
-      \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      t/l : \tau
-      &{} =
-      \begin{array}[t]{@{} l}
-        \text{let } \alpha = \text{typevar}()
-        \\
-        \{ \Delta_1;\Delta_2\ .\ \alpha \ |\
-        \\
-        \ \ \ \ \Delta_1.\tau_1 \in \text{infer } \iota\ \Delta\ \Gamma \vdash t : l \sim \tau 
-        \\
-        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq l \sim \alpha
-        \\
-        \}
-      \end{array}
-      \\
-
-      \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      (t_1\ t_2) : \tau
-      &{} =
-      \begin{array}[t]{@{} l}
-        \text{let } \alpha_1 = \text{typevar}()
-        \\
-        \text{let } \alpha_2 = \text{typevar}()
-        \\
-        \{ \Delta_1;\Delta_2;\Delta_3\ .\ \alpha_1 \ |\
-        \\
-        \ \ \ \ \Delta_1.\tau_1 \in \text{infer } \iota\ \Delta\ \Gamma \vdash t_1 : (\alpha_2 \rightarrow \tau) 
-        \\
-        \ \ \ \ \Delta_2.\tau_2 \in \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_2 : \alpha_2
-        \\
-        \ \ \ \ \Delta_3 \in \text{unify } \iota\ \Delta;\Delta_1;\Delta_2 \vdash 
-        \tau_1 \leq (\tau_2 \rightarrow \alpha_1)
-        \\
-        \}
-      \end{array}
-      \\
-
-      \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) : \tau_2
-      &{} =
-      \begin{array}[t]{@{} l}
-        \{ \Delta_2\ .\ \tau_2' \ |\ 
-        \\
-        \ \ \ \ \Delta_1.\tau_1' \in \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_1 : \tau_1
-        \\ 
-        \ \ \ \ \tau_1'' \in \{\tau_1'[\Delta_1]\}
-        \\ 
-        \ \ \ \ \widebar{\alpha} \in \{\text{freevars}\ \tau_1''\}
-        \\ 
-        \ \ \ \ \Delta_2.\tau_2' \in \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1''
-          \vdash t_2 : \tau_2 
-        \\
-        \} 
-      \end{array}
-      \\
-
-      \text{infer } \iota\ \Delta\ \Gamma \vdash 
-      \text{fix } t : \tau      
-      &{} =
-      \begin{array}[t]{@{} l}
-        \text{let } \alpha_1 = \text{typevar}()
-        \\
-        \text{let } \alpha_2 = \text{typevar}()
-        \\
-        \{ \Delta_1;\Delta_2\ .\ \nu\ \alpha_4 \ . \forall\ \widebar{\alpha} ::
-          \alpha_4 \leq \tau_2\ .\ \tau_3
-          \ |\ 
-        \\
-        \ \ \ \ \Delta_1.\tau_1 \in
-        \text{infer } \blacksquare\ \Delta\ \Gamma \vdash t : \tau \rightarrow \tau
-        \\
-        \ \ \ \ \Delta_2 \in \text{unify } \blacksquare\ \Delta;\Delta_1 \vdash 
-        \tau_1 \leq \alpha_1 \rightarrow \alpha_2 
-        \\
-        \ \ \ \ \tau_2 \in \{\alpha_1[\Delta;\Delta_1;\Delta_2]\}
-        \\ 
-        \ \ \ \ \tau_3 \in \{\alpha_2[\Delta;\Delta_1;\Delta_2]\} 
-        \\
-        \ \ \ \ \widebar{\alpha} \in \{ \text{freevars}\ \tau_2 \}
-        \\
-        \} 
-      \end{array}
+    \text{infer } \iota\ \Delta\ \Gamma \vdash 
+    () : \tau
+    &{} =
+    \begin{array}[t]{@{} l}
+      \{\Delta_1.\text{unit}\ |
+      \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \text{unit} \leq \tau
+      \}
     \end{array}
-  \]
-  \caption{Type inference}
-\end{figure*}
+    \\
+
+    \text{infer } \iota\ \Delta\ \Gamma \vdash 
+    x : \tau
+    &{} =
+    \begin{cases}  
+      \{\Delta_1.\tau_1\ |
+      \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau
+      \}
+      &\text{if } \Gamma(x) = \tau_1
+      \\
+      \emptyset
+      &\text{otherwise}
+    \end{cases}
+    \\
+
+    \text{infer } \iota\ \Delta\ \Gamma \vdash 
+    l ; t : \tau
+    &{} =
+    \begin{array}[t]{@{} l}
+      \text{let } \alpha = \text{typevar}() 
+      \\
+      \{\Delta_1;\Delta_2\ .\ l ; \tau_1 \ |
+      \\
+      \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash l ; \alpha \leq \tau
+      \\
+      \ \ \ \ (\Delta_2.\tau_1) \in \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t : \alpha
+      \\
+      \}
+    \end{array}
+    \\
+
+    \text{infer } \iota\ \Delta\ \Gamma \vdash 
+    \omega\ \widebar{l_i \approx t_i} : \tau
+    &{} =
+    \begin{array}[t]{@{} l}
+      \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
+      \\
+      \text{let } \tau' = \text{reduce} \wedge \widebar{l_i \sim \alpha_i}
+      \\
+      \text{reduce} * \{
+      \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_i : \alpha_i\ |\ 
+      \\
+      \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau' \leq \tau
+      \\
+      \}
+      \\
+    \end{array}
+    \\
+
+    \text{infer } \iota\ \Delta\ \Gamma \vdash 
+    \lambda\ \widebar{p_i : \tau_i \Rightarrow t_i} : \tau
+    &{} =
+    \begin{array}[t]{@{} l}
+      \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
+      \\
+      \text{let } \tau' = \text{reduce} \wedge 
+      \widebar{\tau_i \rightarrow \alpha_i }
+      \\
+      \text{reduce} * \{
+      \text{infer } \iota\ \Delta;\Delta_1;\Delta_2\ \Gamma;\Gamma_1 \vdash t_i : \alpha_i\ |\ 
+      \\
+      \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau' \leq \tau
+      \\
+      \ \ \ \ \Gamma_1 \in \{\text{patenv } p_i\}
+      \\
+      \ \ \ \ \Delta_2.\tau' \in \text{infer } \blacksquare\ \Delta;\Delta_1\ \Gamma;\Gamma_1\ \vdash p_i : \tau_i
+      \\
+      \}
+      \\
+    \end{array}
+    \\
+
+    \text{infer } \iota\ \Delta\ \Gamma \vdash 
+    t/l : \tau
+    &{} =
+    \begin{array}[t]{@{} l}
+      \text{let } \alpha = \text{typevar}()
+      \\
+      \{ \Delta_1;\Delta_2\ .\ \alpha \ |\
+      \\
+      \ \ \ \ \Delta_1.\tau_1 \in \text{infer } \iota\ \Delta\ \Gamma \vdash t : l \sim \tau 
+      \\
+      \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq l \sim \alpha
+      \\
+      \}
+    \end{array}
+    \\
+
+    \text{infer } \iota\ \Delta\ \Gamma \vdash 
+    (t_1\ t_2) : \tau
+    &{} =
+    \begin{array}[t]{@{} l}
+      \text{let } \alpha_1 = \text{typevar}()
+      \\
+      \text{let } \alpha_2 = \text{typevar}()
+      \\
+      \{ \Delta_1;\Delta_2;\Delta_3\ .\ \alpha_1 \ |\
+      \\
+      \ \ \ \ \Delta_1.\tau_1 \in \text{infer } \iota\ \Delta\ \Gamma \vdash t_1 : (\alpha_2 \rightarrow \tau) 
+      \\
+      \ \ \ \ \Delta_2.\tau_2 \in \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_2 : \alpha_2
+      \\
+      \ \ \ \ \Delta_3 \in \text{unify } \iota\ \Delta;\Delta_1;\Delta_2 \vdash 
+      \tau_1 \leq (\tau_2 \rightarrow \alpha_1)
+      \\
+      \}
+    \end{array}
+    \\
+
+    \text{infer } \iota\ \Delta\ \Gamma \vdash 
+    (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) : \tau_2
+    &{} =
+    \begin{array}[t]{@{} l}
+      \{ \Delta_2\ .\ \tau_2' \ |\ 
+      \\
+      \ \ \ \ \Delta_1.\tau_1' \in \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_1 : \tau_1
+      \\ 
+      \ \ \ \ \tau_1'' \in \{\tau_1'[\Delta_1]\}
+      \\ 
+      \ \ \ \ \widebar{\alpha} \in \{\text{freevars}\ \tau_1''\}
+      \\ 
+      \ \ \ \ \Delta_2.\tau_2' \in \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1''
+        \vdash t_2 : \tau_2 
+      \\
+      \} 
+    \end{array}
+    \\
+
+    \text{infer } \iota\ \Delta\ \Gamma \vdash 
+    \text{fix } t : \tau      
+    &{} =
+    \begin{array}[t]{@{} l}
+      \text{let } \alpha_1 = \text{typevar}()
+      \\
+      \text{let } \alpha_2 = \text{typevar}()
+      \\
+      \{ \Delta_1;\Delta_2\ .\ \nu\ \alpha_4 \ . \forall\ \widebar{\alpha} ::
+        \alpha_4 \leq \tau_2\ .\ \tau_3
+        \ |\ 
+      \\
+      \ \ \ \ \Delta_1.\tau_1 \in
+      \text{infer } \blacksquare\ \Delta\ \Gamma \vdash t : \tau \rightarrow \tau
+      \\
+      \ \ \ \ \Delta_2 \in \text{unify } \blacksquare\ \Delta;\Delta_1 \vdash 
+      \tau_1 \leq \alpha_1 \rightarrow \alpha_2 
+      \\
+      \ \ \ \ \tau_2 \in \{\alpha_1[\Delta;\Delta_1;\Delta_2]\}
+      \\ 
+      \ \ \ \ \tau_3 \in \{\alpha_2[\Delta;\Delta_1;\Delta_2]\} 
+      \\
+      \ \ \ \ \widebar{\alpha} \in \{ \text{freevars}\ \tau_2 \}
+      \\
+      \} 
+    \end{array}
+  \end{array}
+\]
 
 
 \begin{enumerate}
@@ -1546,397 +1559,372 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \subsection{Subtype unification}
 
-\begin{figure*}[h]
-  \[
-    \begin{array}{l @{} l}
+\[
+  \begin{array}{l @{} l}
 
-      \text{unify } \blacksquare\ \Delta \vdash \alpha \leq \tau	
-      &{} =
-      \begin{cases}  
-        \{ \cdot,\alpha \mapsto \nu\alpha.\tau \}
-        & \text{if } 
-        \alpha \not\in \text{dom}(\Delta) \ \wedge\
-        \alpha \in \text{freevars}(\tau[\Delta])
-        \\
-        \{ \cdot,\alpha \mapsto \tau \}
-        & \text{if } 
-        \alpha \not\in \text{dom}(\Delta) \ \wedge\
-        \alpha \notin \text{freevars}(\tau[\Delta])
-        \\
-        \text{unify } \blacksquare\ \Delta \vdash \tau_1 \leq \tau
-        &\text{if }
-        \Delta(\alpha) = \tau_1
-      \end{cases}
+    \text{unify } \blacksquare\ \Delta \vdash \alpha \leq \tau	
+    &{} =
+    \begin{cases}  
+      \{ \cdot,\alpha \mapsto \nu\alpha.\tau \}
+      & \text{if } 
+      \alpha \not\in \text{dom}(\Delta) \ \wedge\
+      \alpha \in \text{freevars}(\tau[\Delta])
       \\
+      \{ \cdot,\alpha \mapsto \tau \}
+      & \text{if } 
+      \alpha \not\in \text{dom}(\Delta) \ \wedge\
+      \alpha \notin \text{freevars}(\tau[\Delta])
+      \\
+      \text{unify } \blacksquare\ \Delta \vdash \tau_1 \leq \tau
+      &\text{if }
+      \Delta(\alpha) = \tau_1
+    \end{cases}
+    \\
 
-      \text{unify } \square\ \Delta \vdash \alpha \leq \tau	
-      &{} =
-      \begin{cases}  
-        \{ \cdot,\alpha \mapsto (\nu\alpha.\tau \wedge \beta) \}
-        & \text{if } 
-        \alpha \not\in \text{dom}(\Delta) \ \wedge\
-        \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
-        \text{fresh } \beta
-        \\
-        \{ \cdot,\alpha \mapsto \tau \wedge \beta \}
-        & \text{if } 
-        \alpha \not\in \text{dom}(\Delta) \ \wedge\
-        \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
-        \text{fresh } \beta
-        \\
-        \text{unify } \square\ \Delta \vdash \tau_1 \leq \tau
-        &\text{if }
-        \Delta(\alpha) = \tau
-      \end{cases}
+    \text{unify } \square\ \Delta \vdash \alpha \leq \tau	
+    &{} =
+    \begin{cases}  
+      \{ \cdot,\alpha \mapsto (\nu\alpha.\tau \wedge \beta) \}
+      & \text{if } 
+      \alpha \not\in \text{dom}(\Delta) \ \wedge\
+      \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
+      \text{fresh } \beta
       \\
-      \text{unify } \blacksquare\ \Delta \vdash \tau \leq \alpha 	
-      &{} =
-      \begin{cases}  
-        \{ \cdot,\alpha \mapsto \mu\alpha.\tau \}
-        & \text{if } 
-        \alpha \not\in \text{dom}(\Delta) \ \wedge\
-        \alpha \in \text{freevars}(\tau[\Delta])
-        \\
-        \{ \cdot,\alpha \mapsto \tau \}
-        & \text{if } 
-        \alpha \not\in \text{dom}(\Delta) \ \wedge\
-        \alpha \notin \text{freevars}(\tau[\Delta])
-        \\
-        \text{unify } \blacksquare\ \Delta \vdash \tau \leq \tau_1
-        &\text{if }
-        \Delta(\alpha) = \tau_1
-      \end{cases}
+      \{ \cdot,\alpha \mapsto \tau \wedge \beta \}
+      & \text{if } 
+      \alpha \not\in \text{dom}(\Delta) \ \wedge\
+      \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
+      \text{fresh } \beta
       \\
-      \text{unify } \square\ \Delta \vdash \tau \leq \alpha	
-      &{} =
-      \begin{cases}  
-        \{ \cdot,\alpha \mapsto (\mu\alpha.\tau \vee \beta) \}
-        & \text{if } 
-        \alpha \not\in \text{dom}(\Delta) \ \wedge\
-        \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
-        \text{fresh } \beta
-        \\
-        \{ \cdot,\alpha \mapsto \tau \vee \beta \}
-        & \text{if } 
-        \alpha \not\in \text{dom}(\Delta) \ \wedge\
-        \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
-        \text{fresh } \beta
-        \\
-        \text{unify } \square\ \Delta \vdash \tau \leq \tau_1
-        &\text{if }
-        \Delta(\alpha) = \tau
-      \end{cases}
+      \text{unify } \square\ \Delta \vdash \tau_1 \leq \tau
+      &\text{if }
+      \Delta(\alpha) = \tau
+    \end{cases}
+    \\
+    \text{unify } \blacksquare\ \Delta \vdash \tau \leq \alpha 	
+    &{} =
+    \begin{cases}  
+      \{ \cdot,\alpha \mapsto \mu\alpha.\tau \}
+      & \text{if } 
+      \alpha \not\in \text{dom}(\Delta) \ \wedge\
+      \alpha \in \text{freevars}(\tau[\Delta])
       \\
-      \text{unify } \iota\ \Delta \vdash
-      (\exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3)
-      \leq 
-      \tau_4
-      &{} = 
-      \begin{array}[t]{@{} l}
-        \text{let } \tau_1, \tau_2, \tau_3 = 
-        \text{refresh } \widebar{\alpha_i}\ \tau_1,\ 
-        \text{refresh } \widebar{\alpha_i}\ \tau_2,\ 
-        \text{refresh } \widebar{\alpha_i}\ \tau_3
-        \\
-        \text{let } \Delta_1 = \text{reduce}\ , \widebar{\alpha_i \mapsto \top}
-        \\
-        \{\Delta_1;\Delta_2;\Delta_3\ |
-        \\ 
-        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
-        \\
-        \ \ \ \ \Delta_3 \in \text{unify } \iota\ \Delta;\Delta_1;\Delta_2 \vdash \tau_3 \leq \tau_4
-        \\
-        \}
-      \end{array}
+      \{ \cdot,\alpha \mapsto \tau \}
+      & \text{if } 
+      \alpha \not\in \text{dom}(\Delta) \ \wedge\
+      \alpha \notin \text{freevars}(\tau[\Delta])
       \\
-      \text{unify } \iota\ \Delta \vdash
-      \tau_1
-      \leq 
-      (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-      &{} = 
-      \begin{array}[t]{@{} l}
-        \text{let } \tau_2, \tau_3, \tau_4 = 
-        \text{refresh } \widebar{\alpha}\ \tau_2,\ 
-        \text{refresh } \widebar{\alpha}\ \tau_3,\ 
-        \text{refresh } \widebar{\alpha}\ \tau_4
-        \\
-        \{\Delta_1;\Delta_2\ |
-        \\ 
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_4
-        \\
-        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_2 \leq \tau_3
-        \\
-        \}
-      \end{array}
+      \text{unify } \blacksquare\ \Delta \vdash \tau \leq \tau_1
+      &\text{if }
+      \Delta(\alpha) = \tau_1
+    \end{cases}
+    \\
+    \text{unify } \square\ \Delta \vdash \tau \leq \alpha	
+    &{} =
+    \begin{cases}  
+      \{ \cdot,\alpha \mapsto (\mu\alpha.\tau \vee \beta) \}
+      & \text{if } 
+      \alpha \not\in \text{dom}(\Delta) \ \wedge\
+      \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
+      \text{fresh } \beta
       \\
-      \text{unify } \iota\ \Delta \vdash
-      \tau_1
-      \leq 
-      (\forall \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-      &{} = 
-      \begin{array}[t]{@{} l}
-        \text{let } \tau_2, \tau_3, \tau_4 = 
-        \text{refresh } \widebar{\alpha_i}\ \tau_2,\ 
-        \text{refresh } \widebar{\alpha_i}\ \tau_3,\ 
-        \text{refresh } \widebar{\alpha_i}\ \tau_4
-        \\
-        \text{let } \Delta_1 = \text{reduce}\ , \widebar{\alpha_i \mapsto \bot}
-        \\
-        \{\Delta_1;\Delta_2;\Delta_3\ |
-        \\ 
-        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta \vdash \tau_2 \leq \tau_3
-        \\
-        \ \ \ \ \Delta_3 \in \text{unify } \iota\ \Delta;\Delta_1;\Delta_2 \vdash \tau_1 \leq \tau_4
-        \\ 
-        \}
-      \end{array}
+      \{ \cdot,\alpha \mapsto \tau \vee \beta \}
+      & \text{if } 
+      \alpha \not\in \text{dom}(\Delta) \ \wedge\
+      \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
+      \text{fresh } \beta
       \\
-      \text{unify } \iota\ \Delta \vdash
-      (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
-      \leq 
-      \tau_4
-      &{} = 
-      \begin{array}[t]{@{} l}
-        \text{let } \tau_1, \tau_2, \tau_3 = 
-        \text{refresh } \widebar{\alpha}\ \tau_1,\ 
-        \text{refresh } \widebar{\alpha}\ \tau_2,\ 
-        \text{refresh } \widebar{\alpha}\ \tau_3
-        \\
-        \{\Delta_1;\Delta_2\ |
-        \\ 
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_4
-        \\
-        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2
-        \\
-        \}
-      \end{array}
-
+      \text{unify } \square\ \Delta \vdash \tau \leq \tau_1
+      &\text{if }
+      \Delta(\alpha) = \tau
+    \end{cases}
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    (\exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+    \leq 
+    \tau_4
+    &{} = 
+    \begin{array}[t]{@{} l}
+      \text{let } \tau_1, \tau_2, \tau_3 = 
+      \text{refresh } \widebar{\alpha_i}\ \tau_1,\ 
+      \text{refresh } \widebar{\alpha_i}\ \tau_2,\ 
+      \text{refresh } \widebar{\alpha_i}\ \tau_3
+      \\
+      \text{let } \Delta_1 = \text{reduce}\ , \widebar{\alpha_i \mapsto \top}
+      \\
+      \{\Delta_1;\Delta_2;\Delta_3\ |
+      \\ 
+      \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+      \\
+      \ \ \ \ \Delta_3 \in \text{unify } \iota\ \Delta;\Delta_1;\Delta_2 \vdash \tau_3 \leq \tau_4
+      \\
+      \}
     \end{array}
-  \]
-  \caption{Subtype unification: part 1}
-\end{figure*}
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    \tau_1
+    \leq 
+    (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+    &{} = 
+    \begin{array}[t]{@{} l}
+      \text{let } \tau_2, \tau_3, \tau_4 = 
+      \text{refresh } \widebar{\alpha}\ \tau_2,\ 
+      \text{refresh } \widebar{\alpha}\ \tau_3,\ 
+      \text{refresh } \widebar{\alpha}\ \tau_4
+      \\
+      \{\Delta_1;\Delta_2\ |
+      \\ 
+      \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_4
+      \\
+      \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_2 \leq \tau_3
+      \\
+      \}
+    \end{array}
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    \tau_1
+    \leq 
+    (\forall \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
+    &{} = 
+    \begin{array}[t]{@{} l}
+      \text{let } \tau_2, \tau_3, \tau_4 = 
+      \text{refresh } \widebar{\alpha_i}\ \tau_2,\ 
+      \text{refresh } \widebar{\alpha_i}\ \tau_3,\ 
+      \text{refresh } \widebar{\alpha_i}\ \tau_4
+      \\
+      \text{let } \Delta_1 = \text{reduce}\ , \widebar{\alpha_i \mapsto \bot}
+      \\
+      \{\Delta_1;\Delta_2;\Delta_3\ |
+      \\ 
+      \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta \vdash \tau_2 \leq \tau_3
+      \\
+      \ \ \ \ \Delta_3 \in \text{unify } \iota\ \Delta;\Delta_1;\Delta_2 \vdash \tau_1 \leq \tau_4
+      \\ 
+      \}
+    \end{array}
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
+    \leq 
+    \tau_4
+    &{} = 
+    \begin{array}[t]{@{} l}
+      \text{let } \tau_1, \tau_2, \tau_3 = 
+      \text{refresh } \widebar{\alpha}\ \tau_1,\ 
+      \text{refresh } \widebar{\alpha}\ \tau_2,\ 
+      \text{refresh } \widebar{\alpha}\ \tau_3
+      \\
+      \{\Delta_1;\Delta_2\ |
+      \\ 
+      \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_4
+      \\
+      \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2
+      \\
+      \}
+    \end{array}
 
-\begin{figure*}[h]
-  \[
-    \begin{array}{l @{} l}
-      \text{unify } \iota\ \Delta \vdash \bot \leq \_	
-      &{} = 
-      \{\cdot\}
-      \\
-      \text{unify } \iota\ \Delta \vdash \_ \leq \top	
-      &{} = 
-      \{\cdot\}
-      \\
-      \text{unify } \iota\ \Delta \vdash \text{unit}  \leq \text{unit}	
-      &{} = 
-      \{\cdot\}
-      \\
-      \text{unify } \iota\ \Delta \vdash l*\tau_1 \leq l*\tau_2	
-      &{} = 
-      \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
-      \\
-      \text{unify } \iota\ \Delta \vdash l\sim\tau_1 \leq l\sim\tau_2	
-      &{} = 
-      \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
-      \\
-      \text{unify } \iota\ \Delta \vdash \tau_1\rightarrow\tau_2 \leq \tau_3\rightarrow\tau_4	
-      &{} = 
-      \begin{array}[t]{@{} l}
-        \{\Delta_1;\Delta_2\ |
-        \\ 
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_1
-        \\
-        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_4 \leq \tau_2
-        \\
-        \}
-      \end{array}
-      \\
-      \text{unify } \iota\ \Delta \vdash
-      \mu \alpha . \tau_1 \leq \mu \alpha . \tau_2
-      &{} = 
-      \Delta \vdash 
-      \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] \leq 
-      \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
+  \end{array}
+\]
 
+\[
+  \begin{array}{l @{} l}
+    \text{unify } \iota\ \Delta \vdash \bot \leq \_	
+    &{} = 
+    \{\cdot\}
+    \\
+    \text{unify } \iota\ \Delta \vdash \_ \leq \top	
+    &{} = 
+    \{\cdot\}
+    \\
+    \text{unify } \iota\ \Delta \vdash \text{unit}  \leq \text{unit}	
+    &{} = 
+    \{\cdot\}
+    \\
+    \text{unify } \iota\ \Delta \vdash l*\tau_1 \leq l*\tau_2	
+    &{} = 
+    \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+    \\
+    \text{unify } \iota\ \Delta \vdash l\sim\tau_1 \leq l\sim\tau_2	
+    &{} = 
+    \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+    \\
+    \text{unify } \iota\ \Delta \vdash \tau_1\rightarrow\tau_2 \leq \tau_3\rightarrow\tau_4	
+    &{} = 
+    \begin{array}[t]{@{} l}
+      \{\Delta_1;\Delta_2\ |
+      \\ 
+      \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_1
       \\
-      \text{unify } \iota\ \Delta \vdash
-      \tau_1 \leq \mu \alpha . \tau_2
-      &{} = 
-      \begin{cases}  
-        \text{unify } \iota\ \Delta \vdash 
-        \tau_1 \leq \tau_2[\alpha\mapsto\mu\alpha.\tau_2]	
-        &\text{if }
-        \text{unrollform } \Delta \vdash \tau_1
-        \\
-        \emptyset
-        &\text{otherwise}
-      \end{cases}
+      \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_4 \leq \tau_2
+      \\
+      \}
+    \end{array}
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    \mu \alpha . \tau_1 \leq \mu \alpha . \tau_2
+    &{} = 
+    \Delta \vdash 
+    \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] \leq 
+    \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
 
-      \\
-      \text{unify } \iota\ \Delta \vdash
-      \nu \alpha_1 . \tau_1 \leq 
-      \nu \alpha_2 . \tau_2	
-      &{} = 
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    \tau_1 \leq \mu \alpha . \tau_2
+    &{} = 
+    \begin{cases}  
       \text{unify } \iota\ \Delta \vdash 
-      \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] \leq 
-      \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
-
+      \tau_1 \leq \tau_2[\alpha\mapsto\mu\alpha.\tau_2]	
+      &\text{if }
+      \text{unrollform } \Delta \vdash \tau_1
       \\
+      \emptyset
+      &\text{otherwise}
+    \end{cases}
+
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    \nu \alpha_1 . \tau_1 \leq 
+    \nu \alpha_2 . \tau_2	
+    &{} = 
+    \text{unify } \iota\ \Delta \vdash 
+    \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] \leq 
+    \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    \nu \alpha . \tau_1 \leq 
+    \tau_2 \rightarrow \tau_3
+    &{} = 
+    \begin{cases}
       \text{unify } \iota\ \Delta \vdash
-      \nu \alpha . \tau_1 \leq 
+      \tau_1[\alpha\mapsto\nu\alpha.\tau_1]
+      \leq 
       \tau_2 \rightarrow \tau_3
-      &{} = 
-      \begin{cases}
-        \text{unify } \iota\ \Delta \vdash
-        \tau_1[\alpha\mapsto\nu\alpha.\tau_1]
-        \leq 
-        \tau_2 \rightarrow \tau_3
-        &\text{if }
-        \text{unrollform } \Delta \vdash \tau_2
-        \\
-        \text{unify } \iota\ \Delta \vdash
-        \tau_1[\alpha\mapsto\nu\alpha.\tau_1]
-        \leq 
-        \tau_2 \rightarrow \tau_3
-        &\text{if }
-        \text{unrollform } \Delta \vdash \tau_3
-        \\
-        \text{unify } \iota\ \Delta \vdash
-        (\text{rw\_func\_type}\ \nu\alpha.\tau_1)
-        \leq 
-        \tau_2 \rightarrow \tau_3
-        &\text{otherwise }
-      \end{cases}
-
+      &\text{if }
+      \text{unrollform } \Delta \vdash \tau_2
       \\
       \text{unify } \iota\ \Delta \vdash
-      \tau_1 \vee \tau_2 \leq \tau_3
-      &{} = 
-      \begin{array}[t]{@{} l}
-        \{\Delta_1;\Delta_2\ |
-        \\ 
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3
-        \\
-        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_2 \leq \tau_3
-        \\
-        \}
-      \end{array}
-
+      \tau_1[\alpha\mapsto\nu\alpha.\tau_1]
+      \leq 
+      \tau_2 \rightarrow \tau_3
+      &\text{if }
+      \text{unrollform } \Delta \vdash \tau_3
       \\
       \text{unify } \iota\ \Delta \vdash
-      \tau_1 \leq \tau_2 \vee \tau_3
-      &{} = 
-      (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2)
-      \cup
-      (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3)
+      (\text{rw\_func\_type}\ \nu\alpha.\tau_1)
+      \leq 
+      \tau_2 \rightarrow \tau_3
+      &\text{otherwise }
+    \end{cases}
 
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    \tau_1 \vee \tau_2 \leq \tau_3
+    &{} = 
+    \begin{array}[t]{@{} l}
+      \{\Delta_1;\Delta_2\ |
+      \\ 
+      \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3
       \\
-      \text{unify } \iota\ \Delta \vdash
-      \tau_1 \leq \tau_2 \wedge \tau_3
-      &{} = 
-      \begin{array}[t]{@{} l}
-        \{\Delta_1;\Delta_2\ |
-        \\ 
-        \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
-        \\
-        \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq \tau_3
-        \\
-        \}
-      \end{array}
-
+      \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_2 \leq \tau_3
       \\
-      \text{unify } \iota\ \Delta \vdash
-      \tau_1 \wedge \tau_2 \leq \tau_3
-      &{} = 
-      (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3)
-      \cup
-      (\text{unify } \iota\ \Delta \vdash \tau_2 \leq \tau_3)
-
+      \}
     \end{array}
-  \]
-  \caption{Subtype unification: part 2}
-\end{figure*}
+
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    \tau_1 \leq \tau_2 \vee \tau_3
+    &{} = 
+    (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2)
+    \cup
+    (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3)
+
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    \tau_1 \leq \tau_2 \wedge \tau_3
+    &{} = 
+    \begin{array}[t]{@{} l}
+      \{\Delta_1;\Delta_2\ |
+      \\ 
+      \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
+      \\
+      \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq \tau_3
+      \\
+      \}
+    \end{array}
+
+    \\
+    \text{unify } \iota\ \Delta \vdash
+    \tau_1 \wedge \tau_2 \leq \tau_3
+    &{} = 
+    (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3)
+    \cup
+    (\text{unify } \iota\ \Delta \vdash \tau_2 \leq \tau_3)
+
+  \end{array}
+\]
 
 \begin{enumerate}
   \item definition 
   \item lemmas and proofs 
 \end{enumerate}
 
-\begin{figure*}[h]
-  \[
-    \begin{array}{l @{} l}
-    \Delta\ ;\ \cdot
-    &\ = \Delta 
-    \\
-    \Delta_1;(\Delta_2,\alpha \mapsto \tau) 
-    &\ = (\Delta_1;\Delta_2),\alpha \mapsto \tau
-    \end{array}
-  \]
+\[
+  \begin{array}{l @{} l}
+  \Delta\ ;\ \cdot
+  &\ = \Delta 
+  \\
+  \Delta_1;(\Delta_2,\alpha \mapsto \tau) 
+  &\ = (\Delta_1;\Delta_2),\alpha \mapsto \tau
+  \end{array}
+\]
 
-  \caption{Appending of environments}
-\end{figure*}
 
-\begin{figure*}[h]
-  \[
-    \begin{array}{l @{} l}
-    M_1 * M_2 
+\[
+  \begin{array}{l @{} l}
+  M_1 * M_2 
+  &\ = 
+  [\Delta_1 ; \Delta_2 \ |\ 
+    \Delta_1 \in M_1
+    \ \ \  
+    \Delta_2 \in M_2
+  ]
+  \end{array}
+\]
+
+\[
+  \begin{array}{l @{} l}
+  \text{reduce} \wedge [] 
+  &\ = \top
+  \\
+  \text{reduce} \wedge \tau::\widebar{\tau}
+  &\ = \tau\ \wedge (\text{reduce} \wedge \widebar{\tau})
+  \end{array}
+\]
+
+\[
+  \begin{array}{l @{} l}
+    N_1 * N_2
     &\ = 
-    [\Delta_1 ; \Delta_2 \ |\ 
-      \Delta_1 \in M_1
-      \ \ \  
-      \Delta_2 \in M_2
-    ]
+    \begin{array}[t]{l}
+      [ \Delta_1 ; \Delta_2 . \tau_1 \wedge \tau_2 \ |\ 
+        \Delta_1.\tau_1 \in N_1
+        \ \ 
+        \Delta_2.\tau_2 \in N_2
+      ]
     \end{array}
-  \]
+  \end{array}
+\]
 
-  \caption{Product of lists environments}
-\end{figure*}
-
-\begin{figure*}[h]
-  \[
-    \begin{array}{l @{} l}
-    \text{reduce} \wedge [] 
-    &\ = \top
-    \\
-    \text{reduce} \wedge \tau::\widebar{\tau}
-    &\ = \tau\ \wedge (\text{reduce} \wedge \widebar{\tau})
-    \end{array}
-  \]
-
-  \caption{Reduction of types}
-\end{figure*}
-
-\begin{figure*}[h]
-  \[
-    \begin{array}{l @{} l}
-      N_1 * N_2
-      &\ = 
-      \begin{array}[t]{l}
-        [ \Delta_1 ; \Delta_2 . \tau_1 \wedge \tau_2 \ |\ 
-          \Delta_1.\tau_1 \in N_1
-          \ \ 
-          \Delta_2.\tau_2 \in N_2
-        ]
-      \end{array}
-    \end{array}
-  \]
-
-  \caption{Product of lists of contextual types}
-\end{figure*}
-
-\begin{figure*}[h]
-  \[
-    \begin{array}{l @{}l}
-    \text{reduce} * \{N\}
-    & {}= N
-    \\
-    \text{reduce} * \widebar{N_i}
-    & {}= N_j * (\text{reduce} * \widebar{N_i}\setminus\{N_j\})
-    \end{array}
-  \]
-
-  \caption{Reduction of sets of contextual types}
-\end{figure*}
+\[
+  \begin{array}{l @{}l}
+  \text{reduce} * \{N\}
+  & {}= N
+  \\
+  \text{reduce} * \widebar{N_i}
+  & {}= N_j * (\text{reduce} * \widebar{N_i}\setminus\{N_j\})
+  \end{array}
+\]
 
 
 
