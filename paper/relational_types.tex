@@ -1156,76 +1156,60 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 \end{mathpar}
 
-
 \subsection{Subtyping}
 
 \begin{mathpar}
-  \inferrule[refl] {
+  \inferrule {
   } {
-      \Delta \vdash \tau \leq \tau
+      \tau \in \left< \Delta \Vdash \tau \right>
   }
 
-  \inferrule[bottom] {
+  \inferrule {
   } {
-    \Delta \vdash \bot \leq \tau
+    \tau \in \left< \Delta \Vdash \bot \right>
   }
 
-  \inferrule[top] {
+  \inferrule {
   } {
-    \Delta \vdash \tau \leq \top
-  } 
-  \\\\
-
-  \inferrule[tag] {
-    \Delta \vdash \tau_1 \leq \tau_2
-  } {
-    \Delta \vdash 
-      l*\tau_1 \leq l*\tau_2
+    \top \in \left< \Delta \Vdash \tau \right>
   } 
 
-  \inferrule[field] {
-    \Delta \vdash 
-      \tau_1 \leq \tau_2
+  \inferrule {
+    \tau_2 \in \left< \Delta \Vdash \tau_1 \right>
   } {
-    \Delta \vdash 
-      l\sim\tau_1 \leq l\sim\tau_2
+    l*\tau_2 \in \left< \Delta \Vdash l*\tau_1 \right>
   } 
 
-  \inferrule[case] {
-    \Delta \vdash \tau_3 \leq \tau_1 
+  \inferrule {
+     \leq \tau_2 \in \left< \Delta \Vdash \tau_1 \right>
+  } {
+    l\sim\tau_2 \in \left< \Delta \vdash l\sim\tau_1 \right>
+  } 
+
+  \inferrule {
+    \tau_1 \in \left< \Delta \Vdash \tau_3 \right>
     \\
-    \Delta \vdash 
-      \tau_2 \leq \tau_4
+    \tau_4 \in \left< \Delta \Vdash \tau_2 \right>
   } {
-    \Delta \vdash 
-      \tau_1 \rightarrow \tau_2 \leq \tau_3 \rightarrow \tau_4
+    \tau_3 \rightarrow \tau_4 \in \left< \Delta \Vdash \tau_1 \rightarrow \tau_2 \right>
   } 
 
-  \\\\
-
-  \inferrule[exis-lhs] { 
-    \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2
-    \\
-    \forall \Delta_1'\ .\ \Delta_1' < \Delta_1 \longrightarrow \Delta;\Delta_1' \not\vdash \tau_1 \leq \tau_2
-    \\
-    \Delta;\Delta_1 \vdash \tau_3 \leq \tau_4
+  \inferrule { 
+    \text{freevars}(\Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
-    \Delta;\Delta_2 \vdash \tau_1 \leq \tau_2
-    \\
-    \forall \Delta_2'\ .\ \Delta_2 < \Delta_2' \longrightarrow \Delta;\Delta_2' \not\vdash \tau_1 \leq \tau_2
-    \\
-    \Delta;\Delta_2 \vdash \tau_3 \leq \tau_4
-    \\\\
-    \text{freevars } \Delta \cap \widebar{\alpha_i} = \emptyset 
-    \\
-    \text{dom}(\Delta_1) \subseteq \widebar{\alpha_i}
-    \\
-    \text{dom}(\Delta_2) \subseteq \widebar{\alpha_i}
+    \forall\ \Delta'\ .\
+    \tau_2
+    \in
+    \left< \Delta;\Delta' \Vdash \tau_1 \right>
+    \Longrightarrow
+    \tau_4 \in
+    \left< \Delta;\Delta' \Vdash \tau_3 \right>
   } { 
-    \Delta \vdash 
-      (\exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3)
-      \leq 
-      \tau_4
+    \tau_4
+    \in
+    \left<
+    \Delta \Vdash \exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3
+    \right>
   }
 
   \inferrule[exis-rhs] { 
