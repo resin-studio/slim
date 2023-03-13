@@ -923,6 +923,25 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \tau \wedge \tau
     \end{array}
     \\
+    v 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      () 
+      \ |\ 
+      l;v
+      \ |\ 
+      \omega\ \widebar{l \approx v}
+      \ |\ 
+      \lambda\ \widebar{p : \tau \Rightarrow t} 
+    \end{array}
+  \end{array}
+\]
+
+
+\subsection{operational semantics}
+
+\[
+  \begin{array}{l @{} l}
     E 
     &{} ::=
     []
@@ -940,25 +959,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{let } x : \tau = E\ \text{in } t
     \ |\ 
     \text{fix } E 
-    \\
-    v 
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      () 
-      \ |\ 
-      l;v
-      \ |\ 
-      \omega\ \widebar{l \approx v}
-      \ |\ 
-      \lambda\ \widebar{p : \tau \Rightarrow t} 
-    \end{array}
   \end{array}
 \]
 
-
-\subsection{Operational semantics}
 \begin{mathpar}
-
   \inferrule[PopPush] { 
     t \longrightarrow t' 
   } {
@@ -984,13 +988,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     t[x \mapsto v]
   } 
 
+
+
   \inferrule[Fix] { 
   } {
     \text{fix}\ \lambda [x:\tau \Rightarrow t]
     \longrightarrow 
     t[x \mapsto \text{fix}\ \lambda [x:\tau \Rightarrow t]]
   } 
-
+ 
   \inferrule { 
     e \longrightarrow e' 
   } {
@@ -1042,22 +1048,42 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \end{array}
 \]
 
-\subsection{Standard collecting semantics}
+\subsection{Soundness}
 \begin{mathpar}
+
+  % progress 
   \inferrule { 
-    e \longrightarrow^* v 
+    v \in \left< \Downarrow e \right> 
   } {
-    v \in \left< \Downarrow e \right>
+    e = v \vee e \longrightarrow e'
   } 
 
+  % preservation
   \inferrule { 
-    e \not\longrightarrow^* v 
+    v \in \left< \Downarrow e \right>
+    \\
+    e \longrightarrow e'
   } {
-    \_ \in \left< \Downarrow e \right>
+    v \in \left< \Downarrow e' \right>
   } 
+
+
+  % TODO: does collecting semantics require an environment for variables?
+  % is substitution enough? or is environment needed for soundness?
+  % concretizing version 
+  % prove that concretize meets some property related to \sqsubseteq
+  \\\\
+
+  \inferrule { 
+  } {
+    \left< \Downarrow e \right>
+    \subseteq 
+    \text{concretize}(\left< \Vdash e \right>)
+  } 
+
 \end{mathpar}
 
-
+% TODO: write collecting semantics with WRONG value
 \subsection{Type collecting semantics}
 \begin{mathpar}
   \inferrule { 
@@ -1088,11 +1114,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 
 \begin{mathpar}
-  \inferrule { 
-  } {
-    \bot \in \left< \Gamma \vdash \_ \right>
-  } 
-
   \inferrule { 
   } {
     \text{unit} \in \left< \Gamma \vdash () \right>
