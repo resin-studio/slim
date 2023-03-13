@@ -996,13 +996,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \longrightarrow 
     t[x \mapsto \text{fix}\ \lambda [x:\tau \Rightarrow t]]
   } 
- 
-  \inferrule { 
-    e \longrightarrow e' 
-  } {
-    e \longrightarrow^* e'
-  } 
 
+  \\\\
+
+  \inferrule { 
+  } {
+    e \longrightarrow^* e
+  } 
+ 
   \inferrule { 
     e \longrightarrow e' 
     \\
@@ -1048,42 +1049,16 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \end{array}
 \]
 
-\subsection{Soundness}
+\subsection{Standard collecting semantics}
 \begin{mathpar}
-
-  % progress 
   \inferrule { 
+    e \longrightarrow^* v
+  } {
     v \in \left< \Downarrow e \right> 
-  } {
-    e = v \vee e \longrightarrow e'
   } 
-
-  % preservation
-  \inferrule { 
-    v \in \left< \Downarrow e \right>
-    \\
-    e \longrightarrow e'
-  } {
-    v \in \left< \Downarrow e' \right>
-  } 
-
-
-  % TODO: does collecting semantics require an environment for variables?
-  % is substitution enough? or is environment needed for soundness?
-  % concretizing version 
-  % prove that concretize meets some property related to \sqsubseteq
-  \\\\
-
-  \inferrule { 
-  } {
-    \left< \Downarrow e \right>
-    \subseteq 
-    \text{concretize}(\left< \Vdash e \right>)
-  } 
-
 \end{mathpar}
 
-% TODO: write collecting semantics with WRONG value
+
 \subsection{Type collecting semantics}
 \begin{mathpar}
   \inferrule { 
@@ -1205,6 +1180,49 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \tau \in \left< \Gamma \vdash t \right> 
   } 
 \end{mathpar}
+
+\subsection{Soundness lemmas}
+\begin{mathpar}
+
+  \inferrule { 
+    (\Gamma, \tau) \in \left< \Vdash e \right>
+    \\
+    v \in \text{concretize}(\Gamma, \tau)
+  } {
+    (\Gamma, \tau) \in \left< \Vdash v \right>
+  } 
+
+  \inferrule { 
+  } {
+    \left< \Downarrow e \right>
+    \subseteq 
+    \text{concretize}(\left< \Vdash e \right>)
+  } 
+
+\end{mathpar}
+
+\subsection{Soundness}
+\begin{mathpar}
+
+  % progress 
+  \inferrule { 
+    (\Gamma, \tau) \in \left< \Vdash e \right> 
+  } {
+    e = v \vee e \longrightarrow e'
+  } 
+
+  % preservation 
+  \inferrule { 
+    (\Gamma, \tau) \in \left< \Vdash e \right>
+    \\
+    e \longrightarrow e'
+  } {
+    (\Gamma, \tau) \in \left< \Vdash e' \right>
+  } 
+
+\end{mathpar}
+
+
 
 \subsection{Subtype collecting semantics}
 
