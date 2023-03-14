@@ -964,27 +964,27 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{mathpar}
   \inferrule[PopPush] { 
-    t \longrightarrow t' 
+    t \leadsto t' 
   } {
-    E[t] \longrightarrow E[t']  
+    E[t] \leadsto E[t']  
   }
 
   \inferrule[Proj] {
   } {
-    (\omega\ \widebar{l_i \approx v_i})/l_j \longrightarrow v_j
+    (\omega\ \widebar{l_i \approx v_i})/l_j \leadsto v_j
   } 
 
   \inferrule[App] { 
   } {
     (\lambda\ \widebar{p : \tau \Rightarrow t})\ v 
-    \longrightarrow 
+    \leadsto 
     (\text{match } v\ \widebar{p : \tau \Rightarrow t})
   } 
 
   \inferrule[Let] { 
   } {
     \text{let}\ x : \tau = v \text{ in } t
-    \longrightarrow 
+    \leadsto 
     t[x \mapsto v]
   } 
 
@@ -993,7 +993,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule[Fix] { 
   } {
     \text{fix}\ \lambda [x:\tau \Rightarrow t]
-    \longrightarrow 
+    \leadsto 
     t[x \mapsto \text{fix}\ \lambda [x:\tau \Rightarrow t]]
   } 
 
@@ -1001,15 +1001,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   \inferrule { 
   } {
-    e \longrightarrow^* e
+    e \leadsto^* e
   } 
  
   \inferrule { 
-    e \longrightarrow e' 
+    e \leadsto e' 
     \\
-    e' \longrightarrow^* e''
+    e' \leadsto^* e''
   } {
-    e \longrightarrow^* e''
+    e \leadsto^* e''
   } 
 
 \end{mathpar}
@@ -1052,7 +1052,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \subsection{Standard collecting semantics}
 \begin{mathpar}
   \inferrule { 
-    \forall e'\ .\ e \longrightarrow^* e' \Longrightarrow (e' = v \vee e' \longrightarrow e'') 
+    \forall e'\ .\ e \leadsto^* e' \longrightarrow (e' = v \vee e' \leadsto e'') 
   } {
     e \in \llbracket e \rrbracket
   } 
@@ -1066,14 +1066,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     e \in \llbracket e \rrbracket
   } {
-    e = v \vee e \longrightarrow e'
+    e = v \vee e \leadsto e'
   } 
 
   % preservation 
   \inferrule { 
     e \in \llbracket e \rrbracket 
     \\
-    e \longrightarrow e'
+    e \leadsto e'
   } {
     e' \in \llbracket e' \rrbracket
   } 
@@ -1223,14 +1223,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \tau \in \left< \cdot \vdash e \right> 
   } {
-    e = v \vee e \longrightarrow e'
+    e = v \vee e \leadsto e'
   } 
 
   % preservation 
   \inferrule { 
     \tau \in \left< \cdot \vdash e \right>
     \\
-    e \longrightarrow e'
+    e \leadsto e'
   } {
     \tau \in \left< \cdot \vdash e' \right> 
   } 
@@ -1279,7 +1279,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \tau_2
     \in
     \left< \Delta;\Delta' \Vdash \tau_1 \right>
-    \Longrightarrow
+    \longrightarrow
     \tau_4 \in
     \left< \Delta;\Delta' \Vdash \tau_3 \right>
   } { 
@@ -1313,7 +1313,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \tau_3
     \in
     \left< \Delta;\Delta' \Vdash \tau_2 \right>
-    \Longrightarrow
+    \longrightarrow
     \tau_4 \in
     \left< \Delta;\Delta' \Vdash \tau_1 \right>
   } { 
