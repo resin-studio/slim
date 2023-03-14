@@ -1239,6 +1239,18 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   %% TODO: consider how widening would affect definition of typing.
   %% completed type would correspond with value, not partial expression.
   %% partial expressions do not have smaller type than resulting value.
+  % thoughts on abstract interpretation
+    % where it's just over-engineering
+      % for natural deduction, concretizing is only needed for soundness proof.
+      % abstract interpretation just seems like over engineering for natural deduction systems
+      % definition abstraction is the same as defining a big-step static semantics 
+      % defining concretizing and proving a galois connection
+        % is in effect the same as proving soundness 
+    % where it's valuable
+      % for transition systems that widen/narrow with each step,
+        % concretizing enables leveraging transitions of the dynamic semantics
+      % therefore enables method for construction of small-step static semantics 
+
   \inferrule { 
   } {
     \left< \cdot \vdash e \right> \leq \tau
