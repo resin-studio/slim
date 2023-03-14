@@ -1052,14 +1052,36 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \subsection{Standard collecting semantics}
 \begin{mathpar}
   \inferrule { 
-    e \longrightarrow^* v
+    \forall e'\ .\ e[\rho] \longrightarrow^* e' \Longrightarrow (e' = v \vee e' \longrightarrow e'') 
   } {
-    v \in \left< \Downarrow e \right> 
+    e \in \left< e \right> 
   } 
 \end{mathpar}
 
 
-\subsection{Type collecting semantics}
+\subsection{Standard collecting soundness}
+\begin{mathpar}
+
+  % progress 
+  \inferrule { 
+    e \in \left< e \right> 
+  } {
+    e = v \vee e \longrightarrow e'
+  } 
+
+  % preservation 
+  \inferrule { 
+    e \in \left< e \right>
+    \\
+    e[\rho] \longrightarrow e'
+  } {
+    e' \in \left< e' \right>
+  } 
+
+\end{mathpar}
+
+
+\subsection{Type environment}
 \begin{mathpar}
   \inferrule { 
   } {
@@ -1087,6 +1109,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     x \in \text{dom}(\Gamma, x' \mapsto \tau')
   } 
 \end{mathpar}
+
+
+\subsection{Typing}
 
 \begin{mathpar}
   \inferrule { 
@@ -1178,6 +1203,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \tau \in \left< \cdot \Vdash \tau' \right>
   } {
     \tau \in \left< \Gamma \vdash t \right> 
+  } 
+\end{mathpar}
+
+\subsection{Type collecting semantics}
+\begin{mathpar}
+  \inferrule { 
+    \Gamma \vdash t : \tau 
+  } {
+    (\Gamma, \tau) \in \left< \vdash t \right>
   } 
 \end{mathpar}
 
