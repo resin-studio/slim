@@ -1208,13 +1208,36 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \subsection{Type galois connection}
 \begin{mathpar}
+
   \inferrule { 
-    \tau \in \left< \cdot \vdash e \right>
   } {
-    \llbracket e \rrbracket
-    \subseteq 
-    \lfloor \tau \rfloor
+    \left< E \right> = \text{reduce} \wedge\ \{\left< \cdot \vdash e \right>\ |\ e \in E \}
   } 
+
+  \inferrule { 
+  } {
+    \left< \llbracket e \rrbracket \right>
+    =
+    \left< \cdot \vdash e \right>
+  } 
+
+  \\\\
+
+  \inferrule { 
+  } {
+    \left< \llbracket e \rrbracket \right> \leq \tau
+    \equiv
+    \llbracket e \rrbracket \subseteq \lfloor \tau \rfloor
+  } 
+
+  \inferrule { 
+  } {
+    \left< \cdot \vdash e \right> \leq \tau
+    \equiv
+    \llbracket e \rrbracket \subseteq \lfloor \tau \rfloor
+  } 
+
+
 \end{mathpar}
 
 \subsection{Type collecting soundness}
