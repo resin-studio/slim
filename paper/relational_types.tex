@@ -1208,7 +1208,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \subsection{Type galois connection}
 \begin{mathpar}
-
   \inferrule { 
     \tau \in \left< \cdot \vdash e \right>
   } {
@@ -1216,15 +1215,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \subseteq 
     \llbracket \tau \rrbracket
   } 
-
-  \inferrule { 
-    e' \in \llbracket e \rrbracket
-  } {
-    \left< \cdot \vdash e \right>
-    \subseteq
-    \left< \cdot \vdash e' \right>
-  } 
-
 \end{mathpar}
 
 \subsection{Type collecting soundness}
