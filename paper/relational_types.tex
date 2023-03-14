@@ -1054,7 +1054,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \forall e'\ .\ e \longrightarrow^* e' \Longrightarrow (e' = v \vee e' \longrightarrow e'') 
   } {
-    e \in \left< e \right> 
+    e \in \llbracket e \rrbracket
   } 
 \end{mathpar}
 
@@ -1064,18 +1064,18 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   % progress 
   \inferrule { 
-    e \in \left< e \right> 
+    e \in \llbracket e \rrbracket
   } {
     e = v \vee e \longrightarrow e'
   } 
 
   % preservation 
   \inferrule { 
-    e \in \left< e \right>
+    e \in \llbracket e \rrbracket 
     \\
     e \longrightarrow e'
   } {
-    e' \in \left< e' \right>
+    e' \in \llbracket e' \rrbracket
   } 
 
 \end{mathpar}
@@ -1210,27 +1210,21 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{mathpar}
 
   \inferrule { 
-    e \in E
-    \\
-    \tau \in \left< \cdot \vdash e \right> 
+    \tau \in \left< \cdot \vdash e \right>
   } {
-    \tau \in \text{abstract}(E)
-  } 
-
-  \inferrule { 
-    \vdots
-  } {
-    e \in \text{concretize}(T)
-  } 
-
-  \\\\
-
-  \inferrule { 
-  } {
-    \left< e \right> 
+    \llbracket e \rrbracket
     \subseteq 
-    \text{concretize}(\left< \cdot \vdash e \right>)
+    \llbracket \tau \rrbracket
   } 
+
+  \inferrule { 
+    e' \in \llbracket e \rrbracket
+  } {
+    \left< \cdot \vdash e \right>
+    \subseteq
+    \left< \cdot \vdash e' \right>
+  } 
+
 \end{mathpar}
 
 \subsection{Type collecting soundness}
