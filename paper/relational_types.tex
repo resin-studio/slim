@@ -1205,6 +1205,34 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 \end{mathpar}
 
+
+\subsection{Type galois connection}
+\begin{mathpar}
+
+  \inferrule { 
+    e \in E
+    \\
+    \tau \in \left< \cdot \vdash e \right> 
+  } {
+    \tau \in \text{abstract}(E)
+  } 
+
+  \inferrule { 
+    \vdots
+  } {
+    e \in \text{concretize}(T)
+  } 
+
+  \\\\
+
+  \inferrule { 
+  } {
+    \left< e \right> 
+    \subseteq 
+    \text{concretize}(\left< \cdot \vdash e \right>)
+  } 
+\end{mathpar}
+
 \subsection{Type collecting soundness}
 \begin{mathpar}
   % progress 
@@ -1223,33 +1251,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \tau \in \left< \cdot \vdash e' \right> 
   } 
 
-\end{mathpar}
-
-\subsection{Type galois connection}
-\begin{mathpar}
-
-  \inferrule { 
-    e \in E
-    \\
-    \tau \in \left< \cdot \vdash e \right> 
-  } {
-    \tau \in \text{abstract}(E)
-  } 
-
-  \inferrule { 
-    T \cap \left< \cdot \vdash e \right> \not\subseteq \emptyset 
-  } {
-    e \in \text{concretize}(T)
-  } 
-
-  \\\\
-
-  \inferrule { 
-  } {
-    (\left< \cdot \vdash e \right> \subseteq \text{abstract}(\left< e \right>))
-    \equiv
-    (\left< e \right> \subseteq \text{concretize}(\left< \cdot \vdash e \right>))
-  } 
 \end{mathpar}
 
 
