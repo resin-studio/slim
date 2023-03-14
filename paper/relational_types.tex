@@ -8,6 +8,13 @@
 \usepackage{mathtools}
 \usepackage{stmaryrd}
 \usepackage{listings}
+\usepackage{amsthm}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}{Corollary}[theorem]
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
 
 \makeatletter % allow us to mention @-commands
 \def\arcr{\@arraycr}
@@ -850,10 +857,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 \section{Language}
-\begin{enumerate}
-  \item english statement 
-\end{enumerate}
-\subsection{Syntax}
+
+\begin{definition}[Syntax]
 
 \[
   \begin{array}{l @{} l}
@@ -937,9 +942,62 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \end{array}
 \]
 
+\end{definition}
 
-\subsection{operational semantics}
 
+  
+
+\begin{definition}(Operational semantics)
+\begin{mathpar}
+  \inferrule { 
+    t \leadsto t' 
+  } {
+    E[t] \leadsto E[t']  
+  }
+
+  \inferrule {
+  } {
+    (\omega\ \widebar{l_i \approx v_i})/l_j \leadsto v_j
+  } 
+
+  \inferrule { 
+  } {
+    (\lambda\ \widebar{p : \tau \Rightarrow t})\ v 
+    \leadsto 
+    (\text{match } v\ \widebar{p : \tau \Rightarrow t})
+  } 
+
+  \inferrule { 
+  } {
+    \text{let}\ x : \tau = v \text{ in } t
+    \leadsto 
+    t[x \mapsto v]
+  } 
+
+  \inferrule { 
+  } {
+    \text{fix}\ \lambda [x:\tau \Rightarrow t]
+    \leadsto 
+    t[x \mapsto \text{fix}\ \lambda [x:\tau \Rightarrow t]]
+  } 
+
+  \inferrule { 
+  } {
+    e \leadsto^* e
+  } 
+ 
+  \inferrule { 
+    e \leadsto e' 
+    \\
+    e' \leadsto^* e''
+  } {
+    e \leadsto^* e''
+  } 
+
+\end{mathpar}
+\end{definition}
+
+\begin{definition}
 \[
   \begin{array}{l @{} l}
     E 
@@ -961,59 +1019,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{fix } E 
   \end{array}
 \]
-
-\begin{mathpar}
-  \inferrule[PopPush] { 
-    t \leadsto t' 
-  } {
-    E[t] \leadsto E[t']  
-  }
-
-  \inferrule[Proj] {
-  } {
-    (\omega\ \widebar{l_i \approx v_i})/l_j \leadsto v_j
-  } 
-
-  \inferrule[App] { 
-  } {
-    (\lambda\ \widebar{p : \tau \Rightarrow t})\ v 
-    \leadsto 
-    (\text{match } v\ \widebar{p : \tau \Rightarrow t})
-  } 
-
-  \inferrule[Let] { 
-  } {
-    \text{let}\ x : \tau = v \text{ in } t
-    \leadsto 
-    t[x \mapsto v]
-  } 
-
-
-
-  \inferrule[Fix] { 
-  } {
-    \text{fix}\ \lambda [x:\tau \Rightarrow t]
-    \leadsto 
-    t[x \mapsto \text{fix}\ \lambda [x:\tau \Rightarrow t]]
-  } 
-
-  \\\\
-
-  \inferrule { 
-  } {
-    e \leadsto^* e
-  } 
- 
-  \inferrule { 
-    e \leadsto e' 
-    \\
-    e' \leadsto^* e''
-  } {
-    e \leadsto^* e''
-  } 
-
-\end{mathpar}
-
+\end{definition}
+  
+\begin{definition}
 \[
   \begin{array}{l @{} l}
     \text{match}\ v\ ((p : \tau \Rightarrow t) :: cs)
@@ -1029,6 +1037,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \end{cases}
   \end{array}
 \]
+\end{definition}
+
+\begin{definition}
 \[
   \begin{array}{l @{} l}
     \text{unify}\ v\ x 
@@ -1048,70 +1059,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{reduce } ; \widebar{\text{unify}\ v\ p}
   \end{array}
 \]
+\end{definition}
 
-\subsection{Standard collecting semantics}
-\begin{mathpar}
-  \inferrule { 
-    \forall e'\ .\ e \leadsto^* e' \longrightarrow (e' = v \vee e' \leadsto e'') 
-  } {
-    e \in \llbracket e \rrbracket
-  } 
-\end{mathpar}
-
-
-\subsection{Standard collecting soundness}
-\begin{mathpar}
-
-  % progress 
-  \inferrule { 
-    e \in \llbracket e \rrbracket
-  } {
-    e = v \vee e \leadsto e'
-  } 
-
-  % preservation 
-  \inferrule { 
-    e \in \llbracket e \rrbracket 
-    \\
-    e \leadsto e'
-  } {
-    e' \in \llbracket e' \rrbracket
-  } 
-
-\end{mathpar}
-
-
-\subsection{Type environment}
-\begin{mathpar}
-  \inferrule { 
-  } {
-    (\Gamma, x \mapsto \tau)(x) = \tau 
-  } 
-
-  \inferrule { 
-    x \neq x' 
-    \\
-    \Gamma(x) = \tau
-  } {
-    (\Gamma, x' \mapsto \tau')(x') = \tau 
-  } 
-
-  \inferrule { 
-  } {
-    x \in \text{dom}(\Gamma, x \mapsto \tau)
-  } 
-
-  \inferrule { 
-    x \neq x'
-    \\
-    x \in \text{dom}(\Gamma)
-  } {
-    x \in \text{dom}(\Gamma, x' \mapsto \tau')
-  } 
-\end{mathpar}
-
-\subsection{Type collecting semantics}
-
+\begin{definition}[Typing]
 \begin{mathpar}
   \inferrule { 
   } {
@@ -1204,35 +1154,63 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \tau \in \left< \Gamma \vdash t \right> 
   } 
 \end{mathpar}
+\end{definition}
 
-
-\subsection{Type galois connection}
+\begin{definition}[Type environment]
 \begin{mathpar}
-
-  %%%%%%%%%%%%%
-  %% here are some over-engineered definitions and lemmas in order to match absint framework
-  %%%%
-
   \inferrule { 
   } {
-    \left< E \right> = \text{reduce} \wedge\ \{\left< \cdot \vdash e \right>\ |\ e \in E \}
+    (\Gamma, x \mapsto \tau)(x) = \tau 
+  } 
+
+  \inferrule { 
+    x \neq x' 
+    \\
+    \Gamma(x) = \tau
+  } {
+    (\Gamma, x' \mapsto \tau')(x') = \tau 
   } 
 
   \inferrule { 
   } {
-    \left< \llbracket e \rrbracket \right>
-    =
-    \left< \cdot \vdash e \right>
+    x \in \text{dom}(\Gamma, x \mapsto \tau)
   } 
 
   \inferrule { 
+    x \neq x'
+    \\
+    x \in \text{dom}(\Gamma)
   } {
-    \left< \llbracket e \rrbracket \right> \leq \tau
-    \equiv
-    \llbracket e \rrbracket \subseteq \lfloor \tau \rfloor
+    x \in \text{dom}(\Gamma, x' \mapsto \tau')
   } 
+\end{mathpar}
+\end{definition}
 
-  \\\\
+
+% \subsection{Type galois connection}
+  % %%%%%%%%%%%%%
+  % %% here are some over-engineered definitions and lemmas in order to match absint framework
+  % %%%%
+
+  % \inferrule { 
+  % } {
+  %   \left< E \right> = \text{reduce} \wedge\ \{\left< \cdot \vdash e \right>\ |\ e \in E \}
+  % } 
+
+  % \inferrule { 
+  % } {
+  %   \left< \llbracket e \rrbracket \right>
+  %   =
+  %   \left< \cdot \vdash e \right>
+  % } 
+
+  % \inferrule { 
+  % } {
+  %   \left< \llbracket e \rrbracket \right> \leq \tau
+  %   \equiv
+  %   \llbracket e \rrbracket \subseteq \lfloor \tau \rfloor
+  % } 
+
   %%%%%%%%%%%%%%%%%%%%%%
   %% here is a simplified galois connection, but not as general as absint framework
   %%%%%%%%%%%%%%
@@ -1253,18 +1231,18 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       % small-step requires keep track of types for every sub-expression in the program
         % the abstract value is the top level expression with 
           %\Gamma environment mapping every sub-expression to a type 
+      % when is small-step necessary? tracking side-effects.
 
-  \inferrule { 
-  } {
-    \left< \cdot \vdash e \right> \leq \tau
-    \equiv
-    \llbracket e \rrbracket \subseteq \lfloor \tau \rfloor
-  } 
+% \begin{mathpar}
+%   \inferrule { 
+%   } {
+%     \left< e \right> \leq \tau
+%     \equiv
+%     e \in \lfloor \tau \rfloor
+%   } 
+% \end{mathpar}
 
-
-\end{mathpar}
-
-\subsection{Type collecting soundness}
+\begin{theorem}(Type soundness)
 \begin{mathpar}
   % progress 
   \inferrule { 
@@ -1281,13 +1259,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } {
     \tau \in \left< \cdot \vdash e' \right> 
   } 
-
 \end{mathpar}
+\end{theorem}
 
 
 
-\subsection{Subtype collecting semantics}
-
+\begin{definition}(Subtyping)
 \begin{mathpar}
   \inferrule {
   } {
@@ -1508,9 +1485,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \tau \in \left< \Delta \Vdash \tau \right>
   }
 \end{mathpar}
+\end{definition}
 
-\subsection*{Type inference analysis}
 
+\begin{definition}(Type inference)
 \[
   \begin{array}{l @{} l}
     \text{infer } \iota\ \Delta\ \Gamma \vdash 
@@ -1684,10 +1662,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \end{array}
   \end{array}
 \]
+\end{definition}
 
 
-\subsection{Subtype unification analysis}
-
+\begin{definition}(Subtype unification)
 \[
   \begin{array}{l @{} l}
 
@@ -1854,7 +1832,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   \end{array}
 \]
+\end{definition}
 
+\begin{definition}
 \[
   \begin{array}{l @{} l}
     \text{unify } \iota\ \Delta \vdash \bot \leq \_	
@@ -1992,12 +1972,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   \end{array}
 \]
+\end{definition}
 
-\begin{enumerate}
-  \item definition 
-  \item lemmas and proofs 
-\end{enumerate}
-
+\begin{definition}
 \[
   \begin{array}{l @{} l}
   \Delta\ ;\ \cdot
@@ -2007,8 +1984,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   &\ = (\Delta_1;\Delta_2),\alpha \mapsto \tau
   \end{array}
 \]
+\end{definition}
 
-
+\begin{definition}
 \[
   \begin{array}{l @{} l}
   M_1 * M_2 
@@ -2020,7 +1998,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   ]
   \end{array}
 \]
+\end{definition}
 
+\begin{definition}
 \[
   \begin{array}{l @{} l}
   \text{reduce} \wedge [] 
@@ -2030,7 +2010,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   &\ = \tau\ \wedge (\text{reduce} \wedge \widebar{\tau})
   \end{array}
 \]
+\end{definition}
 
+\begin{definition}
 \[
   \begin{array}{l @{} l}
     N_1 * N_2
@@ -2044,7 +2026,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \end{array}
   \end{array}
 \]
+\end{definition}
 
+\begin{definition}
 \[
   \begin{array}{l @{}l}
   \text{reduce} * \{N\}
@@ -2054,9 +2038,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   & {}= N_j * (\text{reduce} * \widebar{N_i}\setminus\{N_j\})
   \end{array}
 \]
-
-
-
+\end{definition}
 
 \section{Evaluation}
 \begin{enumerate}
