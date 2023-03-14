@@ -1187,61 +1187,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
 
 
-% \subsection{Type galois connection}
-  % %%%%%%%%%%%%%
-  % %% here are some over-engineered definitions and lemmas in order to match absint framework
-  % %%%%
-
-  % \inferrule { 
-  % } {
-  %   \left< E \right> = \text{reduce} \wedge\ \{\left< \cdot \vdash e \right>\ |\ e \in E \}
-  % } 
-
-  % \inferrule { 
-  % } {
-  %   \left< \llbracket e \rrbracket \right>
-  %   =
-  %   \left< \cdot \vdash e \right>
-  % } 
-
-  % \inferrule { 
-  % } {
-  %   \left< \llbracket e \rrbracket \right> \leq \tau
-  %   \equiv
-  %   \llbracket e \rrbracket \subseteq \lfloor \tau \rfloor
-  % } 
-
-  %%%%%%%%%%%%%%%%%%%%%%
-  %% here is a simplified galois connection, but not as general as absint framework
-  %%%%%%%%%%%%%%
-  %% TODO: consider how widening would affect definition of typing.
-  %% completed type would correspond with value, not partial expression.
-  %% partial expressions do not have smaller type than resulting value.
-  % thoughts on abstract interpretation
-    % where it's just over-engineering
-      % for natural deduction, concretizing is only needed for soundness proof.
-      % abstract interpretation just seems like over engineering for natural deduction systems
-      % definition abstraction is the same as defining a big-step static semantics 
-      % defining concretizing and proving a galois connection
-        % is in effect the same as proving soundness 
-    % where it's valuable
-      % for transition systems that widen/narrow with each step,
-        % concretizing enables leveraging transitions of the dynamic semantics
-      % therefore enables method for construction of small-step static semantics 
-      % small-step requires keep track of types for every sub-expression in the program
-        % the abstract value is the top level expression with 
-          %\Gamma environment mapping every sub-expression to a type 
-      % when is small-step necessary? tracking side-effects.
-
-% \begin{mathpar}
-%   \inferrule { 
-%   } {
-%     \left< e \right> \leq \tau
-%     \equiv
-%     e \in \lfloor \tau \rfloor
-%   } 
-% \end{mathpar}
-
 \begin{theorem}(Type soundness)
 \begin{mathpar}
   % progress 
@@ -2608,3 +2553,54 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % consider methods of ensuring beta-normal forms
   % splitting off elim forms than can't refer to intro forms to prevent non-beta-normal forms
   % normal form syntax use let-binding (similar to ANF or CPS or SSA)
+
+
+% thoughts on abstract interpretation
+  % where it's just over-engineering
+    % for natural deduction, concretizing is only needed for soundness proof.
+    % abstract interpretation just seems like over engineering for natural deduction systems
+    % definition abstraction is the same as defining a big-step static semantics 
+    % defining concretizing and proving a galois connection
+      % is in effect the same as proving soundness 
+  % where it's valuable
+    % for transition systems that widen/narrow with each step,
+      % concretizing enables leveraging transitions of the dynamic semantics
+    % therefore enables method for construction of small-step static semantics 
+    % small-step requires keep track of types for every sub-expression in the program
+      % the abstract value is the top level expression with 
+        %\Gamma environment mapping every sub-expression to a type 
+    % when is small-step necessary? tracking side-effects.
+
+  % %%%%%%%%%%%%%
+  % %% here are some over-engineered definitions
+  % %%%%
+
+  % \begin{mathpar}
+
+  % \inferrule { 
+  % } {
+  %   \left< E \right> = \text{reduce} \wedge\ \{\left< \cdot \vdash e \right>\ |\ e \in E \}
+  % } 
+
+  % \inferrule { 
+  % } {
+  %   \left< \llbracket e \rrbracket \right>
+  %   =
+  %   \left< \cdot \vdash e \right>
+  % } 
+
+  % \inferrule { 
+  % } {
+  %   \left< \llbracket e \rrbracket \right> \leq \tau
+  %   \equiv
+  %   \llbracket e \rrbracket \subseteq \lfloor \tau \rfloor
+  % } 
+
+  %   \inferrule { 
+  %   } {
+  %     \left< e \right> \leq \tau
+  %     \equiv
+  %     e \in \lfloor \tau \rfloor
+  %   } 
+  % \end{mathpar}
+
