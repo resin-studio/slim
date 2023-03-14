@@ -1052,7 +1052,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \subsection{Standard collecting semantics}
 \begin{mathpar}
   \inferrule { 
-    \forall e'\ .\ e[\rho] \longrightarrow^* e' \Longrightarrow (e' = v \vee e' \longrightarrow e'') 
+    \forall e'\ .\ e \longrightarrow^* e' \Longrightarrow (e' = v \vee e' \longrightarrow e'') 
   } {
     e \in \left< e \right> 
   } 
@@ -1073,7 +1073,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     e \in \left< e \right>
     \\
-    e[\rho] \longrightarrow e'
+    e \longrightarrow e'
   } {
     e' \in \left< e' \right>
   } 
@@ -1110,8 +1110,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 \end{mathpar}
 
-
-\subsection{Typing}
+\subsection{Type collecting semantics}
 
 \begin{mathpar}
   \inferrule { 
@@ -1206,54 +1205,51 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 \end{mathpar}
 
-\subsection{Type collecting semantics}
+\subsection{Type collecting soundness}
 \begin{mathpar}
-  \inferrule { 
-    \Gamma \vdash t : \tau 
-  } {
-    (\Gamma, \tau) \in \left< \vdash t \right>
-  } 
-\end{mathpar}
-
-\subsection{Soundness lemmas}
-\begin{mathpar}
-
-  \inferrule { 
-    (\Gamma, \tau) \in \left< \Vdash e \right>
-    \\
-    v \in \text{concretize}(\Gamma, \tau)
-  } {
-    (\Gamma, \tau) \in \left< \Vdash v \right>
-  } 
-
-  \inferrule { 
-  } {
-    \left< \Downarrow e \right>
-    \subseteq 
-    \text{concretize}(\left< \Vdash e \right>)
-  } 
-
-\end{mathpar}
-
-\subsection{Soundness}
-\begin{mathpar}
-
   % progress 
   \inferrule { 
-    (\Gamma, \tau) \in \left< \Vdash e \right> 
+    \tau \in \left< \cdot \vdash e \right> 
   } {
     e = v \vee e \longrightarrow e'
   } 
 
   % preservation 
   \inferrule { 
-    (\Gamma, \tau) \in \left< \Vdash e \right>
+    \tau \in \left< \cdot \vdash e \right>
     \\
     e \longrightarrow e'
   } {
-    (\Gamma, \tau) \in \left< \Vdash e' \right>
+    \tau \in \left< \cdot \vdash e' \right> 
   } 
 
+\end{mathpar}
+
+\subsection{Type galois connection}
+\begin{mathpar}
+
+  \inferrule { 
+    e \in E
+    \\
+    \tau \in \left< \cdot \vdash e \right> 
+  } {
+    \tau \in \text{abstract}(E)
+  } 
+
+  \inferrule { 
+    T \cap \left< \cdot \vdash e \right> \not\subseteq \emptyset 
+  } {
+    e \in \text{concretize}(T)
+  } 
+
+  \\\\
+
+  \inferrule { 
+  } {
+    (\left< \cdot \vdash e \right> \subseteq \text{abstract}(\left< e \right>))
+    \equiv
+    (\left< e \right> \subseteq \text{concretize}(\left< \cdot \vdash e \right>))
+  } 
 \end{mathpar}
 
 
