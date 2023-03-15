@@ -1151,8 +1151,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Gamma \vdash t 
     : \tau' 
     \\
-    \cdot \Vdash \tau'
-    : \tau
+    \cdot \Vdash \tau' \leq \tau
   } {
     \Gamma \vdash t
     : \tau
@@ -1379,25 +1378,66 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{definition}
 
-\begin{theorem}(Type soundness)
+\begin{theorem}(Typing progress)
 \begin{mathpar}
-  % progress 
   \inferrule { 
-    \cdot \vdash e
-    :\tau
+    \cdot \vdash e : \tau
   } {
     e = v \vee e \leadsto e'
   } 
+\end{mathpar}
+\end{theorem}
 
-  % preservation 
+\begin{theorem}(Typing preservation)
+\begin{mathpar}
   \inferrule { 
-    \cdot \vdash e
-    : \tau
+    \cdot \vdash e : \tau
     \\
     e \leadsto e'
   } {
-    \cdot \vdash e'
-    : \tau 
+    \cdot \vdash e' : \tau 
+  } 
+\end{mathpar}
+\end{theorem}
+
+
+\begin{definition}[Type transition]
+\begin{mathpar}
+  \inferrule { 
+    \cdot \vdash e : \tau
+    \\
+    e \leadsto e'
+    \\
+    \cdot \vdash e' : \tau'
+  } {
+    \left<e, \tau\right> \rightharpoonup \left<e', \tau'\right>
+  } 
+\end{mathpar}
+\end{definition}
+
+\begin{theorem}(Type transition progress)
+\begin{mathpar}
+  \inferrule { 
+    \cdot \vdash e : \tau
+    \\
+    e \neq v
+  } {
+    e \leadsto e'\ \wedge\ 
+    \left<e,\tau\right> \rightharpoonup \left<e',\tau'\right>
+  } 
+\end{mathpar}
+\end{theorem}
+
+\begin{theorem}(Type transition preservation)
+\begin{mathpar}
+  \inferrule { 
+    \cdot \vdash e : \tau
+    \\
+    e \leadsto e'
+    \\
+    \left<e,\tau\right> \rightharpoonup \left<e',\tau'\right>
+  } {
+    e' : \tau' 
   } 
 \end{mathpar}
 \end{theorem}
