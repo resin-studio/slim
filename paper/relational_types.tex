@@ -2528,14 +2528,18 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 % comparison of transition systems vs compositional systems 
-  % transitions with widening/narrowing correspond to compositional type adjustment
-    % demonstrate that a compositional technique is as expressive as a small-step semantics.
-    % without the overhead of small-step semantics. 
+  % widening/narrowing
+    % composition: type adjustment according to variable
+    % transitions: widening/narrowing operator between steps
+  % mutation 
+    % transitions are necessary, composition insufficient 
+  % abstract interpretation
+    % useful for transitions, superfluous for composition 
 
 % motivation of abstract interpretation
   % where it's valuable
     % abstract interpretation is motivated by data-flow
-    % data-flow is motivated by side effects
+    % data-flow is motivated by side effects/(widening or narrowing)
     % notes:
       % for transition systems that widen/narrow with each step,
         % abstraction/concretizing enables leveraging transitions of the dynamic semantics
