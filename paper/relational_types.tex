@@ -1191,18 +1191,208 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
 
 
+
+\begin{definition}(Subtyping)
+\begin{mathpar}
+  \inferrule {
+  } {
+    \Delta \Vdash \bot
+    \leq \tau
+  }
+
+  \inferrule {
+  } {
+    \Delta \Vdash \tau
+    \leq \top
+  } 
+
+  \inferrule {
+    \Delta \Vdash \tau_1
+    \leq \tau_2
+  } {
+    \Delta \Vdash l*\tau_1
+    \leq l*\tau_2
+  } 
+
+  \inferrule {
+    \Delta \Vdash \tau_1
+    \leq \tau_2
+  } {
+    \Delta \Vdash l\sim\tau_1
+    \leq l\sim\tau_2
+  } 
+
+  \inferrule {
+    \Delta \Vdash \tau_3
+    \leq \tau_1
+    \\
+    \Delta \Vdash \tau_2
+    \leq \tau_4
+  } {
+    \Delta \Vdash \tau_1 \rightarrow \tau_2
+    \leq \tau_3 \rightarrow \tau_4
+  } 
+
+  \inferrule { 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
+    \\\\
+    \forall\ \Delta'\ .\
+    (\Delta;\Delta' \Vdash \tau_1 \leq \tau_2)
+    \longrightarrow
+    (\Delta;\Delta' \Vdash \tau_3 \leq \tau_4)
+  } { 
+    \Delta \Vdash \left<\tau_3 :: \exists \widebar{\alpha_i}\ .\ \tau_1 \leq \tau_2\right>
+    \leq \tau_4
+  }
+
+  \inferrule { 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
+    \\\\
+    \Delta;\Delta' \Vdash \tau_1
+    \leq \tau_4
+    \\
+    \Delta;\Delta' \Vdash \tau_2
+    \leq \tau_3
+  } { 
+    \Delta \Vdash \tau_1
+    \leq \left<\tau_4 :: \exists \widebar{\alpha_i}\ .\ \tau_2 \leq \tau_3\right>
+  }
+
+  \inferrule { 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
+    \\\\
+    \forall\ \Delta'\ .\
+    (\Delta;\Delta' \Vdash \tau_2 \leq \tau_3)
+    \longrightarrow
+    (\Delta;\Delta' \Vdash \tau_1 \leq \tau_4)
+  } { 
+    \Delta \Vdash \tau_1
+    \leq \left<\tau_4 :: \forall \widebar{\alpha_i}\ .\ \tau_2 \leq \tau_3\right>
+  }
+
+  \inferrule { 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha} \subseteq \emptyset 
+    \\\\
+    \Delta;\Delta' \Vdash \tau_3
+    \leq \tau_4
+    \\
+    \Delta;\Delta' \Vdash \tau_1
+    \leq \tau_2
+  } { 
+    \Delta \Vdash \left<\tau_3 :: \forall \widebar{\alpha}\ .\ \tau_1 \leq \tau_2\right>
+    \leq \tau_4
+  }
+
+  \\\\
+
+  \inferrule { 
+    \Delta \Vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
+    \leq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
+  } { 
+    \Delta \Vdash \mu \alpha_1 . \tau_1
+    \leq \mu \alpha_2 . \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \Vdash \tau[\alpha\mapsto\mu \alpha . \tau]
+    \leq \mu \alpha . \tau
+  }
+
+  \inferrule {
+  } {
+    \Delta \Vdash \mu\alpha.\tau
+    \leq \tau[\alpha\mapsto\mu \alpha . \tau]
+  }
+
+  \inferrule { 
+    \Delta \Vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
+    \leq \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+  } {
+    \Delta \Vdash \nu \alpha_1 . \tau_1 
+    \leq \nu \alpha_2 . \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \Vdash \tau[\alpha\mapsto\nu \alpha . \tau]
+    \leq \nu \alpha . \tau
+  }
+
+  \inferrule {
+  } {
+    \Delta \Vdash \nu\alpha.\tau
+    \leq \tau[\alpha\mapsto\nu \alpha . \tau]
+  }
+
+  \inferrule {
+    \Delta \Vdash \tau_1
+    \leq \tau_3
+    \\
+    \Delta \Vdash \tau_2
+    \leq \tau_3
+  } {
+    \Delta \Vdash \tau_1 \vee \tau_2
+    \leq \tau_3
+  }
+
+  \inferrule {
+  } {
+    \Delta \Vdash \tau_1
+    \leq \tau_1 \vee \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \Vdash \tau_2
+    \leq \tau_1 \vee \tau_2
+  }
+
+  \inferrule {
+    \Delta \Vdash \tau
+    \leq \tau_1
+    \\
+    \Delta \Vdash \tau
+    \leq \tau_2
+  } {
+    \Delta \Vdash \tau
+    \leq \tau_1 \wedge \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \Vdash \tau_1 \wedge \tau_2
+    \leq \tau_1
+  }
+
+  \inferrule {
+  } {
+    \Delta \Vdash \tau_1 \wedge \tau_2
+    \leq \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \Vdash \tau
+    \leq \tau
+  }
+\end{mathpar}
+\end{definition}
+
 \begin{theorem}(Type soundness)
 \begin{mathpar}
   % progress 
   \inferrule { 
-    \tau \in \left< \cdot \vdash e \right> 
+    \cdot \vdash e
+    :\tau
   } {
     e = v \vee e \leadsto e'
   } 
 
   % preservation 
   \inferrule { 
-    \tau \in \left< \cdot \vdash e \right>
+    \cdot \vdash e
+    : \tau
     \\
     e \leadsto e'
   } {
@@ -1210,231 +1400,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 \end{mathpar}
 \end{theorem}
-
-
-
-\begin{definition}(Subtyping)
-\begin{mathpar}
-  \inferrule {
-  } {
-    \tau \in \left< \Delta \Vdash \bot \right>
-  }
-
-  \inferrule {
-  } {
-    \top \in \left< \Delta \Vdash \tau \right>
-  } 
-
-  \inferrule {
-    \tau_2 \in \left< \Delta \Vdash \tau_1 \right>
-  } {
-    l*\tau_2 \in \left< \Delta \Vdash l*\tau_1 \right>
-  } 
-
-  \inferrule {
-     \leq \tau_2 \in \left< \Delta \Vdash \tau_1 \right>
-  } {
-    l\sim\tau_2 \in \left< \Delta \Vdash l\sim\tau_1 \right>
-  } 
-
-  \inferrule {
-    \tau_1 \in \left< \Delta \Vdash \tau_3 \right>
-    \\
-    \tau_4 \in \left< \Delta \Vdash \tau_2 \right>
-  } {
-    \tau_3 \rightarrow \tau_4 \in \left< \Delta \Vdash \tau_1 \rightarrow \tau_2 \right>
-  } 
-
-  \inferrule { 
-    \text{freevars}(\Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
-    \\\\
-    \forall\ \Delta'\ .\
-    \tau_2
-    \in
-    \left< \Delta;\Delta' \Vdash \tau_1 \right>
-    \longrightarrow
-    \tau_4 \in
-    \left< \Delta;\Delta' \Vdash \tau_3 \right>
-  } { 
-    \tau_4
-    \in
-    \left<
-    \Delta \Vdash \exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3
-    \right>
-  }
-
-  \inferrule { 
-    \text{freevars}(\Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
-    \\\\
-    \tau_4
-    \in
-    \left< \Delta;\Delta' \Vdash \tau_1 \right>
-    \\
-    \tau_3
-    \in
-    \left< \Delta;\Delta' \Vdash \tau_2 \right>
-  } { 
-    (\exists \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-    \in
-    \left< \Delta \Vdash \tau_1 \right>
-  }
-
-  \inferrule { 
-    \text{freevars}(\Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
-    \\\\
-    \forall\ \Delta'\ .\
-    \tau_3
-    \in
-    \left< \Delta;\Delta' \Vdash \tau_2 \right>
-    \longrightarrow
-    \tau_4 \in
-    \left< \Delta;\Delta' \Vdash \tau_1 \right>
-  } { 
-    (\forall \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-    \in
-    \left< \Delta \Vdash \tau_1 \right>
-  }
-
-  \inferrule { 
-    \text{freevars}(\Delta) \cap \widebar{\alpha} \subseteq \emptyset 
-    \\\\
-    \tau_4
-    \in
-    \left<
-    \Delta;\Delta' \Vdash \tau_3
-    \right>
-    \\
-    \tau_2
-    \in
-    \left< \Delta;\Delta' \Vdash \tau_1 \right>
-  } { 
-    \tau_4
-    \in
-    \left<
-    \Delta \Vdash \forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3
-    \right>
-  }
-
-  \\\\
-
-  \inferrule { 
-    \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
-    \in
-    \left<
-    \Delta \Vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
-    \right>
-  } { 
-    \mu \alpha_2 . \tau_2
-    \in
-    \left<
-    \Delta \Vdash \mu \alpha_1 . \tau_1
-    \right>
-  }
-
-  \inferrule {
-  } {
-    \mu \alpha . \tau
-    \in
-    \left< \Delta \Vdash \tau[\alpha\mapsto\mu \alpha . \tau] \right>
-  }
-
-  \inferrule {
-  } {
-    \tau[\alpha\mapsto\mu \alpha . \tau]
-    \in
-    \left< \Delta \Vdash \mu\alpha.\tau \right>
-  }
-
-  \inferrule { 
-    \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
-    \in
-    \left<
-    \Delta \Vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
-    \right>
-  } {
-    \nu \alpha_2 . \tau_2
-    \in
-    \left<
-    \Delta \Vdash \nu \alpha_1 . \tau_1 
-    \right>
-  }
-
-  \inferrule {
-  } {
-    \nu \alpha . \tau
-    \in
-    \left< \Delta \Vdash \tau[\alpha\mapsto\nu \alpha . \tau] \right>
-  }
-
-  \inferrule {
-  } {
-   \tau[\alpha\mapsto\nu \alpha . \tau]
-   \in
-   \left< \Delta \Vdash \nu\alpha.\tau \right>
-  }
-
-  \inferrule {
-    \tau_3
-    \in
-    \left< \Delta \Vdash \tau_1 \right>
-    \\
-    \tau_3
-    \in
-    \left< \Delta \Vdash \tau_2 \right>
-  } {
-    \tau_3
-    \in
-    \left< \Delta \Vdash \tau_1 \vee \tau_2 \right>
-  }
-
-  \inferrule {
-  } {
-    \tau_1 \vee \tau_2
-    \in
-    \left< \Delta \Vdash \tau_1 \right>
-  }
-
-  \inferrule {
-  } {
-    \tau_1 \vee \tau_2
-    \in
-    \left< \Delta \Vdash \tau_2 \right>
-  }
-
-  \inferrule {
-    \tau_1
-    \in
-    \left< \Delta \Vdash \tau \right>
-    \\
-    \tau_2
-    \in
-    \left< \Delta \Vdash \tau \right>
-  } {
-    \tau_1 \wedge \tau_2
-    \in
-    \left< \Delta \Vdash \tau \right>
-  }
-
-  \inferrule {
-  } {
-    \tau_1
-    \in
-    \left< \Delta \Vdash \tau_1 \wedge \tau_2 \right>
-  }
-
-  \inferrule {
-  } {
-    \tau_2
-    \in
-    \left< \Delta \Vdash \tau_1 \wedge \tau_2 \right>
-  }
-
-  \inferrule {
-  } {
-      \tau \in \left< \Delta \Vdash \tau \right>
-  }
-\end{mathpar}
-\end{definition}
 
 
 \begin{definition}(Type inference)
