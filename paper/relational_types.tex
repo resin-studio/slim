@@ -2298,9 +2298,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     % we merely represent the fixed point with a mu/nu binder.
       % since we don't necessarily have finite states
     % then we check that the inductive invariant subtypes the closed-form type. 
-  % union/intersection adjustment is a generalization of 
+  % union/intersection adjustment is a more surgical version of 
     % (widening,expansion)/(narrowing,contraction)
       % the latter of which is wrt inductive invariants (IH)
+    % abstract interpretation imposes decision condition from outside
+    % type adjustment decides based on previous state
 
 % -- learning inductive invariant:
 % -- conjecture: downward propagation prunes search space just like counter-example-driven refinement
@@ -2556,6 +2558,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 % motivation of abstract interpretation
+  % widening/narrowing
+    % decision when to widen/narrow imposed from outside
+    % differs from type adjustment, which decides to widen/narrow from info in previous state
   % where it's valuable
     % abstract interpretation is motivated by data-flow
     % data-flow is motivated by side effects
