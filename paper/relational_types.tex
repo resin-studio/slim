@@ -2555,21 +2555,30 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % normal form syntax use let-binding (similar to ANF or CPS or SSA)
 
 
-% thoughts on abstract interpretation
-  % where it's just over-engineering
-    % for natural deduction, concretizing is only needed for soundness proof.
-    % abstract interpretation just seems like over engineering for natural deduction systems
-    % definition abstraction is the same as defining a big-step static semantics 
-    % defining concretizing and proving a galois connection
-      % is in effect the same as proving soundness 
+% motivation of abstract interpretation
   % where it's valuable
-    % for transition systems that widen/narrow with each step,
-      % concretizing enables leveraging transitions of the dynamic semantics
-    % therefore enables method for construction of small-step static semantics 
-    % small-step requires keep track of types for every sub-expression in the program
-      % the abstract value is the top level expression with 
-        %\Gamma environment mapping every sub-expression to a type 
-    % when is small-step necessary? tracking side-effects.
+    % abstract interpretation is motivated by data-flow
+    % data-flow is motivated by side effects
+    % notes:
+      % for transition systems that widen/narrow with each step,
+        % abstraction/concretizing enables leveraging transitions of the dynamic semantics
+        % to infer transitions of static analysis
+      % therefore enables method for construction of data-flow/small-step static semantics 
+      % small-step requires keep track of types for every sub-expression in the program
+        % the abstract value is the top level expression with 
+          %\Gamma environment mapping every sub-expression to a type 
+      % when is small-step necessary? tracking side-effects.
+  % where it's just over-engineering
+    % static rules are sufficient for natural deduction
+    % natural deduction is sufficient without side effects
+    % notes:
+      % for natural deduction, 
+        % abstraction/concretizing is equivalent to the static relation
+        % the static relation has no transitions to be inferred
+      % abstract interpretation just seems like over engineering for natural deduction systems
+      % definition abstraction is the same as defining a big-step static semantics 
+      % defining abstraction/concretizing and proving a galois connection
+        % is in effect the same as proving soundness 
 
   % %%%%%%%%%%%%%
   % %% here are some over-engineered definitions
