@@ -1065,93 +1065,97 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{mathpar}
   \inferrule { 
   } {
-    \text{unit} \in \left< \Gamma \vdash () \right>
+    \Gamma \vdash () 
+    : \text{unit}
   } 
 
   \inferrule { 
     \Gamma(x) = \tau
   } {
-    \tau \in \left< \Gamma \vdash x \right>
+    \Gamma \vdash x
+    : \tau 
   } 
 
   \inferrule { 
-    \tau \in \left< \Gamma \vdash t \right>
+    \Gamma \vdash t
+    : \tau 
   } {
-     l*\tau \in \left< \Gamma \vdash l;t \right>  
+     \Gamma \vdash \left<l\ t\right>  
+    : l*\tau
   }
 
   \inferrule { 
     \bigwedge
-    \tau_i \in \left<  \Gamma \vdash t_i \right>
+    \Gamma \vdash t_i :  \tau_i  
   } {
-    (\text{reduce} \wedge \widebar{l_i\sim\tau_i})
-    \in 
-    \left< \Gamma \vdash \omega\ (\widebar{l_i \approx t_i}) \right>  
+    \Gamma \vdash \omega\ (\widebar{l_i \approx t_i})
+    : (\text{reduce} \wedge \widebar{l_i\sim\tau_i})
   } 
 
   \inferrule {
     \bigwedge
-    \tau_i \in \left< \Gamma_i \vdash p_i \right>
+    \Gamma_i \vdash p_i
+    : \tau_i
     \ \wedge\
-    \tau'_i \in \left< \Gamma;\Gamma_i \vdash t_i \right>
+    \Gamma;\Gamma_i \vdash t_i
+    : \tau'_i
   } {
-    (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
-    \in
-    \left< \Gamma \vdash \lambda\ (\widebar{p_i \Rightarrow t_i}) \right>
+    \Gamma \vdash \lambda\ (\widebar{p_i \Rightarrow t_i})
+    : (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
   } 
 
   \inferrule {
-    l\sim\tau \in \left< \Gamma \vdash t \right>
+    \Gamma \vdash t
+    : l\sim\tau
   } {
-    \tau \in \left< \Gamma \vdash t/l \right> 
+    \Gamma \vdash t/l
+    : \tau
   } 
 
   \inferrule { 
-    \tau' \rightarrow \tau \in \left< \Gamma \vdash t_1 \right>
+    \Gamma \vdash t_1
+    : \tau' \rightarrow \tau
     \\
-    \tau' \in \left< \Gamma \vdash t_2 \right>
+    \Gamma \vdash t_2
+    : \tau'
   } {
-    \tau \in \left< \Gamma \vdash (t_1\ t_2) \right>
+    \Gamma \vdash (t_1\ t_2)
+    : \tau
   } 
 
   \inferrule { 
-    \tau_1
-    \in
-    \left<
     \cdot \Vdash 
     \forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5
-    \right>
+    : \tau_1
     \\
-    \tau_1
-    \in
-    \left< \Gamma \vdash t_1 \right>
+    \Gamma \vdash t_1
+    : \tau_1
     \\\\
-    \tau_2
-    \in
-    \left<  
     \Gamma,x \mapsto (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5) 
       \vdash t_2 
-    \right>
+    : \tau_2
   } {
-    \tau_2
-    \in
-    \left< 
     \Gamma \vdash \text{let}\ x : \tau_1 = t_1 \text{ in } t_2 
-    \right>
+    : \tau_2
   } 
 
   \inferrule { 
-    \tau \rightarrow \tau \in \left< \Gamma \vdash t \right>
+    \Gamma \vdash t
+    : \tau \rightarrow \tau
   } {
-    \tau \in \left< \Gamma \vdash \text{fix}\ t \right>
+    \Gamma \vdash \text{fix}\ t 
+    :\tau
   } 
 
   \inferrule { 
-    \tau' \in \left< \Gamma \vdash t \right> 
+    \Gamma \vdash t 
+    : \tau' 
     \\
-    \tau \in \left< \cdot \Vdash \tau' \right>
+    \cdot \Vdash \tau'
+    : \tau
   } {
-    \tau \in \left< \Gamma \vdash t \right> 
+    \Gamma \vdash t
+    : \tau
   } 
 \end{mathpar}
 \end{definition}
