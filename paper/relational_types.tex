@@ -873,7 +873,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       l;t 
       \ |\ 
-      \omega\ \widebar{l \approx t}
+      \omega\ \widebar{l = t}
       \ |\ 
       \lambda\ \widebar{p : \tau \Rightarrow t} 
       \ |\ 
@@ -895,7 +895,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       l;p
       \ |\ 
-      \omega\ \widebar{l \approx p}
+      \omega\ \widebar{l = p}
     \end{array}
     \\
     \tau
@@ -911,13 +911,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       l*\tau 
       \ |\ 
-      l\sim\tau 
+      l:\tau 
       \ |\ 
       \tau\rightarrow\tau 
       \ |\ 
-      \exists \widebar{\alpha} :: \tau \leq \tau \ .\ \tau 
+      \left<\exists \widebar{\alpha}\ .\ \tau\ |\ \tau \leq \tau\right>
       \ |\ 
-      \forall \widebar{\alpha} :: \tau \leq \tau \ .\ \tau 
+      \left<\forall \widebar{\alpha}\ .\ \tau\ |\ \tau \leq \tau\right>
       \ |\ 
       \mu \alpha.\tau 
       \ |\ 
@@ -935,7 +935,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       l;v
       \ |\ 
-      \omega\ \widebar{l \approx v}
+      \omega\ \widebar{l = v}
       \ |\ 
       \lambda\ \widebar{p : \tau \Rightarrow t} 
     \end{array}
@@ -957,7 +957,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   \inferrule {
   } {
-    (\omega\ \widebar{l_i \approx v_i})/l_j \leadsto v_j
+    (\omega\ \widebar{l_i = v_i})/l_j \leadsto v_j
   } 
 
   \inferrule { 
@@ -1006,7 +1006,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \ |\ 
     l;E 
     \ |\ 
-    \omega\ \widebar{l \approx E}
+    \omega\ \widebar{l = E}
     \ |\ 
     E/l
     \ |\ 
@@ -1054,7 +1054,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     &{} =
     \text{unify}\ v\ p
     \\
-    \text{unify}\ (\omega\ \widebar{l \approx v})\ (\omega\ \widebar{l \approx p}) 
+    \text{unify}\ (\omega\ \widebar{l = v})\ (\omega\ \widebar{l = p}) 
     &{} =
     \text{reduce } ; \widebar{\text{unify}\ v\ p}
   \end{array}
@@ -1080,7 +1080,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Gamma \vdash t
     : \tau 
   } {
-     \Gamma \vdash \left<l\ t\right>  
+     \Gamma \vdash (l;t) 
     : l*\tau
   }
 
@@ -1088,8 +1088,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \bigwedge
     \Gamma \vdash t_i :  \tau_i  
   } {
-    \Gamma \vdash \omega\ (\widebar{l_i \approx t_i})
-    : (\text{reduce} \wedge \widebar{l_i\sim\tau_i})
+    \Gamma \vdash \omega\ (\widebar{l_i = t_i})
+    : (\text{reduce} \wedge \widebar{l_i : \tau_i})
   } 
 
   \inferrule {
@@ -1106,7 +1106,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   \inferrule {
     \Gamma \vdash t
-    : l\sim\tau
+    : l:\tau
   } {
     \Gamma \vdash t/l
     : \tau
@@ -1125,13 +1125,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   \inferrule { 
     \cdot \Vdash 
-    \forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5
+    \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
     : \tau_1
     \\
     \Gamma \vdash t_1
     : \tau_1
     \\\\
-    \Gamma,x \mapsto (\forall \widebar{\alpha} :: \tau_3 \leq \tau_4 \ .\ \tau_5) 
+    \Gamma,x \mapsto \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
       \vdash t_2 
     : \tau_2
   } {
@@ -1218,8 +1218,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \Vdash \tau_1
     \leq \tau_2
   } {
-    \Delta \Vdash l\sim\tau_1
-    \leq l\sim\tau_2
+    \Delta \Vdash l:\tau_1
+    \leq l:\tau_2
   } 
 
   \inferrule {
@@ -1241,7 +1241,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \longrightarrow
     (\Delta;\Delta' \Vdash \tau_3 \leq \tau_4)
   } { 
-    \Delta \Vdash \left<\tau_3 :: \exists \widebar{\alpha_i}\ .\ \tau_1 \leq \tau_2\right>
+    \Delta \Vdash \left<\exists \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \leq \tau_2\right>
     \leq \tau_4
   }
 
@@ -1255,7 +1255,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \leq \tau_3
   } { 
     \Delta \Vdash \tau_1
-    \leq \left<\tau_4 :: \exists \widebar{\alpha_i}\ .\ \tau_2 \leq \tau_3\right>
+    \leq \left<\exists \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \leq \tau_3\right>
   }
 
   \inferrule { 
@@ -1267,7 +1267,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     (\Delta;\Delta' \Vdash \tau_1 \leq \tau_4)
   } { 
     \Delta \Vdash \tau_1
-    \leq \left<\tau_4 :: \forall \widebar{\alpha_i}\ .\ \tau_2 \leq \tau_3\right>
+    \leq \left<\forall \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \leq \tau_3\right>
   }
 
   \inferrule { 
@@ -1279,7 +1279,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta;\Delta' \Vdash \tau_1
     \leq \tau_2
   } { 
-    \Delta \Vdash \left<\tau_3 :: \forall \widebar{\alpha}\ .\ \tau_1 \leq \tau_2\right>
+    \Delta \Vdash \left<\forall \widebar{\alpha}\ .\ \tau_3\ |\ \tau_1 \leq \tau_2\right>
     \leq \tau_4
   }
 
@@ -1396,7 +1396,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     e \leadsto e'
   } {
-    \tau \in \left< \cdot \vdash e' \right> 
+    \cdot \vdash e'
+    : \tau 
   } 
 \end{mathpar}
 \end{theorem}
@@ -1452,12 +1453,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
 
     \text{infer } \iota\ \Delta\ \Gamma \vdash 
-    \omega\ \widebar{l_i \approx t_i} : \tau
+    \omega\ \widebar{l_i = t_i} : \tau
     &{} =
     \begin{array}[t]{@{} l}
       \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
       \\
-      \text{let } \tau' = \text{reduce} \wedge \widebar{l_i \sim \alpha_i}
+      \text{let } \tau' = \text{reduce} \wedge \widebar{l_i : \alpha_i}
       \\
       \text{reduce} * \{
       \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_i : \alpha_i\ |\ 
@@ -1500,9 +1501,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \\
       \{ \Delta_1;\Delta_2\ .\ \alpha \ |\
       \\
-      \ \ \ \ \Delta_1.\tau_1 \in \text{infer } \iota\ \Delta\ \Gamma \vdash t : l \sim \tau 
+      \ \ \ \ \Delta_1.\tau_1 \in \text{infer } \iota\ \Delta\ \Gamma \vdash t : l : \tau 
       \\
-      \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq l \sim \alpha
+      \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq l : \alpha
       \\
       \}
     \end{array}
@@ -1767,7 +1768,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     &{} = 
     \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
     \\
-    \text{unify } \iota\ \Delta \vdash l\sim\tau_1 \leq l\sim\tau_2	
+    \text{unify } \iota\ \Delta \vdash l:\tau_1 \leq l:\tau_2	
     &{} = 
     \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
     \\
