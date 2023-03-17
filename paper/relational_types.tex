@@ -1076,15 +1076,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{mathpar}
   \inferrule { 
   } {
-    \left<\left<\rho_\kappa, x, e\right> :: \kappa, \rho, v \right> 
+    \left<\left<\rho_\kappa, x, e\right> :: \kappa, \rho, w \right> 
     \leadsto 
-    \left<\kappa, (\rho_\kappa,x \mapsto \left<\rho,v\right>), e \right>
+    \left<\kappa, (\rho_\kappa,x \mapsto \left<\rho,w\right>), e \right>
   } 
 
   \inferrule { 
     x = \text{fresh}\ ()
   } {
-    \left<\kappa, \rho, l;e \right> 
+    \left<\kappa, \rho, l \cdot e \right> 
     \leadsto 
     \left<
       \left< \rho, x, (l \cdot x)\right> :: \kappa, 
@@ -1092,10 +1092,39 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       e 
     \right>
   } 
+
+  \inferrule { 
+    (x, e_\kappa, e') = \text{contify}\ (\widebar{l_i = e_i})
+  } {
+    \left<\kappa, \rho, \sigma\ \widebar{l_i = e_i} \right> 
+    \leadsto 
+    \left<
+      \left< \rho, x', e_\kappa\right> :: \kappa,
+      \rho,
+      e'
+    \right>
+  } 
 \end{mathpar}
 \end{definition}
 
-\begin{definition}(Abstract state)
+\begin{definition}(Abstract value)
+\[
+  \begin{array}{l @{} l}
+    w 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      x
+      \ |\ 
+      () 
+      \ |\ 
+      l \cdot x 
+      \ |\ 
+      \sigma\ \widebar{l = x}
+      \ |\ 
+      \lambda\ \widebar{p \Rightarrow t} 
+    \end{array}
+  \end{array}
+\]
 \end{definition}
 
 
