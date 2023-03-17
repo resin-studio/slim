@@ -1064,7 +1064,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{unify}\ (\sigma\ \widebar{l = v})\ (\sigma\ \widebar{l = p}) 
     &{} =
-    \text{reduce} \cdot \widebar{\text{unify}\ v\ p}
+    \text{reduce}\ ;\ \widebar{\text{unify}\ v\ p}
   \end{array}
 \]
 \end{definition}
@@ -1082,28 +1082,43 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    x = \text{fresh}\ ()
+    \left< \rho', w \right> = \rho\ x
   } {
-    \left<\kappa, \rho, l \cdot e \right> 
+    \left<\kappa, \rho, x \right> 
     \leadsto 
-    \left<
-      \left< \rho, x, (l \cdot x)\right> :: \kappa, 
-      \rho,
-      e 
-    \right>
+    \left<\kappa, \rho', w \right>
   } 
 
   \inferrule { 
-    (x, e_\kappa, e') = \text{contify}\ (\widebar{l_i = e_i})
+    (x, e_\kappa, e') = \text{contify}\ e 
   } {
-    \left<\kappa, \rho, \sigma\ \widebar{l_i = e_i} \right> 
+    \left<\kappa, \rho, e\right> 
     \leadsto 
     \left<
-      \left< \rho, x', e_\kappa\right> :: \kappa,
+      \left< \rho, x, e_\kappa\right> :: \kappa,
       \rho,
       e'
     \right>
   } 
+
+
+  \inferrule { 
+    \left< \rho', (\sigma\ \widebar{l_i = x_i}) \right> = \rho\ x'
+  } {
+    \left<\kappa, \rho, x' / l_j \right> 
+    \leadsto 
+    \left< \kappa, \rho', x_j \right>
+  } 
+  
+
+  \inferrule { 
+    \left< \rho', w \right> = \rho\ x
+  } {
+    \left<\kappa, \rho, x_1\ x_2 \right> 
+    \leadsto 
+    \left< \right>
+  } 
+
 \end{mathpar}
 \end{definition}
 
@@ -1113,8 +1128,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     w 
     &{} ::=
     \begin{array}[t]{@{} l}
-      x
-      \ |\ 
       () 
       \ |\ 
       l \cdot x 
