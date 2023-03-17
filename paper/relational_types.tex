@@ -859,7 +859,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \section{Language}
 
 \begin{definition}[Syntax]
-
 \[
   \begin{array}{l @{} l}
     t 
@@ -948,6 +947,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   
 
 \begin{definition}(Operational semantics)
+\begin{flalign}
+  &\boxed{t \leadsto t}&
+\end{flalign}
 \begin{mathpar}
   \inferrule { 
     t \leadsto t' 
@@ -1022,6 +1024,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
   
 \begin{definition}
+\begin{flalign}
+  &\boxed{\text{match}\ v\ (\widebar{p \Rightarrow t}) = H}&
+\end{flalign}
 \[
   \begin{array}{l @{} l}
     \text{match}\ v\ ((p \Rightarrow t) :: cs)
@@ -1040,6 +1045,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
 
 \begin{definition}
+\begin{flalign}
+  &\boxed{\text{unify}\ v\ p = H}&
+\end{flalign}
 \[
   \begin{array}{l @{} l}
     \text{unify}\ v\ x 
@@ -1062,9 +1070,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
 
 \begin{definition}(Abstract machine)
-\[
-  \boxed{\left<\kappa, \rho, e \right> \leadsto \left<\kappa, \rho, e \right>}
-\]
+\begin{flalign}
+  &\boxed{\left<\kappa, \rho, e \right> \leadsto \left<\kappa, \rho, e \right>}&
+\end{flalign}
 \begin{mathpar}
   \inferrule { 
   } {
@@ -1094,6 +1102,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 \begin{definition}[Typing]
+\begin{flalign}
+  &\boxed{\Gamma \vdash e : \tau}&
+\end{flalign}
 \begin{mathpar}
   \inferrule { 
   } {
@@ -1191,32 +1202,42 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{definition}
 
-\begin{definition}[Type environment]
+\begin{definition}[Type environment find]
+\begin{flalign}
+  &\boxed{\Gamma\ x = \tau}&
+\end{flalign}
+\[
+  \begin{array}{l @{} l}
+    (\Gamma, x \mapsto \tau)\ x'
+    &{} =
+    \begin{cases}
+      \tau
+      &\text{if } x = x' 
+      \\
+      \Gamma\ x' 
+      &\text{otherwise}
+    \end{cases}
+  \end{array}
+\]
+\end{definition}
+
+\begin{definition}[Type environment domain]
+\begin{flalign}
+  &\boxed{x \in \text{dom}\ \Gamma}&
+\end{flalign}
 \begin{mathpar}
-  \inferrule { 
-  } {
-    (\Gamma, x \mapsto \tau)(x) = \tau 
-  } 
-
-  \inferrule { 
-    x \neq x' 
-    \\
-    \Gamma(x) = \tau
-  } {
-    (\Gamma, x' \mapsto \tau')(x') = \tau 
-  } 
 
   \inferrule { 
   } {
-    x \in \text{dom}(\Gamma, x \mapsto \tau)
+    x \in \text{dom}\ (\Gamma, x \mapsto \tau)
   } 
 
   \inferrule { 
     x \neq x'
     \\
-    x \in \text{dom}(\Gamma)
+    x \in \text{dom}\ \Gamma
   } {
-    x \in \text{dom}(\Gamma, x' \mapsto \tau')
+    x \in \text{dom}\ (\Gamma, x' \mapsto \tau')
   } 
 \end{mathpar}
 \end{definition}
