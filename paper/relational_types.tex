@@ -394,7 +394,7 @@ the the inductive types. The successful trace of the decision algorithm correspo
 the following derivation. 
 
 \[
-  \Delta_l = \cdot, \text{X} \mapsto \text{unit}
+  \Delta_l = \bullet, \text{X} \mapsto \text{unit}
 \]
 
 \begin{mathpar}
@@ -460,7 +460,7 @@ the following derivation.
     \end{array}
   }
 } { 
-  \cdot \vdash
+  \bullet \vdash
   (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
   \leq
   \exists\ \text{X}\ .\ list(\text{X})
@@ -498,13 +498,13 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
       \inferrule* {
         \vdots
       } { 
-        \cdot \vdash
+        \bullet \vdash
         \text{zero}*\text{unit}
         \leq
         \text{zero}*\text{unit}
       }
     } { 
-      \cdot \vdash
+      \bullet \vdash
       \text{zero}*\text{unit}
       \leq
       \begin{array}[]{@{} l}
@@ -521,13 +521,13 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
             \inferrule* {
               \vdots
             } { 
-              \cdot \vdash
+              \bullet \vdash
               \text{succ}*nat 
               \leq
               \text{succ}*nat 
             }
           } { 
-            \cdot \vdash
+            \bullet \vdash
             \text{succ}*nat 
             \leq
             \begin{array}[]{@{} l}
@@ -537,19 +537,19 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
             \end{array}
           }
         } { 
-          \cdot \vdash
+          \bullet \vdash
           \text{succ}*nat
           \leq
           nat
         }
       } { 
-        \cdot \vdash
+        \bullet \vdash
         \text{succ}*\text{succ}*nat
         \leq
         \text{succ}*nat
       }
     } { 
-      \cdot \vdash
+      \bullet \vdash
       \text{succ}*\text{succ}*nat
       \leq
       \begin{array}[]{@{} l}
@@ -559,7 +559,7 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
       \end{array}
     }
   } { 
-    \cdot \vdash
+    \bullet \vdash
     \begin{array}[]{@{} l @{}}
       \text{zero}*\text{unit}\ \vee
       \arcr
@@ -573,7 +573,7 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
     \end{array}
   }
 } { 
-  \cdot \vdash
+  \bullet \vdash
   even \leq nat
 }
 \end{mathpar}
@@ -624,7 +624,7 @@ Applying the function that expects the relation between lists and numbers
 to the argument generates a corresponding subtyping constraint, 
 which the system attempts to solve. We define the type environment a type environment abbreviation.
 \[
-\Delta_{nl} = \cdot, 
+\Delta_{nl} = \bullet, 
   \text{X} \mapsto \text{unit},
   \text{N} \mapsto \text{zero}*\text{unit}, 
   \text{XS} \mapsto \text{nil}*\text{unit}
@@ -667,7 +667,7 @@ A successful trace of the decision algorithm corresponds to the following subtyp
         \text{N} \times \text{XS} \leq nat\_and\_list(\text{X})
       }
     } {
-      \cdot, \text{X} \mapsto \text{unit} \vdash
+      \bullet, \text{X} \mapsto \text{unit} \vdash
       \begin{array}[]{@{} l @{}}
         (\text{succ}*\text{zero}*\text{unit})\ \times 
         \arcr
@@ -681,7 +681,7 @@ A successful trace of the decision algorithm corresponds to the following subtyp
       \end{array}
       }
   } { 
-    \cdot, \text{X} \mapsto \text{unit} \vdash
+    \bullet, \text{X} \mapsto \text{unit} \vdash
     \begin{array}[]{@{} l @{}}
       (\text{succ}*\text{zero}*\text{unit})\ \times 
       \arcr
@@ -697,7 +697,7 @@ A successful trace of the decision algorithm corresponds to the following subtyp
     \end{array}
   }
 } { 
-  \cdot \vdash
+  \bullet \vdash
   (\text{succ}*\text{zero}*\text{unit}) \times (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
   \leq
   \exists\ \text{X}\ .\ nat\_and\_list(\text{X})
@@ -722,7 +722,7 @@ even\_and\_list(\alpha) =
 We verify that the even relation is included in the natural number relation to lists.  
 
 \[
-\Delta_{enl} = \cdot,\ 
+\Delta_{enl} = \bullet,\ 
   \text{N} \times \text{XS} \mapsto nat\_and\_list(\text{X}),\ 
   \text{XS'} \mapsto \text{cons}*(\text{X} \times \text{XS}),\ 
   \text{N'} \mapsto \text{succ}*\text{N}
@@ -758,7 +758,7 @@ We verify that the even relation is included in the natural number relation to l
       \text{N'} \times \text{XS'} \leq nat\_and\_list(\text{X})
     }
   } {
-    \cdot \vdash
+    \bullet \vdash
     \begin{array}[]{@{} l @{}}
       \text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
       \arcr
@@ -776,7 +776,7 @@ We verify that the even relation is included in the natural number relation to l
     \end{array}
   }
 } { 
-  \cdot \vdash
+  \bullet \vdash
   even\_and\_list(\text{X})
   \leq
   nat\_and\_list(\text{X})
@@ -871,11 +871,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       x
       \ |\ 
-      l;t 
+      l \cdot t 
       \ |\ 
-      \omega\ \widebar{l = t}
+      \sigma\ \widebar{l = t}
       \ |\ 
-      \lambda\ \widebar{p : \tau \Rightarrow t} 
+      \lambda\ \widebar{p \Rightarrow t} 
       \ |\ 
       t/l
       \ |\ 
@@ -893,9 +893,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       () 
       \ |\ 
-      l;p
+      l \cdot p
       \ |\ 
-      \omega\ \widebar{l = p}
+      \sigma\ \widebar{l = p}
     \end{array}
     \\
     \tau
@@ -933,11 +933,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \begin{array}[t]{@{} l}
       () 
       \ |\ 
-      l;v
+      l \cdot v
       \ |\ 
-      \omega\ \widebar{l = v}
+      \sigma\ \widebar{l = v}
       \ |\ 
-      \lambda\ \widebar{p : \tau \Rightarrow t} 
+      \lambda\ \widebar{p \Rightarrow t} 
     \end{array}
   \end{array}
 \]
@@ -957,14 +957,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   \inferrule {
   } {
-    (\omega\ \widebar{l_i = v_i})/l_j \leadsto v_j
+    (\sigma\ \widebar{l_i = v_i})/l_j \leadsto v_j
   } 
 
   \inferrule { 
   } {
-    (\lambda\ \widebar{p : \tau \Rightarrow t})\ v 
+    (\lambda\ \widebar{p \Rightarrow t})\ v 
     \leadsto 
-    (\text{match } v\ \widebar{p : \tau \Rightarrow t})
+    (\text{match } v\ \widebar{p \Rightarrow t})
   } 
 
   \inferrule { 
@@ -976,9 +976,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   \inferrule { 
   } {
-    \text{fix}\ \lambda [x:\tau \Rightarrow t]
+    \text{fix}\ \lambda [x \Rightarrow t]
     \leadsto 
-    t[x \mapsto \text{fix}\ \lambda [x:\tau \Rightarrow t]]
+    t[x \mapsto \text{fix}\ \lambda [x \Rightarrow t]]
   } 
 
   \inferrule { 
@@ -1004,9 +1004,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     &{} ::=
     []
     \ |\ 
-    l;E 
+    l \cdot E 
     \ |\ 
-    \omega\ \widebar{l = E}
+    \sigma\ \widebar{l = E}
     \ |\ 
     E/l
     \ |\ 
@@ -1024,12 +1024,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{definition}
 \[
   \begin{array}{l @{} l}
-    \text{match}\ v\ ((p : \tau \Rightarrow t) :: cs)
+    \text{match}\ v\ ((p \Rightarrow t) :: cs)
     &{} =
     \begin{cases}
       t[H]
       &\text{if }
-      \text{unify}\ v\ p = H 
+      (\text{unify}\ v\ p) = H 
       \\
       
       \text{match}\ v\ cs
@@ -1044,19 +1044,19 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \begin{array}{l @{} l}
     \text{unify}\ v\ x 
     &{} =
-    \cdot, x \mapsto v
+    \bullet, x \mapsto v
     \\
     \text{unify}\ ()\ () 
     &{} =
-    \cdot
+    \bullet
     \\
-    \text{unify}\ l;v\ l;p 
+    \text{unify}\ (l \cdot v)\ (l \cdot p) 
     &{} =
     \text{unify}\ v\ p
     \\
-    \text{unify}\ (\omega\ \widebar{l = v})\ (\omega\ \widebar{l = p}) 
+    \text{unify}\ (\sigma\ \widebar{l = v})\ (\sigma\ \widebar{l = p}) 
     &{} =
-    \text{reduce } ; \widebar{\text{unify}\ v\ p}
+    \text{reduce} \cdot \widebar{\text{unify}\ v\ p}
   \end{array}
 \]
 \end{definition}
@@ -1068,11 +1068,22 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{mathpar}
   \inferrule { 
   } {
-    \left<\left<\rho_\kappa, x_\kappa, e_\kappa\right> :: \kappa, \rho, () \right> 
+    \left<\left<\rho_\kappa, x, e\right> :: \kappa, \rho, v \right> 
     \leadsto 
-    \left<\kappa, (\rho_\kappa,x_\kappa \mapsto \left<\rho,()\right>), e_\kappa \right>
+    \left<\kappa, (\rho_\kappa,x \mapsto \left<\rho,v\right>), e \right>
   } 
 
+  \inferrule { 
+    x = \text{fresh}\ ()
+  } {
+    \left<\kappa, \rho, l;e \right> 
+    \leadsto 
+    \left<
+      \left< \rho, x, (l \cdot x)\right> :: \kappa, 
+      \rho,
+      e 
+    \right>
+  } 
 \end{mathpar}
 \end{definition}
 
@@ -1109,7 +1120,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \bigwedge
     \Gamma \vdash t_i :  \tau_i  
   } {
-    \Gamma \vdash \omega\ (\widebar{l_i = t_i})
+    \Gamma \vdash \sigma\ (\widebar{l_i = t_i})
     : (\text{reduce} \wedge \widebar{l_i : \tau_i})
   } 
 
@@ -1145,7 +1156,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    \cdot \Vdash 
+    \bullet \Vdash 
     \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
     : \tau_1
     \\
@@ -1172,7 +1183,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Gamma \vdash t 
     : \tau' 
     \\
-    \cdot \Vdash \tau' \leq \tau
+    \bullet \Vdash \tau' \leq \tau
   } {
     \Gamma \vdash t
     : \tau
@@ -1402,7 +1413,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Typing progress)
 \begin{mathpar}
   \inferrule { 
-    \cdot \vdash e : \tau
+    \bullet \vdash e : \tau
   } {
     e = v \vee e \leadsto e'
   } 
@@ -1412,11 +1423,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Typing preservation)
 \begin{mathpar}
   \inferrule { 
-    \cdot \vdash e : \tau
+    \bullet \vdash e : \tau
     \\
     e \leadsto e'
   } {
-    \cdot \vdash e' : \tau 
+    \bullet \vdash e' : \tau 
   } 
 \end{mathpar}
 \end{theorem}
@@ -1425,11 +1436,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{definition}[Type transition]
 \begin{mathpar}
   \inferrule { 
-    \cdot \vdash e : \tau
+    \bullet \vdash e : \tau
     \\
     e \leadsto e'
     \\
-    \cdot \vdash e' : \tau'
+    \bullet \vdash e' : \tau'
   } {
     \left<e, \tau\right> \rightharpoonup \left<e', \tau'\right>
   } 
@@ -1439,7 +1450,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Type transition progress)
 \begin{mathpar}
   \inferrule { 
-    \cdot \vdash e : \tau
+    \bullet \vdash e : \tau
     \\
     e \neq v
   } {
@@ -1452,7 +1463,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Type transition preservation)
 \begin{mathpar}
   \inferrule { 
-    \cdot \vdash e : \tau
+    \bullet \vdash e : \tau
     \\
     e \leadsto e'
     \\
@@ -1470,7 +1481,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{infer } \iota\ \Delta\ \Gamma \vdash 
     \_ : \tau
     &{} =
-    \{\cdot.\tau\}
+    \{\bullet.\tau\}
     \\
 
     \text{infer } \iota\ \Delta\ \Gamma \vdash 
@@ -1514,7 +1525,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
 
     \text{infer } \iota\ \Delta\ \Gamma \vdash 
-    \omega\ \widebar{l_i = t_i} : \tau
+    \sigma\ \widebar{l_i = t_i} : \tau
     &{} =
     \begin{array}[t]{@{} l}
       \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
@@ -1648,12 +1659,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{unify } \blacksquare\ \Delta \vdash \alpha \leq \tau	
     &{} =
     \begin{cases}  
-      \{ \cdot,\alpha \mapsto \nu\alpha.\tau \}
+      \{ \bullet,\alpha \mapsto \nu\alpha.\tau \}
       & \text{if } 
       \alpha \not\in \text{dom}(\Delta) \ \wedge\
       \alpha \in \text{freevars}(\tau[\Delta])
       \\
-      \{ \cdot,\alpha \mapsto \tau \}
+      \{ \bullet,\alpha \mapsto \tau \}
       & \text{if } 
       \alpha \not\in \text{dom}(\Delta) \ \wedge\
       \alpha \notin \text{freevars}(\tau[\Delta])
@@ -1667,13 +1678,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{unify } \square\ \Delta \vdash \alpha \leq \tau	
     &{} =
     \begin{cases}  
-      \{ \cdot,\alpha \mapsto (\nu\alpha.\tau \wedge \beta) \}
+      \{ \bullet,\alpha \mapsto (\nu\alpha.\tau \wedge \beta) \}
       & \text{if } 
       \alpha \not\in \text{dom}(\Delta) \ \wedge\
       \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
       \text{fresh } \beta
       \\
-      \{ \cdot,\alpha \mapsto \tau \wedge \beta \}
+      \{ \bullet,\alpha \mapsto \tau \wedge \beta \}
       & \text{if } 
       \alpha \not\in \text{dom}(\Delta) \ \wedge\
       \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
@@ -1687,12 +1698,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{unify } \blacksquare\ \Delta \vdash \tau \leq \alpha 	
     &{} =
     \begin{cases}  
-      \{ \cdot,\alpha \mapsto \mu\alpha.\tau \}
+      \{ \bullet,\alpha \mapsto \mu\alpha.\tau \}
       & \text{if } 
       \alpha \not\in \text{dom}(\Delta) \ \wedge\
       \alpha \in \text{freevars}(\tau[\Delta])
       \\
-      \{ \cdot,\alpha \mapsto \tau \}
+      \{ \bullet,\alpha \mapsto \tau \}
       & \text{if } 
       \alpha \not\in \text{dom}(\Delta) \ \wedge\
       \alpha \notin \text{freevars}(\tau[\Delta])
@@ -1705,13 +1716,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{unify } \square\ \Delta \vdash \tau \leq \alpha	
     &{} =
     \begin{cases}  
-      \{ \cdot,\alpha \mapsto (\mu\alpha.\tau \vee \beta) \}
+      \{ \bullet,\alpha \mapsto (\mu\alpha.\tau \vee \beta) \}
       & \text{if } 
       \alpha \not\in \text{dom}(\Delta) \ \wedge\
       \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
       \text{fresh } \beta
       \\
-      \{ \cdot,\alpha \mapsto \tau \vee \beta \}
+      \{ \bullet,\alpha \mapsto \tau \vee \beta \}
       & \text{if } 
       \alpha \not\in \text{dom}(\Delta) \ \wedge\
       \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
@@ -1815,15 +1826,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \begin{array}{l @{} l}
     \text{unify } \iota\ \Delta \vdash \bot \leq \_	
     &{} = 
-    \{\cdot\}
+    \{\bullet\}
     \\
     \text{unify } \iota\ \Delta \vdash \_ \leq \top	
     &{} = 
-    \{\cdot\}
+    \{\bullet\}
     \\
     \text{unify } \iota\ \Delta \vdash \text{unit}  \leq \text{unit}	
     &{} = 
-    \{\cdot\}
+    \{\bullet\}
     \\
     \text{unify } \iota\ \Delta \vdash l*\tau_1 \leq l*\tau_2	
     &{} = 
@@ -1953,7 +1964,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{definition}
 \[
   \begin{array}{l @{} l}
-  \Delta\ ;\ \cdot
+  \Delta\ ;\ \bullet
   &\ = \Delta 
   \\
   \Delta_1;(\Delta_2,\alpha \mapsto \tau) 
@@ -2632,14 +2643,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   % \inferrule { 
   % } {
-  %   \left< E \right> = \text{reduce} \wedge\ \{\left< \cdot \vdash e \right>\ |\ e \in E \}
+  %   \left< E \right> = \text{reduce} \wedge\ \{\left< \bullet \vdash e \right>\ |\ e \in E \}
   % } 
 
   % \inferrule { 
   % } {
   %   \left< \llbracket e \rrbracket \right>
   %   =
-  %   \left< \cdot \vdash e \right>
+  %   \left< \bullet \vdash e \right>
   % } 
 
   % \inferrule { 
