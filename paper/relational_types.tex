@@ -167,12 +167,12 @@ dynamically typed programs easier to write with fewer errors.
 \begin{enumerate}
   \item propagating types (downward/upward) 
   \item adjusting types (wider/narrower) 
-  \item relating types (inductive/coinductive) 
+  \item constraining types (inductive/coinductive) 
 \end{enumerate}
 We introduce a programming language with a specification language to indicate static bounds. 
 As is common these days, the static bounds are represented in a language of types.
 
-\subsection{Propagating types}
+\subsection{Propagated types}
 Writing type annotations can be burdensome, so the first step 
 towards making static checks feasible is to infer types from terms.
 
@@ -204,7 +204,7 @@ are required, so types are propagated in both directions for every syntax rule
 of the language.
 
 
-\subsection{Propagating upward}
+\subsection{Propagated to widen}
 Since annotations are not required, it is important to propagate types up to check
 that a term fits its context.
 For example, a function abstraction is not required to be annotated 
@@ -230,7 +230,7 @@ which expects \lstinline{world*str}.
 hello*str $\leq$ world*str
 \end{lstlisting}
 
-\subsection{Propagating downward}
+\subsection{Propagated to narrow}
 By propagating down and decomposing types, 
 it is possible to guide the completion of programs with type hints.
 To maintain the spirit of dynamic types, type annotations must remain optional.
@@ -252,7 +252,7 @@ $\lambda$ n : nat $\Rightarrow$
 is propagated and decomposed such that the subtyping constraint 
 \lstinline{nat $\subseteq$ str} is decided. 
 
-\subsection{Adjusting types}
+\subsection{Adjustable types}
 
 In a dynamically typed language, since types are not necessarily prescribed
 for terms of particular constructions (as they are in ML datatypes), 
@@ -261,7 +261,7 @@ When inferring a type that may be associated with various terms throughout a pro
 The optimal type may depend on widening a type as new use cases are discovered,
 or narrowing a type as new restrictions are discovered. 
 
-\subsection{Adjusting wider}
+\subsection{Adjustable with widening}
 
 In parametric types where a generic input type must be the same as a generic output type,
 The dynamic nature of terms is seemingly at odds with inferring types.
@@ -300,7 +300,7 @@ The result type for \lstinline{(pair n s)} ends up as
 \newline
 \lstinline{(int $\vee$ string) $\times$ (int $\vee$ string)}. 
 
-\subsection{Adjusting narrower}
+\subsection{Adjustable with narrowing}
 
 In functions where a parameter has an unknown type and that parameter is 
 internally used as an argument to an application, the dynamically typed 
@@ -334,7 +334,7 @@ and the type variable simply falls away in the intersection type of a parameter.
 The external parameter type for ends up as \lstinline{(int $\wedge$ str)}. 
 
 
-\subsection{Relating types}
+\subsection{Constrained types}
 In order to thoroughly catch errors and guide programming, 
 the specification language must be able to describe the semantic relation
 between structures. Rather than adding a second syntactic layer 
@@ -589,7 +589,7 @@ of type abstraction.
 
 \hfill
 
-\subsection{Relating inductively}
+\subsection{Constrained by widening}
 
 The key insight that enables relations to be defined with existing type constructs,
 is to constrain bound variables of quantified types using subtyping constraints,
@@ -787,7 +787,7 @@ We verify that the even relation is included in the natural number relation to l
 
 
 
-\subsection{Relating co-inductively}
+\subsection{Constrained by narrowing}
 The system of type is also expressive enough to precisely specify
 sets of functions, where each function's output depends on its input.
 
@@ -1060,6 +1060,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \end{array}
 \]
 \end{definition}
+
+
+\begin{definition}(Abstract machine)
+\begin{mathpar}
+\end{mathpar}
+\end{definition}
+
+
 
 \begin{definition}[Typing]
 \begin{mathpar}
@@ -2248,6 +2256,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % in Synquid is subtyping depends only on the constraints 
 % in our setting subtyping can depend on base types too
 % the asymmetrical rules can handle all permutations 
+% Synquid lacks decomposition of predicates
+% Relational types allows decomposition like functional/logic programming, thus is more natural to use.
 
 
 % subtyping constraints may be thought of as decidable propositions of the metalanguage 
