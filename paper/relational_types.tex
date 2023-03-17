@@ -947,9 +947,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   
 
 \begin{definition}(Operational semantics)
-\begin{flalign}
+\begin{flalign*}
   &\boxed{t \leadsto t}&
-\end{flalign}
+\end{flalign*}
 \begin{mathpar}
   \inferrule { 
     t \leadsto t' 
@@ -1024,9 +1024,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
   
 \begin{definition}
-\begin{flalign}
+\begin{flalign*}
   &\boxed{\text{match}\ v\ (\widebar{p \Rightarrow t}) = H}&
-\end{flalign}
+\end{flalign*}
 \[
   \begin{array}{l @{} l}
     \text{match}\ v\ ((p \Rightarrow t) :: cs)
@@ -1045,9 +1045,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
 
 \begin{definition}
-\begin{flalign}
+\begin{flalign*}
   &\boxed{\text{unify}\ v\ p = H}&
-\end{flalign}
+\end{flalign*}
 \[
   \begin{array}{l @{} l}
     \text{unify}\ v\ x 
@@ -1070,9 +1070,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
 
 \begin{definition}(Abstract machine)
-\begin{flalign}
+\begin{flalign*}
   &\boxed{\left<\kappa, \rho, e \right> \leadsto \left<\kappa, \rho, e \right>}&
-\end{flalign}
+\end{flalign*}
 \begin{mathpar}
   \inferrule { 
   } {
@@ -1102,9 +1102,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 \begin{definition}[Typing]
-\begin{flalign}
+\begin{flalign*}
   &\boxed{\Gamma \vdash e : \tau}&
-\end{flalign}
+\end{flalign*}
 \begin{mathpar}
   \inferrule { 
   } {
@@ -1203,9 +1203,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
 
 \begin{definition}[Type environment find]
-\begin{flalign}
+\begin{flalign*}
   &\boxed{\Gamma\ x = \tau}&
-\end{flalign}
+\end{flalign*}
 \[
   \begin{array}{l @{} l}
     (\Gamma, x \mapsto \tau)\ x'
@@ -1222,9 +1222,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
 
 \begin{definition}[Type environment domain]
-\begin{flalign}
+\begin{flalign*}
   &\boxed{x \in \text{dom}\ \Gamma}&
-\end{flalign}
+\end{flalign*}
 \begin{mathpar}
 
   \inferrule { 
