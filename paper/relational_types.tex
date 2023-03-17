@@ -997,7 +997,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{definition}
 
-\begin{definition}
+\begin{definition}[Evaluation context]
 \[
   \begin{array}{l @{} l}
     E 
@@ -1061,11 +1061,24 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \]
 \end{definition}
 
-
 \begin{definition}(Abstract machine)
+\[
+  \boxed{\left<\kappa, \rho, e \right> \leadsto \left<\kappa, \rho, e \right>}
+\]
 \begin{mathpar}
+  \inferrule { 
+  } {
+    \left<\left<\rho_\kappa, x_\kappa, e_\kappa\right> :: \kappa, \rho, () \right> 
+    \leadsto 
+    \left<\kappa, (\rho_\kappa,x_\kappa \mapsto \left<\rho,()\right>), e_\kappa \right>
+  } 
+
 \end{mathpar}
 \end{definition}
+
+\begin{definition}(Abstract state)
+\end{definition}
+
 
 
 
