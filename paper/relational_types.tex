@@ -1500,6 +1500,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{definition}
 
+
 \begin{theorem}(Typing progress)
 \begin{mathpar}
   \inferrule { 
@@ -1522,17 +1523,130 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{theorem}
 
-
-\begin{definition}[Type transition]
+\begin{definition}[Typed state abstraction]
+\begin{flalign*}
+  &\boxed{\left< \kappa, \rho, e \right> \rightleftharpoons \left< \Xi, \Gamma, \tau \right>}&
+\end{flalign*}
 \begin{mathpar}
   \inferrule { 
-    \bullet \vdash e : \tau
+    \kappa \rightleftharpoons \Xi
     \\
-    e \leadsto e'
-    \\
-    \bullet \vdash e' : \tau'
+    \rho \rightleftharpoons \Gamma
   } {
-    \left<e, \tau\right> \rightharpoonup \left<e', \tau'\right>
+    \left< \kappa, \rho, () \right> 
+    \rightleftharpoons 
+    \left< \Xi, \Gamma, \text{unit} \right>
+  } 
+
+  \inferrule { 
+    \kappa \rightleftharpoons \Xi
+    \\
+    \rho \rightleftharpoons \Gamma
+    \\
+    \Gamma\ x = \tau
+  } {
+    \Gamma \vdash x
+    : \tau 
+    \\
+    \left< \kappa, \rho, x \right> 
+    \rightleftharpoons 
+    \left< \Xi, \Gamma, \tau \right>
+  } 
+
+  \inferrule { 
+    \Gamma \vdash t
+    : \tau 
+  } {
+     \Gamma \vdash (l;t) 
+    : l*\tau
+  }
+
+  \inferrule { 
+    \bigwedge
+    \Gamma \vdash t_i :  \tau_i  
+  } {
+    \Gamma \vdash \sigma\ (\widebar{l_i = t_i})
+    : (\text{reduce} \wedge \widebar{l_i : \tau_i})
+  } 
+
+  \inferrule {
+    \bigwedge
+    \Gamma_i \vdash p_i
+    : \tau_i
+    \ \wedge\
+    \Gamma;\Gamma_i \vdash t_i
+    : \tau'_i
+  } {
+    \Gamma \vdash \lambda\ (\widebar{m_i \Rightarrow e_i})
+    : (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
+  } 
+
+  \inferrule {
+    \Gamma \vdash t
+    : l:\tau
+  } {
+    \Gamma \vdash t/l
+    : \tau
+  } 
+
+  \inferrule { 
+    \Gamma \vdash t_1
+    : \tau' \rightarrow \tau
+    \\
+    \Gamma \vdash t_2
+    : \tau'
+  } {
+    \Gamma \vdash (t_1\ t_2)
+    : \tau
+  } 
+
+  \inferrule { 
+    \bullet \Vdash 
+    \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
+    : \tau_1
+    \\
+    \Gamma \vdash t_1
+    : \tau_1
+    \\\\
+    \Gamma,x \mapsto \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
+      \vdash t_2 
+    : \tau_2
+  } {
+    \Gamma \vdash \text{let}\ x : \tau_1 = t_1 \text{ in } t_2 
+    : \tau_2
+  } 
+
+  \inferrule { 
+    \Gamma \vdash t
+    : \tau \rightarrow \tau
+  } {
+    \Gamma \vdash \text{fix}\ t 
+    :\tau
+  } 
+
+  \inferrule { 
+    \Gamma \vdash t 
+    : \tau' 
+    \\
+    \bullet \Vdash \tau' \leq \tau
+  } {
+    \Gamma \vdash t
+    : \tau
+  } 
+\end{mathpar}
+\end{definition}
+
+
+\begin{definition}[Typed state transition]
+\begin{flalign*}
+  &\boxed{\left< \Xi, \Gamma, e, \tau \right> \leadsto \left<  \Xi, \Gamma, e, \tau \right>}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+  } {
+    \left< \Xi, \Gamma, e, \tau \right> 
+    \leadsto 
+    \left<  \Xi, \Gamma, e, \tau \right>
   } 
 \end{mathpar}
 \end{definition}
@@ -2703,7 +2817,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % motivation of abstract interpretation
   % where it's valuable
     % abstract interpretation is motivated by data-flow
-    % data-flow is motivated by side effects/(widening or narrowing)
+    % data-flow is motivated non-compositional termination 
     % notes:
       % for transition systems that widen/narrow with each step,
         % abstraction/concretizing enables leveraging transitions of the dynamic semantics
@@ -2724,6 +2838,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       % definition abstraction is the same as defining a big-step static semantics 
       % defining abstraction/concretizing and proving a galois connection
         % is in effect the same as proving soundness 
+
+  % analysis techniques
+    % compositional (structural termination) 
+      % type system
+    %flow (monotonic termination)
+      % constraint-based 
+        % define constraints and abstraction 
+        % prove constraints sound wrt abstraction
+      % state machine 
+        % define abstract transitions in terms of abstraction 
+        % proving abstract transitions sound is trivial 
 
   % %%%%%%%%%%%%%
   % %% here are some over-engineered definitions
