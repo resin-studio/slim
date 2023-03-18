@@ -1553,86 +1553,88 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \left< \Xi, \Gamma, \tau \right>
   } 
 
-  \inferrule { 
-    \Gamma \vdash t
-    : \tau 
-  } {
-     \Gamma \vdash (l;t) 
-    : l*\tau
-  }
+  % \\\\
 
-  \inferrule { 
-    \bigwedge
-    \Gamma \vdash t_i :  \tau_i  
-  } {
-    \Gamma \vdash \sigma\ (\widebar{l_i = t_i})
-    : (\text{reduce} \wedge \widebar{l_i : \tau_i})
-  } 
+  % \inferrule { 
+  %   \Gamma \vdash t
+  %   : \tau 
+  % } {
+  %    \Gamma \vdash (l;t) 
+  %   : l*\tau
+  % }
 
-  \inferrule {
-    \bigwedge
-    \Gamma_i \vdash p_i
-    : \tau_i
-    \ \wedge\
-    \Gamma;\Gamma_i \vdash t_i
-    : \tau'_i
-  } {
-    \Gamma \vdash \lambda\ (\widebar{m_i \Rightarrow e_i})
-    : (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
-  } 
+  % \inferrule { 
+  %   \bigwedge
+  %   \Gamma \vdash t_i :  \tau_i  
+  % } {
+  %   \Gamma \vdash \sigma\ (\widebar{l_i = t_i})
+  %   : (\text{reduce} \wedge \widebar{l_i : \tau_i})
+  % } 
 
-  \inferrule {
-    \Gamma \vdash t
-    : l:\tau
-  } {
-    \Gamma \vdash t/l
-    : \tau
-  } 
+  % \inferrule {
+  %   \bigwedge
+  %   \Gamma_i \vdash p_i
+  %   : \tau_i
+  %   \ \wedge\
+  %   \Gamma;\Gamma_i \vdash t_i
+  %   : \tau'_i
+  % } {
+  %   \Gamma \vdash \lambda\ (\widebar{m_i \Rightarrow e_i})
+  %   : (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
+  % } 
 
-  \inferrule { 
-    \Gamma \vdash t_1
-    : \tau' \rightarrow \tau
-    \\
-    \Gamma \vdash t_2
-    : \tau'
-  } {
-    \Gamma \vdash (t_1\ t_2)
-    : \tau
-  } 
+  % \inferrule {
+  %   \Gamma \vdash t
+  %   : l:\tau
+  % } {
+  %   \Gamma \vdash t/l
+  %   : \tau
+  % } 
 
-  \inferrule { 
-    \bullet \Vdash 
-    \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
-    : \tau_1
-    \\
-    \Gamma \vdash t_1
-    : \tau_1
-    \\\\
-    \Gamma,x \mapsto \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
-      \vdash t_2 
-    : \tau_2
-  } {
-    \Gamma \vdash \text{let}\ x : \tau_1 = t_1 \text{ in } t_2 
-    : \tau_2
-  } 
+  % \inferrule { 
+  %   \Gamma \vdash t_1
+  %   : \tau' \rightarrow \tau
+  %   \\
+  %   \Gamma \vdash t_2
+  %   : \tau'
+  % } {
+  %   \Gamma \vdash (t_1\ t_2)
+  %   : \tau
+  % } 
 
-  \inferrule { 
-    \Gamma \vdash t
-    : \tau \rightarrow \tau
-  } {
-    \Gamma \vdash \text{fix}\ t 
-    :\tau
-  } 
+  % \inferrule { 
+  %   \bullet \Vdash 
+  %   \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
+  %   : \tau_1
+  %   \\
+  %   \Gamma \vdash t_1
+  %   : \tau_1
+  %   \\\\
+  %   \Gamma,x \mapsto \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
+  %     \vdash t_2 
+  %   : \tau_2
+  % } {
+  %   \Gamma \vdash \text{let}\ x : \tau_1 = t_1 \text{ in } t_2 
+  %   : \tau_2
+  % } 
 
-  \inferrule { 
-    \Gamma \vdash t 
-    : \tau' 
-    \\
-    \bullet \Vdash \tau' \leq \tau
-  } {
-    \Gamma \vdash t
-    : \tau
-  } 
+  % \inferrule { 
+  %   \Gamma \vdash t
+  %   : \tau \rightarrow \tau
+  % } {
+  %   \Gamma \vdash \text{fix}\ t 
+  %   :\tau
+  % } 
+
+  % \inferrule { 
+  %   \Gamma \vdash t 
+  %   : \tau' 
+  %   \\
+  %   \bullet \Vdash \tau' \leq \tau
+  % } {
+  %   \Gamma \vdash t
+  %   : \tau
+  % } 
 \end{mathpar}
 \end{definition}
 
@@ -2840,9 +2842,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
         % is in effect the same as proving soundness 
 
   % analysis techniques
-    % compositional (structural termination) 
+    % compositional (structural termination) (directed dependence) 
       % type system
-    %flow (monotonic termination)
+    %flow (monotonic termination) (mutual dependence) (approximate function application) 
       % constraint-based 
         % define constraints and abstraction 
         % prove constraints sound wrt abstraction
