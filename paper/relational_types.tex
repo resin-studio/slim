@@ -861,40 +861,38 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{definition}[Syntax]
 \[
   \begin{array}{l @{} l}
-    t 
+    e 
     &{} ::=
     \begin{array}[t]{@{} l}
-      \_ 
-      \ |\ 
       () 
       \ |\ 
       x
       \ |\ 
-      l \cdot t 
+      l \cdot e
       \ |\ 
-      \sigma\ \widebar{l = t}
+      \sigma\ \widebar{l = e}
       \ |\ 
-      \lambda\ \widebar{p \Rightarrow t} 
+      \lambda\ \widebar{m \Rightarrow e} 
       \ |\ 
-      t/l
+      e/l
       \ |\ 
-      t\ t
+      e\ e 
       \ |\ 
-      \text{let } x : \tau = t\ \text{in } t
+      \text{let } x : \tau = e\ \text{in}\ e
       \ |\ 
-      \text{fix } t
+      \text{fix}\ e
     \end{array}
     \\
-    p 
+    m 
     &{} ::=
     \begin{array}[t]{@{} l}
       x 
       \ |\ 
       () 
       \ |\ 
-      l \cdot p
+      l \cdot m 
       \ |\ 
-      \sigma\ \widebar{l = p}
+      \sigma\ \widebar{l = m}
     \end{array}
     \\
     \tau
@@ -926,18 +924,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       \tau \wedge \tau
     \end{array}
-    \\
-    v 
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      () 
-      \ |\ 
-      l \cdot v
-      \ |\ 
-      \sigma\ \widebar{l = v}
-      \ |\ 
-      \lambda\ \widebar{p \Rightarrow t} 
-    \end{array}
   \end{array}
 \]
 
@@ -952,9 +938,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
-    t \leadsto t' 
+    e \leadsto e' 
   } {
-    E[t] \leadsto E[t']  
+    E[e] \leadsto E[e']  
   }
 
   \inferrule {
@@ -964,72 +950,34 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   \inferrule { 
   } {
-    (\lambda\ \widebar{p \Rightarrow t})\ v 
+    (\lambda\ \widebar{m \Rightarrow e})\ v 
     \leadsto 
-    (\text{match } v\ \widebar{p \Rightarrow t})
+    (\text{match } v\ \widebar{m \Rightarrow e})
   } 
 
   \inferrule { 
   } {
-    \text{let}\ x : \tau = v \text{ in } t
+    \text{let}\ x : \tau = v\ \text{in}\ e 
     \leadsto 
     t[x \mapsto v]
   } 
 
   \inferrule { 
   } {
-    \text{fix}\ \lambda [x \Rightarrow t]
+    \text{fix}\ \lambda [x \Rightarrow e]
     \leadsto 
-    t[x \mapsto \text{fix}\ \lambda [x \Rightarrow t]]
+    e[x \mapsto \text{fix}\ \lambda [x \Rightarrow e]]
   } 
-
-  \inferrule { 
-  } {
-    e \leadsto^* e
-  } 
- 
-  \inferrule { 
-    e \leadsto e' 
-    \\
-    e' \leadsto^* e''
-  } {
-    e \leadsto^* e''
-  } 
-
 \end{mathpar}
 \end{definition}
 
-\begin{definition}[Evaluation context]
-\[
-  \begin{array}{l @{} l}
-    E 
-    &{} ::=
-    []
-    \ |\ 
-    l \cdot E 
-    \ |\ 
-    \sigma\ \widebar{l = E}
-    \ |\ 
-    E/l
-    \ |\ 
-    E\ t
-    \ |\ 
-    v\ E
-    \ |\ 
-    \text{let } x : \tau = E\ \text{in } t
-    \ |\ 
-    \text{fix } E 
-  \end{array}
-\]
-\end{definition}
-  
 \begin{definition}
 \begin{flalign*}
-  &\boxed{\text{match}\ v\ (\widebar{p \Rightarrow t}) = H}&
+  &\boxed{\text{match}\ v\ (\widebar{m \Rightarrow t}) = H}&
 \end{flalign*}
 \[
   \begin{array}{l @{} l}
-    \text{match}\ v\ ((p \Rightarrow t) :: cs)
+    \text{match}\ v\ ((m \Rightarrow t) :: cs)
     &{} =
     \begin{cases}
       t[H]
@@ -1069,7 +1017,50 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \]
 \end{definition}
 
-\begin{definition}(Abstract machine)
+\begin{definition}[Operational structures]
+\[
+  \begin{array}{l @{} l}
+    v 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      () 
+      \ |\ 
+      l \cdot v
+      \ |\ 
+      \sigma\ \widebar{l = v}
+      \ |\ 
+      \lambda\ \widebar{m \Rightarrow t} 
+    \end{array}
+    \\
+    E 
+    &{} ::=
+    []
+    \ |\ 
+    l \cdot E 
+    \ |\ 
+    \sigma\ \widebar{l = E}
+    \ |\ 
+    E/l
+    \ |\ 
+    E\ e 
+    \ |\ 
+    v\ E
+    \ |\ 
+    \text{let } x : \tau = E\ \text{in}\ e 
+    \ |\ 
+    \text{fix } E 
+    \\
+    H 
+    &{} ::=
+    \bullet
+    \ |\ 
+    H, x \mapsto v
+  \end{array}
+\]
+\end{definition}
+  
+
+\begin{definition}(State machine)
 \begin{flalign*}
   &\boxed{\left<\kappa, \rho, e \right> \leadsto \left<\kappa, \rho, e \right>}&
 \end{flalign*}
@@ -1090,7 +1081,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    (x, e_\kappa, e') = \text{contify}\ e 
+    \text{contify}\ e = (x, e_\kappa, e')
   } {
     \left<\kappa, \rho, e\right> 
     \leadsto 
@@ -1103,7 +1094,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
   \inferrule { 
-    \left< \rho', (\sigma\ \widebar{l_i = x_i}) \right> = \rho\ x'
+    \rho\ x' = \left< \rho', (\sigma\ \widebar{l_i = x_i}) \right> 
   } {
     \left<\kappa, \rho, x' / l_j \right> 
     \leadsto 
@@ -1112,19 +1103,55 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   
 
   \inferrule { 
-    \left< \rho', w \right> = \rho\ x
+    \rho\ x_1 = \left< \rho_1, \lambda\ \widebar{m \Rightarrow e} \right> 
+    \\
+    \rho\ x_2 = \left< \rho_2, w \right>
+    \\
+    \text{match}\ \rho_2\ w\ \rho_1\ (\widebar{m \Rightarrow e}) = \left<\rho', e'\right> 
   } {
-    \left<\kappa, \rho, x_1\ x_2 \right> 
+    \left< \kappa, \rho, x_1\ x_2 \right> 
     \leadsto 
-    \left< \right>
+    \left< \kappa, \rho', e' \right>
   } 
 
+  \inferrule { 
+  } {
+    \left< \kappa, \rho, \text{let}\ x : \tau = x'\ \text{in}\ e \right> 
+    \leadsto 
+    \left< \kappa, \rho, e[x \mapsto x'] \right>
+  } 
+
+  \inferrule { 
+    \rho\ x = \lambda[x' \Rightarrow e]
+  } {
+    \left< 
+      \left< \rho_\kappa, x_\kappa, e_\kappa \right> :: \kappa, 
+      \rho, 
+      \text{fix}\ x
+    \right> 
+    \leadsto 
+    \left< \kappa, (\rho,x_\kappa \mapsto \text{fix}\ x), e'[x' \mapsto x_\kappa]\right>
+  } 
 \end{mathpar}
 \end{definition}
 
-\begin{definition}(Abstract value)
+\begin{definition}(State structures)
 \[
   \begin{array}{l @{} l}
+    \kappa 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      \widebar{\left< \rho, x, e \right>}
+    \end{array}
+    \\
+    \rho 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      \bullet 
+      \ |\ 
+      \rho, x \mapsto \left< \rho, w \right> 
+    \end{array}
+    \\
     w 
     &{} ::=
     \begin{array}[t]{@{} l}
@@ -1134,7 +1161,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       \sigma\ \widebar{l = x}
       \ |\ 
-      \lambda\ \widebar{p \Rightarrow t} 
+      \lambda\ \widebar{m \Rightarrow e} 
     \end{array}
   \end{array}
 \]
@@ -1185,7 +1212,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Gamma;\Gamma_i \vdash t_i
     : \tau'_i
   } {
-    \Gamma \vdash \lambda\ (\widebar{p_i \Rightarrow t_i})
+    \Gamma \vdash \lambda\ (\widebar{m_i \Rightarrow e_i})
     : (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
   } 
 
@@ -1606,7 +1633,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
 
     \text{infer } \iota\ \Delta\ \Gamma \vdash 
-    \lambda\ \widebar{p_i : \tau_i \Rightarrow t_i} : \tau
+    \lambda\ \widebar{m_i \Rightarrow t_i} : \tau
     &{} =
     \begin{array}[t]{@{} l}
       \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
