@@ -934,38 +934,38 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{definition}(Operational semantics)
 \begin{flalign*}
-  &\boxed{t \leadsto t}&
+  &\boxed{t \hookrightarrow t}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
-    e \leadsto e' 
+    e \hookrightarrow e' 
   } {
-    E[e] \leadsto E[e']  
+    E[e] \hookrightarrow E[e']  
   }
 
   \inferrule {
   } {
-    (\sigma\ \widebar{l_i = v_i})/l_j \leadsto v_j
+    (\sigma\ \widebar{l_i = v_i})/l_j \hookrightarrow v_j
   } 
 
   \inferrule { 
   } {
     (\lambda\ \widebar{m \Rightarrow e})\ v 
-    \leadsto 
+    \hookrightarrow 
     (\text{match } v\ \widebar{m \Rightarrow e})
   } 
 
   \inferrule { 
   } {
     \text{let}\ x : \tau = v\ \text{in}\ e 
-    \leadsto 
+    \hookrightarrow 
     t[x \mapsto v]
   } 
 
   \inferrule { 
   } {
     \text{fix}\ \lambda [x \Rightarrow e]
-    \leadsto 
+    \hookrightarrow 
     e[x \mapsto \text{fix}\ \lambda [x \Rightarrow e]]
   } 
 \end{mathpar}
@@ -1060,15 +1060,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
   
 
-\begin{definition}(State machine)
+\begin{definition}(Transition semantics)
 \begin{flalign*}
-  &\boxed{\left<\kappa, \rho, e \right> \leadsto \left<\kappa, \rho, e \right>}&
+  &\boxed{\left<\kappa, \rho, e \right> \hookrightarrow \left<\kappa, \rho, e \right>}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
   } {
     \left<\left<\rho_\kappa, x, e\right> :: \kappa, \rho, w \right> 
-    \leadsto 
+    \hookrightarrow 
     \left<\kappa, (\rho_\kappa,x \mapsto \left<\rho,w\right>), e \right>
   } 
 
@@ -1076,7 +1076,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \left< \rho', w \right> = \rho\ x
   } {
     \left<\kappa, \rho, x \right> 
-    \leadsto 
+    \hookrightarrow 
     \left<\kappa, \rho', w \right>
   } 
 
@@ -1084,7 +1084,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{contify}\ e = (x, e_\kappa, e')
   } {
     \left<\kappa, \rho, e\right> 
-    \leadsto 
+    \hookrightarrow 
     \left<
       \left< \rho, x, e_\kappa\right> :: \kappa,
       \rho,
@@ -1097,7 +1097,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \rho\ x' = \left< \rho', (\sigma\ \widebar{l_i = x_i}) \right> 
   } {
     \left<\kappa, \rho, x' / l_j \right> 
-    \leadsto 
+    \hookrightarrow 
     \left< \kappa, \rho', x_j \right>
   } 
   
@@ -1110,14 +1110,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{match}\ \rho_2\ w\ \rho_1\ (\widebar{m \Rightarrow e}) = \left<\rho', e'\right> 
   } {
     \left< \kappa, \rho, x_1\ x_2 \right> 
-    \leadsto 
+    \hookrightarrow 
     \left< \kappa, \rho', e' \right>
   } 
 
   \inferrule { 
   } {
     \left< \kappa, \rho, \text{let}\ x : \tau = x'\ \text{in}\ e \right> 
-    \leadsto 
+    \hookrightarrow 
     \left< \kappa, \rho, e[x \mapsto x'] \right>
   } 
 
@@ -1129,8 +1129,36 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \rho, 
       \text{fix}\ x
     \right> 
-    \leadsto 
+    \hookrightarrow 
     \left< \kappa, (\rho,x_\kappa \mapsto \text{fix}\ x), e'[x' \mapsto x_\kappa]\right>
+  } 
+\end{mathpar}
+\end{definition}
+
+\begin{definition}(Multistep semantics)
+\begin{flalign*}
+  &\boxed{\left<\kappa, \rho, e \right> \hookrightarrow^* \left<\kappa, \rho, e \right>}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+  } {
+    \left< \kappa, \rho, e \right> 
+    \hookrightarrow 
+    \left< \kappa, \rho, e \right> 
+  } 
+
+  \inferrule { 
+    \left< \kappa, \rho, e \right> 
+    \hookrightarrow^*
+    \left< \kappa', \rho', e' \right> 
+    \\
+    \left< \kappa', \rho', e' \right> 
+    \hookrightarrow^*
+    \left< \kappa'', \rho'', e'' \right> 
+  } {
+    \left< \kappa, \rho, e \right> 
+    \hookrightarrow^* 
+    \left< \kappa'', \rho'', e'' \right> 
   } 
 \end{mathpar}
 \end{definition}
@@ -1506,7 +1534,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \bullet \vdash e : \tau
   } {
-    e = v \vee e \leadsto e'
+    e = v \vee e \hookrightarrow e'
   } 
 \end{mathpar}
 \end{theorem}
@@ -1516,172 +1544,59 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \bullet \vdash e : \tau
     \\
-    e \leadsto e'
+    e \hookrightarrow e'
   } {
     \bullet \vdash e' : \tau 
   } 
 \end{mathpar}
 \end{theorem}
 
-\begin{definition}[Typed state abstraction]
+\begin{definition}[State abstraction]
 \begin{flalign*}
-  &\boxed{\left< \kappa, \rho, e \right> \rightleftharpoons \left< \Xi, \Gamma, \tau \right>}&
+  &\boxed{\left< \kappa, \rho, e \right> \rightleftharpoons \left<\Gamma, \tau \right>}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
-    \kappa \rightleftharpoons \Xi
-    \\
-    \rho \rightleftharpoons \Gamma
-  } {
-    \left< \kappa, \rho, () \right> 
-    \rightleftharpoons 
-    \left< \Xi, \Gamma, \text{unit} \right>
-  } 
-
-  \inferrule { 
-    \kappa \rightleftharpoons \Xi
-    \\
     \rho \rightleftharpoons \Gamma
     \\
-    \Gamma\ x = \tau
-  } {
-    \Gamma \vdash x
-    : \tau 
+    \Gamma \vdash e : \tau
     \\
-    \left< \kappa, \rho, x \right> 
+    \kappa \vdash \tau \triangleright \tau' 
+  } {
+    \left< \kappa, \rho, e \right> 
     \rightleftharpoons 
-    \left< \Xi, \Gamma, \tau \right>
+    \left< \Gamma, \tau' \right>
   } 
-
-  % \\\\
-
-  % \inferrule { 
-  %   \Gamma \vdash t
-  %   : \tau 
-  % } {
-  %    \Gamma \vdash (l;t) 
-  %   : l*\tau
-  % }
-
-  % \inferrule { 
-  %   \bigwedge
-  %   \Gamma \vdash t_i :  \tau_i  
-  % } {
-  %   \Gamma \vdash \sigma\ (\widebar{l_i = t_i})
-  %   : (\text{reduce} \wedge \widebar{l_i : \tau_i})
-  % } 
-
-  % \inferrule {
-  %   \bigwedge
-  %   \Gamma_i \vdash p_i
-  %   : \tau_i
-  %   \ \wedge\
-  %   \Gamma;\Gamma_i \vdash t_i
-  %   : \tau'_i
-  % } {
-  %   \Gamma \vdash \lambda\ (\widebar{m_i \Rightarrow e_i})
-  %   : (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
-  % } 
-
-  % \inferrule {
-  %   \Gamma \vdash t
-  %   : l:\tau
-  % } {
-  %   \Gamma \vdash t/l
-  %   : \tau
-  % } 
-
-  % \inferrule { 
-  %   \Gamma \vdash t_1
-  %   : \tau' \rightarrow \tau
-  %   \\
-  %   \Gamma \vdash t_2
-  %   : \tau'
-  % } {
-  %   \Gamma \vdash (t_1\ t_2)
-  %   : \tau
-  % } 
-
-  % \inferrule { 
-  %   \bullet \Vdash 
-  %   \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
-  %   : \tau_1
-  %   \\
-  %   \Gamma \vdash t_1
-  %   : \tau_1
-  %   \\\\
-  %   \Gamma,x \mapsto \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
-  %     \vdash t_2 
-  %   : \tau_2
-  % } {
-  %   \Gamma \vdash \text{let}\ x : \tau_1 = t_1 \text{ in } t_2 
-  %   : \tau_2
-  % } 
-
-  % \inferrule { 
-  %   \Gamma \vdash t
-  %   : \tau \rightarrow \tau
-  % } {
-  %   \Gamma \vdash \text{fix}\ t 
-  %   :\tau
-  % } 
-
-  % \inferrule { 
-  %   \Gamma \vdash t 
-  %   : \tau' 
-  %   \\
-  %   \bullet \Vdash \tau' \leq \tau
-  % } {
-  %   \Gamma \vdash t
-  %   : \tau
-  % } 
 \end{mathpar}
 \end{definition}
 
 
-\begin{definition}[Typed state transition]
+\begin{definition}[Type inference]
 \begin{flalign*}
-  &\boxed{\left< \Xi, \Gamma, e, \tau \right> \leadsto \left<  \Xi, \Gamma, e, \tau \right>}&
+  &\boxed{\Delta \cdot \Gamma \vDash e : \tau}&
 \end{flalign*}
 \begin{mathpar}
-  \inferrule { 
-  } {
-    \left< \Xi, \Gamma, e, \tau \right> 
-    \leadsto 
-    \left<  \Xi, \Gamma, e, \tau \right>
-  } 
 \end{mathpar}
 \end{definition}
 
-\begin{theorem}(Type transition progress)
+\begin{theorem}(Flow soundness)
 \begin{mathpar}
   \inferrule { 
-    \bullet \vdash e : \tau
+    \left< \circ, \bullet, e \right> \rightleftharpoons
+    \left< \Gamma', \tau'[\Delta] \right>
     \\
-    e \neq v
+    \Delta' \cdot \Gamma' \vDash e : \tau'
+    \\
+    \left< \circ, \bullet, e \right> \hookrightarrow^* 
+    \left< \kappa', \rho', e' \right>
   } {
-    e \leadsto e'\ \wedge\ 
-    \left<e,\tau\right> \rightharpoonup \left<e',\tau'\right>
+    \left< \kappa', \rho', e' \right> \rightleftharpoons
+    \left< \Gamma', \tau'[\Delta] \right>
   } 
 \end{mathpar}
 \end{theorem}
 
-\begin{theorem}(Type transition preservation)
-\begin{mathpar}
-  \inferrule { 
-    \bullet \vdash e : \tau
-    \\
-    e \leadsto e'
-    \\
-    \left<e,\tau\right> \rightharpoonup \left<e',\tau'\right>
-  } {
-    e' : \tau' 
-  } 
-\end{mathpar}
-\end{theorem}
-
-
-\begin{definition}(Type inference)
+\begin{definition}(Type inference (old))
 \[
   \begin{array}{l @{} l}
     \text{infer } \iota\ \Delta\ \Gamma \vdash 
@@ -2844,7 +2759,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   % analysis techniques
     % compositional (structural termination) (directed dependence) 
       % type system
-    %flow (monotonic termination) (mutual dependence) (approximate function application) 
+    %flow (monotonic termination) (mutual dependence)
       % constraint-based 
         % define constraints and abstraction 
         % prove constraints sound wrt abstraction
