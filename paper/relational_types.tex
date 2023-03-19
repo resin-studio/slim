@@ -1169,7 +1169,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \kappa 
     &{} ::=
     \begin{array}[t]{@{} l}
-      \widebar{\left< \rho, x, e \right>}
+      \left< \rho, x, e \right> :: \kappa 
+      \ |\ 
+      \circ
+    \end{array}
+    \\
+    \widebar{\left< \rho, x, e \right>}
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      \left< \rho, x, e \right> ::  \widebar{\left< \rho, x, e \right>}
+      \ |\ 
+      \circ
     \end{array}
     \\
     \rho 
