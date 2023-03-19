@@ -1579,18 +1579,51 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{definition}
 
-\begin{theorem}(Flow soundness)
+\begin{theorem}(Type flow initialization)
 \begin{mathpar}
   \inferrule { 
     \Delta \cdot \Gamma \vDash e : \tau
+  } {
+    \left< \circ, \bullet, e \right>
+    \rightleftharpoons
+    \left< \Delta, \Gamma, \tau \right>
+  } 
+\end{mathpar}
+\end{theorem}
+
+\begin{theorem}(Type flow preservation)
+\begin{mathpar}
+  \inferrule { 
+    \left< \kappa, \rho, e \right> 
+    \rightleftharpoons
+    \left< \Delta, \Gamma, \tau \right>
     \\
-    \left< \circ, \bullet, e \right> \rightleftharpoons
-    \left< \Gamma, \tau[\Delta] \right>
+    \Delta \cdot \Gamma \vDash e : \tau
     \\
-    \left< \circ, \bullet, e \right> \hookrightarrow^* 
+    \left< \kappa, \rho, e \right> 
+    \hookrightarrow
+    \left< \kappa', \rho', e' \right>
+  } {
+    \left< \kappa', \rho', e' \right>
+    \rightleftharpoons
+    \left< \Delta, \Gamma, \tau \right>
+  } 
+\end{mathpar}
+\end{theorem}
+
+
+\begin{theorem}(Type flow soundness)
+\begin{mathpar}
+  \inferrule { 
+    \Delta \cdot \Gamma \vDash e : \top \geq \tau
+    \\
+    \left< \circ, \bullet, e \right> 
+    \hookrightarrow^* 
     \left< \kappa, \rho, e' \right>
   } {
-    \rho \rightleftharpoons \Gamma
+    \left< \kappa, \rho, e' \right>
+    \rightleftharpoons
+    \left< \Delta, \Gamma, \tau \right>
   } 
 \end{mathpar}
 \end{theorem}
