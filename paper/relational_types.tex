@@ -1582,16 +1582,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Flow soundness)
 \begin{mathpar}
   \inferrule { 
-    \left< \circ, \bullet, e \right> \rightleftharpoons
-    \left< \Gamma', \tau'[\Delta] \right>
+    \Delta \cdot \Gamma \vDash e : \tau
     \\
-    \Delta' \cdot \Gamma' \vDash e : \tau'
+    \left< \circ, \bullet, e \right> \rightleftharpoons
+    \left< \Gamma, \tau[\Delta] \right>
     \\
     \left< \circ, \bullet, e \right> \hookrightarrow^* 
-    \left< \kappa', \rho', e' \right>
+    \left< \kappa, \rho, e' \right>
   } {
-    \left< \kappa', \rho', e' \right> \rightleftharpoons
-    \left< \Gamma', \tau'[\Delta] \right>
+    \rho \rightleftharpoons \Gamma
   } 
 \end{mathpar}
 \end{theorem}
