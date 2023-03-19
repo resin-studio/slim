@@ -1579,7 +1579,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{definition}
 
-\begin{theorem}(Type flow initialization)
+\begin{theorem}(Abstraction initialization)
 \begin{mathpar}
   \inferrule { 
     \Delta \cdot \Gamma \vDash e : \tau
@@ -1591,31 +1591,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{theorem}
 
-\begin{theorem}(Type flow preservation)
+\begin{theorem}(Abstraction preservation)
 \begin{mathpar}
   \inferrule { 
-    \left< \kappa, \rho, e \right> 
-    \rightleftharpoons
-    \left< \Delta, \Gamma, \tau \right>
-    \\
     \Delta \cdot \Gamma \vDash e : \tau
-    \\
-    \left< \kappa, \rho, e \right> 
-    \hookrightarrow
-    \left< \kappa', \rho', e' \right>
-  } {
-    \left< \kappa', \rho', e' \right>
-    \rightleftharpoons
-    \left< \Delta, \Gamma, \tau \right>
-  } 
-\end{mathpar}
-\end{theorem}
-
-
-\begin{theorem}(Type flow soundness)
-\begin{mathpar}
-  \inferrule { 
-    \Delta \cdot \Gamma \vDash e : \top \geq \tau
     \\
     \left< \circ, \bullet, e \right> 
     \hookrightarrow^* 
