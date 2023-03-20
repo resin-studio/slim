@@ -1588,17 +1588,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{mathpar}
   \inferrule { 
-    \Delta' \VDash \text{unit} \leq \tau
-    \\
-    \Delta' \sqsubseteq \Delta
+    \Delta \VDash \text{unit} \leq \tau
   } {
     \Delta \cdot \Gamma \cdot \text{unit} \vDash () : \tau
   } 
 
   \inferrule { 
-    \Delta' \VDash (\Gamma\ x) \leq \tau
-    \\
-    \Delta' \sqsubseteq \Delta
+    \Delta \VDash (\Gamma\ x) \leq \tau
   } {
     \Delta\ \cdot \Gamma \cdot (\Gamma\ x) \vDash x : \tau
   } 
@@ -1606,13 +1602,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \text{fresh}\ \alpha
     \\
-    \Delta' \VDash (l * \alpha) \leq \tau
+    \Delta \VDash (l * \alpha) \leq \tau
     \\
-    \Delta' \sqsubseteq \Delta''
-    \\\\
-    \Delta'' \cdot \Gamma \cdot \tau' \vDash e : \alpha
-    \\
-    \Delta'' \sqsubseteq \Delta
+    \Delta \cdot \Gamma \cdot \tau' \vDash e : \alpha
   } {
     \Delta\ \cdot \Gamma \cdot (l * \tau') \vDash (l \cdot e) : \tau
   } 
@@ -1620,15 +1612,39 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \bigwedge \text{fresh}\ \alpha_i
     \\
-    \Delta' \VDash (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
+    \Delta \VDash (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
     \\
-    \Delta' \sqsubseteq \Delta''
-    \\\\
-    \bigwedge \Delta'' \cdot \Gamma \cdot \tau' \vDash e_i : \alpha_i
-    \\
-    \Delta'' \sqsubseteq \Delta
+    \bigwedge \Delta \cdot \Gamma \cdot \tau_i' \vDash e_i : \alpha_i
   } {
-    \Delta\ \cdot \Gamma \cdot (\wedge\ \widebar{l_i : \tau_i}) \vDash (\sigma\ \widebar{l_i = e_i}) : \tau
+    \Delta\ \cdot \Gamma \cdot (\wedge\ \widebar{l_i : \tau_i'}) \vDash (\sigma\ \widebar{l_i = e_i}) : \tau
+  } 
+
+  \inferrule { 
+    \bigwedge \text{fresh}\ \alpha_i'
+    \\
+    \bigwedge \text{fresh}\ \alpha_i''
+    \\
+    \Delta \VDash (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau
+    \\\\
+    \bigwedge (\text{patenv}\ m_i) \sqsubseteq \Gamma
+    \\
+    \bigwedge \Delta \cdot \Gamma \cdot \tau_i' \vDash m_i : \alpha'_i
+    \\
+    \bigwedge \Delta \cdot \Gamma \cdot \tau_i'' \vDash e_i : \alpha''_i
+  } {
+    \Delta\ \cdot \Gamma \cdot (\wedge\ \widebar{\tau_i' \rightarrow \tau_i''}) 
+    \vDash 
+    (\lambda\ \widebar{m_i \Rightarrow e_i}) : \tau
+  } 
+
+  \inferrule { 
+    \Delta \cdot \Gamma \cdot \tau' \vDash e : (l : \tau)
+    \\
+    \text{fresh}\ \alpha
+    \\
+    \Delta \VDash \tau' \leq (l : \alpha)
+  } {
+    \Delta\ \cdot \Gamma \cdot \alpha \vDash (e/l) : \tau
   } 
 \end{mathpar}
 
@@ -1639,63 +1655,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \end{definition}
 
-
-%     \text{infer } \iota\ \Delta\ \Gamma \vdash 
-%     \sigma\ \widebar{l_i = t_i} : \tau
-%     &{} =
-%     \begin{array}[t]{@{} l}
-%       \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
-%       \\
-%       \text{let } \tau' = \text{reduce} \wedge \widebar{l_i : \alpha_i}
-%       \\
-%       \text{reduce} * \{
-%       \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_i : \alpha_i\ |\ 
-%       \\
-%       \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau' \leq \tau
-%       \\
-%       \}
-%       \\
-%     \end{array}
-%     \\
-
-%     \text{infer } \iota\ \Delta\ \Gamma \vdash 
-%     \lambda\ \widebar{m_i \Rightarrow t_i} : \tau
-%     &{} =
-%     \begin{array}[t]{@{} l}
-%       \text{let } \widebar{\alpha_i} = \widebar{\text{typevar}()}
-%       \\
-%       \text{let } \tau' = \text{reduce} \wedge 
-%       \widebar{\tau_i \rightarrow \alpha_i }
-%       \\
-%       \text{reduce} * \{
-%       \text{infer } \iota\ \Delta;\Delta_1;\Delta_2\ \Gamma;\Gamma_1 \vdash t_i : \alpha_i\ |\ 
-%       \\
-%       \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta\ \vdash \tau' \leq \tau
-%       \\
-%       \ \ \ \ \Gamma_1 \in \{\text{patenv } p_i\}
-%       \\
-%       \ \ \ \ \Delta_2.\tau' \in \text{infer } \blacksquare\ \Delta;\Delta_1\ \Gamma;\Gamma_1\ \vdash p_i : \tau_i
-%       \\
-%       \}
-%       \\
-%     \end{array}
-%     \\
-
-%     \text{infer } \iota\ \Delta\ \Gamma \vdash 
-%     t/l : \tau
-%     &{} =
-%     \begin{array}[t]{@{} l}
-%       \text{let } \alpha = \text{typevar}()
-%       \\
-%       \{ \Delta_1;\Delta_2\ .\ \alpha \ |\
-%       \\
-%       \ \ \ \ \Delta_1.\tau_1 \in \text{infer } \iota\ \Delta\ \Gamma \vdash t : l : \tau 
-%       \\
-%       \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq l : \alpha
-%       \\
-%       \}
-%     \end{array}
-%     \\
 
 %     \text{infer } \iota\ \Delta\ \Gamma \vdash 
 %     (t_1\ t_2) : \tau
