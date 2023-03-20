@@ -1274,7 +1274,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    \bullet \Vdash 
+    \bullet \vdash 
     \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
     : \tau_1
     \\
@@ -1301,7 +1301,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Gamma \vdash t 
     : \tau' 
     \\
-    \bullet \Vdash \tau' \leq \tau
+    \bullet \vdash \tau' \leq \tau
   } {
     \Gamma \vdash t
     : \tau
@@ -1355,40 +1355,40 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{mathpar}
   \inferrule {
   } {
-    \Delta \Vdash \bot
+    \Delta \vdash \bot
     \leq \tau
   }
 
   \inferrule {
   } {
-    \Delta \Vdash \tau
+    \Delta \vdash \tau
     \leq \top
   } 
 
   \inferrule {
-    \Delta \Vdash \tau_1
+    \Delta \vdash \tau_1
     \leq \tau_2
   } {
-    \Delta \Vdash l*\tau_1
+    \Delta \vdash l*\tau_1
     \leq l*\tau_2
   } 
 
   \inferrule {
-    \Delta \Vdash \tau_1
+    \Delta \vdash \tau_1
     \leq \tau_2
   } {
-    \Delta \Vdash l:\tau_1
+    \Delta \vdash l:\tau_1
     \leq l:\tau_2
   } 
 
   \inferrule {
-    \Delta \Vdash \tau_3
+    \Delta \vdash \tau_3
     \leq \tau_1
     \\
-    \Delta \Vdash \tau_2
+    \Delta \vdash \tau_2
     \leq \tau_4
   } {
-    \Delta \Vdash \tau_1 \rightarrow \tau_2
+    \Delta \vdash \tau_1 \rightarrow \tau_2
     \leq \tau_3 \rightarrow \tau_4
   } 
 
@@ -1396,24 +1396,24 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
     \forall\ \Delta'\ .\
-    (\Delta;\Delta' \Vdash \tau_1 \leq \tau_2)
+    (\Delta;\Delta' \vdash \tau_1 \leq \tau_2)
     \longrightarrow
-    (\Delta;\Delta' \Vdash \tau_3 \leq \tau_4)
+    (\Delta;\Delta' \vdash \tau_3 \leq \tau_4)
   } { 
-    \Delta \Vdash \left<\exists \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \leq \tau_2\right>
+    \Delta \vdash \left<\exists \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \leq \tau_2\right>
     \leq \tau_4
   }
 
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
-    \Delta;\Delta' \Vdash \tau_1
+    \Delta;\Delta' \vdash \tau_1
     \leq \tau_4
     \\
-    \Delta;\Delta' \Vdash \tau_2
+    \Delta;\Delta' \vdash \tau_2
     \leq \tau_3
   } { 
-    \Delta \Vdash \tau_1
+    \Delta \vdash \tau_1
     \leq \left<\exists \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \leq \tau_3\right>
   }
 
@@ -1421,118 +1421,118 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
     \forall\ \Delta'\ .\
-    (\Delta;\Delta' \Vdash \tau_2 \leq \tau_3)
+    (\Delta;\Delta' \vdash \tau_2 \leq \tau_3)
     \longrightarrow
-    (\Delta;\Delta' \Vdash \tau_1 \leq \tau_4)
+    (\Delta;\Delta' \vdash \tau_1 \leq \tau_4)
   } { 
-    \Delta \Vdash \tau_1
+    \Delta \vdash \tau_1
     \leq \left<\forall \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \leq \tau_3\right>
   }
 
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha} \subseteq \emptyset 
     \\\\
-    \Delta;\Delta' \Vdash \tau_3
+    \Delta;\Delta' \vdash \tau_3
     \leq \tau_4
     \\
-    \Delta;\Delta' \Vdash \tau_1
+    \Delta;\Delta' \vdash \tau_1
     \leq \tau_2
   } { 
-    \Delta \Vdash \left<\forall \widebar{\alpha}\ .\ \tau_3\ |\ \tau_1 \leq \tau_2\right>
+    \Delta \vdash \left<\forall \widebar{\alpha}\ .\ \tau_3\ |\ \tau_1 \leq \tau_2\right>
     \leq \tau_4
   }
 
   \\\\
 
   \inferrule { 
-    \Delta \Vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
+    \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
     \leq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
   } { 
-    \Delta \Vdash \mu \alpha_1 . \tau_1
+    \Delta \vdash \mu \alpha_1 . \tau_1
     \leq \mu \alpha_2 . \tau_2
   }
 
   \inferrule {
   } {
-    \Delta \Vdash \tau[\alpha\mapsto\mu \alpha . \tau]
+    \Delta \vdash \tau[\alpha\mapsto\mu \alpha . \tau]
     \leq \mu \alpha . \tau
   }
 
   \inferrule {
   } {
-    \Delta \Vdash \mu\alpha.\tau
+    \Delta \vdash \mu\alpha.\tau
     \leq \tau[\alpha\mapsto\mu \alpha . \tau]
   }
 
   \inferrule { 
-    \Delta \Vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
+    \Delta \vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
     \leq \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
   } {
-    \Delta \Vdash \nu \alpha_1 . \tau_1 
+    \Delta \vdash \nu \alpha_1 . \tau_1 
     \leq \nu \alpha_2 . \tau_2
   }
 
   \inferrule {
   } {
-    \Delta \Vdash \tau[\alpha\mapsto\nu \alpha . \tau]
+    \Delta \vdash \tau[\alpha\mapsto\nu \alpha . \tau]
     \leq \nu \alpha . \tau
   }
 
   \inferrule {
   } {
-    \Delta \Vdash \nu\alpha.\tau
+    \Delta \vdash \nu\alpha.\tau
     \leq \tau[\alpha\mapsto\nu \alpha . \tau]
   }
 
   \inferrule {
-    \Delta \Vdash \tau_1
+    \Delta \vdash \tau_1
     \leq \tau_3
     \\
-    \Delta \Vdash \tau_2
+    \Delta \vdash \tau_2
     \leq \tau_3
   } {
-    \Delta \Vdash \tau_1 \vee \tau_2
+    \Delta \vdash \tau_1 \vee \tau_2
     \leq \tau_3
   }
 
   \inferrule {
   } {
-    \Delta \Vdash \tau_1
+    \Delta \vdash \tau_1
     \leq \tau_1 \vee \tau_2
   }
 
   \inferrule {
   } {
-    \Delta \Vdash \tau_2
+    \Delta \vdash \tau_2
     \leq \tau_1 \vee \tau_2
   }
 
   \inferrule {
-    \Delta \Vdash \tau
+    \Delta \vdash \tau
     \leq \tau_1
     \\
-    \Delta \Vdash \tau
+    \Delta \vdash \tau
     \leq \tau_2
   } {
-    \Delta \Vdash \tau
+    \Delta \vdash \tau
     \leq \tau_1 \wedge \tau_2
   }
 
   \inferrule {
   } {
-    \Delta \Vdash \tau_1 \wedge \tau_2
+    \Delta \vdash \tau_1 \wedge \tau_2
     \leq \tau_1
   }
 
   \inferrule {
   } {
-    \Delta \Vdash \tau_1 \wedge \tau_2
+    \Delta \vdash \tau_1 \wedge \tau_2
     \leq \tau_2
   }
 
   \inferrule {
   } {
-    \Delta \Vdash \tau
+    \Delta \vdash \tau
     \leq \tau
   }
 \end{mathpar}
@@ -1588,13 +1588,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{mathpar}
   \inferrule { 
-    \Delta \VDash \text{unit} \leq \tau
+    \Delta \vDash \text{unit} \leq \tau
   } {
     \Delta \cdot \Gamma \cdot \text{unit} \vDash () : \tau
   } 
 
   \inferrule { 
-    \Delta \VDash (\Gamma\ x) \leq \tau
+    \Delta \vDash (\Gamma\ x) \leq \tau
   } {
     \Delta\ \cdot \Gamma \cdot (\Gamma\ x) \vDash x : \tau
   } 
@@ -1602,7 +1602,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \text{fresh}\ \alpha
     \\
-    \Delta \VDash (l * \alpha) \leq \tau
+    \Delta \vDash (l * \alpha) \leq \tau
     \\
     \Delta \cdot \Gamma \cdot \tau' \vDash e : \alpha
   } {
@@ -1612,7 +1612,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \bigwedge \text{fresh}\ \alpha_i
     \\
-    \Delta \VDash (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
+    \Delta \vDash (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
     \\
     \bigwedge \Delta \cdot \Gamma \cdot \tau_i' \vDash e_i : \alpha_i
   } {
@@ -1624,7 +1624,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \bigwedge \text{fresh}\ \alpha_i''
     \\
-    \Delta \VDash (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau
+    \Delta \vDash (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau
     \\\\
     \bigwedge (\text{patenv}\ m_i) \sqsubseteq \Gamma
     \\
@@ -1642,7 +1642,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{fresh}\ \alpha
     \\
-    \Delta \VDash \tau' \leq (l : \alpha)
+    \Delta \vDash \tau' \leq (l : \alpha)
   } {
     \Delta\ \cdot \Gamma \cdot \alpha \vDash (e/l) : \tau
   } 
@@ -1656,71 +1656,48 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\\\
     \text{fresh}\ \alpha'
     \\
-    \Delta \VDash \tau_1 \leq (\tau_2 \rightarrow \alpha')
+    \Delta \vDash \tau_1 \leq (\tau_2 \rightarrow \alpha')
     \\
     \text{fresh}\ \alpha''
     \\
     % need to call unification one more time to liberate existentially quantified variables 
-    \Delta \VDash \alpha'' \leq \alpha'
+    \Delta \vDash \alpha'' \leq \alpha'
   } {
     \Delta\ \cdot \Gamma \cdot \alpha'' \vDash (e_1\ e_2) : \tau
   } 
+  \\\\
+  \inferrule { 
+    \Delta \cdot \Gamma \cdot \tau_1' \vDash e_1 : \tau_1 
+    \\
+    \tau_1'[\Delta] = \tau_1''
+    \\
+    \text{freevars}\ \tau_1'' = \widebar{\alpha}
+    \\\\
+    \Gamma\ x = \forall \widebar{\alpha} . \tau_1''
+    \\
+    \Delta \cdot \Gamma \cdot \tau_2' \vDash e_2 : \tau_2
+  } {
+    \Delta\ \cdot \Gamma \cdot \tau_2' \vDash (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2
+  } 
+
+  \inferrule { 
+    \Delta \cdot \Gamma \cdot \tau' \vDash e : \bot \rightarrow \tau 
+    \\
+    \text{fresh}\ \alpha_1
+    \\
+    \text{fresh}\ \alpha_2
+    \\\\
+    \Delta \vDash \tau' \leq \alpha_1 \rightarrow \alpha_2
+    \\
+    \alpha_1[\Delta] = \tau_1
+    \\
+    \alpha_2[\Delta] = \tau_2
+  } {
+    \Delta\ \cdot \Gamma \cdot (\text{fixtype}\ \tau_1 \tau_2) 
+    \vDash \text{fix}\ e : \tau
+  } 
 \end{mathpar}
-
-\[
-  \begin{array}{l @{} l}
-  \end{array}
-\]
-
 \end{definition}
-
-%     \text{infer } \iota\ \Delta\ \Gamma \vdash 
-%     (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) : \tau_2
-%     &{} =
-%     \begin{array}[t]{@{} l}
-%       \{ \Delta_2\ .\ \tau_2' \ |\ 
-%       \\
-%       \ \ \ \ \Delta_1.\tau_1' \in \text{infer } \iota\ \Delta;\Delta_1\ \Gamma \vdash t_1 : \tau_1
-%       \\ 
-%       \ \ \ \ \tau_1'' \in \{\tau_1'[\Delta_1]\}
-%       \\ 
-%       \ \ \ \ \widebar{\alpha} \in \{\text{freevars}\ \tau_1''\}
-%       \\ 
-%       \ \ \ \ \Delta_2.\tau_2' \in \Delta\ \Gamma,x \mapsto \forall \widebar{\alpha} . \tau_1''
-%         \vdash t_2 : \tau_2 
-%       \\
-%       \} 
-%     \end{array}
-%     \\
-
-%     \text{infer } \iota\ \Delta\ \Gamma \vdash 
-%     \text{fix } t : \tau      
-%     &{} =
-%     \begin{array}[t]{@{} l}
-%       \text{let } \alpha_1 = \text{typevar}()
-%       \\
-%       \text{let } \alpha_2 = \text{typevar}()
-%       \\
-%       \{ \Delta_1;\Delta_2\ .\ \nu\ \alpha_4 \ . \forall\ \widebar{\alpha} ::
-%         \alpha_4 \leq \tau_2\ .\ \tau_3
-%         \ |\ 
-%       \\
-%       \ \ \ \ \Delta_1.\tau_1 \in
-%       \text{infer } \blacksquare\ \Delta\ \Gamma \vdash t : \tau \rightarrow \tau
-%       \\
-%       \ \ \ \ \Delta_2 \in \text{unify } \blacksquare\ \Delta;\Delta_1 \vdash 
-%       \tau_1 \leq \alpha_1 \rightarrow \alpha_2 
-%       \\
-%       \ \ \ \ \tau_2 \in \{\alpha_1[\Delta;\Delta_1;\Delta_2]\}
-%       \\ 
-%       \ \ \ \ \tau_3 \in \{\alpha_2[\Delta;\Delta_1;\Delta_2]\} 
-%       \\
-%       \ \ \ \ \widebar{\alpha} \in \{ \text{freevars}\ \tau_2 \}
-%       \\
-%       \} 
-%     \end{array}
-%   \end{array}
-% \]
 
 
 \begin{theorem}(Abstraction initialization)

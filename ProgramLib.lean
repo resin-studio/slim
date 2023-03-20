@@ -1468,7 +1468,6 @@ match t with
     let ty_conc := Ty.reduce (env_ty;env_ty1;env_ty2) ty_conc
 
     let ty_content := List.foldr (fun ty_case ty_acc =>
-      -- let fvs := (Ty.free_vars ty_prem).toList.bind (fun | (.fvar k _ , _) => [k] | _ => [])
       let fvs := (Ty.free_vars ty_case).toList.bind (fun | (.fvar k _ , _) => [k] | _ => [])
       let ty_case' := (
         if fvs.length > 0 then
