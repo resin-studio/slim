@@ -868,20 +868,23 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       x
       \ |\ 
-      l \cdot e
+      l \cdot c 
       \ |\ 
-      \sigma\ \widebar{l = e}
+      \sigma\ \widebar{l = c}
       \ |\ 
-      \lambda\ \widebar{m \Rightarrow e} 
+      \lambda\ \widebar{m \Rightarrow c} 
       \ |\ 
-      e/l
+      c/l
       \ |\ 
-      e\ e 
+      c\ c 
       \ |\ 
-      \text{let } x : \tau = e\ \text{in}\ e
+      \text{let } x : \tau = o\ \text{in}\ o 
       \ |\ 
-      \text{fix}\ e
+      \text{fix}\ c
     \end{array}
+    \\
+    c 
+    &{} ::= e^z
     \\
     m 
     &{} ::=
@@ -1582,41 +1585,50 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 \begin{definition}[Type inference]
+%% TODO: consider if compositional typing conflicts with the constraint-based formulation.
+%% could have environments be constraint based, and compositional part be expressed with (\geq \tau)
 \begin{flalign*}
-  &\boxed{\Delta \cdot \Gamma \vDash e : \tau}&
+  &\boxed{\Delta \cdot \Gamma \models e^z : \tau}&
 \end{flalign*}
-
 \begin{mathpar}
   \inferrule { 
-    \Delta \vDash \text{unit} \leq \tau
+    \Delta \models \text{unit} \leq \tau
+    \\
+    \text{unit} \sqsubseteq (\Gamma\ z)
   } {
-    \Delta \cdot \Gamma \cdot \text{unit} \vDash () : \tau
+    \Delta \cdot \Gamma \models ()^z : \tau
   } 
 
   \inferrule { 
-    \Delta \vDash (\Gamma\ x) \leq \tau
+    \Delta \models (\Gamma\ x) \leq \tau
+    \\
+    (\Gamma\ x)  \sqsubseteq (\Gamma\ z)
   } {
-    \Delta\ \cdot \Gamma \cdot (\Gamma\ x) \vDash x : \tau
+    \Delta \cdot \Gamma \models  x^z : \tau
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha
     \\
-    \Delta \vDash (l * \alpha) \leq \tau
+    \Delta \models (l * \alpha) \leq \tau
     \\
-    \Delta \cdot \Gamma \cdot \tau' \vDash e : \alpha
+    \Delta \cdot \Gamma \cdot \tau' \models e : \alpha
+    \\
+    (l * \tau') \sqsubseteq (\Gamma\ z)
   } {
-    \Delta\ \cdot \Gamma \cdot (l * \tau') \vDash (l \cdot e) : \tau
+    \Delta\ \cdot \Gamma \models (l \cdot e)^z : \tau
   } 
 
   \inferrule { 
     \bigwedge \text{fresh}\ \alpha_i
     \\
-    \Delta \vDash (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
+    \Delta \models (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
     \\
-    \bigwedge \Delta \cdot \Gamma \cdot \tau_i' \vDash e_i : \alpha_i
+    \bigwedge \Delta \cdot \Gamma \cdot \tau_i' \models e_i : \alpha_i
+    \\
+    (\wedge\ \widebar{l_i : \tau_i'}) \sqsubseteq (\Gamma\ z)
   } {
-    \Delta\ \cdot \Gamma \cdot (\wedge\ \widebar{l_i : \tau_i'}) \vDash (\sigma\ \widebar{l_i = e_i}) : \tau
+    \Delta\ \cdot \Gamma \models (\sigma\ \widebar{l_i = e_i})^z : \tau
   } 
 
   \inferrule { 
@@ -1624,50 +1636,56 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \bigwedge \text{fresh}\ \alpha_i''
     \\
-    \Delta \vDash (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau
+    \Delta \models (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau
     \\\\
     \bigwedge (\text{patenv}\ m_i) \sqsubseteq \Gamma
     \\
-    \bigwedge \Delta \cdot \Gamma \cdot \tau_i' \vDash m_i : \alpha'_i
+    \bigwedge \Delta \cdot \Gamma \cdot \tau_i' \models m_i : \alpha'_i
     \\
-    \bigwedge \Delta \cdot \Gamma \cdot \tau_i'' \vDash e_i : \alpha''_i
+    \bigwedge \Delta \cdot \Gamma \cdot \tau_i'' \models e_i : \alpha''_i
+    \\
+    (\wedge\ \widebar{\tau_i' \rightarrow \tau_i''}) \sqsubseteq (\Gamma\ z)
   } {
-    \Delta\ \cdot \Gamma \cdot (\wedge\ \widebar{\tau_i' \rightarrow \tau_i''}) 
-    \vDash 
-    (\lambda\ \widebar{m_i \Rightarrow e_i}) : \tau
+    \Delta\ \cdot \Gamma
+    \models 
+    (\lambda\ \widebar{m_i \Rightarrow e_i})^z : \tau
   } 
 
   \inferrule { 
-    \Delta \cdot \Gamma \cdot \tau' \vDash e : (l : \tau)
+    \Delta \cdot \Gamma \cdot \tau' \models e : (l : \tau)
     \\
     \text{fresh}\ \alpha
+    \\\\
+    \Delta \models \tau' \leq (l : \alpha)
     \\
-    \Delta \vDash \tau' \leq (l : \alpha)
+    \alpha \sqsubseteq (\Gamma\ z)
   } {
-    \Delta\ \cdot \Gamma \cdot \alpha \vDash (e/l) : \tau
+    \Delta\ \cdot \Gamma \models (e/l)^z : \tau
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha
     \\
-    \Delta \cdot \Gamma \cdot \tau_1 \vDash e_1 : (\alpha \rightarrow \tau)
+    \Delta \cdot \Gamma \cdot \tau_1 \models e_1 : (\alpha \rightarrow \tau)
     \\
-    \Delta \cdot \Gamma \cdot \tau_2 \vDash e_2 : \alpha
+    \Delta \cdot \Gamma \cdot \tau_2 \models e_2 : \alpha
     \\\\
     \text{fresh}\ \alpha'
     \\
-    \Delta \vDash \tau_1 \leq (\tau_2 \rightarrow \alpha')
-    \\
+    \Delta \models \tau_1 \leq (\tau_2 \rightarrow \alpha')
+    \\\\
     \text{fresh}\ \alpha''
     \\
     % need to call unification one more time to liberate existentially quantified variables 
-    \Delta \vDash \alpha'' \leq \alpha'
+    \Delta \models \alpha'' \leq \alpha'
+    \\
+    \alpha'' \sqsubseteq (\Gamma\ z)
   } {
-    \Delta\ \cdot \Gamma \cdot \alpha'' \vDash (e_1\ e_2) : \tau
+    \Delta\ \cdot \Gamma \cdot \alpha'' \models (e_1\ e_2)^z : \tau
   } 
   \\\\
   \inferrule { 
-    \Delta \cdot \Gamma \cdot \tau_1' \vDash e_1 : \tau_1 
+    \Delta \cdot \Gamma \cdot \tau_1' \models e_1 : \tau_1 
     \\
     \tau_1'[\Delta] = \tau_1''
     \\
@@ -1675,26 +1693,30 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\\\
     \Gamma\ x = \forall \widebar{\alpha} . \tau_1''
     \\
-    \Delta \cdot \Gamma \cdot \tau_2' \vDash e_2 : \tau_2
+    \Delta \cdot \Gamma \cdot \tau_2' \models e_2 : \tau_2
+    \\
+    \tau_2'  \sqsubseteq (\Gamma\ z)
   } {
-    \Delta\ \cdot \Gamma \cdot \tau_2' \vDash (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2
+    \Delta\ \cdot \Gamma\models (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2
   } 
 
   \inferrule { 
-    \Delta \cdot \Gamma \cdot \tau' \vDash e : \bot \rightarrow \tau 
+    \Delta \cdot \Gamma \cdot \tau' \models e : \bot \rightarrow \tau 
     \\
     \text{fresh}\ \alpha_1
     \\
     \text{fresh}\ \alpha_2
     \\\\
-    \Delta \vDash \tau' \leq \alpha_1 \rightarrow \alpha_2
+    \Delta \models \tau' \leq \alpha_1 \rightarrow \alpha_2
     \\
     \alpha_1[\Delta] = \tau_1
     \\
     \alpha_2[\Delta] = \tau_2
+    \\\\
+    (\text{fixtype}\ \tau_1\ \tau_2) \sqsubseteq (\Gamma\ z)
   } {
-    \Delta\ \cdot \Gamma \cdot (\text{fixtype}\ \tau_1 \tau_2) 
-    \vDash \text{fix}\ e : \tau
+    \Delta\ \cdot \Gamma 
+    \models \text{fix}\ e : \tau
   } 
 \end{mathpar}
 \end{definition}
@@ -1703,7 +1725,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Abstraction initialization)
 \begin{mathpar}
   \inferrule { 
-    \Delta \cdot \Gamma \vDash e : \tau
+    \Delta \cdot \Gamma \models e : \tau
   } {
     \left< \circ, \bullet, e \right>
     \rightleftharpoons
@@ -1715,7 +1737,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Abstraction preservation)
 \begin{mathpar}
   \inferrule { 
-    \Delta \cdot \Gamma \vDash e : \tau
+    \Delta \cdot \Gamma \models e : \tau
     \\
     \left< \circ, \bullet, e \right> 
     \hookrightarrow^* 
