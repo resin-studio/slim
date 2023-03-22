@@ -866,8 +866,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \begin{array}[t]{@{} l}
       () 
       \ |\ 
-      x
-      \ |\ 
       l \cdot c 
       \ |\ 
       \sigma\ \widebar{l = c}
@@ -878,13 +876,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       c\ c 
       \ |\ 
-      \text{let } x : \tau = o\ \text{in}\ o 
-      \ |\ 
       \text{fix}\ c
     \end{array}
     \\
     c 
-    &{} ::= e^z
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      e^x
+      \ |\ 
+      e
+      \ |\ 
+      \text{let}\ x : \tau = c\ \text{in}\ c 
+      \ |\ 
+      x
+    \end{array}
     \\
     m 
     &{} ::=
@@ -1065,35 +1070,32 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{definition}(Transition semantics)
 \begin{flalign*}
-  &\boxed{\left<\kappa, \rho, e \right> \hookrightarrow \left<\kappa, \rho, e \right>}&
+  &\boxed{\left<\kappa, \rho, c \right> \hookrightarrow \left<\kappa, \rho, c \right>}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
   } {
-    \left<\left<\rho_\kappa, x, e\right> :: \kappa, \rho, w \right> 
+    \left<\kappa, \rho, e^x\right> 
     \hookrightarrow 
-    \left<\kappa, (\rho_\kappa,x \mapsto \left<\rho,w\right>), e \right>
+    \left<
+      \left< \rho, x, x\right> :: \kappa,
+      \rho,
+      e
+    \right>
   } 
 
   \inferrule { 
-    \left< \rho', w \right> = \rho\ x
-  } {
-    \left<\kappa, \rho, x \right> 
-    \hookrightarrow 
-    \left<\kappa, \rho', w \right>
-  } 
-
-  \inferrule { 
-    \text{contify}\ e = (x, e_\kappa, e')
+    \text{contify}\ e = (x_\kappa, e_\kappa, e')
   } {
     \left<\kappa, \rho, e\right> 
     \hookrightarrow 
     \left<
-      \left< \rho, x, e_\kappa\right> :: \kappa,
+      \left< \rho, x_\kappa, e_\kappa\right> :: \kappa,
       \rho,
       e'
     \right>
   } 
+
 
 
   \inferrule { 
@@ -1118,13 +1120,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-  } {
-    \left< \kappa, \rho, \text{let}\ x : \tau = x'\ \text{in}\ e \right> 
-    \hookrightarrow 
-    \left< \kappa, \rho, e[x \mapsto x'] \right>
-  } 
-
-  \inferrule { 
     \rho\ x = \lambda[x' \Rightarrow e]
   } {
     \left< 
@@ -1134,6 +1129,25 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \right> 
     \hookrightarrow 
     \left< \kappa, (\rho,x_\kappa \mapsto \text{fix}\ x), e'[x' \mapsto x_\kappa]\right>
+  } 
+  
+  \inferrule { 
+  } {
+    \left< \kappa, \rho, \text{let}\ x : \tau = c_1\ \text{in}\ c_2 \right> 
+    \hookrightarrow 
+    \left< \left<\rho, x, c_2\right> :: \kappa, \rho, c_1 \right>
+  } 
+
+
+  \inferrule { 
+  } {
+    \left<
+      \left<\rho_\kappa, x_\kappa, c\right> :: \kappa,
+      \rho, 
+      x 
+    \right> 
+    \hookrightarrow 
+    \left<\kappa, (\rho_\kappa, x_\kappa \mapsto (\rho\ x)), c \right>
   } 
 \end{mathpar}
 \end{definition}
