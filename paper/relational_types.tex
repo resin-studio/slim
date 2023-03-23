@@ -1231,13 +1231,16 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{definition}[Collecting semantics]
 \begin{flalign*}
-  &\boxed{ \left<\kappa, \rho, e \right> \in \llbracket e \rrbracket\flat}&
+  &\boxed{ \left< \rho, e \right> \in \llbracket e \rrbracket\flat}&
 \end{flalign*}
 \begin{mathpar}
 
   \inferrule { 
+    \left<\circ, \rho, e \right> 
+    \hookrightarrow^* 
+    \left<\circ, \rho', e' \right>  
   } {
-    \left<\circ, \rho, e \right> \in \llbracket e \rrbracket\flat
+    \left< \rho', e' \right> \in \llbracket e \rrbracket\flat
   } 
 
   % \inferrule { 
