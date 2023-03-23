@@ -1229,6 +1229,34 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \]
 \end{definition}
 
+\begin{definition}[Collecting semantics]
+\begin{flalign*}
+  &\boxed{ \left<e, \rho, \kappa \right> \in \llbracket e \rrbracket\flat}&
+\end{flalign*}
+\begin{mathpar}
+
+  \inferrule { 
+  } {
+    \left<e, \rho, \circ \right> \in \llbracket e \rrbracket\flat
+  } 
+
+  % \inferrule { 
+  %   \left<e, \rho, \kappa \right> \hookrightarrow^* \varsigma 
+  %   \\
+  %   \varsigma = \left<w, \rho, \circ \right>
+  % } {
+  %   \left<e, \rho, \kappa \right> \in \llbracket e \rrbracket\flat
+  % } 
+
+  % \inferrule { 
+  %   \forall \varsigma \cdot \left<e, \rho, \kappa \right> \hookrightarrow^* \varsigma 
+  %   \longrightarrow (\varsigma \hookrightarrow \varsigma' \vee \varsigma = \left<w, \rho, \circ \right>)
+  % } {
+  %   \left<e, \rho, \kappa \right> \in \llbracket e \rrbracket\flat
+  % } 
+\end{mathpar}
+\end{definition}
+
 
 
 
@@ -1606,14 +1634,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{definition}[Type inference]
 % TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
-% construct a least fixed point search that uses widening of two types (related by subtyping)
-% ditto for narrowing
-% parameter types are default to Top and and narrow based on internal usage.
-% parameter types default to Top and widen based on external usage. 
-% widening operator could depend on Type environment for type variables
-% separate F : L -> L from Widen : L * L -> L 
-% F replaces iteration/recursion of unification step 
-% widening replaces failure decision within step
+% abstract out widening/narrowing operators in unification
+% we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
+% i.e. we don't compare current to previous, we simply look at structure of input.
+% the structure of input decreases as types widen/narrow
 \begin{flalign*}
   &\boxed{\left<\Delta, \Gamma, \tau\right> \in \llbracket x \mapsto e : \tau \rrbracket\#}&
 \end{flalign*}
