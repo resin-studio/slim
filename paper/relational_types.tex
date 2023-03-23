@@ -1611,6 +1611,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % parameter types are default to Top and and narrow based on internal usage.
 % parameter types default to Top and widen based on external usage. 
 % widening operator could depend on Type environment for type variables
+% separate F : L -> L from Widen : L * L -> L 
+% F replaces iteration/recursion of unification step 
+% widening replaces failure decision within step
 \begin{flalign*}
   &\boxed{\left<\Delta, \Gamma, \tau\right> \in \llbracket x \mapsto e : \tau \rrbracket\#}&
 \end{flalign*}
