@@ -1781,13 +1781,22 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % the set of types that are accepted over program variables .
 % here, we distinguish between these sets of types over program variables
 % and sets of types over type variables, thus making type variables explicit.
+% TODO: can we replace type adjustment with simply intersection on type environments on upward propagation
+% union on type environments on downward propagation. 
+% this has the nice property of only happening in type inference, not in unification.
 \begin{flalign*}
   &\boxed{\Delta \in \llbracket \tau \leq \tau \rrbracket\sharp}&
 \end{flalign*}
 \begin{mathpar}
+
   \inferrule {
+    \alpha \in \text{freevars}(\tau[\Delta])
+    \\
+    (\text{adjustable}\ \alpha \vee \Delta(\alpha) = \top)
+    \\
+    \tau' = \Delta(\alpha) \wedge \tau 
   } {
-    \Delta \in \llbracket \alpha \leq \tau \rrbracket\sharp
+    (\Delta, \alpha \mapsto \nu\alpha.\tau) \in \llbracket \alpha \leq \tau \rrbracket\sharp
   }
 \end{mathpar}
 \end{definition}
