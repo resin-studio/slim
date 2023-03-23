@@ -1773,6 +1773,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
 
 \begin{definition}[Subtype unification]
+% note: Cousot's unification is implicit by matching meta-variables for types.
+% that is, a polymorphic type is an infinite set of types merged with 
+% the set of types that are accepted over program variables .
+% here, we distinguish between these sets of types over program variables
+% and sets of types over type variables, thus making type variables explicit.
 \begin{flalign*}
   &\boxed{\Delta \in \llbracket \tau \leq \tau \rrbracket\sharp}&
 \end{flalign*}
