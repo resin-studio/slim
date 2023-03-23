@@ -35,7 +35,8 @@
 
 
 %\title{Type-Directed Synthesis for Dynamic Languages}
-\title{Guiding Program Synthesis with Relational Types}
+% \title{Guiding Program Synthesis with Relational Types}
+\title{Relational Type Inference by Abstract Interpretation}
 \author{Thomas Logan}
 \date{October 2022}
 
@@ -1603,50 +1604,54 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{definition}
 
-
 \begin{definition}[Type inference]
-%% TODO: consider if compositional typing conflicts with the constraint-based formulation.
-%% could have environments be constraint based, and compositional part be expressed with (\geq \tau)
+% TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
+% construct a least fixed point search that uses widening of two types (related by subtyping)
+% ditto for narrowing
+% parameter types are default to Top and and narrow based on internal usage.
+% parameter types default to Top and widen based on external usage. 
+% widening operator could depend on Type environment for type variables
 \begin{flalign*}
-  &\boxed{\Delta \cdot \Gamma \models x \mapsto e : \tau}&
+  &\boxed{\left<\Delta, \Gamma, \tau\right> \in \llbracket x \mapsto e : \tau \rrbracket\#}&
 \end{flalign*}
 \begin{mathpar}
+
   \inferrule { 
     \Delta \models (\Gamma\ x) \leq \tau
   } {
-    \Delta \cdot \Gamma \models  x : \tau
+    \left<\Delta, \Gamma, \Gamma(x) \right> 
+    \in \llbracket x : \tau \rrbracket\#
   } 
 
   \inferrule { 
     \Delta \models \text{unit} \leq \tau
-    \\
-    \text{unit} \sqsubseteq (\Gamma\ x)
   } {
-    \Delta \cdot \Gamma \models x \mapsto () : \tau
+    \left< \Delta, \Gamma, \text{unit} \right> 
+    \in \llbracket () : \tau \rrbracket\#
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha
     \\
     \Delta \models (l * \alpha) \leq \tau
-    \\\\
-    \Delta \cdot \Gamma \cdot \models x' \mapsto e : \alpha
     \\
-    (l * (\Gamma\ x')) \sqsubseteq (\Gamma\ x)
+    \left< \Delta, \Gamma, \tau' \right> 
+    \in \llbracket e : \alpha \rrbracket\#
   } {
-    \Delta\ \cdot \Gamma \models x \mapsto (l \cdot e) : \tau
+    \left< \Delta, \Gamma, (l * \tau')\right> 
+    \in \llbracket (l \cdot e) : \tau \rrbracket\#
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha_i
     \\
     \Delta \models (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
-    \\\\
-    \Delta \cdot \Gamma \models x_i \mapsto e_i : \alpha_i
     \\
-    (\wedge\ \widebar{l_i : (\Gamma\ x_i)}) \sqsubseteq (\Gamma\ x)
+    \left<\Delta, \Gamma, \tau_i\right> 
+    \in  \llbracket e_i : \alpha_i \rrbracket\#
   } {
-    \Delta\ \cdot \Gamma \models x \mapsto (\sigma\ \widebar{l_i = e_i}) : \tau
+    \left< \Delta, \Gamma, (\wedge\ \widebar{l_i : \tau_i}) \right> 
+    \in \llbracket (\sigma\ \widebar{l_i = e_i}) : \tau \rrbracket\#
   } 
 
   \inferrule { 
@@ -1656,72 +1661,70 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \Delta \models (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau
     \\\\
-    (\text{patenv}\ m_i) \sqsubseteq \Gamma
+    \left<\Delta, \Gamma;(\text{patenv}\ m_i), \tau'_i\right> 
+    \in \llbracket m_i : \alpha'_i \rrbracket\#
     \\
-    \Delta \cdot \Gamma \models x'_i \mapsto m_i : \alpha'_i
-    \\\\
-    \Delta \cdot \Gamma \models x''_i \mapsto e_i : \alpha''_i
-    \\
-    (\wedge\ \widebar{(\Gamma\ x_i') \rightarrow (\Gamma\ x_i'')}) 
-    \sqsubseteq 
-    (\Gamma\ x)
+    \left< \Delta, \Gamma, \tau''_i \right> 
+    \in \llbracket e_i : \alpha''_i \rrbracket\#
   } {
-    \Delta\ \cdot \Gamma
-    \models 
-    x \mapsto (\lambda\ \widebar{m_i \Rightarrow e_i}) : \tau
+    \left< \Delta, \Gamma, (\wedge\ \widebar{(\tau_i' \rightarrow \tau_i''}) \right>
+    \in
+    \llbracket (\lambda\ \widebar{m_i \Rightarrow e_i}) : \tau \rrbracket\#
   } 
 
   \inferrule { 
-    \Delta \cdot \Gamma \cdot \models x' \mapsto e : (l : \tau)
+    \left<\Delta, \Gamma, \tau' \right>
+    \in \llbracket e : (l : \tau) \rrbracket\#
     \\
     \text{fresh}\ \alpha
-    \\\\
-    \Delta \models (\Gamma\ x') \leq (l : \alpha)
     \\
-    \alpha \sqsubseteq (\Gamma\ x)
+    \Delta \models \tau' \leq (l : \alpha)
   } {
-    \Delta\ \cdot \Gamma \models x \mapsto (e/l) : \tau
+    \left<\Delta, \Gamma, \alpha \right>
+    \in \llbracket (e/l) : \tau \rrbracket\#
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha
     \\
-    \Delta \cdot \Gamma \cdot \models x_1 \mapsto e_1 : (\alpha \rightarrow \tau)
+    \left< \Delta, \Gamma, \tau_1 \right> 
+    \in \llbracket e_1 : (\alpha \rightarrow \tau) \rrbracket\#
     \\
-    \Delta \cdot \Gamma \cdot \models x_2 \mapsto e_2 : \alpha
+    \left< \Delta, \Gamma, \tau_2 \right> 
+    \in \llbracket e_2 : \alpha \rrbracket\#
     \\\\
     \text{fresh}\ \alpha'
     \\
-    \Delta \models (\Gamma\ x_1) \leq (\Gamma\ x_2) \rightarrow \alpha'
-    \\\\
+    \Delta \models \tau_1 \leq \tau_2 \rightarrow \alpha'
+    \\
     \text{fresh}\ \alpha''
     \\
     % need to call unification one more time to liberate existentially quantified variables 
     \Delta \models \alpha'' \leq \alpha'
-    \\
-    \alpha'' \sqsubseteq (\Gamma\ x)
   } {
-    \Delta\ \cdot \Gamma \cdot \alpha'' \models x \mapsto (e_1\ e_2) : \tau
-  } 
-  \\\\
-  \inferrule { 
-    \Delta \cdot \Gamma \cdot \models x_1 \mapsto e_1 : \tau_1 
-    \\
-    (\Gamma\ x_1)[\Delta] = \tau_1'
-    \\
-    \text{freevars}\ \tau_1' = \widebar{\alpha}
-    \\\\
-    \Gamma\ x = \forall \widebar{\alpha} . \tau_1'
-    \\
-    \Delta \cdot \Gamma \cdot \models x_2 \mapsto e_2 : \tau_2
-    \\
-    (\Gamma\ x_2) \sqsubseteq (\Gamma\ x)
-  } {
-    \Delta\ \cdot \Gamma\models (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2
+    \left<\Delta, \Gamma, \alpha'' \right>
+    \in \llbracket (e_1\ e_2) : \tau \rrbracket\#
   } 
 
   \inferrule { 
-    \Delta \cdot \Gamma \models x' \mapsto e : \bot \rightarrow \tau 
+    \left< \Delta, \Gamma, \tau_1' \right> 
+    \in \llbracket e_1 : \tau_1 \rrbracket\#
+    \\
+    \tau_1'[\Delta] = \tau_1'
+    \\
+    \text{freevars}\ \tau_1' = \widebar{\alpha}
+    \\\\
+    \left< \Delta, (\Gamma, x = \forall \widebar{\alpha} . \tau_1'), \tau_2' \right>  
+    \in \llbracket e_2 : \tau_2 \rrbracket\#
+    \\
+  } {
+    \left< \Delta, \Gamma, \tau_2' \right> 
+    \in \llbracket (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2 \rrbracket\#
+  } 
+
+  \inferrule { 
+    \left< \Delta, \Gamma, \tau' \right> 
+    \in \llbracket e : \bot \rightarrow \tau \rrbracket\#
     \\
     \text{fresh}\ \alpha_1
     \\
@@ -1732,14 +1735,148 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \alpha_1[\Delta] = \tau_1
     \\
     \alpha_2[\Delta] = \tau_2
-    \\\\
-    (\text{fixtype}\ \tau_1\ \tau_2) \sqsubseteq (\Gamma\ x)
   } {
-    \Delta\ \cdot \Gamma 
-    \models x \mapsto \text{fix}\ e : \tau
+    \left< \Delta, \Gamma, (\text{fixtype}\ \tau_1\ \tau_2) \right>
+    \in \llbracket \text{fix}\ e : \tau \rrbracket\#
   } 
 \end{mathpar}
 \end{definition}
+
+
+% \begin{definition}[Type inference old]
+% \begin{flalign*}
+%   &\boxed{\Delta \cdot \Gamma \models x \mapsto e : \tau}&
+% \end{flalign*}
+% \begin{mathpar}
+%   \inferrule { 
+%     \Delta \models (\Gamma\ x) \leq \tau
+%   } {
+%     \Delta \cdot \Gamma \models  x : \tau
+%   } 
+
+%   \inferrule { 
+%     \Delta \models \text{unit} \leq \tau
+%     \\
+%     \text{unit} \sqsupseteq (\Gamma\ x)
+%   } {
+%     \Delta \cdot \Gamma \models x \mapsto () : \tau
+%   } 
+
+%   \inferrule { 
+%     \text{fresh}\ \alpha
+%     \\
+%     \Delta \models (l * \alpha) \leq \tau
+%     \\\\
+%     \Delta \cdot \Gamma \cdot \models x' \mapsto e : \alpha
+%     \\
+%     (l * (\Gamma\ x')) \sqsupseteq (\Gamma\ x)
+%   } {
+%     \Delta\ \cdot \Gamma \models x \mapsto (l \cdot e) : \tau
+%   } 
+
+%   \inferrule { 
+%     \text{fresh}\ \alpha_i
+%     \\
+%     \Delta \models (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
+%     \\\\
+%     \Delta \cdot \Gamma \models x_i \mapsto e_i : \alpha_i
+%     \\
+%     (\wedge\ \widebar{l_i : (\Gamma\ x_i)}) \sqsupseteq (\Gamma\ x)
+%   } {
+%     \Delta\ \cdot \Gamma \models x \mapsto (\sigma\ \widebar{l_i = e_i}) : \tau
+%   } 
+
+%   \inferrule { 
+%     \text{fresh}\ \alpha_i'
+%     \\
+%     \text{fresh}\ \alpha_i''
+%     \\
+%     \Delta \models (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau
+%     \\\\
+%     (\text{patenv}\ m_i) \sqsupseteq \Gamma
+%     \\
+%     \Delta \cdot \Gamma \models x'_i \mapsto m_i : \alpha'_i
+%     \\\\
+%     \Delta \cdot \Gamma \models x''_i \mapsto e_i : \alpha''_i
+%     \\
+%     (\wedge\ \widebar{(\Gamma\ x_i') \rightarrow (\Gamma\ x_i'')}) 
+%     \sqsupseteq 
+%     (\Gamma\ x)
+%   } {
+%     \Delta\ \cdot \Gamma
+%     \models 
+%     x \mapsto (\lambda\ \widebar{m_i \Rightarrow e_i}) : \tau
+%   } 
+
+%   \inferrule { 
+%     \Delta \cdot \Gamma \cdot \models x' \mapsto e : (l : \tau)
+%     \\
+%     \text{fresh}\ \alpha
+%     \\\\
+%     \Delta \models (\Gamma\ x') \leq (l : \alpha)
+%     \\
+%     \alpha \sqsupseteq (\Gamma\ x)
+%   } {
+%     \Delta\ \cdot \Gamma \models x \mapsto (e/l) : \tau
+%   } 
+
+%   \inferrule { 
+%     \text{fresh}\ \alpha
+%     \\
+%     \Delta \cdot \Gamma \cdot \models x_1 \mapsto e_1 : (\alpha \rightarrow \tau)
+%     \\
+%     \Delta \cdot \Gamma \cdot \models x_2 \mapsto e_2 : \alpha
+%     \\\\
+%     \text{fresh}\ \alpha'
+%     \\
+%     \Delta \models (\Gamma\ x_1) \leq (\Gamma\ x_2) \rightarrow \alpha'
+%     \\\\
+%     \text{fresh}\ \alpha''
+%     \\
+%     % need to call unification one more time to liberate existentially quantified variables 
+%     \Delta \models \alpha'' \leq \alpha'
+%     \\
+%     \alpha'' \sqsupseteq (\Gamma\ x)
+%   } {
+%     \Delta\ \cdot \Gamma \cdot \alpha'' \models x \mapsto (e_1\ e_2) : \tau
+%   } 
+%   \\\\
+%   \inferrule { 
+%     \Delta \cdot \Gamma \cdot \models x_1 \mapsto e_1 : \tau_1 
+%     \\
+%     (\Gamma\ x_1)[\Delta] = \tau_1'
+%     \\
+%     \text{freevars}\ \tau_1' = \widebar{\alpha}
+%     \\\\
+%     \Gamma\ x = \forall \widebar{\alpha} . \tau_1'
+%     \\
+%     \Delta \cdot \Gamma \cdot \models x_2 \mapsto e_2 : \tau_2
+%     \\
+%     (\Gamma\ x_2) \sqsupseteq (\Gamma\ x)
+%   } {
+%     \Delta\ \cdot \Gamma\models (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2
+%   } 
+
+%   \inferrule { 
+%     \Delta \cdot \Gamma \models x' \mapsto e : \bot \rightarrow \tau 
+%     \\
+%     \text{fresh}\ \alpha_1
+%     \\
+%     \text{fresh}\ \alpha_2
+%     \\\\
+%     \Delta \models (\Gamma\ x') \leq \alpha_1 \rightarrow \alpha_2
+%     \\
+%     \alpha_1[\Delta] = \tau_1
+%     \\
+%     \alpha_2[\Delta] = \tau_2
+%     \\\\
+%     (\text{fixtype}\ \tau_1\ \tau_2) \sqsupseteq (\Gamma\ x)
+%   } {
+%     \Delta\ \cdot \Gamma 
+%     \models x \mapsto \text{fix}\ e : \tau
+%   } 
+% \end{mathpar}
+% \end{definition}
 
 
 \begin{theorem}(Abstraction initialization)
