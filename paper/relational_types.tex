@@ -1785,6 +1785,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   &\boxed{\Delta \in \llbracket \tau \leq \tau \rrbracket\sharp}&
 \end{flalign*}
 \begin{mathpar}
+  \inferrule {
+  } {
+    \Delta \in \llbracket \alpha \leq \tau \rrbracket\sharp
+  }
 \end{mathpar}
 \end{definition}
 
@@ -1808,52 +1812,32 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     &\text{if }
     \Delta(\alpha) = \tau_1
   \end{cases}
+  \\
+  \text{unify } \square\ \Delta \vdash \alpha \leq \tau	
+  &{} =
+  \begin{cases}  
+    \{ \bullet,\alpha \mapsto (\nu\alpha.\tau \wedge \beta) \}
+    & \text{if } 
+    \alpha \not\in \text{dom}(\Delta) \ \wedge\
+    \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
+    \text{fresh } \beta
+    \\
+    \{ \bullet,\alpha \mapsto \tau \wedge \beta \}
+    & \text{if } 
+    \alpha \not\in \text{dom}(\Delta) \ \wedge\
+    \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
+    \text{fresh } \beta
+    \\
+    \text{unify } \square\ \Delta \vdash \tau_1 \leq \tau
+    &\text{if }
+    \Delta(\alpha) = \tau
+  \end{cases}
+
+
+
 \end{array}
 \]
 
-
-% \begin{definition}(Subtype unification)
-% \[
-%   \begin{array}{l @{} l}
-
-%     \text{unify } \blacksquare\ \Delta \vdash \alpha \leq \tau	
-%     &{} =
-%     \begin{cases}  
-%       \{ \bullet,\alpha \mapsto \nu\alpha.\tau \}
-%       & \text{if } 
-%       \alpha \not\in \text{dom}(\Delta) \ \wedge\
-%       \alpha \in \text{freevars}(\tau[\Delta])
-%       \\
-%       \{ \bullet,\alpha \mapsto \tau \}
-%       & \text{if } 
-%       \alpha \not\in \text{dom}(\Delta) \ \wedge\
-%       \alpha \notin \text{freevars}(\tau[\Delta])
-%       \\
-%       \text{unify } \blacksquare\ \Delta \vdash \tau_1 \leq \tau
-%       &\text{if }
-%       \Delta(\alpha) = \tau_1
-%     \end{cases}
-%     \\
-
-%     \text{unify } \square\ \Delta \vdash \alpha \leq \tau	
-%     &{} =
-%     \begin{cases}  
-%       \{ \bullet,\alpha \mapsto (\nu\alpha.\tau \wedge \beta) \}
-%       & \text{if } 
-%       \alpha \not\in \text{dom}(\Delta) \ \wedge\
-%       \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
-%       \text{fresh } \beta
-%       \\
-%       \{ \bullet,\alpha \mapsto \tau \wedge \beta \}
-%       & \text{if } 
-%       \alpha \not\in \text{dom}(\Delta) \ \wedge\
-%       \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
-%       \text{fresh } \beta
-%       \\
-%       \text{unify } \square\ \Delta \vdash \tau_1 \leq \tau
-%       &\text{if }
-%       \Delta(\alpha) = \tau
-%     \end{cases}
 %     \\
 %     \text{unify } \blacksquare\ \Delta \vdash \tau \leq \alpha 	
 %     &{} =
