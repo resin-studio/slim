@@ -53,7 +53,7 @@ def PHashMap.from_list [BEq α] [Hashable α]
 
 protected def PHashMap.repr [Repr (α × β)] [BEq α] [Hashable α] 
 (m : PHashMap α β) (n : Nat) : Format :=
-  List.repr (toList m) n
+  Format.bracket "<" (List.repr (toList m) n) ">"
 
 instance [Repr (α × β)] [BEq α] [Hashable α] : Repr (PHashMap α β) where
   reprPrec := PHashMap.repr
@@ -63,7 +63,7 @@ instance [Repr (α × β)] [BEq α] [Hashable α] : Repr (PHashMap α β) where
 -- TODO: remove top and bottom types 
 inductive Ty : Type
 | bvar : Nat -> Ty  
-| fvar : Nat -> Bool -> Ty
+| fvar : Nat -> Ty
 | unit : Ty
 | bot : Ty
 | top : Ty
@@ -83,7 +83,7 @@ protected partial def Ty.repr (ty : Ty) (n : Nat) : Format :=
 match ty with
 | .bvar id => 
   "β[" ++ repr id ++ "]"
-| .fvar id adj =>
+| .fvar id =>
   "α[" ++ repr id ++ "]"
 | .unit => "@" 
 | .bot => "⊥" 
@@ -224,7 +224,7 @@ macro_rules
 | `([: [$x,$xs:slm,*] :]) => `([: $x :] :: [: [$xs,*] :])
 -- Ty 
 | `([: β[$n] :]) => `(Ty.bvar [: $n :])
-| `([: α[$n:slm] :]) => `(Ty.fvar [: $n :] false)
+| `([: α[$n:slm] :]) => `(Ty.fvar [: $n :])
 | `([: @ :]) => `(Ty.unit)
 | `([: ⊥ :]) => `(Ty.bot)
 | `([: ⊤ :]) => `(Ty.top)
@@ -324,9 +324,9 @@ def lookup_record (key : String) : List (String × T) -> Option T
 
 partial def Ty.subst (m : PHashMap Ty Ty) : Ty -> Ty
 | .bvar id => .bvar id 
-| .fvar id adj => (match m.find? (.fvar id adj) with
+| .fvar id => (match m.find? (.fvar id) with
   | some ty => Ty.subst m ty 
-  | none => .fvar id adj
+  | none => .fvar id
 )
 | .unit => .unit
 | .bot => .bot
@@ -391,7 +391,7 @@ def Ty.unionize : Ty -> Ty -> Ty
 
 partial def Ty.simplify : Ty -> Ty
 | .bvar id => Ty.bvar id  
-| .fvar id adj => Ty.fvar id adj
+| .fvar id => Ty.fvar id
 | .unit => .unit 
 | .bot => .bot 
 | .top => .top 
@@ -443,7 +443,7 @@ macro_rules
 -- TODO: only extract variables in type bodies.
 partial def Ty.free_vars: Ty -> PHashMap Ty Unit
 | .bvar id => {} 
-| .fvar id adj => PHashMap.from_list [(.fvar id adj, Unit.unit)] 
+| .fvar id => PHashMap.from_list [(.fvar id, Unit.unit)] 
 | .unit => {} 
 | .bot => {} 
 | .top => {} 
@@ -461,10 +461,13 @@ partial def Ty.free_vars: Ty -> PHashMap Ty Unit
 | .recur ty => (Ty.free_vars ty)
 | .corec ty => (Ty.free_vars ty)
 
+partial def Ty.free_vars_env (env_ty : PHashMap Ty Ty) (ty : Ty) : PHashMap Ty Unit :=  
+  Ty.free_vars (Ty.reduce env_ty ty)
+
 
 def Ty.signed_free_vars (posi : Bool) : Ty -> PHashMap Nat Unit
 | .bvar id => {} 
-| .fvar id adj => 
+| .fvar id => 
   if posi then
     let u : Unit := Unit.unit
     PHashMap.from_list [(id, u)] 
@@ -486,12 +489,16 @@ def Ty.signed_free_vars (posi : Bool) : Ty -> PHashMap Nat Unit
 | .corec ty => (Ty.signed_free_vars posi ty)
 
 
+-- Consider: convert to to using existentialization/package_env of environment wrt to payload
+-- avoid substitution since type variables decide widening/narrowing
+-- might not be an issue if substitution only occcurs in specific areas
+-- where we are ok with losing some precision
 def Ty.generalize (fids : List Nat) (start : Nat) : Ty -> Ty
 | .bvar id => .bvar id 
-| .fvar id adj => 
+| .fvar id => 
   match (fids.enumFrom start).find? (fun (_, fid) => fid == id) with
   | .some (bid, _) => .bvar bid
-  | .none => .fvar id adj
+  | .none => .fvar id
 | .unit => .unit
 | .bot => .bot
 | .top => .top
@@ -522,7 +529,7 @@ def Ty.instantiate (start : Nat) (args : List Ty) : Ty -> Ty
       args.get i 
     else
       .bvar id
-| .fvar id adj => .fvar id adj
+| .fvar id => .fvar id
 | .unit => .unit
 | .bot => .bot
 | .top => .top
@@ -565,15 +572,13 @@ partial def unroll : Ty -> Ty
 
 
 partial def roll_recur (ty_key : Ty) (m : PHashMap Ty Ty) (ty : Ty) : Ty :=
-  let ty := Ty.reduce m ty  
-  if (Ty.free_vars ty).contains ty_key then
+  if (Ty.free_vars_env m ty).contains ty_key then
     Ty.subst (PHashMap.from_list [(ty_key, [: β[0] :])]) [: (μ β[0] => ⟨ty⟩) :] 
   else
     ty 
 
 partial def roll_corec (ty_key : Ty) (m : PHashMap Ty Ty) (ty : Ty) : Ty :=
-  let ty := Ty.reduce m ty
-  if (Ty.free_vars ty).contains ty_key then
+  if (Ty.free_vars_env m ty).contains ty_key then
     Ty.subst (PHashMap.from_list [(ty_key, [: β[0] :])]) [: (ν β[0] => ⟨ty⟩) :] 
   else
     ty
@@ -581,7 +586,7 @@ partial def roll_corec (ty_key : Ty) (m : PHashMap Ty Ty) (ty : Ty) : Ty :=
 
 partial def Ty.subst_default (sign : Bool) : Ty -> Ty
 | .bvar id => Ty.bvar id  
-| .fvar _ _ => if sign then Ty.bot else Ty.top
+| .fvar _ => if sign then Ty.bot else Ty.top
 | .unit => .unit 
 | .bot => .bot 
 | .top => .top 
@@ -645,14 +650,14 @@ def wellformed_record_type (env_ty : PHashMap Ty Ty) (ty : Ty) : Bool :=
   | .some fields => 
     List.any fields (fun (k_fd, ty_fd) =>
       match ty_fd with
-      | .fvar _ _ => false 
+      | .fvar _ => false 
       | _ => true 
     ) 
   | .none => false
 
 partial def wellformed_unroll_type (env_ty : PHashMap Ty Ty) (ty : Ty) : Bool :=
   match (Ty.simplify (Ty.subst env_ty ty)) with 
-  | .fvar _ _ => false
+  | .fvar _ => false
   | ty => (linearize_fields ty == .none) || (wellformed_record_type env_ty ty)
 
 
@@ -667,11 +672,11 @@ def extract_premise (start : Nat) : Ty -> Option Ty
     none
 | Ty.inter ty1 Ty.top => 
   (extract_premise start ty1)
-| Ty.inter ty1 (Ty.fvar _ _) => 
+| Ty.inter ty1 (Ty.fvar _) => 
   (extract_premise start ty1)
 | Ty.inter Ty.top ty2 => 
   (extract_premise start ty2)
-| Ty.inter (Ty.fvar _ _) ty2 => 
+| Ty.inter (Ty.fvar _) ty2 => 
   (extract_premise start ty2)
 | Ty.inter ty1 ty2 => 
   Option.bind (extract_premise start ty1) (fun ty1_prem =>
@@ -692,11 +697,11 @@ def extract_relation (start : Nat) : Ty -> Option Ty
     none
 | Ty.inter ty1 Ty.top => 
   (extract_relation start ty1)
-| Ty.inter ty1 (Ty.fvar _ _) => 
+| Ty.inter ty1 (Ty.fvar _) => 
   (extract_relation start ty1)
 | Ty.inter Ty.top ty2 => 
   (extract_relation start ty2)
-| Ty.inter (Ty.fvar _ _) ty2 => 
+| Ty.inter (Ty.fvar _) ty2 => 
   (extract_relation start ty2)
 | Ty.inter ty1 ty2 => 
   Option.bind (extract_relation start ty1) (fun ty1_rel =>
@@ -751,7 +756,7 @@ match var_fields with
 | [] => {}
 | (l, ty_fd) :: var_fields' =>
   match ty_fd with
-  | Ty.fvar id _ =>
+  | Ty.fvar id =>
     let fields := 
       prev_fields ++ (l, [: β[0] :]) :: var_fields 
     let ty_lhs := intersect_fields fields
@@ -796,57 +801,77 @@ match var_fields with
     --   []
 -/
 
+-- -- TODO: on meet, move unassigned variables undereath binders to enable recursive unification
+-- def Ty.meet (ty1 ty2 : Ty) : Ty :=
+--   Ty.intersect ty1 ty2
 
-partial def unify (i : Nat) (env_ty : PHashMap Ty Ty) :
-Ty -> Ty -> List (Nat × PHashMap Ty Ty)
+-- def Ty.join (ty1 ty2 : Ty) : Ty :=
+--   Ty.unionize ty1 ty2
+
+-- def Ty.meet_env (env_ty1 : PHashMap Ty Ty) (env_ty2 : PHashMap Ty Ty) : PHashMap Ty Ty :=
+--   let env_ty2' := PHashMap.from_list (env_ty2.toList.map (fun (key, ty2) =>
+--     match (env_ty1.find? key) with
+--     | none => (key, ty2)
+--     | some ty1 => (key, Ty.meet ty1 ty2)
+--   ))
+--   env_ty1 ; env_ty2'
+
+-- def Ty.join_env (env_ty1 : PHashMap Ty Ty) (env_ty2 : PHashMap Ty Ty) : List (PHashMap Ty Ty) :=
+--   [env_ty1, env_ty2]
+
+
+def Ty.assume_env (i_u_env_ty : Nat × List α) 
+(f : Nat -> α -> (Nat × List β)) :
+(Nat × List β) :=
+  let (i, u_env_ty) := i_u_env_ty
+  List.foldl (fun (i, u_acc) env_ty =>
+    let (i, u_env_ty) := (f i env_ty)
+    (i, u_acc ++ u_env_ty)
+  ) (i, []) u_env_ty 
+
+-- TODO: rewrite with union of type evironments as list: 
+-- union cannot distribute over type environment!
+-- TODO: rewrite entails into meets (except for opaque quantification) 
+  -- ensure that variables can be assigned different values and merged 
+-- TODO: always assign variables using union/intersect or join/meet
+  -- if variable is fixed it should be substituted with concrete type! 
+partial def Ty.unify (i : Nat) (env_ty : PHashMap Ty Ty) :
+Ty -> Ty -> (Nat × List (PHashMap Ty Ty))
 
 -- liberally quantified 
 | ty', .exis n ty_c1 ty_c2 ty =>
-  let adj := (ty_c1 == [: @ :] && ty_c1 == [: @ :])
-  let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j) adj))
+  let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
 
   let ty_c1 := Ty.instantiate 0 args ty_c1
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty := Ty.instantiate 0 args ty
-  List.bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ; env_ty1) ty_c1 ty_c2) (fun (i, env_ty2) => 
-    [ (i, env_ty1 ; env_ty2) ]
-  ))
+  Ty.assume_env (unify i env_ty ty' ty) (fun i env_ty => 
+    unify i env_ty ty_c1 ty_c2
+  )
 
 | .univ n ty_c1 ty_c2 ty', ty =>
-  let adj := (ty_c1 == [: @ :] && ty_c1 == [: @ :])
-  let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j) adj))
+  let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
   let ty_c1 := Ty.instantiate 0 args ty_c1
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty' := Ty.instantiate 0 args ty'
-  List.bind (unify i env_ty ty' ty) (fun (i, env_ty1) =>
-  List.bind (unify i (env_ty ; env_ty1) ty_c1 ty_c2) (fun (i, env_ty2) => 
-    [ (i, env_ty1 ; env_ty2) ]
-  ))
-
-
+  Ty.assume_env (unify i env_ty ty' ty) (fun i env_ty =>
+    (unify i env_ty ty_c1 ty_c2)
+  )
+  
 -- free variables
 ---------------------------------------------------------------
-| (.fvar id1 adj1), (.fvar id2 adj2) => 
-  match (env_ty.find? (.fvar id1 adj1), env_ty.find? (.fvar id2 adj2)) with 
+| (.fvar id1), (.fvar id2) => 
+  match (env_ty.find? (.fvar id1), env_ty.find? (.fvar id2)) with 
   | (.none, .none) => 
     -- ensure older unassigned free variables appear in simplified form
     if id1 < id2 then
-      [
-        (i, PHashMap.from_list [
-          (.fvar id2 adj2, Ty.fvar id1 (adj1 || adj2))
-        ])
-      ]
+      (i, [env_ty.insert (Ty.fvar id2) (Ty.fvar id1)])
     else if id1 > id2 then
-      [
-        (i, PHashMap.from_list [
-          (.fvar id1 adj1, Ty.fvar id2 (adj1 || adj2))
-        ])
-      ]
+      (i, [env_ty.insert (Ty.fvar id1) (Ty.fvar id2)])
     else
-      []
-  | (_, .some ty) => unify i env_ty (.fvar id1 adj1) ty 
-  | (.some ty', _) => unify i env_ty ty' (.fvar id2 adj2) 
+      (i, [env_ty])
+  | (_, .some ty) => unify i env_ty (.fvar id1) ty 
+  | (.some ty', _) => unify i env_ty ty' (.fvar id2) 
 
 -- Notes on adjusting:
 -- consider a function applied to an argument.
@@ -857,60 +882,49 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
 -- adjusting in unification is a general way to handle substitution of intersection/union into variables
 -- it generalized to type checking that can occur anywhere due to up/down propagation 
 -- in contrast, for example, to simply substituting in union at application etc.
-| .fvar id adj, ty  => 
-  match env_ty.find? (.fvar id adj) with 
+| .fvar id, ty  => 
+  match env_ty.find? (.fvar id) with 
   | none => 
-    let (i, ty_up) := (
-      if adj then
-        (i + 1, Ty.inter ty (Ty.fvar i true))
-      else
-        (i, ty)
-    )
-    [ 
-      (i, PHashMap.from_list [
-        (.fvar id adj, roll_corec (.fvar id adj) env_ty ty_up)
-      ]) 
-    ]
-  | some ty' => unify i env_ty ty' ty 
+    (i, [env_ty.insert (Ty.fvar id) (roll_corec (.fvar id) env_ty ty)])
+  | some ty' => 
+    let (i, u_env_ty) := (unify i env_ty ty' ty)
+    if u_env_ty.isEmpty then
+      (i, [env_ty.insert (Ty.fvar id) (roll_corec (.fvar id) env_ty (Ty.inter ty ty'))])
+    else
+      (i, u_env_ty)
 
-| ty', .fvar id  adj => 
-  match env_ty.find? (.fvar id adj) with 
+| ty', .fvar id => 
+  match env_ty.find? (.fvar id) with 
   | none => 
-    let (i, ty_low) := (
-      if adj then
-        (i + 1, Ty.union ty' (Ty.fvar i true))
-      else
-       (i, ty')
-    )
-    [ 
-      (i, PHashMap.from_list [
-        (.fvar id adj, roll_recur (.fvar id adj) env_ty ty_low)
-      ]) 
-    ]
-  | some ty => unify i env_ty ty' ty 
+    (i, [env_ty.insert (Ty.fvar id) (roll_recur (.fvar id) env_ty ty')])
+  | some ty => 
+    let (i, u_env_ty) := (unify i env_ty ty' ty) 
+    if u_env_ty.isEmpty then
+      (i, [env_ty.insert (Ty.fvar id) (roll_recur (.fvar id) env_ty (Ty.union ty' ty))])
+    else
+      (i, u_env_ty)
 
 -- opaquely quantified 
 -- TODO: consider requiring normal form check to ensure safety
 -- or using min/max to check both extremes
 | .exis n ty_c1 ty_c2 ty1, ty2 =>
-  let adj := (ty_c1 == [: @ :] && ty_c1 == [: @ :])
   let bound_start := i
   let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
   let bound_end := i
   let is_bound_var := (fun ty_var => 
     match ty_var with
-    | .fvar i' _ => bound_start <= i' && i' < bound_end
+    | Ty.fvar i' => bound_start <= i' && i' < bound_end
     | _ => false
   )
 
-  let args := ids.map (fun id => Ty.fvar id adj)
+  let args := ids.map (fun id => Ty.fvar id)
   let ty_c1 := Ty.instantiate 0 args ty_c1
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty1 := Ty.instantiate 0 args ty1
 
   let op_fields := linearize_fields ty_c1
 
-  let contexts := ( 
+  let (i, contexts) := ( 
     match op_fields with 
     | some fields =>
       let is_recur_type := match ty_c2 with 
@@ -919,113 +933,100 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
       let is_consistent_variable_record := List.all fields (fun (l, ty_fd) =>
         let rlabels := extract_record_labels (ty_c2) 
         rlabels.contains l &&
-        (match ty_fd with | (Ty.fvar _ _) => true | _ => false)
+        (match ty_fd with | (Ty.fvar _) => true | _ => false)
       )
       if is_recur_type && is_consistent_variable_record then
         let ty_norm := normalize_fields fields
-        [(i, PHashMap.from_list [(ty_norm, ty_c2)])]
+        (i, [PHashMap.from_list [(ty_norm, ty_c2)]])
 
-      else []
+      else (i, []) 
     | none => (unify i (env_ty) ty_c1 ty_c2)
   )
 
-  -- given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
-  if contexts.isEmpty then
-    -- vacuous truth; lhs constraint makes lhs empty
-    -- [(i, {})]
-    -- should fail to ensure soundness
-    []
-  else
-    List.bind contexts (fun (i, env_ty1) => 
-    List.bind (unify i (env_ty;env_ty1) ty1 ty2) (fun (i, env_ty2) =>
-      let env_ty_result := env_ty1;env_ty2
-      let is_result_safe := List.all env_ty_result.toList (fun (ty_key, ty_value) =>
-        let var_keys := Ty.free_vars ty_key
-        let var_values := Ty.free_vars ty_value
-        ( -- bound vars can only bind to bound vars or non-vars
-          not (var_keys.toList.any (fun (ty_var_key, Unit.unit) => is_bound_var ty_var_key)) || 
-          (var_values.toList.all (fun (ty_var_val, Unit.unit) => is_bound_var ty_var_val))
-        )
+  -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
+  -- Option.bind op_context (fun (i, env_ty1) =>
+  Ty.assume_env (i, contexts) (fun i env_ty => 
+  Ty.assume_env (unify i env_ty ty1 ty2) (fun i env_ty =>
+    let is_result_safe := List.all env_ty.toList (fun (ty_key, ty_value) =>
+      let var_keys := Ty.free_vars ty_key
+      let var_values := Ty.free_vars ty_value
+      ( -- bound vars can only bind to bound vars or non-vars
+        not (var_keys.toList.any (fun (ty_var_key, Unit.unit) => is_bound_var ty_var_key)) || 
+        (var_values.toList.all (fun (ty_var_val, Unit.unit) => is_bound_var ty_var_val))
       )
-      if is_result_safe then
-        [(i, env_ty_result)]
-      else
-        []
-    ))
+    )
+    if is_result_safe then
+      (i, [env_ty])
+    else
+      (i, [])
+  ))
 
 | ty1, .univ n ty_c1 ty_c2 ty2 =>
-  let adj := (ty_c1 == [: @ :] && ty_c1 == [: @ :])
   let bound_start := i
   let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
   let bound_end := i
   let is_bound_var := (fun ty_var => 
     match ty_var with
-    | .fvar i' _ => bound_start <= i' && i' < bound_end
+    | Ty.fvar i' => bound_start <= i' && i' < bound_end
     | _ => false
   )
 
-  let args := ids.map (fun id => Ty.fvar id adj)
+  let args := ids.map (fun id => Ty.fvar id)
   let ty_c1 := Ty.instantiate 0 args ty_c1
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty2 := Ty.instantiate 0 args ty2
 
-  let contexts := (unify i (env_ty) ty_c1 ty_c2)
+  let (i, contexts) := (unify i (env_ty) ty_c1 ty_c2)
 
-  if contexts.isEmpty then
-    [(i, {})]
-  else
-    List.bind contexts (fun (i, env_ty1) => 
-    List.bind (unify i (env_ty;env_ty1) ty1 ty2) (fun (i, env_ty2) =>
-      let env_ty_result := env_ty1;env_ty2
-      let is_result_safe := List.all env_ty_result.toList (fun (ty_key, ty_value) =>
-        let var_keys := Ty.free_vars ty_key
-        let var_values := Ty.free_vars ty_value
-        ( -- bound vars can only bind to bind vars or non-vars
-          not (var_keys.toList.any (fun (ty_var, Unit.unit) => is_bound_var ty_var)) || 
-          (var_values.toList.all (fun (ty_var, Unit.unit) => is_bound_var ty_var))
-        )
+  -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
+  Ty.assume_env (i, contexts) (fun i env_ty => 
+  Ty.assume_env (unify i env_ty ty1 ty2) (fun i env_ty => 
+    let is_result_safe := List.all env_ty.toList (fun (ty_key, ty_value) =>
+      let var_keys := Ty.free_vars ty_key
+      let var_values := Ty.free_vars ty_value
+      ( -- bound vars can only bind to bind vars or non-vars
+        not (var_keys.toList.any (fun (ty_var, Unit.unit) => is_bound_var ty_var)) || 
+        (var_values.toList.all (fun (ty_var, Unit.unit) => is_bound_var ty_var))
       )
-      if is_result_safe then
-        [(i, env_ty_result)]
-      else
-        []
-    ))
+    )
+    if is_result_safe then
+      (i, [env_ty])
+    else
+      (i, [])
+  ))
 
 -----------------------------------------------------
 
-
 | .bvar id1, .bvar id2  =>
   if id1 = id2 then 
-    [ (i, {}) ]
+    (i, [env_ty])
   else
-    .nil
+    (i, [])
 
-| .bot, _ => [ (i, {}) ] 
-| _, .top => [ (i, {}) ] 
-| .unit, .unit => [ (i, {}) ] 
+| .bot, _ => (i, [env_ty])
+| _, .top => (i, [env_ty])
+| .unit, .unit => (i, [env_ty])
 
 | .tag l' ty', .tag l ty =>
   if l' = l then
     unify i env_ty ty' ty
   else
-    .nil 
+    (i, [])
 
 | .field l' ty', .field l ty =>
   if l' = l then
     unify i env_ty ty' ty
   else
-    .nil
+    (i, [])
 
 | .case ty1 ty2', .case ty1' ty2 =>
-  List.bind (unify i env_ty ty1' ty1) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ; env_ty1) ty2' ty2) (fun (i, env_ty2) =>
-    [ (i, env_ty1 ; env_ty2) ]
-  ))
-
+  Ty.assume_env (unify i env_ty ty1' ty1) (fun i env_ty =>
+    (unify i env_ty ty2' ty2)
+  ) 
 
 | .recur ty', .recur ty =>
   if Ty.equal env_ty ty' ty then
-    [ (i, {}) ]
+    (i, [env_ty])
   else
     -- unroll using rhs ty
     -- by induction hypothesis, ty' ≤ ty
@@ -1044,108 +1045,105 @@ Ty -> Ty -> List (Nat × PHashMap Ty Ty)
       | Ty.tag _ _ => true 
       | Ty.top => true 
       | Ty.bot => true 
-      | _ => false 
+      | _ => false
+      -- | Ty.fvar _ => false 
+      -- | _ => true 
     ) then  
       unify i env_ty ty' (unroll (Ty.recur ty))
     else
       let ty_norm := normalize_fields fields
       match env_ty.find? ty_norm with
       | .some ty_cache => unify i env_ty ty_cache (Ty.recur ty)
-      | .none => []
+      | .none => (i, []) 
 
 | ty', .corec ty1 =>
   -- reduce to "arrow-normal-form" for propagation purposes
   match rewrite_function_type (.corec ty1) with
   | .some ty_rw => 
     unify i env_ty ty' ty_rw
-  | .none => .nil
+  | .none => (i, [])
 
 | .corec ty1, ty =>
   -- reduce to "arrow-normal-form" for propagation purposes
   match rewrite_function_type (.corec ty1) with
   | .some ty_rw => 
     unify i env_ty ty_rw ty 
-  | .none => .nil
+  | .none => (i, [])
 
--- | .corec ty1, Ty.case ty2 ty3 =>
---   if wellformed_unroll_type env_ty ty2 || wellformed_unroll_type env_ty ty3 then
---     unify i env_ty (unroll (Ty.corec ty1)) (Ty.case ty2 ty3)
---   else
---     match rewrite_function_type (.corec ty1) with
---     | .some ty' => 
---       unify i env_ty ty' (Ty.case ty2 ty3)
---     | .none => .nil
 
-| .union ty1 ty2, ty => 
-  List.bind (unify i env_ty ty1 ty) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ; env_ty1) ty2 ty) (fun (i, env_ty2) =>
-    [ (i, env_ty1 ; env_ty2) ]
-  ))
+| Ty.union ty1 ty2, ty => 
+  Ty.assume_env (unify i env_ty ty1 ty) (fun i env_ty =>
+    (unify i env_ty ty2 ty)
+  )
 
 | ty, .union ty1 ty2 => 
-  (unify i env_ty ty ty1) ++ (unify i env_ty ty ty2)
+  let (i, u_env_ty1) := (unify i env_ty ty ty1)
+  let (i, u_env_ty2) := (unify i env_ty ty ty2)
+  (i, u_env_ty1 ++ u_env_ty2)
 
 
 | ty, .inter ty1 ty2 => 
-  List.bind (unify i env_ty ty ty1) (fun (i, env_ty1) => 
-  List.bind (unify i (env_ty ; env_ty1) ty ty2) (fun (i, env_ty2) =>
-    [ (i, env_ty1 ; env_ty2) ]
-  ))
+  Ty.assume_env (unify i env_ty ty ty1) (fun i env_ty =>
+    (unify i env_ty ty ty2)
+  )
+
 
 | .inter ty1 ty2, ty => 
-  (unify i env_ty ty1 ty) ++ (unify i env_ty ty2 ty)
+  let (i, u_env_ty1) := (unify i env_ty ty1 ty)
+  let (i, u_env_ty2) := (unify i env_ty ty2 ty)
+  (i, u_env_ty1 ++ u_env_ty2)
 
-| _, _ => .nil 
+| _, _ => (i, []) 
 
-def unify_all (i : Nat) (cs : List (Ty × Ty)) : List (Nat × PHashMap Ty Ty) := 
-  List.foldl (fun u_env_ty1 => fun (ty_c1, ty_c2) => 
-    List.bind u_env_ty1 (fun (i, env_ty1) => 
-    List.bind (unify i env_ty1 ty_c1 ty_c2) (fun (i, env_ty2) =>
-      [ (i, env_ty1 ; env_ty2) ]
-    ))
-  ) [(i, {})] cs
+-- def unify_all (i : Nat) (cs : List (Ty × Ty)) : (Nat × List (PHashMap Ty Ty)) := 
+--   List.foldl (fun u_env_ty1 => fun (ty_c1, ty_c2) => 
+--     Option.bind u_env_ty1 (fun (i, env_ty1) => 
+--     Option.bind (Ty.unify i env_ty1 ty_c1 ty_c2) (fun (i, env_ty2) =>
+--       some (i, env_ty1 ; env_ty2)
+--     ))
+--   ) (some (i, {})) cs
 
 
-def Ty.refresh (i : Nat) : Ty -> (Nat × Ty)
-  | .bvar id => (i + 1, Ty.bvar id) 
-  | .fvar _ adj => (i + 1, Ty.fvar i adj)
-  | .unit => (i + 1, .unit) 
-  | .bot => (i + 1, .bot) 
-  | .top => (i + 1, .top) 
-  | .tag l ty => 
-    let (i, ty) := Ty.refresh i ty 
-    (i, Ty.tag l ty) 
-  | .field l ty => 
-    let (i, ty) := Ty.refresh i ty 
-    (i, Ty.field l ty) 
-  | .union ty1 ty2 => 
-    let (i, ty1) := Ty.refresh i ty1
-    let (i, ty2) := Ty.refresh i ty2
-    (i, .union ty1 ty2)
-  | .inter ty1 ty2 => 
-    let (i, ty1) := Ty.refresh i ty1
-    let (i, ty2) := Ty.refresh i ty2
-    (i, .inter ty1 ty2)
-  | .case ty1 ty2 => 
-    let (i, ty1) := Ty.refresh i ty1
-    let (i, ty2) := Ty.refresh i ty2
-    (i, .case ty1 ty2)
-  | .univ n cty1 cty2 ty => 
-    let (i, cty1) := Ty.refresh i cty1
-    let (i, cty2) := Ty.refresh i cty2
-    let (i, ty) := Ty.refresh i ty
-    (i, .univ n cty1 cty2 ty)
-  | .exis n cty1 cty2 ty => 
-    let (i, cty1) := Ty.refresh i cty1
-    let (i, cty2) := Ty.refresh i cty2
-    let (i, ty) := Ty.refresh i ty
-    (i, .exis n cty1 cty2 ty)
-  | .recur ty =>
-    let (i, ty) := Ty.refresh i ty
-    (i, .recur ty)
-  | .corec ty =>
-    let (i, ty) := Ty.refresh i ty
-    (i, .corec ty)
+-- def Ty.refresh (i : Nat) : Ty -> (Nat × Ty)
+--   | .bvar id => (i + 1, Ty.bvar id) 
+--   | .fvar _ => (i + 1, Ty.fvar i)
+--   | .unit => (i + 1, .unit) 
+--   | .bot => (i + 1, .bot) 
+--   | .top => (i + 1, .top) 
+--   | .tag l ty => 
+--     let (i, ty) := Ty.refresh i ty 
+--     (i, Ty.tag l ty) 
+--   | .field l ty => 
+--     let (i, ty) := Ty.refresh i ty 
+--     (i, Ty.field l ty) 
+--   | .union ty1 ty2 => 
+--     let (i, ty1) := Ty.refresh i ty1
+--     let (i, ty2) := Ty.refresh i ty2
+--     (i, .union ty1 ty2)
+--   | .inter ty1 ty2 => 
+--     let (i, ty1) := Ty.refresh i ty1
+--     let (i, ty2) := Ty.refresh i ty2
+--     (i, .inter ty1 ty2)
+--   | .case ty1 ty2 => 
+--     let (i, ty1) := Ty.refresh i ty1
+--     let (i, ty2) := Ty.refresh i ty2
+--     (i, .case ty1 ty2)
+--   | .univ n cty1 cty2 ty => 
+--     let (i, cty1) := Ty.refresh i cty1
+--     let (i, cty2) := Ty.refresh i cty2
+--     let (i, ty) := Ty.refresh i ty
+--     (i, .univ n cty1 cty2 ty)
+--   | .exis n cty1 cty2 ty => 
+--     let (i, cty1) := Ty.refresh i cty1
+--     let (i, cty2) := Ty.refresh i cty2
+--     let (i, ty) := Ty.refresh i ty
+--     (i, .exis n cty1 cty2 ty)
+--   | .recur ty =>
+--     let (i, ty) := Ty.refresh i ty
+--     (i, .recur ty)
+--   | .corec ty =>
+--     let (i, ty) := Ty.refresh i ty
+--     (i, .corec ty)
 
 partial def Ty.union_all : (List Ty) -> Option Ty
   | [] => none
@@ -1159,15 +1157,18 @@ partial def Ty.union_all : (List Ty) -> Option Ty
 
 
 partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
-  (unify i {} ty1 ty2).foldl (fun acc => fun  (_, env_ty) =>
-    Ty.simplify ((Ty.subst env_ty (Ty.union ty_result acc)))
-  ) (Ty.bot)
+  let (_, u_env_ty) := (Ty.unify i {} ty1 ty2)
+  List.foldr (fun env_ty ty_acc => 
+    Ty.simplify (Ty.subst env_ty (Ty.union ty_result ty_acc))
+  ) Ty.bot u_env_ty
 
-partial def unify_decide (i : Nat) (ty1) (ty2) :=
-  not (unify i {} ty1 ty2).isEmpty
 
 partial def unify_simple (i : Nat) (ty1) (ty2) :=
-  (unify i {} ty1 ty2)
+  (Ty.unify i {} ty1 ty2)
+
+partial def unify_decide (i : Nat) (ty1) (ty2) :=
+  let (_, result) := (Ty.unify i {} ty1 ty2)
+  !result.isEmpty
 
 
 -- -- notation convetion:
@@ -1291,51 +1292,36 @@ structure Contract where
   ty : Ty 
 deriving Repr
 
--- TODO: add adjustable flag to fvar.
--- variable is adjustable if there is no constraint on it in quantifier.
--- variable is adjustable if introduced from lack of annotation.
+
+def Ty.combine (i_u_env_ty : (Nat × List (PHashMap Ty Ty))) (ty : Ty) :=
+  let (i, u_env_ty) := i_u_env_ty
+  (i, u_env_ty.map fun env_ty => (env_ty, ty))
+
+-- TODO: substitute in concrete types for types that should not be refined
 partial def infer (i : Nat) (env_ty : PHashMap Ty Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
-List Contract := 
+(Nat × List (PHashMap Ty Ty × Ty)) :=
 match t with
-| Tm.hole => 
-  let guide : Guide := ⟨env_tm, ty⟩
-  [{
-      i := i + 1, 
-      env_ty := {}, guides := [(i, guide)], 
-      t := (Tm.fvar i), ty := ty
-  }] 
+| Tm.hole => (i, [(env_ty, ty)])
 | Tm.unit => 
-  List.bind (unify i env_ty Ty.unit ty) (fun (i, env_ty_x) => 
-    [{i := i, env_ty := env_ty_x, guides := [], t := t, ty := Ty.unit}]
-  )
-| Tm.bvar _ => .nil 
+  let (i, u_env_ty) := (Ty.unify i env_ty Ty.unit ty) 
+  (i, u_env_ty.map fun env_ty => (env_ty, Ty.unit))
+| Tm.bvar _ => (i, []) 
 | Tm.fvar id =>
-  match (env_tm.find? id) with 
-    | .some ty' => 
-      List.bind (unify i env_ty ty' ty) (fun (i, env_ty_x) =>
-        [{
-          i := i, 
-          env_ty := env_ty_x, guides := [], 
-          t := t, ty := ty'
-        }]
-      )
-    | .none => .nil 
+  match (env_tm.find? id) with
+  | some ty' => 
+    Ty.combine (Ty.unify i env_ty ty' ty) ty'
+  | none => (i, [])
 
 | .tag l t1 =>   
-  let (i, ty1) := (i + 1, Ty.fvar i false)
-  List.bind (unify i env_ty (Ty.tag l ty1) ty) (fun (i, env_ty1) =>
-  List.bind (infer i env_ty env_tm t1 ty1) (fun ⟨i, env_ty2, guides_t1, t1', ty1'⟩ =>
-    [⟨
-      i, 
-      env_ty1;env_ty2, guides_t1, 
-      Tm.tag l t1', 
-      Ty.tag l ty1'
-    ⟩]
+  let (i, ty1) := (i + 1, Ty.fvar i)
+  Ty.assume_env (Ty.unify i env_ty (Ty.tag l ty1) ty) (fun i env_ty =>
+  Ty.assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
+    (i, [(env_ty, Ty.tag l ty1')])
   ))
 
 | .record fds =>
   let (i, trips) := List.foldr (fun (l, t1) (i, ty_acc) =>
-    (i + 1, (l, t1, (Ty.fvar i false)) :: ty_acc)
+    (i + 1, (l, t1, (Ty.fvar i)) :: ty_acc)
   ) (i, []) fds
 
   let ty_init := Ty.top
@@ -1344,30 +1330,19 @@ match t with
     Ty.inter (Ty.field l ty1) ty_acc 
   ) ty_init trips 
 
-  let u_env_ty1 := unify i env_ty ty' ty 
-
   let f_step := (fun (l, t1, ty1) acc =>
-    List.bind acc (fun ⟨i, env_ty_acc, guides_acc, t_acc, ty_acc⟩ =>
-    List.bind (infer i (env_ty;env_ty_acc) env_tm t1 ty1) (fun ⟨i, env_ty_x, guides_t1, t1', ty1'⟩ =>
-      match t_acc with
-      | Tm.record fds_acc =>
-        [⟨
-          i,
-          env_ty_acc;env_ty_x,
-          guides_acc ++ guides_t1,
-          Tm.record ((l, t1') :: fds_acc),
-          Ty.inter (Ty.field l ty1') ty_acc
-        ⟩]
-      | _ => .nil
+    Ty.assume_env acc (fun i (env_ty, ty_acc) =>
+    Ty.assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
+      (i, [(env_ty, Ty.inter (Ty.field l ty1') ty_acc)])
     ))
   )
 
-  let init := u_env_ty1.map fun (i, env_ty1) => ⟨i, env_ty1, [], Tm.record [], Ty.top⟩
+  let init := Ty.combine (Ty.unify i env_ty ty' ty) Ty.top
   List.foldr f_step init trips
 
 | .func fs =>
   let (i, fs_typed) := List.foldr (fun (p, b) (i, ty_acc) =>
-    (i + 2, (p, Ty.fvar i true, b, Ty.fvar (i + 1) false) :: ty_acc)
+    (i + 2, (p, Ty.fvar i, b, Ty.fvar (i + 1)) :: ty_acc)
   ) (i, []) fs
 
   let case_init := Ty.top
@@ -1376,99 +1351,80 @@ match t with
     (i, Ty.inter (Ty.case ty_p ty_b) ty_acc) 
   ) (i, case_init) fs_typed 
 
-  let u_env_ty1 := unify i env_ty ty' ty 
-
   let f_step := (fun (p, ty_p, b, ty_b) acc =>
-    List.bind acc (fun ⟨i, env_ty_acc, guides_acc, t_acc, ty_acc⟩ =>
-    List.bind (pattern_wellformed 0 p).toList (fun n =>
+    Ty.assume_env acc (fun i (env_ty, ty_acc) =>
+    match pattern_wellformed 0 p with
+    | none => (i, [])
+    | some n =>
+      let env_pat : PHashMap Nat Ty := (List.range n).foldl (init := {}) (fun env_pat j => 
+        let tm_key := (i + (2 * j))
+        let ty_x := Ty.fvar (i + (2 * j) + 1) 
+        (env_pat.insert tm_key ty_x)
+      )
+      let i := i + (2 * n)
 
-    let env_pat : PHashMap Nat Ty := (List.range n).foldl (init := {}) (fun env_pat j => 
-      let tm_key := (i + (2 * j))
-      let ty_x := Ty.fvar (i + (2 * j) + 1) false 
-      (env_pat.insert tm_key ty_x)
+      let list_tm_x := env_pat.toList.map (fun (k, _) => (Tm.fvar k))
+
+      let p := Tm.instantiate 0 list_tm_x p 
+      let b := Tm.instantiate 0 list_tm_x b  
+      Ty.assume_env (infer i env_ty (env_tm ; env_pat) p ty_p) (fun i (env_ty, ty_p') =>
+      Ty.assume_env (infer i env_ty (env_tm ; env_pat) b ty_b) (fun i (env_ty, ty_b') =>
+           (i, [(env_ty, Ty.simplify (Ty.inter (Ty.case ty_p' ty_b') ty_acc))])
+      )))
     )
-    let i := i + (2 * n)
 
-    let fids := env_pat.toList.map (fun (k, _) => k)
-    let list_tm_x := env_pat.toList.map (fun (k, _) => (Tm.fvar k))
-
-    let p := Tm.instantiate 0 list_tm_x p 
-    let b := Tm.instantiate 0 list_tm_x b  
-    List.bind (
-      infer i (env_ty;env_ty_acc) (env_tm ; env_pat) p ty_p
-    ) (fun ⟨i, env_ty_p, _, _, ty_p'⟩ =>
-    List.bind (
-      infer i (env_ty;env_ty_acc;env_ty_p) (env_tm ; env_pat) b ty_b
-    ) (fun ⟨i, env_ty_b, guides_b, b', ty_b'⟩ =>
-      match t_acc with
-      | Tm.func cases_acc =>
-        [⟨
-          i,
-          env_ty_acc;env_ty_p;env_ty_b,
-          guides_acc ++ guides_b,
-          Tm.func ((p, Tm.generalize fids 0 b') :: cases_acc),
-          Ty.simplify (Ty.inter (Ty.case ty_p' ty_b') ty_acc)
-        ⟩]
-      | _ => .nil
-    ))))
-  )
-
-  let init := u_env_ty1.map fun (i, env_ty1) => ⟨i, env_ty1, [], Tm.func [], Ty.top⟩
+  let init := Ty.combine (Ty.unify i env_ty ty' ty) Ty.top
   List.foldr f_step init fs_typed
 
 | .proj t1 l =>
-  List.bind (infer i env_ty env_tm t1 (Ty.field l ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
-  let (i, ty') := (i + 1, Ty.fvar i false)
-  List.bind (unify i (env_ty;env_ty1) ty1' (Ty.field l ty')) (fun (i, env_ty2) =>
-    [⟨i, env_ty1;env_ty2, guides_t1, Tm.proj t1' l, ty'⟩]
+  Ty.assume_env (infer i env_ty env_tm t1 (Ty.field l ty)) (fun i (env_ty, ty1') =>
+  let (i, ty') := (i + 1, Ty.fvar i)
+  Ty.assume_env (Ty.unify i env_ty ty1' (Ty.field l ty')) (fun i env_ty =>
+    (i, [(env_ty, ty')])
   ))
 
 | .app t1 t2 =>
-  let (i, ty2) := (i + 1, Ty.fvar i false)
-  List.bind (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1⟩ =>
-  List.bind (infer i (env_ty;env_ty1) env_tm t2 ty2) (fun ⟨i, env_ty2, guides_t2, t2', ty2'⟩ =>
-  let (i, ty') := (i + 1, Ty.fvar i false)
-  List.bind (unify i (env_ty;env_ty1;env_ty2) ty1 (Ty.case ty2' ty')) (fun (i, env_ty3) =>
-  let (i, ty'') := (i + 1, Ty.fvar i false)
-  List.bind (unify i (env_ty;env_ty1;env_ty2;env_ty3) ty'' ty') (fun (i, env_ty4) =>
-    [⟨i, env_ty1;env_ty2;env_ty3;env_ty4, guides_t1 ++ guides_t2, Tm.app t1' t2', ty''⟩]
+  let (i, ty2) := (i + 1, Ty.fvar i)
+  Ty.assume_env (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun i (env_ty, ty1) =>
+  Ty.assume_env (infer i env_ty env_tm t2 ty2) (fun i (env_ty, ty2') =>
+  let (i, ty') := (i + 1, Ty.fvar i)
+  Ty.assume_env (Ty.unify i env_ty ty1 (Ty.case ty2' ty')) (fun i env_ty =>
+  let (i, ty'') := (i + 1, Ty.fvar i)
+  Ty.assume_env (Ty.unify i env_ty ty'' ty') (fun i env_ty =>
+    (i, [(env_ty, ty'')])
   ))))
 
 | .letb op_ty1 t1 t => 
 
   let (i, ty1) := match op_ty1 with
   | some ty1 => (i, ty1)
-  | none => (i + 1, Ty.fvar i true)
+  | none => (i + 1, Ty.fvar i)
 
   let free_var_boundary := i
-  List.bind (infer i env_ty env_tm t1 ty1) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
+  Ty.assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
+    -- prevent overgeneralization by filtering
+    let ty1' := Ty.reduce env_ty ty1'
+    let fvs := List.filter (fun id => id >= free_var_boundary) (
+      (Ty.free_vars ty1').toList.reverse.bind (fun | (.fvar k , _) => [k] | _ => [])
+    )
 
-  -- prevent overgeneralization by filtering
-  let ty1' := Ty.reduce (env_ty;env_ty1) ty1'
-  let fvs := List.filter (fun id => id >= free_var_boundary) (
-    (Ty.free_vars ty1').toList.reverse.bind (fun | (.fvar k _ , _) => [k] | _ => [])
+    let ty1' := if fvs.isEmpty then ty1' else [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
+    let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
+    let t := Tm.instantiate 0 [x] t 
+
+    (infer i env_ty (env_tm ; env_tmx) t ty) 
   )
 
-  let ty1' := if fvs.isEmpty then ty1' else [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
-  let fids := [i]
-  let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
-  let t := Tm.instantiate 0 [x] t 
-
-  List.bind (infer i (env_ty;env_ty1) (env_tm ; env_tmx) t ty) (fun ⟨i, env_ty', guides_t, t', ty'⟩ =>
-    [ ⟨i, env_ty1;env_ty', guides_t1 ++ guides_t, .letb ty1' t1' (Tm.generalize fids 0 t'), ty'⟩ ]
-  ))
-
 | .fix t1 =>
-  List.bind (infer i env_ty env_tm t1 (Ty.case [: ⊥ :] ty)) (fun ⟨i, env_ty1, guides_t1, t1', ty1'⟩ =>
-  let (i, ty_prem) := (i + 1, Ty.fvar i false) 
-  let (i, ty_conc) := (i + 1, Ty.fvar i false) 
-  List.bind (unify i (env_ty;env_ty1) ty1' (.case ty_prem ty_conc)) (fun (i, env_ty2) =>
-
-    let ty_prem := Ty.reduce (env_ty;env_ty1;env_ty2) ty_prem 
-    let ty_conc := Ty.reduce (env_ty;env_ty1;env_ty2) ty_conc
+  let (i, ty_prem) := (i + 1, Ty.fvar i) 
+  Ty.assume_env (infer i env_ty env_tm t1 (Ty.case ty_prem ty)) (fun i (env_ty, ty1') =>
+  let (i, ty_conc) := (i + 1, Ty.fvar i) 
+  Ty.assume_env (Ty.unify i env_ty ty1' (.case ty_prem ty_conc)) (fun i env_ty =>
+    let ty_prem := Ty.reduce env_ty ty_prem 
+    let ty_conc := Ty.reduce env_ty ty_conc
 
     let ty_content := List.foldr (fun ty_case ty_acc =>
-      let fvs := (Ty.free_vars ty_case).toList.bind (fun | (.fvar k _ , _) => [k] | _ => [])
+      let fvs := (Ty.free_vars ty_case).toList.bind (fun | (.fvar k , _) => [k] | _ => [])
       let ty_case' := (
         if fvs.length > 0 then
           [:
@@ -1487,16 +1443,19 @@ match t with
     let ty' := [: ν β[0] => ⟨ty_content⟩ :]
 
     -- constraint that ty' <= ty_prem is built into inductive type
-    [ ⟨i, env_ty1;env_ty2, guides_t1, Tm.fix t1', ty'⟩ ]
+    (i, [(env_ty, ty')])
   ))
 
 partial def PHashMap.intersect (m1 : PHashMap Nat Unit) (m2 : PHashMap Nat Unit) :=
   PHashMap.from_list (m1.toList.filter (fun (id, _) => m2.contains id))
 
+partial def infer_simple i (t : Tm) :=
+  (infer (i + 1) {} {} t (Ty.fvar i))
+
 partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
-  (infer i {} {} t ty).foldl (fun acc => fun  ⟨_, env_ty, _, _, ty'⟩ =>
-    -- (Ty.subst env_ty (Ty.union acc ty'))
-    let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union acc ty')))
+  let (_, u_env) := (infer i {} {} t ty)
+  List.foldr (fun (env_ty, ty') ty_acc => 
+    let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
     let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
 
     let fvs := pos_neg_set.toList.reverse.bind (fun (k, _) => [k])
@@ -1504,10 +1463,9 @@ partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
       Ty.simplify (Ty.subst_default true ty')
     else
       Ty.simplify (Ty.subst_default true [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :])
-  ) (Ty.bot)
+  ) Ty.bot u_env
 
-
-partial def infer_reduce (i : Nat) (t : Tm) : Ty := infer_reduce_wt (i + 1) t (Ty.fvar i true)
+partial def infer_reduce (i : Nat) (t : Tm) : Ty := infer_reduce_wt (i + 1) t (Ty.fvar i)
 
 structure Work where
   cost : Nat
@@ -1517,60 +1475,6 @@ structure Work where
   t : Tm
 deriving Repr
 
--- ooga
-#eval infer_reduce 0 [:
-  fix(λ y[0] => λ[
-  for zero;() => nil;(),
-  for succ;y[0] => cons;(y[1] y[0])
-  ])
-:]
-
-#eval infer_reduce 0 [:
-  let y[0] = fix(λ y[0] => λ[
-  for zero;() => nil;(),
-  for succ;y[0] => cons;(y[1] y[0])
-  ]) =>
-  (y[0] (succ;zero;()))
-:]
-
-def nat_to_list := [: 
-  ν β[0] => 
-    (zero*@ -> nil*@) ∧ 
-    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
-      succ*β[0] -> cons*β[1])
-:]
-
-#eval rewrite_function_type nat_to_list
-
--- expected: cons*nil*@
--- booga
-#eval infer_reduce 0 [:
-  let y[0] : ⟨nat_to_list⟩ = _ =>
-  (y[0] (succ;zero;()))
-:]
-
--- regression test
-
--- widening
-#eval infer_reduce 0 [:
-  let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
-  ((y[0] hello;()) world;())
-:]
-
--- narrowing
-#eval infer_reduce 0 [:
-let y[0] : uno*@ -> @ = _ => 
-let y[0] : dos*@ -> @ = _ =>
-(λ y[0] =>
-  ((y[2] y[0]), (y[1] y[0])))
-:]
-
-#eval infer_reduce 0 [:
-  let y[0] : (zero*@ -> nil*@) ∧ (succ*zero*@ -> cons*nil*@) = _ =>
-  (y[0] (succ;zero;()))
-:]
-
-----------------------------------------
 
 
 def Work.le (x y: Work): Bool := x.cost <= y.cost
@@ -1618,7 +1522,7 @@ partial def Tm.subst (m : PHashMap Nat Tm) : Tm -> Tm
 -- (tag labels, field labels)
 partial def extract_labels : Ty -> (List String × List String)
 | .bvar id => ([], []) 
-| .fvar id _ => ([], [])
+| .fvar id => ([], [])
 | .unit => ([], []) 
 | .bot => ([], [])
 | .top => ([], [])
@@ -1717,59 +1621,323 @@ partial def enumerate (i : Nat) (env_tm : PHashMap Nat Ty) (ty : Ty) : List Tm :
 
 
 
-#check BinomialHeap.ofList
-#check BinomialHeap.merge
+-- #check BinomialHeap.ofList
+-- #check BinomialHeap.merge
 
-partial def synthesize_loop (queue : Work.Queue) : Option Tm := 
-  Option.bind (queue.deleteMin) (fun (work, queue') =>
-    if work.guides.isEmpty then
-      some (Tm.subst work.patches work.t)
-    else 
-      let queue_ext := BinomialHeap.ofList Work.le (
-        List.bind work.guides.toList (fun (id, guide) =>
-          let hypotheses := enumerate work.i guide.env_tm guide.ty_expected
-          List.bind hypotheses (fun h =>
-          let contracts := (infer work.i {} guide.env_tm h guide.ty_expected)
-          List.bind contracts (fun ⟨i, _, guides, t, _⟩ =>
-            let patch := t
-            [
-              {
-                cost := work.cost + (Tm.cost h),
-                i := i,
-                guides := work.guides.erase id ; (PHashMap.from_list guides),
-                patches := work.patches.insert id patch 
-                t := work.t 
-              }
+-- partial def synthesize_loop (queue : Work.Queue) : Option Tm := 
+--   Option.bind (queue.deleteMin) (fun (work, queue') =>
+--     if work.guides.isEmpty then
+--       some (Tm.subst work.patches work.t)
+--     else 
+--       let queue_ext := BinomialHeap.ofList Work.le (
+--         List.bind work.guides.toList (fun (id, guide) =>
+--           let hypotheses := enumerate work.i guide.env_tm guide.ty_expected
+--           List.bind hypotheses (fun h =>
+--           let contracts := (infer work.i {} guide.env_tm h guide.ty_expected)
+--           List.bind contracts (fun ⟨i, _, guides, t, _⟩ =>
+--             let patch := t
+--             [
+--               {
+--                 cost := work.cost + (Tm.cost h),
+--                 i := i,
+--                 guides := work.guides.erase id ; (PHashMap.from_list guides),
+--                 patches := work.patches.insert id patch 
+--                 t := work.t 
+--               }
 
-            ]
-          ))
-        ) 
-      )
+--             ]
+--           ))
+--         ) 
+--       )
 
-      let queue'' := BinomialHeap.merge queue' queue_ext
+--       let queue'' := BinomialHeap.merge queue' queue_ext
 
-      synthesize_loop queue''
+--       synthesize_loop queue''
+--   )
+
+
+
+-- partial def synthesize (t : Tm) : Option Tm := 
+--   let contracts := infer 0 {} {} t [: ∃ 1 => β[0] :]
+--   let works : List Work := contracts.map (fun contract =>
+--     {
+--       cost := (Tm.cost t), i := contract.i, 
+--       guides := PHashMap.from_list contract.guides, 
+--       patches := {},
+--       t := contract.t
+--     }
+--   )
+--   let queue := List.foldl (fun queue work =>
+--     queue.insert work
+--   ) BinomialHeap.empty works
+
+--   (synthesize_loop queue) 
+
+-- partial def synth_reduce (t : Tm) : Tm := 
+--   match synthesize t with
+--   | some t => t
+--   | none => Tm.hole
+
+
+--- unification --
+def nat_ := [:
+  μ β[0] => 
+    zero*@ ∨
+    succ*β[0]
+:]
+  
+#eval unify_simple 30
+[:
+  (zero*@) 
+:] [:
+    zero*@ ∨
+    succ*@
+:]
+
+
+#eval unify_reduce 30
+[:
+  (succ*succ*succ*α[0]) 
+:] [:
+    zero*@ ∨
+    succ*⟨nat_⟩
+:]
+[: α[0] :]
+
+#eval unify_simple 30
+[:
+  (succ*succ*succ*zero*@) 
+:] [:
+    zero*@ ∨
+    succ*⟨nat_⟩
+:]
+
+def plus := [: 
+  μ β[0] => 
+    (∃ 1 => 
+      (x ~ zero*@ ∧ y ~ β[0] ∧ z ~ β[0])) ∨ 
+
+    (∃ 3 :: (x ~ β[0] ∧ y ~ β[1] ∧ z ~ β[2]) ≤ β[3] => 
+      (x ~ succ*β[0] ∧ y ~ β[1] ∧ z ~ succ*β[2]))
+:]
+
+#eval unify_reduce 30 [:
+  (
+    x ~ (succ*zero*@) ∧ 
+    y ~ (α[10]) ∧
+    z ~ (succ*succ*succ*zero*@)
   )
+:] plus
+[: α[10] :]
 
-
-
-partial def synthesize (t : Tm) : Option Tm := 
-  let contracts := infer 0 {} {} t [: ∃ 1 => β[0] :]
-  let works : List Work := contracts.map (fun contract =>
-    {
-      cost := (Tm.cost t), i := contract.i, 
-      guides := PHashMap.from_list contract.guides, 
-      patches := {},
-      t := contract.t
-    }
+#eval unify_reduce 30 [:
+  (
+    x ~ (succ*zero*@) ∧ 
+    y ~ (α[1]) ∧
+    z ~ α[2] 
   )
-  let queue := List.foldl (fun queue work =>
-    queue.insert work
-  ) BinomialHeap.empty works
+:] plus
+[: α[1] × α[2] :]
 
-  (synthesize_loop queue) 
+#eval unify_reduce 30 [:
+  (
+    x ~ α[1] ∧
+    y ~ α[2] ∧
+    z ~ (succ*succ*zero*@)
+  )
+:] plus
+[: α[1] × α[2] :]
 
-partial def synth_reduce (t : Tm) : Tm := 
-  match synthesize t with
-  | some t => t
-  | none => Tm.hole
+
+
+#eval unify_reduce 30 [:
+  zero*@
+:] [:
+  ⟨nat_⟩
+:] 
+[: α[0] :]
+
+#eval unify_reduce 30 [:
+  (α[0] × zero*@) ∨ (zero*@ × α[0])
+:] [:
+  (⟨nat_⟩ × zero*@)
+:] 
+[: α[0] :]
+
+#eval unify_reduce 30 [:
+  (α[0] × zero*@) ∨ (⟨nat_⟩ × α[0])
+:] [:
+  (⟨nat_⟩ × zero*@)
+:] 
+[: α[0] :]
+
+
+#eval unify_reduce 30 [:
+  (
+    x ~ α[0] ∧
+    y ~ α[2] ∧
+    z ~ (succ*succ*zero*@)
+  )
+:] plus
+[: α[0] × α[2] :]
+
+#eval unify_reduce 1 [:
+  (
+    x ~ (succ*succ*zero*@) ∧ 
+    y ~ (succ*zero*@) ∧
+    z ~ (α[0])
+  )
+:] plus
+[: α[0] :]
+-- == [: succ*succ*succ*zero*@ :]
+
+#eval unify_reduce 30 [:
+  (
+    x ~ (succ*zero*@) ∧ 
+    y ~ (α[10]) ∧
+    z ~ (succ*succ*zero*@)
+  )
+:] plus
+[: α[10] :]
+
+
+#eval unify_reduce 10 [:
+(
+  x ~ α[0] ∧
+  y ~ succ*zero*@ ∧
+  z ~ succ*succ*zero*@
+)
+:] plus
+[: α[0] :]
+
+#eval unify_simple 10 [:
+  ⊥
+:] plus 
+
+#eval unify_simple 10 plus [:
+  ⊥
+:] 
+
+--- inferring types of recursion --
+
+#eval infer_simple 0 [:
+  fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ])
+:]
+
+#eval infer_reduce 0 [:
+  fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ])
+:]
+
+#eval infer_reduce 0 [:
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ]) =>
+  (y[0] (succ;zero;()))
+:]
+
+def nat_to_list := [: 
+  ν β[0] => 
+    (zero*@ -> nil*@) ∧ 
+    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
+      succ*β[0] -> cons*β[1])
+:]
+
+#eval rewrite_function_type nat_to_list
+
+-- expected: cons*nil*@
+#eval infer_reduce 0 [:
+  let y[0] : ⟨nat_to_list⟩ = _ =>
+  (y[0] (succ;zero;()))
+:]
+
+-- regression test
+
+---------- adjustment ----------------
+-- widening
+#eval infer_reduce 0 [:
+  let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  ((y[0] hello;()) world;())
+:]
+
+#eval infer_reduce 0 [:
+  let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  (y[0] hello;())
+:]
+
+-- ERROR: overspecialize because we reduce at generalization 
+-- TODO: construct a package_env function, then wrap in universal
+-- package an environment as an existential in a type 
+-- [X ↦ T1] . T => ∃ X . T :: X ≤ T1  
+-- [X ↦ T1(Y), Y ↦ TY2] . T => ∃ X . T :: X ≤ ∃ Y . T1(Y) :: Y ≤ TY2 
+
+#eval infer_reduce 0 [:
+  let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] = (y[0] hello;()) => 
+  y[0]
+:]
+
+-- ERROR: overspecialize because we reduce at generalization 
+-- expected: ((world*@ ∨ hello*@) × (world*@ ∨ hello*@))
+#eval infer_reduce 0 [:
+  let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] = (y[0] hello;()) => 
+  (y[0] world;())
+:]
+
+-- narrowing
+
+#eval infer_reduce 0 [:
+let y[0] : uno*@ -> @ = _ => 
+let y[0] : dos*@ -> @ = _ =>
+(λ y[0] =>
+  ((y[2] y[0]), (y[1] y[0])))
+:]
+
+#eval infer_reduce 0 [:
+let y[0] : uno*@ -> @ = _ => 
+let y[0] : dos*@ -> @ = _ =>
+(λ y[0] =>
+  let y[0] = (y[2] y[0]) => 
+  let y[0] = (y[2] y[1]) =>
+  (y[0], y[1]))
+:]
+
+#eval infer_reduce 0 [:
+  let y[0] : (zero*@ -> nil*@) ∧ (succ*zero*@ -> cons*nil*@) = _ =>
+  (y[0] (succ;zero;()))
+:]
+
+----------------------------------------
+
+def nat_list := [: 
+  μ β[0] => (
+    (zero*@ × nil*@) ∨ 
+    (∃ 2 :: β[0] × β[1] ≤ β[2] => 
+      (succ*β[0] × cons*β[1]))
+  )
+:]
+
+def even_list := [: 
+  μ β[0] => (
+    (zero*@ × nil*@) ∨ 
+    (∃ 2 :: β[0] × β[1] ≤ β[2] => 
+      (succ*succ*β[0] × cons*cons*β[1]))
+  )
+:]
+
+#eval unify_decide 0 
+  even_list
+  nat_list
+-- == true
+
+#eval unify_decide 0 
+  nat_list
+  even_list
+-- == false 
