@@ -489,6 +489,18 @@ def Ty.signed_free_vars (posi : Bool) : Ty -> PHashMap Nat Unit
 | .corec ty => (Ty.signed_free_vars posi ty)
 
 
+
+-- ERROR: overspecialize because we reduce at generalization 
+-- TODO: construct a package_env function, then wrap in universal
+-- package an environment as an existential in a type 
+-- [X ↦ T1] . T => ∃ X . T :: X ≤ T1  
+-- [X ↦ T1(Y), Y ↦ TY2] . T => ∃ X . T :: X ≤ ∃ Y . T1(Y) :: Y ≤ TY2 
+-- TODO: requirs modifying constraint into list of constraints
+-- def Ty.package_env (env_ty : PHashMap Ty Ty) (ty : Ty) :=  
+--   let fids := (Ty.free_vars ty).toList.bind (fun | (.fvar k , _) => [k] | composite => Ty.free_vars composite)
+--   [: ∃ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :]
+
+
 -- Consider: convert to to using existentialization/package_env of environment wrt to payload
 -- avoid substitution since type variables decide widening/narrowing
 -- might not be an issue if substitution only occcurs in specific areas
@@ -1874,9 +1886,6 @@ def nat_to_list := [:
 -- ERROR: overspecialize because we reduce at generalization 
 -- TODO: construct a package_env function, then wrap in universal
 -- package an environment as an existential in a type 
--- [X ↦ T1] . T => ∃ X . T :: X ≤ T1  
--- [X ↦ T1(Y), Y ↦ TY2] . T => ∃ X . T :: X ≤ ∃ Y . T1(Y) :: Y ≤ TY2 
-
 #eval infer_reduce 0 [:
   let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   let y[0] = (y[0] hello;()) => 
