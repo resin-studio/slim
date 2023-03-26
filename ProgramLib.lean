@@ -91,7 +91,7 @@ match ty with
 | .tag l ty1 => 
   (l ++ "*" ++ (Ty.repr ty1 n))
 | .field l ty1 => 
-  (l ++ " ~ " ++ (Ty.repr ty1 n))
+  (l ++ " : " ++ (Ty.repr ty1 n))
 
 | .union (Ty.tag "inl" inl) (Ty.tag "inr" inr) =>
   Format.bracket "(" ((Ty.repr inl n) ++ " +" ++ Format.line ++ (Ty.repr inr n)) ")"
@@ -174,7 +174,7 @@ syntax:90 "@" : slm
 syntax:90 "⊥" : slm
 syntax:90 "⊤" : slm
 syntax:90 slm:100 "*" slm:90 : slm
-syntax:90 slm:100 "~" slm:90 : slm
+syntax:90 slm:100 ":" slm:90 : slm
 syntax:50 slm:51 "->" slm:50 : slm
 syntax:60 slm:61 "∨" slm:60 : slm
 syntax:60 slm:61 "+" slm:60 : slm
@@ -195,7 +195,7 @@ syntax:30 "x[" slm:90 "]" : slm
 syntax:30 slm:100 ";" slm:30 : slm
 syntax:30 slm:100 ":=" slm:30 : slm
 syntax:30 "(" slm "," slm ")" : slm
-syntax:30 "ω" slm : slm
+syntax:30 "σ" slm : slm
 syntax:20 "for" slm:30 ":" slm "=>" slm:20 : slm 
 syntax:20 "for" slm:30 "=>" slm:20 : slm 
 syntax:20 "λ" slm:30 ":" slm "=>" slm:20 : slm 
@@ -229,7 +229,7 @@ macro_rules
 | `([: ⊥ :]) => `(Ty.bot)
 | `([: ⊤ :]) => `(Ty.top)
 | `([: $a * $b:slm :]) => `(Ty.tag [: $a :] [: $b :])
-| `([: $a ~ $b:slm :]) => `(Ty.field [: $a :] [: $b :])
+| `([: $a : $b:slm :]) => `(Ty.field [: $a :] [: $b :])
 | `([: $a -> $b :]) => `(Ty.case [: $a :] [: $b :])
 | `([: $a ∨ $b :]) => `(Ty.union [: $a :] [: $b :])
 | `([: $a + $b :]) => `(Ty.union (Ty.tag "inl" [: $a :]) (Ty.tag "inr" [: $b :]))
@@ -249,7 +249,7 @@ macro_rules
 | `([: $a ; $b :]) => `(Tm.tag [: $a :] [: $b :])
 | `([: $a := $b :]) => `(([: $a :], [: $b :]))
 | `([: for $b => $d :]) => `(([: $b :], [: $d :]))
-| `([: ω $a :]) => `(Tm.record [: $a :])
+| `([: σ $a :]) => `(Tm.record [: $a :])
 | `([: ( $a , $b ) :]) => `(Tm.record [("l", [: $a :]), ("r", [:$b :])])
 | `([: λ $b => $d :]) => `(Tm.func [([: $b :], [: $d :])])
 | `([: λ $a :]) => `(Tm.func [: $a :])
@@ -284,7 +284,7 @@ match t with
 | record fds =>
   let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
     l ++ " := " ++ Tm.repr t1 n ⟩
-  "ω" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
+  "σ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
 | func [(pat, tb)] =>
   "λ " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
 | func fs =>
@@ -1753,35 +1753,35 @@ def nat_ := [:
 
 def plus := [: 
   μ 1 . 
-    (∃ 1 . (x ~ zero*@ ∧ y ~ β[0] ∧ z ~ β[0])) ∨ 
-    (∃ 3 . (x ~ succ*β[0] ∧ y ~ β[1] ∧ z ~ succ*β[2]) | 
-      (x ~ β[0] ∧ y ~ β[1] ∧ z ~ β[2]) ≤ β[3] 
+    (∃ 1 . (x : zero*@ ∧ y : β[0] ∧ z : β[0])) ∨ 
+    (∃ 3 . (x : succ*β[0] ∧ y : β[1] ∧ z : succ*β[2]) | 
+      (x : β[0] ∧ y : β[1] ∧ z : β[2]) ≤ β[3] 
     )
 :]
 
 #eval unify_reduce 30 [:
   (
-    x ~ (succ*zero*@) ∧ 
-    y ~ (α[10]) ∧
-    z ~ (succ*succ*succ*zero*@)
+    x : (succ*zero*@) ∧ 
+    y : (α[10]) ∧
+    z : (succ*succ*succ*zero*@)
   )
 :] plus
 [: α[10] :]
 
 #eval unify_reduce 30 [:
   (
-    x ~ (succ*zero*@) ∧ 
-    y ~ (α[1]) ∧
-    z ~ α[2] 
+    x : (succ*zero*@) ∧ 
+    y : (α[1]) ∧
+    z : α[2] 
   )
 :] plus
 [: α[1] × α[2] :]
 
 #eval unify_reduce 30 [:
   (
-    x ~ α[1] ∧
-    y ~ α[2] ∧
-    z ~ (succ*succ*zero*@)
+    x : α[1] ∧
+    y : α[2] ∧
+    z : (succ*succ*zero*@)
   )
 :] plus
 [: α[1] × α[2] :]
@@ -1812,18 +1812,18 @@ def plus := [:
 
 #eval unify_reduce 30 [:
   (
-    x ~ α[0] ∧
-    y ~ α[2] ∧
-    z ~ (succ*succ*zero*@)
+    x : α[0] ∧
+    y : α[2] ∧
+    z : (succ*succ*zero*@)
   )
 :] plus
 [: α[0] × α[2] :]
 
 #eval unify_reduce 1 [:
   (
-    x ~ (succ*succ*zero*@) ∧ 
-    y ~ (succ*zero*@) ∧
-    z ~ (α[0])
+    x : (succ*succ*zero*@) ∧ 
+    y : (succ*zero*@) ∧
+    z : (α[0])
   )
 :] plus
 [: α[0] :]
@@ -1831,9 +1831,9 @@ def plus := [:
 
 #eval unify_reduce 30 [:
   (
-    x ~ (succ*zero*@) ∧ 
-    y ~ (α[10]) ∧
-    z ~ (succ*succ*zero*@)
+    x : (succ*zero*@) ∧ 
+    y : (α[10]) ∧
+    z : (succ*succ*zero*@)
   )
 :] plus
 [: α[10] :]
@@ -1841,9 +1841,9 @@ def plus := [:
 
 #eval unify_reduce 10 [:
 (
-  x ~ α[0] ∧
-  y ~ succ*zero*@ ∧
-  z ~ succ*succ*zero*@
+  x : α[0] ∧
+  y : succ*zero*@ ∧
+  z : succ*succ*zero*@
 )
 :] plus
 [: α[0] :]
@@ -1988,3 +1988,6 @@ def even_list := [:
   let y[0] : ⟨nat_list⟩ = _ =>
   y[0] 
 :]
+
+----------
+#eval [: σ[x := hello;()] :]
