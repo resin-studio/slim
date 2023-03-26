@@ -111,34 +111,34 @@ match ty with
 | .univ n ty_c1 ty_c2 ty_pl =>
   if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
     Format.bracket "(" (
-      "∀ " ++ (repr n) ++ " =>" ++ Format.line ++ 
+      "∀ " ++ (repr n) ++ " ." ++ Format.line ++ 
       (Ty.repr ty_pl n)
     ) ")"
   else
     Format.bracket "(" (
-      "∀ " ++ (repr n) ++ " :: " ++
-      (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " =>" ++ Format.line ++ 
-      (Ty.repr ty_pl n)
+      "∀ " ++ (repr n) ++ " ." ++ Format.line ++ 
+      (Ty.repr ty_pl n) ++ " | " ++
+      (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
     ) ")"
 | .exis n ty_c1 ty_c2 ty_pl =>
   if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
     Format.bracket "(" (
-      "∃ " ++ (repr n) ++ " =>" ++ Format.line ++ 
+      "∃ " ++ (repr n) ++ " ." ++ Format.line ++ 
       (Ty.repr ty_pl n)
     ) ")"
   else
     Format.bracket "(" (
-      "∃ " ++ (repr n) ++ " :: " ++
-      (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n) ++ " =>" ++ Format.line ++ 
-      (Ty.repr ty_pl n)
+      "∃ " ++ (repr n) ++ " ." ++ Format.line ++ 
+      (Ty.repr ty_pl n) ++ " | " ++
+      (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
     ) ")"
 | .recur ty1 =>
   Format.bracket "(" (
-    "μ β[0] => " ++ (Ty.repr ty1 n)
+    "μ 1 . " ++ (Ty.repr ty1 n)
   ) ")"
 | .corec ty1 =>
   Format.bracket "(" (
-    "ν β[0] => " ++ (Ty.repr ty1 n)
+    "ν 1 . " ++ (Ty.repr ty1 n)
   ) ")"
 
 instance : Repr Ty where
@@ -180,12 +180,12 @@ syntax:60 slm:61 "∨" slm:60 : slm
 syntax:60 slm:61 "+" slm:60 : slm
 syntax:70 slm:71 "∧" slm:70 : slm
 syntax:70 slm:71 "×" slm:70 : slm
-syntax:40 "∃" slm "::" slm "≤" slm "=>" slm:40 : slm 
-syntax:40 "∃" slm "=>" slm:40 : slm 
-syntax:40 "∀" slm "::" slm "≤" slm "=>" slm:40 : slm 
-syntax:40 "∀" slm "=>" slm:40 : slm 
-syntax:80 "μ β[0] =>" slm : slm 
-syntax:80 "ν β[0] =>" slm : slm 
+syntax:40 "∃" slm "." slm:40 "|" slm "≤" slm: slm 
+syntax:40 "∃" slm "." slm:40 : slm 
+syntax:40 "∀" slm "." slm:40 "|" slm "≤" slm : slm 
+syntax:40 "∀" slm "." slm:40 : slm 
+syntax:80 "μ 1 ." slm : slm 
+syntax:80 "ν 1 ." slm : slm 
 
 --term
 syntax:30 "_" : slm
@@ -235,12 +235,12 @@ macro_rules
 | `([: $a + $b :]) => `(Ty.union (Ty.tag "inl" [: $a :]) (Ty.tag "inr" [: $b :]))
 | `([: $a ∧ $b :]) => `(Ty.inter [: $a :] [: $b :])
 | `([: $a × $b :]) => `(Ty.inter (Ty.field "l" [: $a :]) (Ty.field "r" [: $b :]))
-| `([: ∀ $a :: $b ≤ $c => $d :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
-| `([: ∀ $a:slm => $b:slm :]) => `(Ty.univ [: $a :] [: @ :] [: @ :] [: $b :] )
-| `([: ∃ $a :: $b ≤ $c => $d  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
-| `([: ∃ $a:slm => $b:slm :]) => `(Ty.exis [: $a :] [: @ :] [: @ :] [: $b :] )
-| `([: μ β[0] => $a :]) => `(Ty.recur [: $a :])
-| `([: ν β[0] => $a :]) => `(Ty.corec [: $a :])
+| `([: ∀ $a . $d | $b ≤ $c :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
+| `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: @ :] [: @ :] [: $b :] )
+| `([: ∃ $a . $d | $b ≤ $c  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
+| `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] [: @ :] [: @ :] [: $b :] )
+| `([: μ 1 . $a :]) => `(Ty.recur [: $a :])
+| `([: ν 1 . $a :]) => `(Ty.corec [: $a :])
 --Tm
 | `([: _ :]) => `(Tm.hole)
 | `([: () :]) => `(Tm.unit)
@@ -559,12 +559,11 @@ def Ty.package_env (boundary : Nat) (env_ty : PHashMap Nat Ty) (ty : Ty) : Ty :=
     ty
   else
     let ty_ex := [:
-      (∃ ⟨fids.length⟩ :: 
-        ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ => 
-        ⟨Ty.generalize fids 0 ty⟩ 
+      (∃ ⟨fids.length⟩ . ⟨Ty.generalize fids 0 ty⟩ | 
+        ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ 
       )
     :]
-    [: ∀ 1 :: β[0] ≤ ⟨ty_ex⟩ => β[0] :]
+    [: ∀ 1 . β[0] | β[0] ≤ ⟨ty_ex⟩ :]
 
   -- -- generalization based on substitution 
   -- let ty1' := Ty.reduce env_ty ty1'
@@ -621,22 +620,22 @@ def τ := [: α[0] :]
 partial def unroll : Ty -> Ty
 | .recur ty => 
   -- Ty.instantiate 0 [Ty.recur τ] τ 
-  [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
+  [: ⟨ty⟩ ↑ 0 // [μ 1 . ⟨ty⟩]:]
 | .corec ty => 
   -- Ty.instantiate 0 [Ty.corec τ] τ 
-  [: ⟨ty⟩ ↑ 0 // [ν β[0] => ⟨ty⟩]:]
+  [: ⟨ty⟩ ↑ 0 // [ν 1 . ⟨ty⟩]:]
 | ty => ty
 
 
 partial def roll_recur (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
   if (Ty.free_vars_env m ty).contains key then
-    Ty.subst (PHashMap.from_list [(key, [: β[0] :])]) [: (μ β[0] => ⟨ty⟩) :] 
+    Ty.subst (PHashMap.from_list [(key, [: β[0] :])]) [: (μ 1 . ⟨ty⟩) :] 
   else
     ty 
 
 partial def roll_corec (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
   if (Ty.free_vars_env m ty).contains key then
-    Ty.subst (PHashMap.from_list [(key, [: β[0] :])]) [: (ν β[0] => ⟨ty⟩) :] 
+    Ty.subst (PHashMap.from_list [(key, [: β[0] :])]) [: (ν 1 . ⟨ty⟩) :] 
   else
     ty
 
@@ -775,9 +774,9 @@ def rewrite_function_type : Ty -> Option Ty
   bind (extract_premise 0 ty) (fun prem =>
   bind (extract_relation 0 ty) (fun rel =>
     [:
-      ∀ 1 :: β[0] ≤ ⟨Ty.recur prem⟩ => (
-        β[0] -> (∃ 1 :: β[1] × β[0] ≤ ⟨Ty.recur rel⟩ => β[0])
-      )
+      ∀ 1 . (
+        β[0] -> (∃ 1 . β[0] | β[1] × β[0] ≤ ⟨Ty.recur rel⟩)
+      ) | β[0] ≤ ⟨Ty.recur prem⟩
     :]
   )) 
 | _ => none
@@ -816,7 +815,7 @@ match var_fields with
     let fields := 
       prev_fields ++ (l, [: β[0] :]) :: var_fields 
     let ty_lhs := intersect_fields fields
-    let ty := [: ∃ 1 :: ⟨ty_lhs⟩ ≤ ⟨ty_rhs⟩ => β[0] :]
+    let ty := [: ∃ 1 . β[0] | ⟨ty_lhs⟩ ≤ ⟨ty_rhs⟩ :]
     let m : PHashMap Nat Ty := (separate_fields (prev_fields ++ [(l, ty_fd)]) var_fields') ty_rhs
     m.insert id ty
   | _ => {}
@@ -1076,8 +1075,8 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
   else
     -- unroll using rhs ty
     -- by induction hypothesis, ty' ≤ ty
-    let ty' := [: ⟨ty'⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
-    let ty := [: ⟨ty⟩ ↑ 0 // [μ β[0] => ⟨ty⟩]:]
+    let ty' := [: ⟨ty'⟩ ↑ 0 // [μ 1 . ⟨ty⟩]:]
+    let ty := [: ⟨ty⟩ ↑ 0 // [μ 1 . ⟨ty⟩]:]
     unify i env_ty env_complex ty' ty
 
 | ty', .recur ty =>
@@ -1469,9 +1468,8 @@ match t with
       let ty_case' := (
         if fvs.length > 0 then
           [:
-            (∀ ⟨fvs.length⟩ :: 
-              β[⟨fvs.length⟩] ≤ ⟨Ty.generalize fvs 0 ty_prem⟩ => 
-              ⟨Ty.generalize fvs 0 ty_case⟩ 
+            (∀ ⟨fvs.length⟩ . ⟨Ty.generalize fvs 0 ty_case⟩ | 
+              β[⟨fvs.length⟩] ≤ ⟨Ty.generalize fvs 0 ty_prem⟩ 
             )
           :]
         else
@@ -1481,7 +1479,7 @@ match t with
       (Ty.inter ty_case' ty_acc) 
     ) [: ⊤ :] (split_conjunctions ty_conc)
 
-    let ty' := [: ν β[0] => ⟨ty_content⟩ :]
+    let ty' := [: ν 1 . ⟨ty_content⟩ :]
 
     -- constraint that ty' <= ty_prem is built into inductive type
     (i, [(env_ty, ty')])
@@ -1503,7 +1501,7 @@ partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
     if fvs.isEmpty then
       Ty.simplify (Ty.subst_default true ty')
     else
-      Ty.simplify (Ty.subst_default true [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :])
+      Ty.simplify (Ty.subst_default true [: ∀ ⟨fvs.length⟩ . ⟨Ty.generalize fvs 0 ty'⟩ :])
   ) Ty.bot u_env
 
 partial def infer_reduce (i : Nat) (t : Tm) : Ty := infer_reduce_wt (i + 1) t (Ty.fvar i)
@@ -1722,7 +1720,7 @@ partial def enumerate (i : Nat) (env_tm : PHashMap Nat Ty) (ty : Ty) : List Tm :
 
 --- unification --
 def nat_ := [:
-  μ β[0] => 
+  μ 1 . 
     zero*@ ∨
     succ*β[0]
 :]
@@ -1754,12 +1752,11 @@ def nat_ := [:
 :]
 
 def plus := [: 
-  μ β[0] => 
-    (∃ 1 => 
-      (x ~ zero*@ ∧ y ~ β[0] ∧ z ~ β[0])) ∨ 
-
-    (∃ 3 :: (x ~ β[0] ∧ y ~ β[1] ∧ z ~ β[2]) ≤ β[3] => 
-      (x ~ succ*β[0] ∧ y ~ β[1] ∧ z ~ succ*β[2]))
+  μ 1 . 
+    (∃ 1 . (x ~ zero*@ ∧ y ~ β[0] ∧ z ~ β[0])) ∨ 
+    (∃ 3 . (x ~ succ*β[0] ∧ y ~ β[1] ∧ z ~ succ*β[2]) | 
+      (x ~ β[0] ∧ y ~ β[1] ∧ z ~ β[2]) ≤ β[3] 
+    )
 :]
 
 #eval unify_reduce 30 [:
@@ -1892,10 +1889,10 @@ def plus := [:
 :]
 
 def nat_to_list := [: 
-  ν β[0] => 
+  ν 1 . 
     (zero*@ -> nil*@) ∧ 
-    (∀ 2 :: β[2] ≤ β[0] -> β[1] => 
-      succ*β[0] -> cons*β[1])
+    (∀ 2 . succ*β[0] -> cons*β[1] | 
+      β[2] ≤ β[0] -> β[1])
 :]
 
 #eval rewrite_function_type nat_to_list
@@ -1911,23 +1908,23 @@ def nat_to_list := [:
 ---------- adjustment ----------------
 -- widening
 #eval infer_reduce 0 [:
-  let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] : ∀ 1 . β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   ((y[0] hello;()) world;())
 :]
 
 #eval infer_reduce 0 [:
-  let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] : ∀ 1 . β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   (y[0] hello;())
 :]
 
 #eval infer_reduce 0 [:
-  let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] : ∀ 1 . β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   let y[0] = (y[0] hello;()) => 
   y[0]
 :]
 
 #eval infer_reduce 0 [:
-  let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] : ∀ 1 . β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   let y[0] = (y[0] hello;()) => 
   (y[0] world;())
 :]
@@ -1958,20 +1955,22 @@ let y[0] : dos*@ -> @ = _ =>
 ----------------------------------------
 
 def nat_list := [: 
-  μ β[0] => (
+  μ 1 . (
     (zero*@ × nil*@) ∨ 
-    (∃ 2 :: β[0] × β[1] ≤ β[2] => 
-      (succ*β[0] × cons*β[1]))
+    (∃ 2 . (succ*β[0] × cons*β[1]) | 
+      β[0] × β[1] ≤ β[2])
   )
 :]
 
 def even_list := [: 
-  μ β[0] => (
+  μ 1 . (
     (zero*@ × nil*@) ∨ 
-    (∃ 2 :: β[0] × β[1] ≤ β[2] => 
-      (succ*succ*β[0] × cons*cons*β[1]))
+    (∃ 2 . (succ*succ*β[0] × cons*cons*β[1]) | 
+      β[0] × β[1] ≤ β[2])
   )
 :]
+
+#eval nat_list
 
 #eval unify_decide 0 
   even_list
