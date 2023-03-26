@@ -1791,6 +1791,35 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   &\boxed{\Delta \in \llbracket \Omega \vdash \tau \leq \tau \rrbracket^\sharp}&
 \end{flalign*}
 \begin{mathpar}
+
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \Delta;\Delta' \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
+    \\
+    \Delta;\Delta';\Delta'' \in \llbracket \Omega \vdash \tau_3 \leq \tau_4 \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash  
+      (\forall \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \leq \tau_4)
+      \leq \tau_2
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \Delta;\Delta' \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
+    \\
+    \Delta;\Delta';\Delta'' \in \llbracket \Omega \vdash \tau_3 \leq \tau_4 \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq 
+      (\exists \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \leq \tau_4)
+    \rrbracket^\sharp
+  }
+
+
   \inferrule {
     \alpha \not\in (\text{dom}\ \Delta)
   } {
@@ -1839,185 +1868,68 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \in \llbracket \Omega \vdash \tau \leq \alpha \rrbracket^\sharp
   }
 
+  \\\\
+
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \text{complex}\ \Delta\ \tau_3 = k
+    \\
+    \Delta;\Delta' \in \llbracket \Omega, k \mapsto \tau_4 \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
+    \\
+    % safety: bound vars can only assign to bound vars or non-vars
+    \text{safe}\ \widebar{\alpha_i}\ \Delta'
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash 
+      (\exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \leq \tau_4) \leq
+      \tau_2
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \text{complex}\ \Delta\ \tau_3 \neq k
+    \\
+    \Delta;\Delta' \in \llbracket \Omega \vdash \tau_3 \leq \tau_4 \rrbracket^\sharp
+    \\\\
+    \Delta;\Delta';\Delta'' \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
+    \\
+    % safety: bound vars can only assign to bound vars or non-vars
+    \text{safe}\ \widebar{\alpha_i}\ \Delta''
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash 
+      (\exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \leq \tau_4) \leq
+      \tau_2
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \Delta;\Delta' \in \llbracket \Omega \vdash \tau_3 \leq \tau_4 \rrbracket^\sharp
+    \\
+    \Delta;\Delta';\Delta'' \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
+    \\
+    % safety: bound vars can only assign to bound vars or non-vars
+    \text{safe}\ \widebar{\alpha_i}\ \Delta''
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash 
+      \tau_1
+      \leq
+      (\forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \leq \tau_4)
+    \rrbracket^\sharp
+  }
+
 \end{mathpar}
 \end{definition}
 
 \[
 \begin{array}{l @{} l}
 
-  \text{unify } \blacksquare\ \Delta \vdash \alpha \leq \tau	
-  &{} =
-  \begin{cases}  
-    \{ \bullet,\alpha \mapsto \nu\alpha.\tau \}
-    & \text{if } 
-    \alpha \not\in \text{dom}(\Delta) \ \wedge\
-    \alpha \in \text{freevars}(\tau[\Delta])
-    \\
-    \{ \bullet,\alpha \mapsto \tau \}
-    & \text{if } 
-    \alpha \not\in \text{dom}(\Delta) \ \wedge\
-    \alpha \notin \text{freevars}(\tau[\Delta])
-    \\
-    \text{unify } \blacksquare\ \Delta \vdash \tau_1 \leq \tau
-    &\text{if }
-    \Delta(\alpha) = \tau_1
-  \end{cases}
-  \\
-  \text{unify } \square\ \Delta \vdash \alpha \leq \tau	
-  &{} =
-  \begin{cases}  
-    \{ \bullet,\alpha \mapsto (\nu\alpha.\tau \wedge \beta) \}
-    & \text{if } 
-    \alpha \not\in \text{dom}(\Delta) \ \wedge\
-    \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
-    \text{fresh } \beta
-    \\
-    \{ \bullet,\alpha \mapsto \tau \wedge \beta \}
-    & \text{if } 
-    \alpha \not\in \text{dom}(\Delta) \ \wedge\
-    \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
-    \text{fresh } \beta
-    \\
-    \text{unify } \square\ \Delta \vdash \tau_1 \leq \tau
-    &\text{if }
-    \Delta(\alpha) = \tau
-  \end{cases}
-
-
-
-\end{array}
-\]
-
-%     \\
-%     \text{unify } \blacksquare\ \Delta \vdash \tau \leq \alpha 	
-%     &{} =
-%     \begin{cases}  
-%       \{ \bullet,\alpha \mapsto \mu\alpha.\tau \}
-%       & \text{if } 
-%       \alpha \not\in \text{dom}(\Delta) \ \wedge\
-%       \alpha \in \text{freevars}(\tau[\Delta])
-%       \\
-%       \{ \bullet,\alpha \mapsto \tau \}
-%       & \text{if } 
-%       \alpha \not\in \text{dom}(\Delta) \ \wedge\
-%       \alpha \notin \text{freevars}(\tau[\Delta])
-%       \\
-%       \text{unify } \blacksquare\ \Delta \vdash \tau \leq \tau_1
-%       &\text{if }
-%       \Delta(\alpha) = \tau_1
-%     \end{cases}
-%     \\
-%     \text{unify } \square\ \Delta \vdash \tau \leq \alpha	
-%     &{} =
-%     \begin{cases}  
-%       \{ \bullet,\alpha \mapsto (\mu\alpha.\tau \vee \beta) \}
-%       & \text{if } 
-%       \alpha \not\in \text{dom}(\Delta) \ \wedge\
-%       \alpha \in \text{freevars}(\tau[\Delta]) \ \wedge\ 
-%       \text{fresh } \beta
-%       \\
-%       \{ \bullet,\alpha \mapsto \tau \vee \beta \}
-%       & \text{if } 
-%       \alpha \not\in \text{dom}(\Delta) \ \wedge\
-%       \alpha \notin \text{freevars}(\tau[\Delta]) \ \wedge\ 
-%       \text{fresh } \beta
-%       \\
-%       \text{unify } \square\ \Delta \vdash \tau \leq \tau_1
-%       &\text{if }
-%       \Delta(\alpha) = \tau
-%     \end{cases}
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     (\exists \widebar{\alpha_i} :: \tau_1 \leq \tau_2\ .\ \tau_3)
-%     \leq 
-%     \tau_4
-%     &{} = 
-%     \begin{array}[t]{@{} l}
-%       \text{let } \tau_1, \tau_2, \tau_3 = 
-%       \text{refresh } \widebar{\alpha_i}\ \tau_1,\ 
-%       \text{refresh } \widebar{\alpha_i}\ \tau_2,\ 
-%       \text{refresh } \widebar{\alpha_i}\ \tau_3
-%       \\
-%       \text{let } \Delta_1 = \text{reduce}\ , \widebar{\alpha_i \mapsto \top}
-%       \\
-%       \{\Delta_1;\Delta_2;\Delta_3\ |
-%       \\ 
-%       \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
-%       \\
-%       \ \ \ \ \Delta_3 \in \text{unify } \iota\ \Delta;\Delta_1;\Delta_2 \vdash \tau_3 \leq \tau_4
-%       \\
-%       \}
-%     \end{array}
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     \tau_1
-%     \leq 
-%     (\exists \widebar{\alpha} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-%     &{} = 
-%     \begin{array}[t]{@{} l}
-%       \text{let } \tau_2, \tau_3, \tau_4 = 
-%       \text{refresh } \widebar{\alpha}\ \tau_2,\ 
-%       \text{refresh } \widebar{\alpha}\ \tau_3,\ 
-%       \text{refresh } \widebar{\alpha}\ \tau_4
-%       \\
-%       \{\Delta_1;\Delta_2\ |
-%       \\ 
-%       \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_4
-%       \\
-%       \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_2 \leq \tau_3
-%       \\
-%       \}
-%     \end{array}
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     \tau_1
-%     \leq 
-%     (\forall \widebar{\alpha_i} :: \tau_2 \leq \tau_3\ .\ \tau_4)
-%     &{} = 
-%     \begin{array}[t]{@{} l}
-%       \text{let } \tau_2, \tau_3, \tau_4 = 
-%       \text{refresh } \widebar{\alpha_i}\ \tau_2,\ 
-%       \text{refresh } \widebar{\alpha_i}\ \tau_3,\ 
-%       \text{refresh } \widebar{\alpha_i}\ \tau_4
-%       \\
-%       \text{let } \Delta_1 = \text{reduce}\ , \widebar{\alpha_i \mapsto \bot}
-%       \\
-%       \{\Delta_1;\Delta_2;\Delta_3\ |
-%       \\ 
-%       \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta \vdash \tau_2 \leq \tau_3
-%       \\
-%       \ \ \ \ \Delta_3 \in \text{unify } \iota\ \Delta;\Delta_1;\Delta_2 \vdash \tau_1 \leq \tau_4
-%       \\ 
-%       \}
-%     \end{array}
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     (\forall \widebar{\alpha} :: \tau_1 \leq \tau_2\ .\ \tau_3)
-%     \leq 
-%     \tau_4
-%     &{} = 
-%     \begin{array}[t]{@{} l}
-%       \text{let } \tau_1, \tau_2, \tau_3 = 
-%       \text{refresh } \widebar{\alpha}\ \tau_1,\ 
-%       \text{refresh } \widebar{\alpha}\ \tau_2,\ 
-%       \text{refresh } \widebar{\alpha}\ \tau_3
-%       \\
-%       \{\Delta_1;\Delta_2\ |
-%       \\ 
-%       \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_4
-%       \\
-%       \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq \tau_2
-%       \\
-%       \}
-%     \end{array}
-
-%   \end{array}
-% \]
-% \end{definition}
-
-% \begin{definition}
-% \[
-%   \begin{array}{l @{} l}
 %     \text{unify } \iota\ \Delta \vdash \bot \leq \_	
 %     &{} = 
 %     \{\bullet\}
@@ -2151,9 +2063,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 %     \cup
 %     (\text{unify } \iota\ \Delta \vdash \tau_2 \leq \tau_3)
 
-%   \end{array}
-% \]
-% \end{definition}
+
+\end{array}
+\]
 
 
 
