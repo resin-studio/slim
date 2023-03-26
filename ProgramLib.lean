@@ -801,9 +801,8 @@ def intersect_fields : List (String × Ty) -> Ty
 | [] => Ty.top 
 | (l, ty) :: fields => Ty.inter (Ty.field l ty) (intersect_fields fields)
 
-def normalize_fields (fields : List (String × Ty)) : Ty :=
-  let fields_sorted := mergeSort (fun (l1, _) (l2, _) => l1 < l2) fields
-  intersect_fields fields_sorted
+def normalize_fields (fields : List (String × Ty)) : List (String × Ty) :=
+  mergeSort (fun (l1, _) (l2, _) => l1 < l2) fields
 
 
 -- α[0] ↦ ∃ β[0] :: β[0] × α[1] ≤ ⟨nat_list⟩ => β[0]   
@@ -892,7 +891,7 @@ def Ty.assume_env (i_u_env_ty : Nat × List α)
   -- ensure that variables can be assigned different values and merged 
 -- TODO: always assign variables using union/intersect or join/meet
   -- if variable is fixed it should be substituted with concrete type! 
-partial def Ty.unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_complex : PHashMap Ty Ty):
+partial def Ty.unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_complex : PHashMap (List (String × Ty)) Ty):
 Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
 -- liberally quantified 
