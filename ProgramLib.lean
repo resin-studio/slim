@@ -533,7 +533,7 @@ def nested_pairs : (List Ty) -> Ty
 | [] => Ty.unit 
 | ty :: tys => [: ⟨ty⟩ × ⟨nested_pairs tys⟩ :]
 
-def Ty.package_env (boundary : Nat) (env_ty : PHashMap Nat Ty) (ty : Ty) : Ty := 
+def Ty.pack (boundary : Nat) (env_ty : PHashMap Nat Ty) (ty : Ty) : Ty := 
   /-  
   -- -- old generalization based on substitution 
   -- let ty1' := Ty.reduce env_ty ty1'
@@ -1447,7 +1447,7 @@ match t with
 
   let free_var_boundary := i
   Ty.assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
-    let ty1' := Ty.package_env free_var_boundary env_ty ty1'
+    let ty1' := Ty.pack free_var_boundary env_ty ty1'
 
     let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
     let t := Tm.instantiate 0 [x] t 

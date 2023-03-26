@@ -1645,46 +1645,46 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % i.e. we don't compare current to previous, we simply look at structure of input.
 % the structure of input decreases as types widen/narrow
 \begin{flalign*}
-  &\boxed{\left<\Delta, \Gamma, \tau\right> \in \llbracket x \mapsto e : \tau \rrbracket\sharp}&
+  &\boxed{\left<\Delta, \Gamma, \tau\right> \in \llbracket x \mapsto e : \tau \rrbracket^\sharp}&
 \end{flalign*}
 \begin{mathpar}
 
   \inferrule { 
-    \Delta \models (\Gamma\ x) \leq \tau
+    \Delta \in \llbracket (\Gamma\ x) \leq \tau \rrbracket^\sharp
   } {
     \left<\Delta, \Gamma, \Gamma(x) \right> 
-    \in \llbracket x : \tau \rrbracket\sharp
+    \in \llbracket x : \tau \rrbracket^\sharp
   } 
 
   \inferrule { 
-    \Delta \models \text{unit} \leq \tau
+    \Delta \in \llbracket \text{unit} \leq \tau \rrbracket^\sharp
   } {
     \left< \Delta, \Gamma, \text{unit} \right> 
-    \in \llbracket () : \tau \rrbracket\sharp
+    \in \llbracket () : \tau \rrbracket^\sharp
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha
     \\
-    \Delta \models (l * \alpha) \leq \tau
+    \Delta \in \llbracket (l * \alpha) \leq \tau \rrbracket^\sharp
     \\
     \left< \Delta, \Gamma, \tau' \right> 
-    \in \llbracket e : \alpha \rrbracket\sharp
+    \in \llbracket e : \alpha \rrbracket^\sharp
   } {
     \left< \Delta, \Gamma, (l * \tau')\right> 
-    \in \llbracket (l \cdot e) : \tau \rrbracket\sharp
+    \in \llbracket (l \cdot e) : \tau \rrbracket^\sharp
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha_i
     \\
-    \Delta \models (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
+    \Delta \in \llbracket (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau \rrbracket^\sharp
     \\
     \left<\Delta, \Gamma, \tau_i\right> 
-    \in  \llbracket e_i : \alpha_i \rrbracket\sharp
+    \in  \llbracket e_i : \alpha_i \rrbracket^\sharp
   } {
     \left< \Delta, \Gamma, (\wedge\ \widebar{l_i : \tau_i}) \right> 
-    \in \llbracket (\sigma\ \widebar{l_i = e_i}) : \tau \rrbracket\sharp
+    \in \llbracket (\sigma\ \widebar{l_i = e_i}) : \tau \rrbracket^\sharp
   } 
 
   \inferrule { 
@@ -1692,90 +1692,96 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{fresh}\ \alpha_i''
     \\
-    \Delta \models (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau
+    \Delta \in \llbracket (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau \rrbracket^\sharp
     \\\\
     \left<\Delta, \Gamma;(\text{patenv}\ m_i), \tau'_i\right> 
-    \in \llbracket m_i : \alpha'_i \rrbracket\sharp
+    \in \llbracket m_i : \alpha'_i \rrbracket^\sharp
     \\
     \left< \Delta, \Gamma, \tau''_i \right> 
-    \in \llbracket e_i : \alpha''_i \rrbracket\sharp
+    \in \llbracket e_i : \alpha''_i \rrbracket^\sharp
   } {
     \left< \Delta, \Gamma, (\wedge\ \widebar{(\tau_i' \rightarrow \tau_i''}) \right>
     \in
-    \llbracket (\lambda\ \widebar{m_i \Rightarrow e_i}) : \tau \rrbracket\sharp
+    \llbracket (\lambda\ \widebar{m_i \Rightarrow e_i}) : \tau \rrbracket^\sharp
   } 
 
   \inferrule { 
     \left<\Delta, \Gamma, \tau' \right>
-    \in \llbracket e : (l : \tau) \rrbracket\sharp
+    \in \llbracket e : (l : \tau) \rrbracket^\sharp
     \\
     \text{fresh}\ \alpha
     \\
-    \Delta \models \tau' \leq (l : \alpha)
+    \Delta \in \llbracket \tau' \leq (l : \alpha) \rrbracket^\sharp
   } {
     \left<\Delta, \Gamma, \alpha \right>
-    \in \llbracket (e/l) : \tau \rrbracket\sharp
+    \in \llbracket (e/l) : \tau \rrbracket^\sharp
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha
     \\
     \left< \Delta, \Gamma, \tau_1 \right> 
-    \in \llbracket e_1 : (\alpha \rightarrow \tau) \rrbracket\sharp
+    \in \llbracket e_1 : (\alpha \rightarrow \tau) \rrbracket^\sharp
     \\
     \left< \Delta, \Gamma, \tau_2 \right> 
-    \in \llbracket e_2 : \alpha \rrbracket\sharp
+    \in \llbracket e_2 : \alpha \rrbracket^\sharp
     \\\\
     \text{fresh}\ \alpha'
     \\
-    \Delta \models \tau_1 \leq \tau_2 \rightarrow \alpha'
+    \Delta \in \llbracket \tau_1 \leq \tau_2 \rightarrow \alpha' \rrbracket^\sharp
     \\
     \text{fresh}\ \alpha''
     \\
     % need to call unification one more time to liberate existentially quantified variables 
-    \Delta \models \alpha'' \leq \alpha'
+    \Delta \in \llbracket \alpha'' \leq \alpha' \rrbracket^\sharp
   } {
     \left<\Delta, \Gamma, \alpha'' \right>
-    \in \llbracket (e_1\ e_2) : \tau \rrbracket\sharp
+    \in \llbracket (e_1\ e_2) : \tau \rrbracket^\sharp
   } 
 
   \inferrule { 
     \left< \Delta, \Gamma, \tau_1' \right> 
-    \in \llbracket e_1 : \tau_1 \rrbracket\sharp
+    \in \llbracket e_1 : \tau_1 \rrbracket^\sharp
     \\
-    \tau_1'[\Delta] = \tau_1'
-    \\
-    \text{freevars}\ \tau_1' = \widebar{\alpha}
-    \\\\
-    \left< \Delta, (\Gamma, x = \forall \widebar{\alpha} . \tau_1'), \tau_2' \right>  
-    \in \llbracket e_2 : \tau_2 \rrbracket\sharp
+    \left< \Delta, (\Gamma, x = \text{pack}\ \Delta\ \tau_1'), \tau_2' \right>  
+    \in \llbracket e_2 : \tau_2 \rrbracket^\sharp
     \\
   } {
     \left< \Delta, \Gamma, \tau_2' \right> 
-    \in \llbracket (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2 \rrbracket\sharp
+    \in \llbracket (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2 \rrbracket^\sharp
   } 
 
   \inferrule { 
-    \left< \Delta, \Gamma, \tau' \right> 
-    \in \llbracket e : \bot \rightarrow \tau \rrbracket\sharp
-    \\
     \text{fresh}\ \alpha_1
     \\
+    \left< \Delta, \Gamma, \tau' \right> 
+    \in \llbracket e : \alpha_1 \rightarrow \tau \rrbracket^\sharp
+    \\
     \text{fresh}\ \alpha_2
-    \\\\
-    \Delta \models (\Gamma\ x') \leq \alpha_1 \rightarrow \alpha_2
     \\
-    \alpha_1[\Delta] = \tau_1
-    \\
-    \alpha_2[\Delta] = \tau_2
+    \Delta \in \llbracket \tau' \leq \alpha_1 \rightarrow \alpha_2 \rrbracket^\sharp
   } {
-    \left< \Delta, \Gamma, (\text{fixtype}\ \tau_1\ \tau_2) \right>
-    \in \llbracket \text{fix}\ e : \tau \rrbracket\sharp
+    \left< \Delta, \Gamma, (\text{fixtype}\ \Delta\ \alpha_1\ \alpha_2) \right>
+    \in \llbracket \text{fix}\ e : \tau \rrbracket^\sharp
   } 
 \end{mathpar}
 \end{definition}
 
 \begin{definition}[Subtype unification]
+\begin{flalign*}
+  &\boxed{\Delta \in \llbracket \tau \leq \tau \rrbracket^\sharp}&
+\end{flalign*}
+\begin{mathpar}
+
+  \inferrule {
+    \Delta \in \llbracket \bullet \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket \tau_1 \leq \tau_2 \rrbracket^\sharp
+  }
+\end{mathpar}
+\end{definition}
+
+\begin{definition}[Subtype itermediate unification ]
 % note: Cousot's unification is implicit by matching meta-variables for types.
 % that is, a polymorphic type is an infinite set of types merged with 
 % the set of types that are accepted over program variables .
@@ -1785,7 +1791,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % union on type environments on downward propagation. 
 % this has the nice property of only happening in type inference, not in unification.
 \begin{flalign*}
-  &\boxed{\Delta \in \llbracket \tau \leq \tau \rrbracket\sharp}&
+  &\boxed{\Delta \in \llbracket \tau \leq \tau \rrbracket^\sharp}&
 \end{flalign*}
 \begin{mathpar}
 
@@ -1796,7 +1802,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \tau' = \Delta(\alpha) \wedge \tau 
   } {
-    (\Delta, \alpha \mapsto \nu\alpha.\tau) \in \llbracket \alpha \leq \tau \rrbracket\sharp
+    (\Delta, \alpha \mapsto \nu\alpha.\tau) \in \llbracket \alpha \leq \tau \rrbracket^\sharp
   }
 \end{mathpar}
 \end{definition}
