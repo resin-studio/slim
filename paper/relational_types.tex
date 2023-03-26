@@ -1761,7 +1761,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \Delta \in \llbracket \tau' \leq \alpha_1 \rightarrow \alpha_2 \rrbracket^\sharp
   } {
-    \left< \Delta, \Gamma, (\text{fixtype}\ \Delta\ \alpha_1\ \alpha_2) \right>
+    \left< \Delta, \Gamma, (\text{spiral}\ \Delta\ \alpha_1\ \alpha_2) \right>
     \in \llbracket \text{fix}\ e : \tau \rrbracket^\sharp
   } 
 \end{mathpar}
@@ -1787,23 +1787,58 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % the set of types that are accepted over program variables .
 % here, we distinguish between these sets of types over program variables
 % and sets of types over type variables, thus making type variables explicit.
-% TODO: can we replace type adjustment with simply intersection on type environments on upward propagation
-% union on type environments on downward propagation. 
-% this has the nice property of only happening in type inference, not in unification.
 \begin{flalign*}
   &\boxed{\Delta \in \llbracket \tau \leq \tau \rrbracket^\sharp}&
 \end{flalign*}
 \begin{mathpar}
+  \inferrule {
+    \alpha \not\in (\text{dom}\ \Delta)
+  } {
+    (\Delta, \alpha \mapsto \text{narrow}\ \alpha\ \tau) 
+    \in \llbracket \alpha \leq \tau \rrbracket^\sharp
+  }
 
   \inferrule {
-    \alpha \in \text{freevars}(\tau[\Delta])
+    (\Delta\ \alpha) = \tau'
     \\
-    (\text{adjustable}\ \alpha \vee \Delta(\alpha) = \top)
-    \\
-    \tau' = \Delta(\alpha) \wedge \tau 
+    (\Delta;\Delta') \in \llbracket \tau' \leq \tau \rrbracket^\sharp
   } {
-    (\Delta, \alpha \mapsto \nu\alpha.\tau) \in \llbracket \alpha \leq \tau \rrbracket^\sharp
+    (\Delta;\Delta') \in \llbracket \alpha \leq \tau \rrbracket^\sharp
   }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \llbracket \tau' \leq \tau \rrbracket^\sharp \subseteq \emptyset
+  } {
+    (\Delta, \alpha \mapsto \text{narrow}\ \tau' \tau) 
+    \in \llbracket \alpha \leq \tau \rrbracket^\sharp
+  }
+  \\\\
+  \inferrule {
+    \alpha \not\in (\text{dom}\ \Delta)
+  } {
+    (\Delta, \alpha \mapsto \text{widen}\ \tau\ \alpha) 
+    \in \llbracket \tau \leq \alpha \rrbracket^\sharp
+  }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    (\Delta;\Delta') \in \llbracket \tau \leq \tau' \rrbracket^\sharp
+  } {
+    (\Delta;\Delta') \in \llbracket \tau \leq \alpha \rrbracket^\sharp
+  }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \llbracket \tau \leq \tau' \rrbracket^\sharp \subseteq \emptyset
+  } {
+    (\Delta, \alpha \mapsto \text{widen}\ \tau\ \tau') 
+    \in \llbracket \tau \leq \alpha \rrbracket^\sharp
+  }
+
 \end{mathpar}
 \end{definition}
 
@@ -2250,7 +2285,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 %     \\
 %     \alpha_2[\Delta] = \tau_2
 %     \\\\
-%     (\text{fixtype}\ \tau_1\ \tau_2) \sqsupseteq (\Gamma\ x)
+%     (\text{spiral}\ \tau_1\ \tau_2) \sqsupseteq (\Gamma\ x)
 %   } {
 %     \Delta\ \cdot \Gamma 
 %     \models x \mapsto \text{fix}\ e : \tau
