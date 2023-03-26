@@ -996,7 +996,7 @@ Ty -> Ty -> (Nat × List (PHashMap Ty Ty))
       )
       if is_recur_type && is_consistent_variable_record then
         let ty_norm := normalize_fields fields
-        (i, [PHashMap.from_list [(ty_norm, ty_c2)]])
+        (i, [env_ty.insert ty_norm ty_c2])
 
       else (i, []) 
     | none => (unify i (env_ty) ty_c1 ty_c2)
@@ -1933,17 +1933,12 @@ def nat_to_list := [:
   (y[0] hello;())
 :]
 
--- ERROR: overspecialize because we reduce at generalization 
--- TODO: construct a package_env function, then wrap in universal
--- package an environment as an existential in a type 
 #eval infer_reduce 0 [:
   let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   let y[0] = (y[0] hello;()) => 
   y[0]
 :]
 
--- ERROR: overspecialize because we reduce at generalization 
--- expected: ((world*@ ∨ hello*@) × (world*@ ∨ hello*@))
 #eval infer_reduce 0 [:
   let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   let y[0] = (y[0] hello;()) => 
