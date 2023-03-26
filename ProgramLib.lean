@@ -490,21 +490,6 @@ def Ty.signed_free_vars (posi : Bool) : Ty -> PHashMap Nat Unit
 
 
 
--- ERROR: overspecialize because we reduce at generalization 
--- TODO: construct a package_env function, then wrap in universal
--- package an environment as an existential in a type 
--- [X ↦ T1] . T => ∃ X . T :: X ≤ T1  
--- [X ↦ T1(Y), Y ↦ TY2] . T => ∃ X . T :: X ≤ ∃ Y . T1(Y) :: Y ≤ TY2 
--- TODO: requirs modifying constraint into list of constraints
--- def Ty.package_env (env_ty : PHashMap Ty Ty) (ty : Ty) :=  
---   let fids := (Ty.free_vars ty).toList.bind (fun | (.fvar k , _) => [k] | composite => Ty.free_vars composite)
---   [: ∃ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty'⟩ :]
-
-
--- Consider: convert to to using existentialization/package_env of environment wrt to payload
--- avoid substitution since type variables decide widening/narrowing
--- might not be an issue if substitution only occcurs in specific areas
--- where we are ok with losing some precision
 def Ty.generalize (fids : List Nat) (start : Nat) : Ty -> Ty
 | .bvar id => .bvar id 
 | .fvar id => 
@@ -529,6 +514,68 @@ def Ty.generalize (fids : List Nat) (start : Nat) : Ty -> Ty
 )
 | .recur ty => .recur (Ty.generalize fids (start + 1) ty)
 | .corec ty => .corec (Ty.generalize fids (start + 1) ty)
+
+partial def reachable_constraints (env_ty : PHashMap Ty Ty) (ty : Ty) : List (Ty × Ty) :=
+  let fvs := (Ty.free_vars ty).toList
+  List.bind fvs (fun (key, _) =>
+    match env_ty.find? (key) with
+    | some ty' => [(key, ty')] ++ reachable_constraints env_ty ty'
+    | none => []
+  )
+
+def unzip : List (α × α) -> (List α × List α)
+| [] => ([], []) 
+| (x, y) :: xys => 
+  let (xs, ys) := unzip xys
+  (x :: xs, y :: ys)
+
+def nested_pairs : (List Ty) -> Ty 
+| [] => Ty.unit 
+| ty :: tys => [: ⟨ty⟩ × ⟨nested_pairs tys⟩ :]
+
+def Ty.package_env (boundary : Nat) (env_ty : PHashMap Ty Ty) (ty : Ty) : Ty := 
+  /-  
+  -- -- old generalization based on substitution 
+  -- let ty1' := Ty.reduce env_ty ty1'
+  -- -- prevent over generalizing by filtering at boundary 
+  -- let fvs := List.filter (fun id => id >= free_var_boundary) (
+  --   (Ty.free_vars ty1').toList.reverse.bind (fun | (.fvar k , _) => [k] | _ => [])
+  -- )
+  -- let ty1' := if fvs.isEmpty then ty1' else [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
+  -/
+
+  -- avoids substitution, as type variable determines type adjustment
+  -- boudary prevents overgeneralizing
+  let constraints := reachable_constraints env_ty ty
+  let (lhs, rhs) := unzip constraints
+  let ty_lhs := nested_pairs lhs
+  let ty_rhs := nested_pairs rhs
+
+  let fids := List.filter (fun id => id >= boundary) (
+    (
+      Ty.free_vars ty; Ty.free_vars ty_lhs ; Ty.free_vars ty_rhs
+    ).toList.bind (fun | (.fvar k , _) => [k] | _ => [])
+  )
+
+  if fids.isEmpty then
+    ty
+  else
+    let ty_ex := [:
+      (∃ ⟨fids.length⟩ :: 
+        ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ => 
+        ⟨Ty.generalize fids 0 ty⟩ 
+      )
+    :]
+    [: ∀ 1 :: β[0] ≤ ⟨ty_ex⟩ => β[0] :]
+
+  -- -- generalization based on substitution 
+  -- let ty1' := Ty.reduce env_ty ty1'
+  -- -- prevent over generalizing by filtering at boundary 
+  -- let fvs := List.filter (fun id => id >= free_var_boundary) (
+  --   (Ty.free_vars ty1').toList.reverse.bind (fun | (.fvar k , _) => [k] | _ => [])
+  -- )
+  -- let ty1' := if fvs.isEmpty then ty1' else [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
+
 
 
 def Ty.instantiate (start : Nat) (args : List Ty) : Ty -> Ty
@@ -1414,13 +1461,8 @@ match t with
 
   let free_var_boundary := i
   Ty.assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
-    -- prevent overgeneralization by filtering
-    let ty1' := Ty.reduce env_ty ty1'
-    let fvs := List.filter (fun id => id >= free_var_boundary) (
-      (Ty.free_vars ty1').toList.reverse.bind (fun | (.fvar k , _) => [k] | _ => [])
-    )
+    let ty1' := Ty.package_env free_var_boundary env_ty ty1'
 
-    let ty1' := if fvs.isEmpty then ty1' else [: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
     let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
     let t := Tm.instantiate 0 [x] t 
 
@@ -1844,6 +1886,14 @@ def plus := [:
   for zero;() => nil;(),
   for succ;y[0] => cons;(y[1] y[0])
   ])
+:]
+
+#eval infer_reduce 0 [:
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ]) =>
+  y[0]
 :]
 
 #eval infer_reduce 0 [:
