@@ -874,6 +874,28 @@ match var_fields with
 -- def Ty.join_env (env_ty1 : PHashMap Ty Ty) (env_ty2 : PHashMap Ty Ty) : List (PHashMap Ty Ty) :=
 --   [env_ty1, env_ty2]
 
+partial def Ty.wellfounded (n : Nat) : Ty -> Bool
+| bvar id => (List.range n).all (fun tar => id != tar)
+| fvar _ => true 
+| unit => true 
+| bot => true 
+| top => true 
+| tag _ _ => true 
+| field _ ty => Ty.wellfounded n ty
+| union ty1 ty2 =>
+  Ty.wellfounded n ty1 && Ty.wellfounded n ty2
+| inter ty1 ty2 =>
+  match (linearize_fields (inter ty1 ty2)) with
+  | some fields => fields.any (fun (_, ty') => Ty.wellfounded n ty')
+  | none => false
+| case _ _ => false
+| univ _ _ _ _ => false
+| exis n' ty_c1 ty_c2 ty' => 
+  Ty.wellfounded n ty_c1 &&
+  Ty.wellfounded n ty_c2 &&
+  Ty.wellfounded (n + n') ty'
+| recur _ => false 
+| corec _ => false
 
 def Ty.assume_env (i_u_env_ty : Nat × List α) 
 (f : Nat -> α -> (Nat × List β)) :
@@ -1081,26 +1103,29 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
 | ty', .recur ty =>
   -- TODO: add wellfoundend check for .recur ty
-  let ty' := (Ty.simplify (Ty.subst env_ty ty'))
-  match (linearize_fields ty') with
-  | .none => 
-    unify i env_ty env_complex ty' (unroll (Ty.recur ty))
-  | .some fields =>
-    if List.any fields (fun (k_fd, ty_fd) =>
-      match ty_fd with
-      | Ty.tag _ _ => true 
-      | Ty.top => true 
-      | Ty.bot => true 
-      | _ => false
-      -- | Ty.fvar _ => false 
-      -- | _ => true 
-    ) then  
+  if Ty.wellfounded 1 ty then
+    let ty' := (Ty.simplify (Ty.subst env_ty ty'))
+    match (linearize_fields ty') with
+    | .none => 
       unify i env_ty env_complex ty' (unroll (Ty.recur ty))
-    else
-      let ty_norm := normalize_fields fields
-      match env_complex.find? ty_norm with
-      | .some ty_cache => unify i env_ty env_complex ty_cache (Ty.recur ty)
-      | .none => (i, []) 
+    | .some fields =>
+      if List.any fields (fun (k_fd, ty_fd) =>
+        match ty_fd with
+        | Ty.tag _ _ => true 
+        | Ty.top => true 
+        | Ty.bot => true 
+        | _ => false
+        -- | Ty.fvar _ => false 
+        -- | _ => true 
+      ) then  
+        unify i env_ty env_complex ty' (unroll (Ty.recur ty))
+      else
+        let ty_norm := normalize_fields fields
+        match env_complex.find? ty_norm with
+        | .some ty_cache => unify i env_ty env_complex ty_cache (Ty.recur ty)
+        | .none => (i, []) 
+  else
+    (i, []) 
 
 | ty', .corec ty1 =>
   -- reduce to "arrow-normal-form" for propagation purposes
@@ -2000,11 +2025,34 @@ def even_list := [:
   [: α[0] :] 
 
 -- ERROR: diverges - not well foundend: induction untagged 
--- #eval unify_decide 0 
---   [: hello*@ :] 
---   [: μ 1 . wrong*@ ∨ β[0] :] 
+#eval unify_decide 0 
+  [: hello*@ :] 
+  [: μ 1 . wrong*@ ∨ β[0] :] 
 
 -- ERROR: diverges - inductive type not well founded
--- #eval unify_decide 0 
---   [: hello*@ :] 
---   [: μ 1 . β[0] :] 
+#eval unify_decide 0 
+  [: hello*@ :] 
+  [: μ 1 . β[0] :] 
+
+def bad_nat_list := [: 
+  μ 1 . (
+    (zero*@ × nil*@) ∨ 
+    (∃ 2 . (β[0] × β[1]) | 
+      β[0] × β[1] ≤ β[2])
+  )
+:]
+
+#eval unify_decide 0 
+  [: zero*@ × nil*@ :] 
+  bad_nat_list
+
+def other_nat_list := [: 
+  μ 1 . (
+    (∃ 2 . (succ*β[0] × cons*β[1]) | 
+      β[0] × β[1] ≤ β[2])
+  )
+:]
+
+#eval unify_decide 0 
+  [: succ*zero*@ × cons*nil*@ :] 
+  other_nat_list
