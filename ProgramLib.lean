@@ -1080,6 +1080,7 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
     unify i env_ty env_complex ty' ty
 
 | ty', .recur ty =>
+  -- TODO: add wellfoundend check for .recur ty
   let ty' := (Ty.simplify (Ty.subst env_ty ty'))
   match (linearize_fields ty') with
   | .none => 
@@ -1991,3 +1992,19 @@ def even_list := [:
 
 ----------
 #eval [: σ[x := hello;()] :]
+
+
+
+#eval unify_decide 0 
+  [: hello*@ :] 
+  [: α[0] :] 
+
+-- ERROR: diverges - not well foundend: induction untagged 
+-- #eval unify_decide 0 
+--   [: hello*@ :] 
+--   [: μ 1 . wrong*@ ∨ β[0] :] 
+
+-- ERROR: diverges - inductive type not well founded
+-- #eval unify_decide 0 
+--   [: hello*@ :] 
+--   [: μ 1 . β[0] :] 

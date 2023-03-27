@@ -1781,7 +1781,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{definition}
 
-\begin{definition}[Subtype itermediate unification ]
+\begin{definition}[Intermediate subtype unification ]
 % note: Cousot's unification is implicit by matching meta-variables for types.
 % that is, a polymorphic type is an infinite set of types merged with 
 % the set of types that are accepted over program variables .
@@ -1954,6 +1954,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   }
 
   \inferrule {
+    \text{wellfounded}\ \alpha_2\ \tau_2
+    \\
     \Delta \in \llbracket 
       \Omega \vdash 
       \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] % by induction hypothesis
@@ -1967,6 +1969,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   }
 
   \inferrule {
+    \text{wellfounded}\ \alpha\ \tau_2
+    \\
     \text{complex}\ \tau_1 = k 
     \\
     \Delta \in \llbracket 
@@ -1979,6 +1983,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   }
 
   \inferrule {
+    \text{wellfounded}\ \alpha\ \tau_2
+    \\
     \text{complex}\ \tau_1 \neq k 
     \\
     \Delta \in \llbracket 
