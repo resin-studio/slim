@@ -1924,150 +1924,180 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \rrbracket^\sharp
   }
 
+  \inferrule {
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \text{unit} \leq \text{unit}
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket \Omega \vdash l*\tau_1 \leq l*\tau_2 \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket \Omega \vdash l:\tau_1 \leq l:\tau_2 \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket \Omega \vdash \tau_3 \leq \tau_1 \rrbracket^\sharp
+    \\
+    \Delta;\Delta' \in \llbracket \Omega \vdash \tau_2 \leq \tau_4 \rrbracket^\sharp
+  } {
+    \Delta;\Delta' \in \llbracket 
+      \Omega \vdash \tau_1\rightarrow\tau_2 \leq \tau_3\rightarrow\tau_4	
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket 
+      \Omega \vdash 
+      \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] % by induction hypothesis
+      \leq 
+      \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
+    \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \mu \alpha_1 . \tau_1 \leq \mu \alpha_2 . \tau_2
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \text{complex}\ \tau_1 = k 
+    \\
+    \Delta \in \llbracket 
+      \Omega \vdash (\Omega\ k) \leq \mu \alpha . \tau_2
+    \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \mu \alpha . \tau_2
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \text{complex}\ \tau_1 \neq k 
+    \\
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_2[\alpha \mapsto \mu \alpha . \tau_2]
+    \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \mu \alpha . \tau_2
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket 
+      \Omega \vdash 
+        \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
+        \leq 
+        \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+        % by co-induction hypothesis
+    \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \nu \alpha_1 . \tau_1 \leq \nu \alpha_2 . \tau_2	
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \text{rewrite}\ \nu \alpha . \tau_1 = \tau_1'
+    \\
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1' \leq \tau_2
+    \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \nu \alpha . \tau_1 \leq \tau_2
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \text{rewrite}\ \nu \alpha . \tau_2 = \tau_2'
+    \\
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_2'
+    \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq  \nu \alpha . \tau_2
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_3
+    \rrbracket^\sharp
+    \\
+    \Delta;\Delta' \in \llbracket 
+      \Omega \vdash \tau_2 \leq \tau_3
+    \rrbracket^\sharp
+  } {
+    \Delta;\Delta' \in \llbracket 
+      \Omega \vdash \tau_1 \vee \tau_2 \leq \tau_3
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_2
+    \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_2 \vee \tau_3
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_3
+    \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_2 \vee \tau_3
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_2
+    \rrbracket^\sharp
+    \\
+    \Delta;\Delta' \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_3
+    \rrbracket^\sharp
+  } {
+    \Delta;\Delta' \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_2 \wedge \tau_3
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \leq \tau_3
+    \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \wedge \tau_2 \leq \tau_3
+    \rrbracket^\sharp
+  }
+
+  \inferrule {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_2 \leq \tau_3
+    \rrbracket^\sharp
+  } {
+    \Delta \in \llbracket 
+      \Omega \vdash \tau_1 \wedge \tau_2 \leq \tau_3
+    \rrbracket^\sharp
+  }
+
 \end{mathpar}
 \end{definition}
-
-\[
-\begin{array}{l @{} l}
-
-%     \text{unify } \iota\ \Delta \vdash \bot \leq \_	
-%     &{} = 
-%     \{\bullet\}
-%     \\
-%     \text{unify } \iota\ \Delta \vdash \_ \leq \top	
-%     &{} = 
-%     \{\bullet\}
-%     \\
-%     \text{unify } \iota\ \Delta \vdash \text{unit}  \leq \text{unit}	
-%     &{} = 
-%     \{\bullet\}
-%     \\
-%     \text{unify } \iota\ \Delta \vdash l*\tau_1 \leq l*\tau_2	
-%     &{} = 
-%     \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
-%     \\
-%     \text{unify } \iota\ \Delta \vdash l:\tau_1 \leq l:\tau_2	
-%     &{} = 
-%     \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
-%     \\
-%     \text{unify } \iota\ \Delta \vdash \tau_1\rightarrow\tau_2 \leq \tau_3\rightarrow\tau_4	
-%     &{} = 
-%     \begin{array}[t]{@{} l}
-%       \{\Delta_1;\Delta_2\ |
-%       \\ 
-%       \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_3 \leq \tau_1
-%       \\
-%       \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_4 \leq \tau_2
-%       \\
-%       \}
-%     \end{array}
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     \mu \alpha . \tau_1 \leq \mu \alpha . \tau_2
-%     &{} = 
-%     \Delta \vdash 
-%     \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] \leq 
-%     \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
-
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     \tau_1 \leq \mu \alpha . \tau_2
-%     &{} = 
-%     \begin{cases}  
-%       \text{unify } \iota\ \Delta \vdash 
-%       \tau_1 \leq \tau_2[\alpha\mapsto\mu\alpha.\tau_2]	
-%       &\text{if }
-%       \text{unrollform } \Delta \vdash \tau_1
-%       \\
-%       \emptyset
-%       &\text{otherwise}
-%     \end{cases}
-
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     \nu \alpha_1 . \tau_1 \leq 
-%     \nu \alpha_2 . \tau_2	
-%     &{} = 
-%     \text{unify } \iota\ \Delta \vdash 
-%     \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] \leq 
-%     \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
-
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     \nu \alpha . \tau_1 \leq 
-%     \tau_2 \rightarrow \tau_3
-%     &{} = 
-%     \begin{cases}
-%       \text{unify } \iota\ \Delta \vdash
-%       \tau_1[\alpha\mapsto\nu\alpha.\tau_1]
-%       \leq 
-%       \tau_2 \rightarrow \tau_3
-%       &\text{if }
-%       \text{unrollform } \Delta \vdash \tau_2
-%       \\
-%       \text{unify } \iota\ \Delta \vdash
-%       \tau_1[\alpha\mapsto\nu\alpha.\tau_1]
-%       \leq 
-%       \tau_2 \rightarrow \tau_3
-%       &\text{if }
-%       \text{unrollform } \Delta \vdash \tau_3
-%       \\
-%       \text{unify } \iota\ \Delta \vdash
-%       (\text{rw\_func\_type}\ \nu\alpha.\tau_1)
-%       \leq 
-%       \tau_2 \rightarrow \tau_3
-%       &\text{otherwise }
-%     \end{cases}
-
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     \tau_1 \vee \tau_2 \leq \tau_3
-%     &{} = 
-%     \begin{array}[t]{@{} l}
-%       \{\Delta_1;\Delta_2\ |
-%       \\ 
-%       \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3
-%       \\
-%       \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_2 \leq \tau_3
-%       \\
-%       \}
-%     \end{array}
-
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     \tau_1 \leq \tau_2 \vee \tau_3
-%     &{} = 
-%     (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2)
-%     \cup
-%     (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3)
-
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     \tau_1 \leq \tau_2 \wedge \tau_3
-%     &{} = 
-%     \begin{array}[t]{@{} l}
-%       \{\Delta_1;\Delta_2\ |
-%       \\ 
-%       \ \ \ \ \Delta_1 \in \text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_2
-%       \\
-%       \ \ \ \ \Delta_2 \in \text{unify } \iota\ \Delta;\Delta_1 \vdash \tau_1 \leq \tau_3
-%       \\
-%       \}
-%     \end{array}
-
-%     \\
-%     \text{unify } \iota\ \Delta \vdash
-%     \tau_1 \wedge \tau_2 \leq \tau_3
-%     &{} = 
-%     (\text{unify } \iota\ \Delta \vdash \tau_1 \leq \tau_3)
-%     \cup
-%     (\text{unify } \iota\ \Delta \vdash \tau_2 \leq \tau_3)
-
-
-\end{array}
-\]
-
-
 
 
 % \begin{definition}[Type inference old]
