@@ -1452,7 +1452,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   &\boxed{x \in \text{dom}\ \Gamma}&
 \end{flalign*}
 \begin{mathpar}
-
   \inferrule { 
   } {
     x \in \text{dom}\ (\Gamma, x \mapsto \tau)
@@ -1676,6 +1675,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{flalign*}
   &\boxed{\Delta \cdot \Gamma \Vdash e : \tau \leq \tau}&
 \end{flalign*}
+
 \begin{mathpar}
   \inferrule { 
     \Delta \cdot \bullet \Vdash (\Gamma\ x) \leq \tau
@@ -1694,25 +1694,26 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \text{fresh}\ \alpha
     \\
-    \Delta \in \llbracket \bullet \vdash (l * \alpha) \leq \tau \rrbracket^\sharp
+    \Delta \cdot \bullet \Vdash (l * \alpha) \leq \tau
     \\
-    \left< \Delta, \Gamma, \tau' \right> 
-    \in \llbracket e : \alpha \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Gamma
+    \Vdash e : \tau' \leq \alpha
   } {
-    \left< \Delta, \Gamma, (l * \tau')\right> 
-    \in \llbracket (l \cdot e) : \tau \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Gamma 
+    \Vdash (l \cdot e) : (l * \tau') \leq \tau
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha_i
     \\
-    \Delta \in \llbracket \bullet \vdash (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau \rrbracket^\sharp
+    \Delta \cdot \bullet \Vdash (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
     \\
-    \left<\Delta, \Gamma, \tau_i\right> 
-    \in  \llbracket e_i : \alpha_i \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Gamma
+    \Vdash e_i : \tau_i \leq \alpha_i
   } {
-    \left< \Delta, \Gamma, (\wedge\ \widebar{l_i : \tau_i}) \right> 
-    \in \llbracket (\sigma\ \widebar{l_i = e_i}) : \tau \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Gamma
+    \Vdash (\sigma\ \widebar{l_i = e_i}) : 
+    (\wedge\ \widebar{l_i : \tau_i}) \leq \tau
   } 
 
   \inferrule { 
@@ -1720,77 +1721,83 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{fresh}\ \alpha_i''
     \\
-    \Delta \in \llbracket \bullet \vdash (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau \rrbracket^\sharp
+    \Delta \cdot \bullet \Vdash (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau
     \\
-    \left<\Delta, \Gamma;(\text{patenv}\ m_i), \tau'_i\right> 
-    \in \llbracket m_i : \alpha'_i \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Gamma;(\text{patenv}\ m_i) 
+    \Vdash m_i : \tau'_i \leq \alpha'_i
     \\
-    \left< \Delta, \Gamma, \tau''_i \right> 
-    \in \llbracket e_i : \alpha''_i \rrbracket^\sharp
+    \Delta;\Delta';\Delta'' \cdot \Gamma 
+    \Vdash e_i : \tau''_i \leq \alpha''_i
   } {
-    \left< \Delta, \Gamma, (\wedge\ \widebar{(\tau_i' \rightarrow \tau_i''}) \right>
-    \in
-    \llbracket (\lambda\ \widebar{m_i \Rightarrow e_i}) : \tau \rrbracket^\sharp
+    \Delta;\Delta';\Delta'' \cdot \Gamma
+    \Vdash
+    (\lambda\ \widebar{m_i \Rightarrow e_i}) : 
+    (\wedge\ \widebar{\tau_i' \rightarrow \tau_i''}) \leq 
+    \tau
   } 
 
   \inferrule { 
-    \left<\Delta, \Gamma, \tau' \right>
-    \in \llbracket e : (l : \tau) \rrbracket^\sharp
+    \Delta \cdot \Gamma
+    \Vdash e : \tau' \leq (l : \tau)
     \\
     \text{fresh}\ \alpha
     \\
-    \Delta \in \llbracket \bullet \vdash \tau' \leq (l : \alpha) \rrbracket^\sharp
+    \Delta;\Delta' \cdot \bullet \Vdash \tau' \leq (l : \alpha)
   } {
-    \left<\Delta, \Gamma, \alpha \right>
-    \in \llbracket (e/l) : \tau \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Gamma
+    \Vdash (e/l) : \alpha \leq \tau
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha
     \\
-    \left< \Delta, \Gamma, \tau_1 \right> 
-    \in \llbracket e_1 : (\alpha \rightarrow \tau) \rrbracket^\sharp
+    \Delta \cdot \Gamma 
+    \Vdash e_1 : \tau_1 \leq (\alpha \rightarrow \tau)
     \\
-    \left< \Delta, \Gamma, \tau_2 \right> 
-    \in \llbracket e_2 : \alpha \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Gamma
+    \Vdash e_2 : \tau_2 \leq \alpha
     \\
     \text{fresh}\ \alpha'
     \\
-    \Delta \in \llbracket \bullet \vdash \tau_1 \leq \tau_2 \rightarrow \alpha' \rrbracket^\sharp
+    \Delta;\Delta';\Delta'' \cdot \bullet \Vdash \tau_1 \leq \tau_2 \rightarrow \alpha'
     \\
     \text{fresh}\ \alpha''
     \\
     % need to call unification one more time to liberate existentially quantified variables 
-    \Delta \in \llbracket \bullet \vdash \alpha'' \leq \alpha' \rrbracket^\sharp
+    \Delta;\Delta';\Delta'';\Delta''' \cdot \bullet \Vdash \alpha'' \leq \alpha'
   } {
-    \left<\Delta, \Gamma, \alpha'' \right>
-    \in \llbracket (e_1\ e_2) : \tau \rrbracket^\sharp
+    \Delta;\Delta';\Delta'';\Delta''' \cdot \Gamma
+    \Vdash (e_1\ e_2) : \alpha'' \leq \tau
   } 
 
   \inferrule { 
-    \left< \Delta, \Gamma, \tau_1' \right> 
-    \in \llbracket e_1 : \tau_1 \rrbracket^\sharp
+    \Delta \cdot \Gamma 
+    \Vdash e_1 : \tau_1' \leq \tau_1
     \\
-    \left< \Delta, (\Gamma, x = \text{pack}\ \Delta\ \tau_1'), \tau_2' \right>  
-    \in \llbracket e_2 : \tau_2 \rrbracket^\sharp
+    \Delta;\Delta' \cdot (\Gamma, x \mapsto \text{pack}\ \Delta\ \tau_1')  
+    \Vdash e_2 : \tau_2' \leq \tau_2
     \\
   } {
-    \left< \Delta, \Gamma, \tau_2' \right> 
-    \in \llbracket (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2 \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Gamma 
+    \Vdash 
+    (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : 
+    \tau_2' \leq 
+    \tau_2
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha_1
     \\
-    \left< \Delta, \Gamma, \tau' \right> 
-    \in \llbracket e : \alpha_1 \rightarrow \tau \rrbracket^\sharp
+    \Delta \cdot \Gamma 
+    \Vdash e : \tau' \leq \alpha_1 \rightarrow \tau
     \\
     \text{fresh}\ \alpha_2
     \\
-    \Delta \in \llbracket \bullet \vdash \tau' \leq \alpha_1 \rightarrow \alpha_2 \rrbracket^\sharp
+    \Delta;\Delta' \cdot \bullet \Vdash \tau' \leq \alpha_1 \rightarrow \alpha_2
   } {
-    \left< \Delta, \Gamma, (\text{spiral}\ \Delta\ \alpha_1\ \alpha_2) \right>
-    \in \llbracket \text{fix}\ e : \tau \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Gamma  
+    \Vdash \text{fix}\ e :(\text{spiral}\ \Delta\ \alpha_1\ \alpha_2) 
+    \leq \tau
   } 
 \end{mathpar}
 \caption{Type inference}
