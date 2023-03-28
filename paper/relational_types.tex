@@ -632,9 +632,10 @@ which the system attempts to solve. We define the type environment a type enviro
   \text{XS} \mapsto \text{nil}*\text{unit}
 \]
 \noindent
-A successful trace of the decision algorithm corresponds to the following subtyping derivation.  
+A successful trace of the decision algorithm corresponds to the subtyping derivation in fig. ? .  
 
 \noindent
+\begin{figure*}
 \begin{mathpar}
 \inferrule* {
   \inferrule* { 
@@ -705,6 +706,8 @@ A successful trace of the decision algorithm corresponds to the following subtyp
   \exists\ \text{X}\ .\ nat\_and\_list(\text{X})
 }
 \end{mathpar}
+\caption{}
+\end{figure*}
 
 We can also specify a relation between even numbers and lists.  
 
@@ -717,19 +720,28 @@ even\_and\_list(\alpha) =
   \\
   \hspace{4mm}\exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \leq \text{P}\ .\ 
   \\
-  \hspace{8mm}\text{succ}*\text{succ}*\text{N} \times \text{cons}*(\alpha \times \text{cons}*(\alpha \times \text{XS}))
+  \hspace{8mm}\text{succ}*\text{succ}*\text{N}\ \times 
+  \\
+  \hspace{12mm}\text{cons}*(\alpha \times \text{cons}*(\alpha \times \text{XS}))
 \end{array}
 \]
 
 We verify that the even relation is included in the natural number relation to lists.  
+Shown in fig. ?.
 
 \[
 \Delta_{enl} = \bullet,\ 
+\begin{array}[t]{@{} l}
   \text{N} \times \text{XS} \mapsto nat\_and\_list(\text{X}),\ 
+  \\
   \text{XS'} \mapsto \text{cons}*(\text{X} \times \text{XS}),\ 
+  \\
   \text{N'} \mapsto \text{succ}*\text{N}
+\end{array}
 \]
 
+\begin{figure*}
+  
 \begin{mathpar}
 \inferrule* {
   \inferrule* {
@@ -784,8 +796,8 @@ We verify that the even relation is included in the natural number relation to l
   nat\_and\_list(\text{X})
 }
 \end{mathpar}
-
-
+\caption{}
+\end{figure*}
 
 
 
@@ -920,10 +932,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \text{unit} 
       \ |\ 
       \alpha 
-      \ |\ 
-      \bot 
-      \ |\ 
-      \top 
       \ |\ 
       l*\tau 
       \ |\ 
@@ -1445,18 +1453,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{figure*}
 \begin{mathpar}
   \inferrule {
-  } {
-    \Delta \vdash \bot
-    \leq \tau
-  }
-
-  \inferrule {
-  } {
-    \Delta \vdash \tau
-    \leq \top
-  } 
-
-  \inferrule {
     \Delta \vdash \tau_1
     \leq \tau_2
   } {
@@ -1665,14 +1661,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{mathpar}
 
   \inferrule { 
-    \Delta \in \llbracket (\Gamma\ x) \leq \tau \rrbracket^\sharp
+    \Delta \in \llbracket \bullet \vdash (\Gamma\ x) \leq \tau \rrbracket^\sharp
   } {
     \left<\Delta, \Gamma, \Gamma(x) \right> 
     \in \llbracket x : \tau \rrbracket^\sharp
   } 
 
   \inferrule { 
-    \Delta \in \llbracket \text{unit} \leq \tau \rrbracket^\sharp
+    \Delta \in \llbracket \bullet \vdash \text{unit} \leq \tau \rrbracket^\sharp
   } {
     \left< \Delta, \Gamma, \text{unit} \right> 
     \in \llbracket () : \tau \rrbracket^\sharp
@@ -1782,6 +1778,18 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \caption{Type inference}
 \end{figure*}
+
+% \begin{figure*}
+% \begin{flalign*}
+%   &\boxed{\Delta \vdash \tau \triangledown \tau = \tau}&
+% \end{flalign*}
+% \[
+% \begin{array}{l @{}l}
+%   & {}=
+% \end{array}
+% \]
+% \caption{Narrowing}
+% \end{figure*}
 
 
 \begin{figure}
@@ -2190,71 +2198,71 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{theorem}
 
 
-\begin{definition}
-\[
-  \begin{array}{l @{} l}
-  \Delta\ ;\ \bullet
-  &\ = \Delta 
-  \\
-  \Delta_1;(\Delta_2,\alpha \mapsto \tau) 
-  &\ = (\Delta_1;\Delta_2),\alpha \mapsto \tau
-  \end{array}
-\]
-\end{definition}
+% \begin{definition}
+% \[
+%   \begin{array}{l @{} l}
+%   \Delta\ ;\ \bullet
+%   &\ = \Delta 
+%   \\
+%   \Delta_1;(\Delta_2,\alpha \mapsto \tau) 
+%   &\ = (\Delta_1;\Delta_2),\alpha \mapsto \tau
+%   \end{array}
+% \]
+% \end{definition}
 
-\begin{definition}
-\[
-  \begin{array}{l @{} l}
-  M_1 * M_2 
-  &\ = 
-  [\Delta_1 ; \Delta_2 \ |\ 
-    \Delta_1 \in M_1
-    \ \ \  
-    \Delta_2 \in M_2
-  ]
-  \end{array}
-\]
-\end{definition}
+% \begin{definition}
+% \[
+%   \begin{array}{l @{} l}
+%   M_1 * M_2 
+%   &\ = 
+%   [\Delta_1 ; \Delta_2 \ |\ 
+%     \Delta_1 \in M_1
+%     \ \ \  
+%     \Delta_2 \in M_2
+%   ]
+%   \end{array}
+% \]
+% \end{definition}
 
-\begin{definition}
-\[
-  \begin{array}{l @{} l}
-  \text{reduce} \wedge [] 
-  &\ = \top
-  \\
-  \text{reduce} \wedge \tau::\widebar{\tau}
-  &\ = \tau\ \wedge (\text{reduce} \wedge \widebar{\tau})
-  \end{array}
-\]
-\end{definition}
+% \begin{definition}
+% \[
+%   \begin{array}{l @{} l}
+%   \text{reduce} \wedge [] 
+%   &\ = \top
+%   \\
+%   \text{reduce} \wedge \tau::\widebar{\tau}
+%   &\ = \tau\ \wedge (\text{reduce} \wedge \widebar{\tau})
+%   \end{array}
+% \]
+% \end{definition}
 
-\begin{definition}
-\[
-  \begin{array}{l @{} l}
-    N_1 * N_2
-    &\ = 
-    \begin{array}[t]{l}
-      [ \Delta_1 ; \Delta_2 . \tau_1 \wedge \tau_2 \ |\ 
-        \Delta_1.\tau_1 \in N_1
-        \ \ 
-        \Delta_2.\tau_2 \in N_2
-      ]
-    \end{array}
-  \end{array}
-\]
-\end{definition}
+% \begin{definition}
+% \[
+%   \begin{array}{l @{} l}
+%     N_1 * N_2
+%     &\ = 
+%     \begin{array}[t]{l}
+%       [ \Delta_1 ; \Delta_2 . \tau_1 \wedge \tau_2 \ |\ 
+%         \Delta_1.\tau_1 \in N_1
+%         \ \ 
+%         \Delta_2.\tau_2 \in N_2
+%       ]
+%     \end{array}
+%   \end{array}
+% \]
+% \end{definition}
 
-\begin{definition}
-\[
-  \begin{array}{l @{}l}
-  \text{reduce} * \{N\}
-  & {}= N
-  \\
-  \text{reduce} * \widebar{N_i}
-  & {}= N_j * (\text{reduce} * \widebar{N_i}\setminus\{N_j\})
-  \end{array}
-\]
-\end{definition}
+% \begin{definition}
+% \[
+%   \begin{array}{l @{}l}
+%   \text{reduce} * \{N\}
+%   & {}= N
+%   \\
+%   \text{reduce} * \widebar{N_i}
+%   & {}= N_j * (\text{reduce} * \widebar{N_i}\setminus\{N_j\})
+%   \end{array}
+% \]
+% \end{definition}
 
 \section{Evaluation}
 \begin{enumerate}
