@@ -1,7 +1,8 @@
 % \documentclass{article}
 % \documentclass[]{acmart}
-\documentclass[manuscript]{acmart}
+% \documentclass[manuscript]{acmart}
 % \documentclass[manuscript,screen,sigplan,review]{acmart}
+\documentclass[sigplan]{acmart}
 % \documentclass[manuscript]
 \usepackage{mathpartir}
 \usepackage{hyperref}
@@ -857,9 +858,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{lstlisting}
 
 
+\newpage
+
 \section{Language}
 
-\begin{definition}[Syntax]
+\begin{figure*}
+  
 \[
   \begin{array}{l @{} l}
     e 
@@ -942,7 +946,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \end{array}
 \]
 
-\end{definition}
+\caption{Syntax}
+\end{figure*}
+
 
 
   
@@ -1075,7 +1081,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \end{definition}
   
 
-\begin{definition}(Semantics)
+\begin{figure*}
 \begin{flalign*}
   &\boxed{\left<\kappa, \rho, c \right> \hookrightarrow \left<\kappa, \rho, c \right>}&
 \end{flalign*}
@@ -1157,9 +1163,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \left<\kappa, (\rho_\kappa, x_\kappa \mapsto (\rho\ x)), c \right>
   } 
 \end{mathpar}
-\end{definition}
+\caption{Small-step semantics}
+\end{figure*}
 
-\begin{definition}(Multistep semantics)
+\begin{figure*}
 \begin{flalign*}
   &\boxed{\left<\kappa, \rho, c \right> \hookrightarrow^* \left<\kappa, \rho, c \right>}&
 \end{flalign*}
@@ -1185,9 +1192,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \left< \kappa'', \rho'', c'' \right> 
   } 
 \end{mathpar}
-\end{definition}
+\caption{Multi-step semantics}
+\end{figure*}
 
-\begin{definition}(Internal state)
+\begin{figure}
 \[
   \begin{array}{l @{} l}
     \kappa 
@@ -1227,9 +1235,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \end{array}
   \end{array}
 \]
-\end{definition}
+\caption{Internal state}
+\end{figure}
 
-\begin{definition}[Collecting semantics]
+\begin{figure*}
 \begin{flalign*}
   &\boxed{ \varsigma \in \llbracket e \rrbracket\flat}&
 \end{flalign*}
@@ -1258,10 +1267,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   %   \left<e, \rho, \kappa \right> \in \llbracket e \rrbracket\flat
   % } 
 \end{mathpar}
-\end{definition}
+\caption{Collecting semantics}
+\end{figure*}
 
 
-\begin{definition}[State abstraction]
+\begin{figure*}
 % note: Cousot defines concretization by calling runtime semantics
 % this is a bit odd as it could be non-terminating
 % he seems to have some magical way to decide termination
@@ -1283,9 +1293,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \left< \Gamma, \tau' \right>
   } 
 \end{mathpar}
-\end{definition}
+\caption{State abstraction}
+\end{figure*}
 
-\begin{definition}[Typing]
+\begin{figure*}
 \begin{flalign*}
   &\boxed{\Gamma \vdash e : \tau}&
 \end{flalign*}
@@ -1384,9 +1395,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     : \tau
   } 
 \end{mathpar}
-\end{definition}
+\caption{Typing}
+\end{figure*}
 
-\begin{definition}[Type environment find]
+\begin{figure}
 \begin{flalign*}
   &\boxed{\Gamma\ x = \tau}&
 \end{flalign*}
@@ -1403,9 +1415,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \end{cases}
   \end{array}
 \]
-\end{definition}
+\caption{Type environment find}
+\end{figure}
 
-\begin{definition}[Type environment domain]
+\begin{figure}
 \begin{flalign*}
   &\boxed{x \in \text{dom}\ \Gamma}&
 \end{flalign*}
@@ -1424,11 +1437,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     x \in \text{dom}\ (\Gamma, x' \mapsto \tau')
   } 
 \end{mathpar}
-\end{definition}
+\caption{Type environment domain}
+\end{figure}
 
 
 
-\begin{definition}(Subtyping)
+\begin{figure*}
 \begin{mathpar}
   \inferrule {
   } {
@@ -1613,7 +1627,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \leq \tau
   }
 \end{mathpar}
-\end{definition}
+\caption{Subtyping}
+\end{figure*}
 
 
 \begin{theorem}(Typing progress)
@@ -1638,7 +1653,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{theorem}
 
-\begin{definition}[Type inference]
+\begin{figure*}
 % TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
 % abstract out widening/narrowing operators in unification
 % we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
@@ -1666,7 +1681,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \text{fresh}\ \alpha
     \\
-    \Delta \in \llbracket (l * \alpha) \leq \tau \rrbracket^\sharp
+    \Delta \in \llbracket \bullet \vdash (l * \alpha) \leq \tau \rrbracket^\sharp
     \\
     \left< \Delta, \Gamma, \tau' \right> 
     \in \llbracket e : \alpha \rrbracket^\sharp
@@ -1678,7 +1693,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \text{fresh}\ \alpha_i
     \\
-    \Delta \in \llbracket (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau \rrbracket^\sharp
+    \Delta \in \llbracket \bullet \vdash (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau \rrbracket^\sharp
     \\
     \left<\Delta, \Gamma, \tau_i\right> 
     \in  \llbracket e_i : \alpha_i \rrbracket^\sharp
@@ -1692,8 +1707,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{fresh}\ \alpha_i''
     \\
-    \Delta \in \llbracket (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau \rrbracket^\sharp
-    \\\\
+    \Delta \in \llbracket \bullet \vdash (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau \rrbracket^\sharp
+    \\
     \left<\Delta, \Gamma;(\text{patenv}\ m_i), \tau'_i\right> 
     \in \llbracket m_i : \alpha'_i \rrbracket^\sharp
     \\
@@ -1711,7 +1726,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{fresh}\ \alpha
     \\
-    \Delta \in \llbracket \tau' \leq (l : \alpha) \rrbracket^\sharp
+    \Delta \in \llbracket \bullet \vdash \tau' \leq (l : \alpha) \rrbracket^\sharp
   } {
     \left<\Delta, \Gamma, \alpha \right>
     \in \llbracket (e/l) : \tau \rrbracket^\sharp
@@ -1725,15 +1740,15 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \left< \Delta, \Gamma, \tau_2 \right> 
     \in \llbracket e_2 : \alpha \rrbracket^\sharp
-    \\\\
+    \\
     \text{fresh}\ \alpha'
     \\
-    \Delta \in \llbracket \tau_1 \leq \tau_2 \rightarrow \alpha' \rrbracket^\sharp
+    \Delta \in \llbracket \bullet \vdash \tau_1 \leq \tau_2 \rightarrow \alpha' \rrbracket^\sharp
     \\
     \text{fresh}\ \alpha''
     \\
     % need to call unification one more time to liberate existentially quantified variables 
-    \Delta \in \llbracket \alpha'' \leq \alpha' \rrbracket^\sharp
+    \Delta \in \llbracket \bullet \vdash \alpha'' \leq \alpha' \rrbracket^\sharp
   } {
     \left<\Delta, \Gamma, \alpha'' \right>
     \in \llbracket (e_1\ e_2) : \tau \rrbracket^\sharp
@@ -1759,29 +1774,18 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{fresh}\ \alpha_2
     \\
-    \Delta \in \llbracket \tau' \leq \alpha_1 \rightarrow \alpha_2 \rrbracket^\sharp
+    \Delta \in \llbracket \bullet \vdash \tau' \leq \alpha_1 \rightarrow \alpha_2 \rrbracket^\sharp
   } {
     \left< \Delta, \Gamma, (\text{spiral}\ \Delta\ \alpha_1\ \alpha_2) \right>
     \in \llbracket \text{fix}\ e : \tau \rrbracket^\sharp
   } 
 \end{mathpar}
-\end{definition}
+\caption{Type inference}
+\end{figure*}
 
-\begin{definition}[Subtype unification]
-\begin{flalign*}
-  &\boxed{\Delta \in \llbracket \tau \leq \tau \rrbracket^\sharp}&
-\end{flalign*}
-\begin{mathpar}
 
-  \inferrule {
-    \Delta \in \llbracket \bullet \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
-  } {
-    \Delta \in \llbracket \tau_1 \leq \tau_2 \rrbracket^\sharp
-  }
-\end{mathpar}
-\end{definition}
-
-\begin{definition}[Rolling down]
+\begin{figure}
+\caption{Rolling down}
 \begin{flalign*}
   &\boxed{\text{rolldn}\ \alpha\ \tau = \tau}&
 \end{flalign*}
@@ -1797,9 +1801,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \end{cases}
 \end{array}
 \]
-\end{definition}
+\caption{Rolling down}
+\end{figure}
 
-\begin{definition}[Rolling up]
+\begin{figure}
 \begin{flalign*}
   &\boxed{\text{rollup}\ \alpha\ \tau = \tau}&
 \end{flalign*}
@@ -1815,9 +1820,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \end{cases}
 \end{array}
 \]
-\end{definition}
+\caption{Rolling up}
+\end{figure}
 
-\begin{definition}[Intermediate subtype unification]
+\begin{figure*}
 % note: type adjustment bears some resemblance 
 % to widening/narrowing in abstraction interpretation.
 % However, it doesn't share all the responsibilities of AI's operators.
@@ -1833,12 +1839,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   &\boxed{\Delta \in \llbracket \Omega \vdash \tau \leq \tau \rrbracket^\sharp}&
 \end{flalign*}
 \begin{mathpar}
-
   \inferrule {
     \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \Delta;\Delta' \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
-    \\\\
+    \\
     \Delta;\Delta';\Delta'' \in \llbracket \Omega \vdash \tau_3 \leq \tau_4 \rrbracket^\sharp
   } {
     \Delta \in \llbracket 
@@ -1852,7 +1857,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \Delta;\Delta' \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
-    \\\\
+    \\
     \Delta;\Delta';\Delta'' \in \llbracket \Omega \vdash \tau_3 \leq \tau_4 \rrbracket^\sharp
   } {
     \Delta \in \llbracket 
@@ -1860,7 +1865,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       (\exists \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \leq \tau_4)
     \rrbracket^\sharp
   }
-
 
   \inferrule {
     \alpha \not\in (\text{dom}\ \Delta)
@@ -1885,7 +1889,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     (\Delta, \alpha \mapsto (\text{rolldn}\ \alpha\ (\tau' \wedge \tau))) 
     \in \llbracket \Omega \vdash \alpha \leq \tau \rrbracket^\sharp
   }
-  \\\\
+
   \inferrule {
     \alpha \not\in (\text{dom}\ \Delta)
   } {
@@ -1910,13 +1914,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \in \llbracket \Omega \vdash \tau \leq \alpha \rrbracket^\sharp
   }
 
-  \\\\
-
   \inferrule {
     \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \text{complex}\ \Delta\ \tau_3 = k
-    \\
+    \\\\
     \Delta;\Delta' \in \llbracket \Omega, k \mapsto \tau_4 \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
     \\
     % safety: bound vars can only assign to bound vars or non-vars
@@ -1933,9 +1935,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \text{complex}\ \Delta\ \tau_3 \neq k
-    \\
-    \Delta;\Delta' \in \llbracket \Omega \vdash \tau_3 \leq \tau_4 \rrbracket^\sharp
     \\\\
+    \Delta;\Delta' \in \llbracket \Omega \vdash \tau_3 \leq \tau_4 \rrbracket^\sharp
+    \\
     \Delta;\Delta';\Delta'' \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
     \\
     % safety: bound vars can only assign to bound vars or non-vars
@@ -1965,6 +1967,16 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       (\forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \leq \tau_4)
     \rrbracket^\sharp
   }
+
+\end{mathpar}
+\caption{Subtype unification: part 1}
+\end{figure*}
+
+\begin{figure*}
+\begin{flalign*}
+  &\boxed{\Delta \in \llbracket \Omega \vdash \tau \leq \tau \rrbracket^\sharp}&
+\end{flalign*}
+\begin{mathpar}
 
   \inferrule {
   } {
@@ -2143,9 +2155,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \Omega \vdash \tau_1 \wedge \tau_2 \leq \tau_3
     \rrbracket^\sharp
   }
-
 \end{mathpar}
-\end{definition}
+\caption{Subtype unification: part 2}
+\end{figure*}
 
 
 
