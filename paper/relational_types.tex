@@ -918,6 +918,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \begin{array}[t]{@{} l}
       () 
       \ |\ 
+      x
+      \ |\ 
       l \cdot c 
       \ |\ 
       \sigma\ \widebar{l = c}
@@ -928,25 +930,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       c\ c 
       \ |\ 
+      \text{let}\ x : \tau = e\ \text{in}\ e
+      \ |\ 
       \text{fix}\ c
-    \end{array}
-    \\
-    p 
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      x \mapsto e
-      \ |\ 
-      \text{let}\ x : \tau = p\ \text{in}\ p 
-      \ |\ 
-      x
-    \end{array}
-    \\
-    c 
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      p
-      \ |\ 
-      e
     \end{array}
     \\
     m 
@@ -1126,7 +1112,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{figure*}
 \begin{flalign*}
-  &\boxed{\left<\kappa, \rho, c \right> \hookrightarrow \left<\kappa, \rho, c \right>}&
+  &\boxed{\varsigma \hookrightarrow \varsigma}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
@@ -1152,8 +1138,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \right>
   } 
 
-
-
   \inferrule { 
     \rho\ x' = \left< \rho', (\sigma\ \widebar{l_i = x_i}) \right> 
   } {
@@ -1161,7 +1145,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \hookrightarrow 
     \left< \kappa, \rho', x_j \right>
   } 
-  
 
   \inferrule { 
     \rho\ x_1 = \left< \rho_1, \lambda\ \widebar{m \Rightarrow e} \right> 
@@ -1189,21 +1172,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   
   \inferrule { 
   } {
-    \left< \kappa, \rho, \text{let}\ x : \tau = p_1\ \text{in}\ p_2 \right> 
+    \left< \kappa, \rho, \text{let}\ x : \tau = e_1\ \text{in}\ e_2 \right> 
     \hookrightarrow 
-    \left< \left<\rho, x, c_2\right> :: \kappa, \rho, c_1 \right>
+    \left< \left<\rho, x, e_2\right> :: \kappa, \rho, e_1 \right>
   } 
-
 
   \inferrule { 
   } {
     \left<
-      \left<\rho_\kappa, x_\kappa, c\right> :: \kappa,
+      \left<\rho_\kappa, x_\kappa, e\right> :: \kappa,
       \rho, 
       x 
     \right> 
     \hookrightarrow 
-    \left<\kappa, (\rho_\kappa, x_\kappa \mapsto (\rho\ x)), c \right>
+    \left<\kappa, (\rho_\kappa, x_\kappa \mapsto (\rho\ x)), e \right>
   } 
 \end{mathpar}
 \caption{Small-step semantics}
@@ -1211,28 +1193,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{figure*}
 \begin{flalign*}
-  &\boxed{\left<\kappa, \rho, c \right> \hookrightarrow^* \left<\kappa, \rho, c \right>}&
+  &\boxed{\varsigma \hookrightarrow^* \varsigma}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
   } {
-    \left< \kappa, \rho, c \right> 
-    \hookrightarrow 
-    \left< \kappa, \rho, c \right> 
+    \varsigma \hookrightarrow \varsigma
   } 
 
   \inferrule { 
-    \left< \kappa, \rho, c \right> 
-    \hookrightarrow^*
-    \left< \kappa', \rho', c' \right> 
+    \varsigma \hookrightarrow \varsigma'
     \\
-    \left< \kappa', \rho', c' \right> 
-    \hookrightarrow^*
-    \left< \kappa'', \rho'', c'' \right> 
+    \varsigma' \hookrightarrow^* \varsigma''
   } {
-    \left< \kappa, \rho, c \right> 
-    \hookrightarrow^* 
-    \left< \kappa'', \rho'', c'' \right> 
+    \varsigma \hookrightarrow \varsigma''
   } 
 \end{mathpar}
 \caption{Multi-step semantics}
