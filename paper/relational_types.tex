@@ -1,7 +1,7 @@
 % \documentclass{article}
 % \documentclass[]{acmart}
 \documentclass[manuscript]{acmart}
-% \documentclass[manuscript,screen,review]{acmart}
+% \documentclass[manuscript,screen,sigplan,review]{acmart}
 % \documentclass[manuscript]
 \usepackage{mathpartir}
 \usepackage{hyperref}
@@ -1818,6 +1818,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{definition}
 
 \begin{definition}[Intermediate subtype unification]
+% note: type adjustment bears some resemblance 
+% to widening/narrowing in abstraction interpretation.
+% However, it doesn't share all the responsibilities of AI's operators.
+% AI's operators play the role of ensuring monotonicity while preserving some precision.
+% RelType adjustment is not used to ensure termination. It is merely to increase precision. 
+% RelType's termination is based on structural recursion rather than monotonicity.
 % note: Cousot's unification is implicit by matching meta-variables for types.
 % that is, a polymorphic type is an infinite set of types merged with 
 % the set of types that are accepted over program variables .
