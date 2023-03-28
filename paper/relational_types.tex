@@ -1638,7 +1638,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Subtyping}
 \end{figure*}
 
-
 \begin{theorem}(Typing progress)
 \begin{mathpar}
   \inferrule { 
@@ -1677,7 +1676,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \left<\Gamma \cdot (\text{pack}\ \Delta\ \tau)\right> \in \llbracket e \rrbracket^\sharp
   }
 \end{mathpar}
-\caption{Type collecting semantics}
+\caption{Type analysis}
 \end{figure*}
 
 \begin{figure*}
@@ -2203,30 +2202,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 
-\begin{theorem}(Abstraction initialization)
+\begin{theorem}(Soundness of type analysis)
 \begin{mathpar}
-  \inferrule { 
-    \Delta \cdot \Gamma \models e : \tau
-  } {
-    \left< \circ, \bullet, e \right>
-    \rightleftharpoons
-    \left< \Delta, \Gamma, \tau \right>
-  } 
-\end{mathpar}
-\end{theorem}
-
-\begin{theorem}(Abstraction preservation)
-\begin{mathpar}
-  \inferrule { 
-    \Delta \cdot \Gamma \models e : \tau
-    \\
-    \left< \circ, \bullet, e \right> 
-    \hookrightarrow^* 
-    \left< \kappa, \rho, e' \right>
-  } {
-    \left< \kappa, \rho, e' \right>
-    \rightleftharpoons
-    \left< \Delta, \Gamma, \tau \right>
+  \inferrule {} {
+    \llbracket e \rrbracket^\flat \subseteq \gamma\ \llbracket e \rrbracket^\sharp
   } 
 \end{mathpar}
 \end{theorem}
