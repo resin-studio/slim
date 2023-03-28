@@ -874,8 +874,38 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \section{Language}
 
+\begin{theorem}(Soundness of type analysis)
+\begin{mathpar}
+  \inferrule {} {
+    \llbracket e \rrbracket^\flat \subseteq \gamma\ \llbracket e \rrbracket^\sharp
+  } 
+\end{mathpar}
+\end{theorem}
+
+\begin{theorem}(Progress of typing)
+\begin{mathpar}
+  \inferrule { 
+    \bullet \vdash e : \tau
+  } {
+    e = v \vee e \hookrightarrow e'
+  } 
+\end{mathpar}
+\end{theorem}
+
+\begin{theorem}(Preservation of typing)
+\begin{mathpar}
+  \inferrule { 
+    \bullet \vdash e : \tau
+    \\
+    e \hookrightarrow e'
+  } {
+    \bullet \vdash e' : \tau 
+  } 
+\end{mathpar}
+\end{theorem}
+
+
 \begin{figure*}
-  
 \[
   \begin{array}{l @{} l}
     e 
@@ -1638,27 +1668,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Subtyping}
 \end{figure*}
 
-\begin{theorem}(Typing progress)
-\begin{mathpar}
-  \inferrule { 
-    \bullet \vdash e : \tau
-  } {
-    e = v \vee e \hookrightarrow e'
-  } 
-\end{mathpar}
-\end{theorem}
-
-\begin{theorem}(Typing preservation)
-\begin{mathpar}
-  \inferrule { 
-    \bullet \vdash e : \tau
-    \\
-    e \hookrightarrow e'
-  } {
-    \bullet \vdash e' : \tau 
-  } 
-\end{mathpar}
-\end{theorem}
 
 \begin{figure*}
 % TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
@@ -2200,15 +2209,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Subtype unification: part 2}
 \end{figure*}
 
-
-
-\begin{theorem}(Soundness of type analysis)
-\begin{mathpar}
-  \inferrule {} {
-    \llbracket e \rrbracket^\flat \subseteq \gamma\ \llbracket e \rrbracket^\sharp
-  } 
-\end{mathpar}
-\end{theorem}
 
 
 % \begin{definition}
