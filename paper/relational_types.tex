@@ -1823,7 +1823,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % However, it doesn't share all the responsibilities of AI's operators.
 % AI's operators play the role of ensuring monotonicity while preserving some precision.
 % RelType adjustment is not used to ensure termination. It is merely to increase precision. 
-% RelType's termination is based on structural recursion rather than monotonicity.
+% RelType's termination is based on structural recursion modulo the type variables rather than monotonicity of types.
 % note: Cousot's unification is implicit by matching meta-variables for types.
 % that is, a polymorphic type is an infinite set of types merged with 
 % the set of types that are accepted over program variables .
