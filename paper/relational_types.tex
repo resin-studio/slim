@@ -37,7 +37,7 @@
 
 %\title{Type-Directed Synthesis for Dynamic Languages}
 % \title{Guiding Program Synthesis with Relational Types}
-\title{Relational Type Inference by Abstract Interpretation}
+\title{Relational Type Inference}
 \author{Thomas Logan}
 \date{October 2022}
 
@@ -1248,34 +1248,46 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{figure*}
 \begin{flalign*}
-  &\boxed{ \varsigma \in \llbracket e \rrbracket\flat}&
+  &\boxed{ \varsigma \in \llbracket e \rrbracket^\flat}&
 \end{flalign*}
 \begin{mathpar}
-
   \inferrule { 
     \left<\circ, \rho, e \right> 
     \hookrightarrow^* 
     \varsigma
   } {
-    \varsigma \in \llbracket e \rrbracket\flat
+    \varsigma \in \llbracket e \rrbracket^\flat
   } 
-
-  % \inferrule { 
-  %   \left<e, \rho, \kappa \right> \hookrightarrow^* \varsigma 
-  %   \\
-  %   \varsigma = \left<w, \rho, \circ \right>
-  % } {
-  %   \left<e, \rho, \kappa \right> \in \llbracket e \rrbracket\flat
-  % } 
-
-  % \inferrule { 
-  %   \forall \varsigma \cdot \left<e, \rho, \kappa \right> \hookrightarrow^* \varsigma 
-  %   \longrightarrow (\varsigma \hookrightarrow \varsigma' \vee \varsigma = \left<w, \rho, \circ \right>)
-  % } {
-  %   \left<e, \rho, \kappa \right> \in \llbracket e \rrbracket\flat
-  % } 
 \end{mathpar}
 \caption{Collecting semantics}
+\end{figure*}
+
+\begin{figure*}
+\begin{flalign*}
+  &\boxed{\varsigma \in \gamma\ T}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+    \forall \left< \Gamma \cdot \tau \right> \in T\ .\ \Gamma \vdash \varsigma : \tau
+  } {
+    \varsigma \in \gamma\ T 
+  } 
+\end{mathpar}
+\caption{Concretization}
+\end{figure*}
+
+\begin{figure*}
+\begin{flalign*}
+  &\boxed{\left<\Gamma \cdot \tau \right> \in \alpha\ P}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+    \exists\ \varsigma \in P\ .\ \Gamma \vdash \varsigma : \tau
+  } {
+    \left< \Gamma \cdot \tau \right> \in \alpha\ P 
+  } 
+\end{mathpar}
+\caption{Abstraction}
 \end{figure*}
 
 
@@ -1286,22 +1298,22 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % typing rules don't require calling runtime semantics,
 % they are purely driven by the ast structure.
 \begin{flalign*}
-  &\boxed{\left< \kappa, \rho, e \right> \rightleftharpoons \left<\Gamma, \tau \right>}&
+  &\boxed{\Gamma \vdash \varsigma : \tau}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
-    \rho \rightleftharpoons \Gamma
+    \Gamma \vdash \rho
     \\
     \Gamma \vdash e : \tau
     \\
     \kappa \vdash \tau \triangleright \tau' 
   } {
-    \left< \kappa, \rho, e \right> 
-    \rightleftharpoons 
-    \left< \Gamma, \tau' \right>
+    \Gamma \vdash 
+      \left< \kappa, \rho, e \right> 
+    : \tau'
   } 
 \end{mathpar}
-\caption{State abstraction}
+\caption{State typing}
 \end{figure*}
 
 \begin{figure*}
@@ -1656,22 +1668,40 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % i.e. we don't compare current to previous, we simply look at structure of input.
 % the structure of input decreases as types widen/narrow
 \begin{flalign*}
-  &\boxed{\left<\Delta, \Gamma, \tau\right> \in \llbracket e : \tau \rrbracket^\sharp}&
+  &\boxed{\left<\Gamma \cdot \tau\right> \in \llbracket e \rrbracket^\sharp}&
 \end{flalign*}
 \begin{mathpar}
-
   \inferrule { 
-    \Delta \in \llbracket \bullet \vdash (\Gamma\ x) \leq \tau \rrbracket^\sharp
+    \Delta \cdot \Gamma \Vdash e : \tau \leq \top
   } {
-    \left<\Delta, \Gamma, \Gamma(x) \right> 
-    \in \llbracket x : \tau \rrbracket^\sharp
+    \left<\Gamma \cdot (\text{pack}\ \Delta\ \tau)\right> \in \llbracket e \rrbracket^\sharp
+  }
+\end{mathpar}
+\caption{Type collecting semantics}
+\end{figure*}
+
+\begin{figure*}
+% TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
+% abstract out widening/narrowing operators in unification
+% we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
+% i.e. we don't compare current to previous, we simply look at structure of input.
+% the structure of input decreases as types widen/narrow
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Gamma \Vdash e : \tau \leq \tau}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+    \Delta \cdot \bullet \Vdash (\Gamma\ x) \leq \tau
+  } {
+    \Delta \cdot \Gamma
+    \Vdash x : (\Gamma\ x) \leq \tau
   } 
 
   \inferrule { 
-    \Delta \in \llbracket \bullet \vdash \text{unit} \leq \tau \rrbracket^\sharp
+    \Delta \cdot \bullet \Vdash \text{unit} \leq \tau
   } {
-    \left< \Delta, \Gamma, \text{unit} \right> 
-    \in \llbracket () : \tau \rrbracket^\sharp
+    \Delta \cdot \Gamma 
+    \Vdash () : \text{unit} \leq \tau
   } 
 
   \inferrule { 
@@ -1837,7 +1867,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % However, it doesn't share all the responsibilities of AI's operators.
 % AI's operators play the role of ensuring monotonicity while preserving some precision.
 % RelType adjustment is not used to ensure termination. It is merely to increase precision. 
-% RelType's termination is based on structural recursion modulo the type variables rather than monotonicity of types.
+% RelType adjustment with intersection occurs at output positions 
+% RelType adjustment with union occurs at input positions 
+% the overall effect is in narrowing the actual type, and widening the expected types.
+% the AbsInt notion of narrowing might map to the unification process as a whole.
+
 % note: Cousot's unification is implicit by matching meta-variables for types.
 % that is, a polymorphic type is an infinite set of types merged with 
 % the set of types that are accepted over program variables .
