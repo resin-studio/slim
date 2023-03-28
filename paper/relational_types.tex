@@ -1781,7 +1781,43 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{definition}
 
-\begin{definition}[Intermediate subtype unification ]
+\begin{definition}[Rolling down]
+\begin{flalign*}
+  &\boxed{\text{rolldn}\ \alpha\ \tau = \tau}&
+\end{flalign*}
+\[
+\begin{array}{l @{}l}
+  \text{rolldn}\ \alpha\ \tau
+  & {}=
+  \begin{cases}
+    \nu \alpha . \tau 
+    &\text{if } \alpha \in (\text{freevars}\ \tau) 
+    \\
+    \tau &\text{otherwise}
+  \end{cases}
+\end{array}
+\]
+\end{definition}
+
+\begin{definition}[Rolling up]
+\begin{flalign*}
+  &\boxed{\text{rollup}\ \alpha\ \tau = \tau}&
+\end{flalign*}
+\[
+\begin{array}{l @{}l}
+  \text{rollup}\ \alpha\ \tau
+  & {}=
+  \begin{cases}
+    \mu \alpha . \tau 
+    &\text{if } \alpha \in (\text{freevars}\ \tau) 
+    \\
+    \tau &\text{otherwise}
+  \end{cases}
+\end{array}
+\]
+\end{definition}
+
+\begin{definition}[Intermediate subtype unification]
 % note: Cousot's unification is implicit by matching meta-variables for types.
 % that is, a polymorphic type is an infinite set of types merged with 
 % the set of types that are accepted over program variables .
@@ -1796,7 +1832,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \Delta;\Delta' \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
-    \\
+    \\\\
     \Delta;\Delta';\Delta'' \in \llbracket \Omega \vdash \tau_3 \leq \tau_4 \rrbracket^\sharp
   } {
     \Delta \in \llbracket 
@@ -1810,7 +1846,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \Delta;\Delta' \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
-    \\
+    \\\\
     \Delta;\Delta';\Delta'' \in \llbracket \Omega \vdash \tau_3 \leq \tau_4 \rrbracket^\sharp
   } {
     \Delta \in \llbracket 
@@ -1840,7 +1876,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \llbracket \Omega \vdash \tau' \leq \tau \rrbracket^\sharp \subseteq \emptyset
   } {
-    (\Delta, \alpha \mapsto \tau' \blacktriangle (\text{rolldn}\ \alpha\ \tau)) 
+    (\Delta, \alpha \mapsto (\text{rolldn}\ \alpha\ (\tau' \wedge \tau))) 
     \in \llbracket \Omega \vdash \alpha \leq \tau \rrbracket^\sharp
   }
   \\\\
@@ -1864,7 +1900,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \llbracket \Omega \vdash \tau \leq \tau' \rrbracket^\sharp \subseteq \emptyset
   } {
-    (\Delta, \alpha \mapsto \tau' \blacktriangledown (\text{rollup}\ \alpha\ \tau)) 
+    (\Delta, \alpha \mapsto (\text{rollup}\ \alpha\ (\tau' \vee \tau))) 
     \in \llbracket \Omega \vdash \tau \leq \alpha \rrbracket^\sharp
   }
 
