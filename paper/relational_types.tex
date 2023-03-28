@@ -887,9 +887,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Progress of typing)
 \begin{mathpar}
   \inferrule { 
-    \bullet \vdash e : \tau
+    \Gamma \vdash \left< \kappa \cdot \rho \cdot e \right> : \tau
   } {
-    e = v \vee e \hookrightarrow e'
+    (\kappa = \circ \land e = w) \vee 
+    \left< \kappa \cdot \rho \cdot e \right> 
+    \hookrightarrow
+    \varsigma'
   } 
 \end{mathpar}
 \end{theorem}
@@ -897,11 +900,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Preservation of typing)
 \begin{mathpar}
   \inferrule { 
-    \bullet \vdash e : \tau
+    \Gamma \vdash \varsigma : \tau
     \\
-    e \hookrightarrow e'
+    \varsigma \hookrightarrow \varsigma'
   } {
-    \bullet \vdash e' : \tau 
+    \Gamma \vdash \varsigma' : \tau
   } 
 \end{mathpar}
 \end{theorem}
@@ -2279,26 +2282,26 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \]
 % \end{definition}
 
-\section{Evaluation}
-\begin{enumerate}
-  \item experiments 
-  \item adequacy of problem 
-  \item adequacy of solution 
-\end{enumerate}
+% \section{Evaluation}
+% \begin{enumerate}
+%   \item experiments 
+%   \item adequacy of problem 
+%   \item adequacy of solution 
+% \end{enumerate}
 
-\section{Related work}
-\begin{enumerate}
-  \item past work 
-  \item future work 
-\end{enumerate}
+% \section{Related work}
+% \begin{enumerate}
+%   \item past work 
+%   \item future work 
+% \end{enumerate}
 
-\section{Conclusion}
-\begin{enumerate}
-  \item restate context with technical terms 
-  \item restate problem with technical terms 
-  \item restate solution with technical terms 
-  \item restate results 
-\end{enumerate}
+% \section{Conclusion}
+% \begin{enumerate}
+%   \item restate context with technical terms 
+%   \item restate problem with technical terms 
+%   \item restate solution with technical terms 
+%   \item restate results 
+% \end{enumerate}
 
 % \section*{Notes}
 
