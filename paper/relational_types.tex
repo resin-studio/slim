@@ -877,6 +877,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Soundness of type analysis)
 \begin{mathpar}
   \inferrule {} {
+    \alpha\ \llbracket e \rrbracket^\flat \supseteq \llbracket e \rrbracket^\sharp
+    \longleftrightarrow
     \llbracket e \rrbracket^\flat \subseteq \gamma\ \llbracket e \rrbracket^\sharp
   } 
 \end{mathpar}
