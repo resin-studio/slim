@@ -888,12 +888,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Progress of typing)
 \begin{mathpar}
   \inferrule { 
-    \Gamma \vdash \left< \kappa \cdot \rho \cdot e \right> : \tau
+    \bullet \vdash e : \tau
   } {
-    (\kappa = \circ \land e = w) \vee 
-    \left< \kappa \cdot \rho \cdot e \right> 
-    \hookrightarrow
-    \varsigma'
+    (e = v) \vee 
+    e \hookrightarrow e'
   } 
 \end{mathpar}
 \end{theorem}
@@ -902,11 +900,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Preservation of typing)
 \begin{mathpar}
   \inferrule { 
-    \Gamma \vdash \varsigma : \tau
+    \bullet \vdash e : \tau
     \\
-    \varsigma \hookrightarrow \varsigma'
+    e \hookrightarrow e'
   } {
-    \Gamma \vdash \varsigma' : \tau
+    \bullet \vdash e' : \tau
   } 
 \end{mathpar}
 \end{theorem}
@@ -982,207 +980,207 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 
-  
+\begin{figure*}
+\begin{flalign*}
+  &\boxed{e \hookrightarrow e}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+    e \hookrightarrow e' 
+  } {
+    E[e] \hookrightarrow E[e']  
+  }
 
-% \begin{definition}(Operational semantics)
-% \begin{flalign*}
-%   &\boxed{t \hookrightarrow t}&
-% \end{flalign*}
-% \begin{mathpar}
-%   \inferrule { 
-%     e \hookrightarrow e' 
-%   } {
-%     E[e] \hookrightarrow E[e']  
-%   }
+  \inferrule {
+  } {
+    (\sigma\ \widebar{l_i = v_i})/l_j \hookrightarrow v_j
+  } 
 
-%   \inferrule {
-%   } {
-%     (\sigma\ \widebar{l_i = v_i})/l_j \hookrightarrow v_j
-%   } 
+  \inferrule { 
+  } {
+    (\lambda\ \widebar{m \Rightarrow e})\ v 
+    \hookrightarrow 
+    (\text{match } v\ \widebar{m \Rightarrow e})
+  } 
 
-%   \inferrule { 
-%   } {
-%     (\lambda\ \widebar{m \Rightarrow e})\ v 
-%     \hookrightarrow 
-%     (\text{match } v\ \widebar{m \Rightarrow e})
-%   } 
+  \inferrule { 
+  } {
+    \text{let}\ x : \tau = v\ \text{in}\ e 
+    \hookrightarrow 
+    t[x \mapsto v]
+  } 
 
-%   \inferrule { 
-%   } {
-%     \text{let}\ x : \tau = v\ \text{in}\ e 
-%     \hookrightarrow 
-%     t[x \mapsto v]
-%   } 
-
-%   \inferrule { 
-%   } {
-%     \text{fix}\ \lambda [x \Rightarrow e]
-%     \hookrightarrow 
-%     e[x \mapsto \text{fix}\ \lambda [x \Rightarrow e]]
-%   } 
-% \end{mathpar}
-% \end{definition}
-
-% \begin{definition}
-% \begin{flalign*}
-%   &\boxed{\text{match}\ v\ (\widebar{m \Rightarrow t}) = H}&
-% \end{flalign*}
-% \[
-%   \begin{array}{l @{} l}
-%     \text{match}\ v\ ((m \Rightarrow t) :: cs)
-%     &{} =
-%     \begin{cases}
-%       t[H]
-%       &\text{if }
-%       (\text{unify}\ v\ p) = H 
-%       \\
-      
-%       \text{match}\ v\ cs
-%       &\text{otherwise}
-%     \end{cases}
-%   \end{array}
-% \]
-% \end{definition}
-
-% \begin{definition}
-% \begin{flalign*}
-%   &\boxed{\text{unify}\ v\ p = H}&
-% \end{flalign*}
-% \[
-%   \begin{array}{l @{} l}
-%     \text{unify}\ v\ x 
-%     &{} =
-%     \bullet, x \mapsto v
-%     \\
-%     \text{unify}\ ()\ () 
-%     &{} =
-%     \bullet
-%     \\
-%     \text{unify}\ (l \cdot v)\ (l \cdot p) 
-%     &{} =
-%     \text{unify}\ v\ p
-%     \\
-%     \text{unify}\ (\sigma\ \widebar{l = v})\ (\sigma\ \widebar{l = p}) 
-%     &{} =
-%     \text{reduce}\ ;\ \widebar{\text{unify}\ v\ p}
-%   \end{array}
-% \]
-% \end{definition}
-
-% \begin{definition}[Operational structures]
-% \[
-%   \begin{array}{l @{} l}
-%     v 
-%     &{} ::=
-%     \begin{array}[t]{@{} l}
-%       () 
-%       \ |\ 
-%       l \cdot v
-%       \ |\ 
-%       \sigma\ \widebar{l = v}
-%       \ |\ 
-%       \lambda\ \widebar{m \Rightarrow t} 
-%     \end{array}
-%     \\
-%     E 
-%     &{} ::=
-%     []
-%     \ |\ 
-%     l \cdot E 
-%     \ |\ 
-%     \sigma\ \widebar{l = E}
-%     \ |\ 
-%     E/l
-%     \ |\ 
-%     E\ e 
-%     \ |\ 
-%     v\ E
-%     \ |\ 
-%     \text{let } x : \tau = E\ \text{in}\ e 
-%     \ |\ 
-%     \text{fix } E 
-%     \\
-%     H 
-%     &{} ::=
-%     \bullet
-%     \ |\ 
-%     H, x \mapsto v
-%   \end{array}
-% \]
-% \end{definition}
-  
+  \inferrule { 
+  } {
+    \text{fix}\ \lambda [x \Rightarrow e]
+    \hookrightarrow 
+    e[x \mapsto \text{fix}\ \lambda [x \Rightarrow e]]
+  } 
+\end{mathpar}
+\caption{Operational semantics}
+\end{figure*}
 
 \begin{figure*}
 \begin{flalign*}
-  &\boxed{\varsigma \hookrightarrow \varsigma}&
+  &\boxed{\text{match}\ v\ (\widebar{m \Rightarrow t}) = H}&
 \end{flalign*}
-\begin{mathpar}
-
-  \inferrule { 
-    \rho\ x' = \left< \rho', (\sigma\ \widebar{l_i = _i}) \right> 
-  } {
-    \left<\kappa, \rho, x' / l_j \right> 
-    \hookrightarrow 
-    \left< \kappa, \rho', x_j \right>
-  } 
-
-  \inferrule { 
-    \rho\ x_1 = \left< \rho_1, \lambda\ \widebar{m \Rightarrow e} \right> 
-    \\
-    \rho\ x_2 = \left< \rho_2, w \right>
-    \\
-    \text{match}\ \rho_2\ w\ \rho_1\ (\widebar{m \Rightarrow e}) = \left<\rho', e'\right> 
-  } {
-    \left< \kappa, \rho, x_1\ x_2 \right> 
-    \hookrightarrow 
-    \left< \kappa, \rho', e' \right>
-  } 
-
-  \inferrule { 
-    \rho\ x = \lambda[x' \Rightarrow e]
-  } {
-    \left< 
-      \left< \rho_\kappa, x_\kappa, e_\kappa \right> :: \kappa, 
-      \rho, 
-      \text{fix}\ x
-    \right> 
-    \hookrightarrow 
-    \left< \kappa, (\rho,x_\kappa \mapsto \text{fix}\ x), e'[x' \mapsto x_\kappa]\right>
-  } 
-  
-  \inferrule { 
-  } {
-    \left< \kappa, \rho, \text{let}\ x : \tau = e_1\ \text{in}\ e_2 \right> 
-    \hookrightarrow 
-    \left< \left<\rho, x, e_2\right> :: \kappa, \rho, e_1 \right>
-  } 
-
-  \inferrule { 
-  } {
-    \left<
-      \left<\rho_\kappa, x_\kappa, e\right> :: \kappa,
-      \rho, 
-      x 
-    \right> 
-    \hookrightarrow 
-    \left<\kappa, (\rho_\kappa, x_\kappa \mapsto (\rho\ x)), e \right>
-  } 
-
-  \inferrule { 
-    \text{contify}\ e = (x, e', e'')
-  } {
-    \left<\kappa, \rho, e\right> 
-    \hookrightarrow 
-    \left<
-      \left< \rho, x, e'\right> :: \kappa,
-      \rho,
-      e''
-    \right>
-  } 
-
-\end{mathpar}
-\caption{Small-step semantics}
+\[
+  \begin{array}{l @{} l}
+    \text{match}\ v\ ((m \Rightarrow t) :: cs)
+    &{} =
+    \begin{cases}
+      t[H]
+      &\text{if }
+      (\text{unify}\ v\ p) = H 
+      \\
+      
+      \text{match}\ v\ cs
+      &\text{otherwise}
+    \end{cases}
+  \end{array}
+\]
 \end{figure*}
+
+\begin{figure*}
+\begin{flalign*}
+  &\boxed{\text{unify}\ v\ p = H}&
+\end{flalign*}
+\[
+  \begin{array}{l @{} l}
+    \text{unify}\ v\ x 
+    &{} =
+    \bullet, x \mapsto v
+    \\
+    \text{unify}\ ()\ () 
+    &{} =
+    \bullet
+    \\
+    \text{unify}\ (l \cdot v)\ (l \cdot p) 
+    &{} =
+    \text{unify}\ v\ p
+    \\
+    \text{unify}\ (\sigma\ \widebar{l = v})\ (\sigma\ \widebar{l = p}) 
+    &{} =
+    \text{reduce}\ ;\ \widebar{\text{unify}\ v\ p}
+  \end{array}
+\]
+\end{figure*}
+
+\begin{figure*}
+\[
+  \begin{array}{l @{} l}
+    v 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      () 
+      \ |\ 
+      l \cdot v
+      \ |\ 
+      \sigma\ \widebar{l = v}
+      \ |\ 
+      \lambda\ \widebar{m \Rightarrow t} 
+    \end{array}
+    \\
+    E 
+    &{} ::=
+    []
+    \ |\ 
+    l \cdot E 
+    \ |\ 
+    \sigma\ \widebar{l = E}
+    \ |\ 
+    E/l
+    \ |\ 
+    E\ e 
+    \ |\ 
+    v\ E
+    \ |\ 
+    \text{let } x : \tau = E\ \text{in}\ e 
+    \ |\ 
+    \text{fix } E 
+    \\
+    H 
+    &{} ::=
+    \bullet
+    \ |\ 
+    H, x \mapsto v
+  \end{array}
+\]
+\caption{Operational structures}
+\end{figure*}
+  
+
+% \begin{figure*}
+% \begin{flalign*}
+%   &\boxed{\varsigma \hookrightarrow \varsigma}&
+% \end{flalign*}
+% \begin{mathpar}
+
+%   \inferrule { 
+%     \rho\ x' = \left< \rho', (\sigma\ \widebar{l_i = _i}) \right> 
+%   } {
+%     \left<\kappa, \rho, x' / l_j \right> 
+%     \hookrightarrow 
+%     \left< \kappa, \rho', x_j \right>
+%   } 
+
+%   \inferrule { 
+%     \rho\ x_1 = \left< \rho_1, \lambda\ \widebar{m \Rightarrow e} \right> 
+%     \\
+%     \rho\ x_2 = \left< \rho_2, w \right>
+%     \\
+%     \text{match}\ \rho_2\ w\ \rho_1\ (\widebar{m \Rightarrow e}) = \left<\rho', e'\right> 
+%   } {
+%     \left< \kappa, \rho, x_1\ x_2 \right> 
+%     \hookrightarrow 
+%     \left< \kappa, \rho', e' \right>
+%   } 
+
+%   \inferrule { 
+%     \rho\ x = \lambda[x' \Rightarrow e]
+%   } {
+%     \left< 
+%       \left< \rho_\kappa, x_\kappa, e_\kappa \right> :: \kappa, 
+%       \rho, 
+%       \text{fix}\ x
+%     \right> 
+%     \hookrightarrow 
+%     \left< \kappa, (\rho,x_\kappa \mapsto \text{fix}\ x), e'[x' \mapsto x_\kappa]\right>
+%   } 
+  
+%   \inferrule { 
+%   } {
+%     \left< \kappa, \rho, \text{let}\ x : \tau = e_1\ \text{in}\ e_2 \right> 
+%     \hookrightarrow 
+%     \left< \left<\rho, x, e_2\right> :: \kappa, \rho, e_1 \right>
+%   } 
+
+%   \inferrule { 
+%   } {
+%     \left<
+%       \left<\rho_\kappa, x_\kappa, e\right> :: \kappa,
+%       \rho, 
+%       x 
+%     \right> 
+%     \hookrightarrow 
+%     \left<\kappa, (\rho_\kappa, x_\kappa \mapsto (\rho\ x)), e \right>
+%   } 
+
+%   \inferrule { 
+%     \text{contify}\ e = (x, e', e'')
+%   } {
+%     \left<\kappa, \rho, e\right> 
+%     \hookrightarrow 
+%     \left<
+%       \left< \rho, x, e'\right> :: \kappa,
+%       \rho,
+%       e''
+%     \right>
+%   } 
+
+% \end{mathpar}
+% \caption{Small-step semantics}
+% \end{figure*}
 
 
 % \begin{figure*}
@@ -1222,27 +1220,48 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \caption{Contification}
 % \end{figure*}
 
-
 \begin{figure*}
 \begin{flalign*}
-  &\boxed{\varsigma \hookrightarrow^* \varsigma}&
+  &\boxed{e \hookrightarrow^* e}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
   } {
-    \varsigma \hookrightarrow^* \varsigma
+    e \hookrightarrow^* e
   } 
 
   \inferrule { 
-    \varsigma \hookrightarrow \varsigma'
+    e \hookrightarrow e'
     \\
-    \varsigma' \hookrightarrow^* \varsigma''
+    e' \hookrightarrow^* e''
   } {
-    \varsigma \hookrightarrow^* \varsigma''
+    e \hookrightarrow^* e''
   } 
 \end{mathpar}
 \caption{Multi-step semantics}
 \end{figure*}
+
+
+% \begin{figure*}
+% \begin{flalign*}
+%   &\boxed{\varsigma \hookrightarrow^* \varsigma}&
+% \end{flalign*}
+% \begin{mathpar}
+%   \inferrule { 
+%   } {
+%     \varsigma \hookrightarrow^* \varsigma
+%   } 
+
+%   \inferrule { 
+%     \varsigma \hookrightarrow \varsigma'
+%     \\
+%     \varsigma' \hookrightarrow^* \varsigma''
+%   } {
+%     \varsigma \hookrightarrow^* \varsigma''
+%   } 
+% \end{mathpar}
+% \caption{Multi-step semantics}
+% \end{figure*}
 
 \begin{figure}
 \[
@@ -1289,19 +1308,35 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{figure*}
 \begin{flalign*}
-  &\boxed{ \varsigma \in \llbracket e \rrbracket^\flat}&
+  &\boxed{ e \in \llbracket e \rrbracket^\flat}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
-    \left<\circ, \rho, e \right> 
+    e
     \hookrightarrow^* 
-    \varsigma
+    e'
   } {
-    \varsigma \in \llbracket e \rrbracket^\flat
+    e' \in \llbracket e \rrbracket^\flat
   } 
 \end{mathpar}
 \caption{Collecting semantics}
 \end{figure*}
+
+% \begin{figure*}
+% \begin{flalign*}
+%   &\boxed{ \varsigma \in \llbracket e \rrbracket^\flat}&
+% \end{flalign*}
+% \begin{mathpar}
+%   \inferrule { 
+%     \left<\circ, \rho, e \right> 
+%     \hookrightarrow^* 
+%     \varsigma
+%   } {
+%     \varsigma \in \llbracket e \rrbracket^\flat
+%   } 
+% \end{mathpar}
+% \caption{Collecting semantics}
+% \end{figure*}
 
 \begin{figure*}
 \begin{flalign*}
@@ -1309,9 +1344,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
-    \forall \left< \Gamma \cdot \tau \right> \in T\ .\ \Gamma \vdash \varsigma : \tau
+    \forall\ \tau \in T\ .\ \bullet \vdash e : \tau
   } {
-    \varsigma \in \gamma\ T 
+    e \in \gamma\ T 
   } 
 \end{mathpar}
 \caption{Concretization}
@@ -1319,43 +1354,43 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{figure*}
 \begin{flalign*}
-  &\boxed{\left<\Gamma \cdot \tau \right> \in \alpha\ P}&
+  &\boxed{\tau \in \alpha\ P}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
-    \exists\ \varsigma \in P\ .\ \Gamma \vdash \varsigma : \tau
+    \exists\ e \in P\ .\ \bullet \vdash e : \tau
   } {
-    \left< \Gamma \cdot \tau \right> \in \alpha\ P 
+    \tau \in \alpha\ P 
   } 
 \end{mathpar}
 \caption{Abstraction}
 \end{figure*}
 
-
-\begin{figure*}
 % note: Cousot defines concretization by calling runtime semantics
 % this is a bit odd as it could be non-terminating
 % he seems to have some magical way to decide termination
 % typing rules don't require calling runtime semantics,
 % they are purely driven by the ast structure.
-\begin{flalign*}
-  &\boxed{\Gamma \vdash \varsigma : \tau}&
-\end{flalign*}
-\begin{mathpar}
-  \inferrule { 
-    \Gamma \vdash \rho
-    \\
-    \Gamma \vdash e : \tau
-    \\
-    \kappa \vdash \tau \triangleright \tau' 
-  } {
-    \Gamma \vdash 
-      \left< \kappa, \rho, e \right> 
-    : \tau'
-  } 
-\end{mathpar}
-\caption{State typing}
-\end{figure*}
+
+% \begin{figure*}
+% \begin{flalign*}
+%   &\boxed{\Gamma \vdash \varsigma : \tau}&
+% \end{flalign*}
+% \begin{mathpar}
+%   \inferrule { 
+%     \Gamma \vdash \rho
+%     \\
+%     \Gamma \vdash e : \tau
+%     \\
+%     \kappa \vdash \tau \triangleright \tau' 
+%   } {
+%     \Gamma \vdash 
+%       \left< \kappa, \rho, e \right> 
+%     : \tau'
+%   } 
+% \end{mathpar}
+% \caption{State typing}
+% \end{figure*}
 
 \begin{figure*}
 \begin{flalign*}
