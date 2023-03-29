@@ -920,21 +920,21 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \begin{array}[t]{@{} l}
       () 
       \ |\ 
-      x
+      l \cdot e 
       \ |\ 
-      l \cdot c 
+      \sigma\ \widebar{l = e}
       \ |\ 
-      \sigma\ \widebar{l = c}
+      \lambda\ \widebar{m \Rightarrow e} 
       \ |\ 
-      \lambda\ \widebar{m \Rightarrow c} 
+      e/l
       \ |\ 
-      c/l
+      e\ e 
       \ |\ 
-      c\ c 
+      \text{fix}\ e
       \ |\ 
       \text{let}\ x : \tau = e\ \text{in}\ e
       \ |\ 
-      \text{fix}\ c
+      x
     \end{array}
     \\
     m 
@@ -1117,31 +1117,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   &\boxed{\varsigma \hookrightarrow \varsigma}&
 \end{flalign*}
 \begin{mathpar}
-  \inferrule { 
-  } {
-    \left<\kappa, \rho, x \mapsto e\right> 
-    \hookrightarrow 
-    \left<
-      \left< \rho, x, x\right> :: \kappa,
-      \rho,
-      e
-    \right>
-  } 
 
   \inferrule { 
-    \text{contify}\ e = (x_\kappa, e_\kappa, e')
-  } {
-    \left<\kappa, \rho, e\right> 
-    \hookrightarrow 
-    \left<
-      \left< \rho, x_\kappa, e_\kappa\right> :: \kappa,
-      \rho,
-      e'
-    \right>
-  } 
-
-  \inferrule { 
-    \rho\ x' = \left< \rho', (\sigma\ \widebar{l_i = x_i}) \right> 
+    \rho\ x' = \left< \rho', (\sigma\ \widebar{l_i = _i}) \right> 
   } {
     \left<\kappa, \rho, x' / l_j \right> 
     \hookrightarrow 
@@ -1189,9 +1167,63 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \hookrightarrow 
     \left<\kappa, (\rho_\kappa, x_\kappa \mapsto (\rho\ x)), e \right>
   } 
+
+  \inferrule { 
+    \text{contify}\ e = (x, e', e'')
+  } {
+    \left<\kappa, \rho, e\right> 
+    \hookrightarrow 
+    \left<
+      \left< \rho, x, e'\right> :: \kappa,
+      \rho,
+      e''
+    \right>
+  } 
+
+% TODO: use values instead of abstract values.
+% TODO: add rule to substitute when value is seen
 \end{mathpar}
 \caption{Small-step semantics}
 \end{figure*}
+
+
+% \begin{figure*}
+% \begin{flalign*}
+%   &\boxed{\text{contify}\ e = (x, e, c)}&
+% \end{flalign*}
+% \[
+% \begin{array}{l @{} l}
+%   % \text{contify} l \cdot c 
+%   % &{} =
+%   % c
+%   % \\
+%   % \text{contify} l \cdot c 
+%   % &{} =
+%   % c
+
+%       % () 
+%       % \ |\ 
+%       % l \cdot e 
+%       % \ |\ 
+%       % \sigma\ \widebar{l = e}
+%       % \ |\ 
+%       % \lambda\ \widebar{m \Rightarrow e} 
+%       % \ |\ 
+%       % e/l
+%       % \ |\ 
+%       % e\ e 
+%       % \ |\ 
+%       % \text{fix}\ e
+%       % \ |\ 
+%       % \text{let}\ x : \tau = e\ \text{in}\ e
+%       % \ |\ 
+%       % x
+% \end{array}
+% \]
+
+% \caption{Contification}
+% \end{figure*}
+
 
 \begin{figure*}
 \begin{flalign*}
