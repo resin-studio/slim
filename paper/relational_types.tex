@@ -978,6 +978,92 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Syntax}
 \end{figure*}
 
+\begin{figure*}
+\begin{flalign*}
+  &\boxed{ e \in \llbracket e \rrbracket^\flat}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+    e
+    \hookrightarrow^* 
+    e'
+  } {
+    e' \in \llbracket e \rrbracket^\flat
+  } 
+\end{mathpar}
+\caption{Collecting semantics}
+\end{figure*}
+
+% \begin{figure*}
+% \begin{flalign*}
+%   &\boxed{ \varsigma \in \llbracket e \rrbracket^\flat}&
+% \end{flalign*}
+% \begin{mathpar}
+%   \inferrule { 
+%     \left<\circ, \rho, e \right> 
+%     \hookrightarrow^* 
+%     \varsigma
+%   } {
+%     \varsigma \in \llbracket e \rrbracket^\flat
+%   } 
+% \end{mathpar}
+% \caption{Collecting semantics}
+% \end{figure*}
+
+\begin{figure*}
+\begin{flalign*}
+  &\boxed{\varsigma \in \gamma\ T}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+    \forall\ \tau \in T\ .\ \bullet \vdash e : \tau
+  } {
+    e \in \gamma\ T 
+  } 
+\end{mathpar}
+\caption{Concretization}
+\end{figure*}
+
+\begin{figure*}
+\begin{flalign*}
+  &\boxed{\tau \in \alpha\ P}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+    \exists\ e \in P\ .\ \bullet \vdash e : \tau
+  } {
+    \tau \in \alpha\ P 
+  } 
+\end{mathpar}
+\caption{Abstraction}
+\end{figure*}
+
+
+\begin{figure*}
+% TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
+% abstract out widening/narrowing operators in unification
+% we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
+% i.e. we don't compare current to previous, we simply look at structure of input.
+% the structure of input decreases as types widen/narrow
+\begin{flalign*}
+  &\boxed{\tau \in \llbracket e \rrbracket^\sharp}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+    \Delta \cdot \bullet \Vdash e : \tau \leq \top
+  } {
+    (\text{pack}\ \Delta\ \tau) \in \llbracket e \rrbracket^\sharp
+  }
+\end{mathpar}
+\caption{Type analysis}
+\end{figure*}
+
+% note: Cousot defines concretization by calling runtime semantics
+% this is a bit odd as it could be non-terminating
+% he seems to have some magical way to decide termination
+% typing rules don't require calling runtime semantics,
+% they are purely driven by the ast structure.
+
 
 
 \begin{figure*}
@@ -1263,114 +1349,49 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \caption{Multi-step semantics}
 % \end{figure*}
 
-\begin{figure}
-\[
-  \begin{array}{l @{} l}
-    \kappa 
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      \left< \rho, x, e \right> :: \kappa 
-      \ |\ 
-      \circ
-    \end{array}
-    \\
-    \widebar{\left< \rho, x, e \right>}
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      \left< \rho, x, e \right> ::  \widebar{\left< \rho, x, e \right>}
-      \ |\ 
-      \circ
-    \end{array}
-    \\
-    \rho 
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      \bullet 
-      \ |\ 
-      \rho, x \mapsto \left< \rho, w \right> 
-    \end{array}
-    \\
-    w 
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      () 
-      \ |\ 
-      l \cdot x 
-      \ |\ 
-      \sigma\ \widebar{l = x}
-      \ |\ 
-      \lambda\ \widebar{m \Rightarrow e} 
-    \end{array}
-  \end{array}
-\]
-\caption{Internal state}
-\end{figure}
-
-\begin{figure*}
-\begin{flalign*}
-  &\boxed{ e \in \llbracket e \rrbracket^\flat}&
-\end{flalign*}
-\begin{mathpar}
-  \inferrule { 
-    e
-    \hookrightarrow^* 
-    e'
-  } {
-    e' \in \llbracket e \rrbracket^\flat
-  } 
-\end{mathpar}
-\caption{Collecting semantics}
-\end{figure*}
-
 % \begin{figure*}
-% \begin{flalign*}
-%   &\boxed{ \varsigma \in \llbracket e \rrbracket^\flat}&
-% \end{flalign*}
-% \begin{mathpar}
-%   \inferrule { 
-%     \left<\circ, \rho, e \right> 
-%     \hookrightarrow^* 
-%     \varsigma
-%   } {
-%     \varsigma \in \llbracket e \rrbracket^\flat
-%   } 
-% \end{mathpar}
-% \caption{Collecting semantics}
+% \[
+%   \begin{array}{l @{} l}
+%     \kappa 
+%     &{} ::=
+%     \begin{array}[t]{@{} l}
+%       \left< \rho, x, e \right> :: \kappa 
+%       \ |\ 
+%       \circ
+%     \end{array}
+%     \\
+%     \widebar{\left< \rho, x, e \right>}
+%     &{} ::=
+%     \begin{array}[t]{@{} l}
+%       \left< \rho, x, e \right> ::  \widebar{\left< \rho, x, e \right>}
+%       \ |\ 
+%       \circ
+%     \end{array}
+%     \\
+%     \rho 
+%     &{} ::=
+%     \begin{array}[t]{@{} l}
+%       \bullet 
+%       \ |\ 
+%       \rho, x \mapsto \left< \rho, w \right> 
+%     \end{array}
+%     \\
+%     w 
+%     &{} ::=
+%     \begin{array}[t]{@{} l}
+%       () 
+%       \ |\ 
+%       l \cdot x 
+%       \ |\ 
+%       \sigma\ \widebar{l = x}
+%       \ |\ 
+%       \lambda\ \widebar{m \Rightarrow e} 
+%     \end{array}
+%   \end{array}
+% \]
+% \caption{Internal state}
 % \end{figure*}
 
-\begin{figure*}
-\begin{flalign*}
-  &\boxed{\varsigma \in \gamma\ T}&
-\end{flalign*}
-\begin{mathpar}
-  \inferrule { 
-    \forall\ \tau \in T\ .\ \bullet \vdash e : \tau
-  } {
-    e \in \gamma\ T 
-  } 
-\end{mathpar}
-\caption{Concretization}
-\end{figure*}
-
-\begin{figure*}
-\begin{flalign*}
-  &\boxed{\tau \in \alpha\ P}&
-\end{flalign*}
-\begin{mathpar}
-  \inferrule { 
-    \exists\ e \in P\ .\ \bullet \vdash e : \tau
-  } {
-    \tau \in \alpha\ P 
-  } 
-\end{mathpar}
-\caption{Abstraction}
-\end{figure*}
-
-% note: Cousot defines concretization by calling runtime semantics
-% this is a bit odd as it could be non-terminating
-% he seems to have some magical way to decide termination
-% typing rules don't require calling runtime semantics,
-% they are purely driven by the ast structure.
 
 % \begin{figure*}
 % \begin{flalign*}
@@ -1538,6 +1559,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 \begin{figure*}
+\begin{flalign*}
+  &\boxed{\Delta \vdash \tau \leq \tau}&
+\end{flalign*}
+
 \begin{mathpar}
   \inferrule {
     \Delta \vdash \tau_1
@@ -1711,25 +1736,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Subtyping}
 \end{figure*}
 
-
-\begin{figure*}
-% TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
-% abstract out widening/narrowing operators in unification
-% we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
-% i.e. we don't compare current to previous, we simply look at structure of input.
-% the structure of input decreases as types widen/narrow
-\begin{flalign*}
-  &\boxed{\left<\Gamma \cdot \tau\right> \in \llbracket e \rrbracket^\sharp}&
-\end{flalign*}
-\begin{mathpar}
-  \inferrule { 
-    \Delta \cdot \Gamma \Vdash e : \tau \leq \top
-  } {
-    \left<\Gamma \cdot (\text{pack}\ \Delta\ \tau)\right> \in \llbracket e \rrbracket^\sharp
-  }
-\end{mathpar}
-\caption{Type analysis}
-\end{figure*}
 
 \begin{figure*}
 % TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
