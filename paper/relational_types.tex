@@ -884,6 +884,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \end{theorem}
 
+
 \begin{theorem}(Progress of typing)
 \begin{mathpar}
   \inferrule { 
@@ -896,6 +897,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 \end{mathpar}
 \end{theorem}
+
 
 \begin{theorem}(Preservation of typing)
 \begin{mathpar}
@@ -1549,8 +1551,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \leq \tau_4
   }
 
-  \\\\
-
   \inferrule { 
     \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
     \leq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
@@ -1955,7 +1955,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \tau_1
       \leq
       (\forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \leq \tau_4)
-    \rrbracket^\sharp
   }
 \end{mathpar}
 \caption{Subtype unification: part 1}
@@ -1963,52 +1962,45 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{figure*}
 \begin{flalign*}
-  &\boxed{\Delta \in \llbracket \Omega \vdash \tau \leq \tau \rrbracket^\sharp}&
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \leq \tau}&
 \end{flalign*}
+
 \begin{mathpar}
-
   \inferrule {
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \text{unit} \leq \text{unit}
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \text{unit} \leq \text{unit}
   }
 
   \inferrule {
-    \Delta \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2
   } {
-    \Delta \in \llbracket \Omega \vdash l*\tau_1 \leq l*\tau_2 \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash l*\tau_1 \leq l*\tau_2
   }
 
   \inferrule {
-    \Delta \in \llbracket \Omega \vdash \tau_1 \leq \tau_2 \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2
   } {
-    \Delta \in \llbracket \Omega \vdash l:\tau_1 \leq l:\tau_2 \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash l:\tau_1 \leq l:\tau_2
   }
 
   \inferrule {
-    \Delta \in \llbracket \Omega \vdash \tau_3 \leq \tau_1 \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_3 \leq \tau_1
     \\
-    \Delta;\Delta' \in \llbracket \Omega \vdash \tau_2 \leq \tau_4 \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_2 \leq \tau_4
   } {
-    \Delta;\Delta' \in \llbracket 
-      \Omega \vdash \tau_1\rightarrow\tau_2 \leq \tau_3\rightarrow\tau_4	
-    \rrbracket^\sharp
+    \Delta;\Delta' \cdot 
+      \Omega \Vdash \tau_1\rightarrow\tau_2 \leq \tau_3\rightarrow\tau_4	
   }
 
   \inferrule {
     \text{wellfounded}\ \alpha_2\ \tau_2
     \\
-    \Delta \in \llbracket 
-      \Omega \vdash 
+    \Delta \cdot \Omega \Vdash 
       \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] % by induction hypothesis
       \leq 
       \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
-    \rrbracket^\sharp
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \mu \alpha_1 . \tau_1 \leq \mu \alpha_2 . \tau_2
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \mu \alpha_1 . \tau_1 \leq \mu \alpha_2 . \tau_2
   }
 
   \inferrule {
@@ -2016,13 +2008,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{complex}\ \tau_1 = k 
     \\
-    \Delta \in \llbracket 
-      \Omega \vdash (\Omega\ k) \leq \mu \alpha . \tau_2
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash (\Omega\ k) \leq \mu \alpha . \tau_2
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \mu \alpha . \tau_2
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \mu \alpha . \tau_2
   }
 
   \inferrule {
@@ -2030,119 +2018,75 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{complex}\ \tau_1 \neq k 
     \\
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_2[\alpha \mapsto \mu \alpha . \tau_2]
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2[\alpha \mapsto \mu \alpha . \tau_2]
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \mu \alpha . \tau_2
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \mu \alpha . \tau_2
   }
 
   \inferrule {
-    \Delta \in \llbracket 
-      \Omega \vdash 
+    \Delta \cdot \Omega \Vdash 
         \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
         \leq 
         \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
         % by co-induction hypothesis
-    \rrbracket^\sharp
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \nu \alpha_1 . \tau_1 \leq \nu \alpha_2 . \tau_2	
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \nu \alpha_1 . \tau_1 \leq \nu \alpha_2 . \tau_2	
   }
 
   \inferrule {
     \text{rewrite}\ \nu \alpha . \tau_1 = \tau_1'
     \\
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1' \leq \tau_2
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1' \leq \tau_2
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \nu \alpha . \tau_1 \leq \tau_2
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \leq \tau_2
   }
 
   \inferrule {
     \text{rewrite}\ \nu \alpha . \tau_2 = \tau_2'
     \\
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_2'
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2'
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq  \nu \alpha . \tau_2
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq  \nu \alpha . \tau_2
   }
 
   \inferrule {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_3
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_3
     \\
-    \Delta;\Delta' \in \llbracket 
-      \Omega \vdash \tau_2 \leq \tau_3
-    \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_2 \leq \tau_3
   } {
-    \Delta;\Delta' \in \llbracket 
-      \Omega \vdash \tau_1 \vee \tau_2 \leq \tau_3
-    \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \vee \tau_2 \leq \tau_3
   }
 
   \inferrule {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_2
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_2 \vee \tau_3
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2 \vee \tau_3
   }
 
   \inferrule {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_3
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_3
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_2 \vee \tau_3
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2 \vee \tau_3
   }
 
   \inferrule {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_2
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2
     \\
-    \Delta;\Delta' \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_3
-    \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \leq \tau_3
   } {
-    \Delta;\Delta' \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_2 \wedge \tau_3
-    \rrbracket^\sharp
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \leq \tau_2 \wedge \tau_3
   }
 
   \inferrule {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \leq \tau_3
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_3
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \wedge \tau_2 \leq \tau_3
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \wedge \tau_2 \leq \tau_3
   }
 
   \inferrule {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_2 \leq \tau_3
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_2 \leq \tau_3
   } {
-    \Delta \in \llbracket 
-      \Omega \vdash \tau_1 \wedge \tau_2 \leq \tau_3
-    \rrbracket^\sharp
+    \Delta \cdot \Omega \Vdash \tau_1 \wedge \tau_2 \leq \tau_3
   }
 \end{mathpar}
 \caption{Subtype unification: part 2}
