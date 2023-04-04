@@ -186,6 +186,10 @@ The advantage of the predicate subtyping approach is that users can avoid the ef
 Additionally, they can reuse the same constructions across a hierarchy of types, rather than constructing isomorphisms. 
 In our relational type system, we take an approach similar to predicate subtyping, however, our language design does not require
 a separate language of predicates. Instead, we reuse the notion of subtyping directly in place of a separate predicate language.
+Unlike, Liquid Haskell, our development does not rely on SMT solvers. In some ways this may be a limitation of our approach, 
+as SMT solvers may provide results very fast for certain problems due to their integration with SAT's resolution. 
+On the other hand, our system is not limited to the theories available for SMT. Finding a way to get the best of both may be 
+a future research direction.
 
 \begin{enumerate}
   \item Dependent types 
