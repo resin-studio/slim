@@ -170,13 +170,13 @@ including expressive subtypes, dynamic types, and type reconstruction.
 
 \noindent
 \textbf{Expressive types}. There are many existing type systems for stating properties beyond 
-merely the interface of objects. Perhaps the most well known kind of expressive type systems are dependent type systems, 
-seen in systems Twelf, ATS (Xi et al), Coq, Lean, and others. By allowing types to depend on terms, 
-these systems enable the construction of terms that act as proofs of properties described in types. 
+merely the interface of objects. \textit{Dependent types} are probably the best known form of expressive types. 
+Systems with dependent types include Twelf\cite[?]{}, ATS (Xi et al), Coq, Lean, and others. By allowing types to depend on terms, 
+these systems enable the construction of terms that act as proofs of properties described by types. 
 That is, function abstraction corresponds to implication introduction, function application corresponds to modus ponens, and 
 datatype constructors correspond to introduction/elimination rules of primitive propositions.
-Predicate subtyping is an alternative approach, as seen in Liquid types and PVS, 
-where predicates can refine types to a subtype that accepts a subset of the original set of terms.
+\textit{Predicate subtyping} is an alternative approach, as seen in Liquid types and PVS, 
+where a predicate can refine a type to a subtype that accepts a subset of the original set of terms.
 In contrast to dependent type systems, 
 the inhabitant of a predicate subtype is a witness to the existential interpretation of the predicate, 
 rather than a composition of rules that construct the proposition. 
@@ -228,11 +228,24 @@ making type checking more efficient.
 \noindent
 \textbf{Descriptive types}. We define \textit{descriptive types} as 
 type systems that do not prescribe the types of term constructions, but instead allow  
-term constructions to belong to any type that accurately describes them.
-\begin{enumerate}
-  \item Gradual types 
-  \item set-theoretic types 
-\end{enumerate}
+term constructions to belong to any type that accurately describes them. 
+Generally speaking, dynamic types are the most precise description, however,
+as their name suggests, that description can only be inferred dynamically (at runtime).
+\textit{Gradual types} are a set of design principles for controlling which parts of a program
+should be enforced statically and which parts should be handled dynamically. 
+This allows users to choose between tradeoffs of precise/dynamic errors or  
+imprecise/static errors depending on their particular situations.
+
+\textit{Set-theoretic types} offer ways to describe programs statically 
+with union and intersection type combinators. 
+In contrast to refinement types, where term constructors are prescribed a top type,
+there is no prescribed upper bound on the set that term may belong to. The set that describes
+a term can be widened with union, or type expected by a parameter may be narrowed with intersection. 
+
+In our relational type system, we take a set-theoretic approach and combine it with type inference
+resulting in a technique we call \textit{type adjustment} that automatically widens and narrows types
+with the goal of increasing precision of the type reconstructions. This increased precision naturally
+enables inferring expressive types as well.
 
 \section{Overview}
 
