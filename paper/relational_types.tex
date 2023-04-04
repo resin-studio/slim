@@ -186,22 +186,41 @@ The advantage of the predicate subtyping approach is that users can avoid the ef
 Additionally, they can reuse the same constructions across a hierarchy of types, rather than constructing isomorphisms. 
 In our relational type system, we take an approach similar to predicate subtyping, however, our language design does not require
 a separate language of predicates. Instead, we reuse the notion of subtyping directly in place of a separate predicate language.
-Unlike, Liquid Haskell, our development does not rely on SMT solvers. In some ways this may be a limitation of our approach, 
+By reusing the notion of subtyping our relational type system is enable to infer
+properties that describe the program. By contrast, the liquid type system 
+is a form of refinement type system where simple types can be inferred but
+subtypes must be specified.
+Unlike liquid types, our development does not rely on SMT solvers. In some ways this may be a limitation of our approach, 
 as SMT solvers may provide results very fast for certain problems due to their integration with SAT's resolution. 
 On the other hand, our system is not limited to the theories available for SMT. Finding a way to get the best of both may be 
 a future research direction.
-
-\begin{enumerate}
-  \item Dependent types 
-  \item Predicate types
-\end{enumerate}
+\newline
 
 \noindent
-\textbf{Type reconstruction}
-\begin{enumerate}
-  \item bidirectional typing 
-  \item Hindley-Milner type inference 
-\end{enumerate}
+\textbf{Type reconstruction}.
+Hindley-Milner type inference \cite[?]{} is the standard technique for complete type reconstruction employed
+by many systems in the ML-family. The technique can reconstruct the types of parameters 
+and terms by constructing constraints over types and solving for type variables. 
+The constraints are constructed bottom up. Some systems solve the constraints on the fly  
+as they are generated, while other systems separate constraint generation and constraint
+solving into two separate phases. 
+While Hindley-Milner is an elegant and complete technique for type reconstruction, it requires
+restrictions in the expressivity of the type system and programming language.
+Refinement type systems \cite[?]{} (including Liquid types) are one compromise where users are afforded
+The convenience of Hindley-Milner type inference, but may also introduce subtyping refinement
+with some additional costs of annotation.
+Another approach to incomplete type reconstruction is \textit{bidirectional typing} \cite[?]{}.
+In bidirectional typing, the goal is to reconstruct types in a language that allows general subtyping 
+and impredicative polymorphism. Bidirectional typing requires type annotations, from which it can 
+propagate expected type information down, such that errors can be detected locally. 
+In other areas where annotations are not required it can partially
+reconstruct types by propagating type information up. \text{roundtrip typing} \cite[?]{} is an extension of 
+bidirectional typing that enables program synthesis guided by liquid types. 
+Our relational type system extends both Hindley-Milner and bidirectional typing, 
+such that precise and expressive types may be inferred and errors may be detected locally
+without rigid requirements on where annotations must be placed. 
+\newline
+
 
 \noindent
 \textbf{Descriptive types}. We define \textit{descriptive types} as 
