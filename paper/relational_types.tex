@@ -184,9 +184,8 @@ This places a greater burden of proof to be automated by the type system (as in 
 Assuming the predicates are decidable, the witnesses could be viewed as a very simple form of proof.
 The advantage of the predicate subtyping approach is that users can avoid the effort of constructing proofs that are computationally irrelevant.
 Additionally, they can reuse the same constructions across a hierarchy of types, rather than constructing isomorphisms. 
-
-
-
+In our relational type system, we take an approach similar to predicate subtyping, however, our language design does not require
+a separate language of predicates. Instead, we reuse the notion of subtyping directly in place of a separate predicate language.
 
 \begin{enumerate}
   \item Dependent types 
