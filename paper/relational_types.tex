@@ -191,9 +191,10 @@ properties that describe the program. By contrast, the liquid type system
 is a form of refinement type system where simple types can be inferred but
 subtypes must be specified.
 Unlike liquid types, our development does not rely on SMT solvers. In some ways this may be a limitation of our approach, 
-as SMT solvers may provide results very fast for certain problems due to their integration with SAT's resolution. 
+as SMT solvers may provide results very fast for certain problems due to its search space pruning based on SAT's resolution refutation. 
 On the other hand, our system is not limited to the theories available for SMT. Finding a way to get the best of both may be 
-a future research direction.
+a future research direction. Additionally, our system of type reconstruction offers another mechanism for pruning the search  
+space, which may compensate for lack of resolution refutation.
 \newline
 
 \noindent
@@ -218,7 +219,9 @@ reconstruct types by propagating type information up. \text{roundtrip typing} \c
 bidirectional typing that enables program synthesis guided by liquid types. 
 Our relational type system extends both Hindley-Milner and bidirectional typing, 
 such that precise and expressive types may be inferred and errors may be detected locally
-without rigid requirements on where annotations must be placed. 
+without rigid requirements on where annotations must be placed. In addition to detecting errors locally, 
+downward propagation of types may prune the search space for local problems, 
+making type checking more efficient. 
 \newline
 
 
