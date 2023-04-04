@@ -1368,7 +1368,6 @@ def Ty.combine (i_u_env_ty : (Nat × List (PHashMap Nat Ty))) (ty : Ty) :=
   let (i, u_env_ty) := i_u_env_ty
   (i, u_env_ty.map fun env_ty => (env_ty, ty))
 
--- TODO: substitute in concrete types for types that should not be refined
 partial def infer (i : Nat) (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
 (Nat × List (PHashMap Nat Ty × Ty)) :=
 match t with

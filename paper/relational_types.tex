@@ -1865,26 +1865,42 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{fresh}\ \alpha_2
     \\
     \Delta;\Delta' \cdot \bullet \Vdash \tau' \leq \alpha_1 \rightarrow \alpha_2
+    \\\\
+    \alpha_1[\Delta] = \tau_1
+    \\
+    \alpha_2[\Delta] = \tau_2
+    \\
+    \text{split}\ \tau_2 = \widebar{\tau_i'}
+    \\
+    \text{fresh}\ \alpha_3
   } {
     \Delta;\Delta' \cdot \Gamma  
-    \Vdash \text{fix}\ e :(\text{spiral}\ \Delta\ \alpha_1\ \alpha_2) 
+    \Vdash \text{fix}\ e :(\nu\ \alpha_3\ .\  \wedge_i(\widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) 
     \leq \tau
   } 
+
 \end{mathpar}
 \caption{Type inference}
 \end{figure*}
 
-% \begin{figure*}
-% \begin{flalign*}
-%   &\boxed{\Delta \vdash \tau \triangledown \tau = \tau}&
-% \end{flalign*}
-% \[
-% \begin{array}{l @{}l}
-%   & {}=
-% \end{array}
-% \]
-% \caption{Narrowing}
-% \end{figure*}
+\begin{figure*}
+\begin{flalign*}
+  &\boxed{\text{twist}\ \alpha\ \tau_1\ \tau_2}&
+\end{flalign*}
+\[
+\begin{array}{l @{}l}
+  \text{twist}\ \alpha\ \tau_1\ \tau_2
+  & {}=  
+  \begin{cases}
+    \left<\forall\ \widebar{\alpha_i}\ .\ \tau_2\ |\ \alpha \leq \tau_1 \right> 
+    &\text{if } \alpha_i \in (\text{freevars}\ \tau_2) 
+    \\
+    \tau_2 &\text{otherwise}
+  \end{cases}
+\end{array}
+\]
+\caption{Twisting}
+\end{figure*}
 
 
 
