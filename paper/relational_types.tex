@@ -156,11 +156,58 @@ The contributions of the relational type system include:
 
 % summary 
 
-In section 2, we illustrate the problem and our solution with examples.
-In section 3, we define the problem and the syntax, semantics, typing, and subtyping of our language.
-In section 4, we present the synthesis and unification algorithms.
-In section 5, we evaluate the problem and its solution. 
-In section 6, we discuss related work of the past and possible future directions. 
+In section 2, we discuss related work. 
+In section 3, we illustrate the problem and our solution with examples.
+In section 4, we define the problem and the syntax, semantics, typing, and subtyping of our language.
+In section 5, we present the synthesis and unification algorithms.
+In section 6, we prove the soundness of our analysis. 
+In section 7, we discuss possible future directions
+
+\section{Related work}
+There has extensive past work dealing with different aspects of our problem,
+including expressive subtypes, dynamic types, and type reconstruction.  
+\newline 
+
+\noindent
+\textbf{Expressive types}. There are many existing type systems for stating properties beyond 
+merely the interface of objects. Perhaps the most well known kind of expressive type systems are dependent type systems, 
+seen in systems Twelf, ATS (Xi et al), Coq, Lean, and others. By allowing types to depend on terms, 
+these systems enable the construction of terms that act as proofs of properties described in types. 
+That is, function abstraction corresponds to implication introduction, function application corresponds to modus ponens, and 
+datatype constructors correspond to introduction/elimination rules of primitive propositions.
+Predicate subtyping is an alternative approach, as seen in Liquid types and PVS, 
+where predicates can refine types to a subtype that accepts a subset of the original set of terms.
+In contrast to dependent type systems, 
+the inhabitant of a predicate subtype is a witness to the existential interpretation of the predicate, 
+rather than a composition of rules that construct the proposition. 
+This places a greater burden of proof to be automated by the type system (as in Liquid Haskell) or requires auxiliary ways of providing proofs (as in PVS).
+Assuming the predicates are decidable, the witnesses could be viewed as a very simple form of proof.
+The advantage of the predicate subtyping approach is that users can avoid the effort of constructing proofs that are computationally irrelevant.
+Additionally, they can reuse the same constructions across a hierarchy of types, rather than constructing isomorphisms. 
+
+
+
+
+\begin{enumerate}
+  \item Dependent types 
+  \item Predicate types
+\end{enumerate}
+
+\noindent
+\textbf{Type reconstruction}
+\begin{enumerate}
+  \item bidirectional typing 
+  \item Hindley-Milner type inference 
+\end{enumerate}
+
+\noindent
+\textbf{Descriptive types}. We define \textit{descriptive types} as 
+type systems that do not prescribe the types of term constructions, but instead allow  
+term constructions to belong to any type that accurately describes them.
+\begin{enumerate}
+  \item Gradual types 
+  \item set-theoretic types 
+\end{enumerate}
 
 \section{Overview}
 
