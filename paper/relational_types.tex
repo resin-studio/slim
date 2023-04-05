@@ -190,7 +190,9 @@ In our relational type system, we take a set-theoretic approach.
 
 \noindent
 \textbf{Expressive types}. There are many existing type systems for stating properties beyond 
-merely the interface of objects. \textit{Dependent types} are probably the best known form of expressive types. 
+merely the interface of objects. 
+
+\textit{Dependent types} are probably the best known form of expressive types. 
 Systems with dependent types include Twelf \cite{}, ATS (Xi et al), Coq, Lean, and others. By allowing types to depend on terms, 
 these systems enable the construction of terms that act as proofs of properties described by types. 
 That is, function abstraction corresponds to implication introduction, function application corresponds to modus ponens, and 
@@ -215,7 +217,8 @@ one can reason over types whose meanings are derived from the forms of their ter
 
 \noindent
 \textbf{Type reconstruction}.
-Hindley-Milner type inference \cite{} is the standard technique for complete type reconstruction employed
+
+\textit{Hindley-Milner type inference} \cite{} is the standard technique for complete type reconstruction employed
 by many systems. The technique can reconstruct the types of parameters 
 and terms by constructing constraints over types and solving for type variables. 
 The constraints are constructed bottom up. Some systems solve the constraints on the fly  
@@ -224,9 +227,10 @@ solving into two separate phases.
 Liquid types combine Hindley-Milner type inference 
 with \textit{predicate abstraction}\cite{} to infer both base types and predicate refinements.
 
-Another approach to type reconstruction is \textit{bidirectional typing} \cite{}.
-In bidirectional typing, the goal is to reconstruct types locally 
-by propagating type annotations downward. 
+\textit{Bidirectional typing} is approach for reconstructing types locally\cite{}.
+Bidirectional typing can provide an incomplete method of reconstruction by leveraging
+annotations and propagating their types downward to reconstruct types 
+for subparts of the program. 
 In other areas where annotations are not required it can partially
 reconstruct types by propagating type information up. 
 \text{Roundtrip typing} \cite{} is an extension of 
