@@ -170,34 +170,32 @@ including expressive subtypes, dynamic types, and type reconstruction.
 
 \noindent
 \textbf{Descriptive types}. We define \textit{descriptive types} as 
-type systems that do not prescribe the types of term constructions, but instead allow  
-term constructions to belong to any type that accurately describes them. 
+type systems that allow term constructions to belong to any type that accurately describes them. 
 Generally speaking, dynamic types are the most precise description, however,
 as their name suggests, that description is determined dynamically (at runtime).
-\textit{Gradual types}\cite[?]{} are a set of design principles for controlling which parts of a program
+
+\textit{Gradual types} \cite{} are a set of design principles for controlling which parts of a program
 should be enforced statically and which parts should be handled dynamically. 
 This allows users to choose between tradeoffs of precise dynamic errors or  
 less precise static errors depending on their particular situations.
 
-\textit{Set-theoretic types} \cite[Castagna et al]{?} offer ways to describe programs statically 
+\textit{Set-theoretic types} \cite{} offer ways to describe programs statically 
 with union and intersection type combinators (among other set-related features). 
-In contrast to refinement types, where a term constructor is prescribed a particular top type by the datatype mechanism,
+In contrast to \text{refinement types} \cite{}, where a term constructor is prescribed a particular top type by the datatype mechanism,
 there is no prescribed upper bound on the set that a term may belong to. The set that describes
 a term can be widened with union, or the type expected by a parameter may be narrowed with intersection. 
 
-In our relational type system, we take a set-theoretic approach and combine it with type inference
-resulting in a technique we call \textit{type adjustment} that automatically widens and narrows types 
-with the goal of increasing precision of the type reconstructions. This increased precision naturally
-enables inferring expressive types as well.
+In our relational type system, we take a set-theoretic approach.
 \newline
 
 \noindent
 \textbf{Expressive types}. There are many existing type systems for stating properties beyond 
 merely the interface of objects. \textit{Dependent types} are probably the best known form of expressive types. 
-Systems with dependent types include Twelf\cite[?]{}, ATS (Xi et al), Coq, Lean, and others. By allowing types to depend on terms, 
+Systems with dependent types include Twelf \cite{}, ATS (Xi et al), Coq, Lean, and others. By allowing types to depend on terms, 
 these systems enable the construction of terms that act as proofs of properties described by types. 
 That is, function abstraction corresponds to implication introduction, function application corresponds to modus ponens, and 
 datatype constructors correspond to introduction/elimination rules of primitive propositions.
+
 \textit{Predicate subtyping} is an alternative approach, as seen in Liquid types and PVS, 
 where a predicate can refine a type to a subtype that accepts a subset of the original set of terms.
 In contrast to dependent type systems, 
@@ -207,43 +205,46 @@ This places a greater burden of proof to be automated by the type system (as in 
 Assuming the predicates are decidable, the witnesses could be viewed as a very simple form of proof.
 The advantage of the predicate subtyping approach is that users can avoid the effort of constructing proofs that are computationally irrelevant.
 Additionally, they can reuse the same constructions across a hierarchy of types, rather than constructing isomorphisms. 
+
 In our relational type system, we take an approach similar to predicate subtyping, however, our language design does not require
 a separate language of predicates. Instead, we reuse the notion of subtyping directly in place of a separate predicate language.
-By reusing the notion of subtyping our relational type system is enable to infer
-properties that describe the program. By contrast, the liquid type system 
-is a form of refinement type system where simple types can be inferred but
-subtypes must be specified.
+The result is that our declarative type language has a pattern matching flavor akin to Prolog. 
+Instead of reasoning in terms of a predefined set of predicates, 
+one can reason over types whose meanings are derived from the forms of their terms.
 \newline
 
 \noindent
 \textbf{Type reconstruction}.
-Hindley-Milner type inference \cite[?]{} is the standard technique for complete type reconstruction employed
-by many systems in the ML-family. The technique can reconstruct the types of parameters 
+Hindley-Milner type inference \cite{} is the standard technique for complete type reconstruction employed
+by many systems. The technique can reconstruct the types of parameters 
 and terms by constructing constraints over types and solving for type variables. 
 The constraints are constructed bottom up. Some systems solve the constraints on the fly  
 as they are generated, while other systems separate constraint generation and constraint
 solving into two separate phases. 
-While Hindley-Milner is an elegant and complete technique for type reconstruction, it requires
-restrictions in the expressivity of the type system and programming language.
-Refinement type systems \cite[?]{} (including Liquid types) are one compromise where users are afforded
-The convenience of Hindley-Milner type inference, but may also introduce subtyping refinement
-with some additional costs of annotation. Liquid types combine Hindley-Milner type inference 
-with \textit{predicate abstraction}\cite[?]{?} to infer both base types and predicate refinements.
-Another approach to incomplete type reconstruction is \textit{bidirectional typing} \cite[?]{}.
-In bidirectional typing, the goal is to reconstruct types in a language that allows general subtyping 
-and impredicative polymorphism. Bidirectional typing requires type annotations, from which it can 
-propagate expected type information down, such that errors can be detected locally. 
+Liquid types combine Hindley-Milner type inference 
+with \textit{predicate abstraction}\cite{} to infer both base types and predicate refinements.
+
+Another approach to type reconstruction is \textit{bidirectional typing} \cite{}.
+In bidirectional typing, the goal is to reconstruct types locally 
+by propagating type annotations downward. 
 In other areas where annotations are not required it can partially
-reconstruct types by propagating type information up. \text{roundtrip typing} \cite[?]{} is an extension of 
+reconstruct types by propagating type information up. 
+\text{Roundtrip typing} \cite{} is an extension of 
 bidirectional typing that enables program synthesis guided by liquid types. 
 
 Our relational type system extends both Hindley-Milner and bidirectional typing, 
 such that precise and expressive types may be inferred and errors may be detected locally
 without rigid requirements on where annotations must be placed.  
-Additionally, the combination of upward and downward propagation of types makes type checking more efficient 
-by pruning the search space, much like how CDCL and BCP combine to prune the search space in SAT. 
+Additionally, the combination of upward and downward propagation of types 
+makes type checking more efficient by pruning the search space, 
+much like how CDCL and BCP combine to prune the search space in SAT. 
 
-\textbf{TODO:} think about connection between between type adjustment and predicate abstraction.
+In our setting, we leverage union and intersection in type inference
+resulting in a technique we call \textit{type adjustment} that automatically widens and narrows types 
+with the goal of increasing precision of the type reconstructions. This increased precision naturally
+enables inferring expressive types as well.
+
+\textbf{TODO:} think about connection between between type adjustment and predicate abstraction and predicate refinement.
 \newline
 
 
@@ -720,7 +721,7 @@ which the system attempts to solve. We define the type environment a type enviro
 A successful trace of the decision algorithm corresponds to the subtyping derivation in fig. ? .  
 
 \noindent
-\begin{figure*}
+\begin{figure*}[h]
 \begin{mathpar}
 \inferrule* {
   \inferrule* { 
@@ -825,7 +826,7 @@ Shown in fig. ?.
 \end{array}
 \]
 
-\begin{figure*}
+\begin{figure*}[h]
   
 \begin{mathpar}
 \inferrule* {
@@ -995,7 +996,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{theorem}
 
 
-\begin{figure*}
+\begin{figure*}[h]
 \[
   \begin{array}{l @{} l}
     e 
@@ -1063,7 +1064,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Syntax}
 \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{ e \in \llbracket e \rrbracket^\flat}&
 \end{flalign*}
@@ -1095,7 +1096,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \caption{Collecting semantics}
 % \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\varsigma \in \gamma\ T}&
 \end{flalign*}
@@ -1109,7 +1110,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Concretization}
 \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\tau \in \alpha\ P}&
 \end{flalign*}
@@ -1124,7 +1125,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{figure*}
 
 
-\begin{figure*}
+\begin{figure*}[h]
 % TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
 % abstract out widening/narrowing operators in unification
 % we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
@@ -1151,7 +1152,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{e \hookrightarrow e}&
 \end{flalign*}
@@ -1191,7 +1192,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Operational semantics}
 \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\text{match}\ v\ (\widebar{m \Rightarrow t}) = H}&
 \end{flalign*}
@@ -1212,7 +1213,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \]
 \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\text{unify}\ v\ p = H}&
 \end{flalign*}
@@ -1237,7 +1238,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \]
 \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \[
   \begin{array}{l @{} l}
     v 
@@ -1391,7 +1392,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \caption{Contification}
 % \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{e \hookrightarrow^* e}&
 \end{flalign*}
@@ -1498,7 +1499,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \caption{State typing}
 % \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\Gamma \vdash e : \tau}&
 \end{flalign*}
@@ -1600,7 +1601,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Typing}
 \end{figure*}
 
-\begin{figure}
+\begin{figure}[h]
 \begin{flalign*}
   &\boxed{\Gamma\ x = \tau}&
 \end{flalign*}
@@ -1620,7 +1621,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Type environment find}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[h]
 \begin{flalign*}
   &\boxed{x \in \text{dom}\ \Gamma}&
 \end{flalign*}
@@ -1643,7 +1644,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\Delta \vdash \tau \leq \tau}&
 \end{flalign*}
@@ -1822,7 +1823,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{figure*}
 
 
-\begin{figure*}
+\begin{figure*}[h]
 % TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
 % abstract out widening/narrowing operators in unification
 % we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
@@ -1968,7 +1969,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Type inference}
 \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\text{twist}\ \alpha\ \tau_1\ \tau_2}&
 \end{flalign*}
@@ -1989,7 +1990,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 
 
-\begin{figure*}
+\begin{figure*}[h]
 % note: type adjustment bears some resemblance 
 % to widening/narrowing in abstraction interpretation.
 % However, it doesn't share all the responsibilities of AI's operators.
@@ -2132,7 +2133,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Subtype unification: part 1}
 \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\Delta \cdot \Omega \Vdash \tau \leq \tau}&
 \end{flalign*}
@@ -2264,7 +2265,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Subtype unification: part 2}
 \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\text{rolldn}\ \alpha\ \tau = \tau}&
 \end{flalign*}
@@ -2283,7 +2284,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Rolling down}
 \end{figure*}
 
-\begin{figure*}
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\text{rollup}\ \alpha\ \tau = \tau}&
 \end{flalign*}
@@ -2490,35 +2491,40 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % Gradual typing systems separate subtyping from the relation 
 % between dynamic to static types to avoid all terms typing via the subsumption rule.
 
+\clearpage
 
-% \subsection*{references}
-% \begin{enumerate}
-% \item Refinement types for ML by Tim Freeman and Frank Pfenning 
-% \item Refinement types as proof irrelevance by William Lovas and Frank Pfenning 
-% \item Local type inference by Benjamin C. Pierce and David N. Turner
-% \item Liquid types - \url{http://goto.ucsd.edu/~rjhala/papers/liquid_types.pdf}
-% \item Program synthesis from polymorphic refinement types by Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama
-% \item Example-directed synthesis: a type-theoretic interpretation by Frankle, Osera, Walker, and Zdancewic
-% \item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
-% \item Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
-% \item Gradual typing for objects by Jeremy G. Siek and Walid Taha 
-% \item Gradual typing with unification-based inference by Siek and Manish Vachharajani 
-% \item Dynamic Type Inference for Gradual Hindley–Milner Typing - \url{https://dl.acm.org/doi/pdf/10.1145/3290331}
-% \item Principal type schemes for gradual programs - \url{https://www.cs.ubc.ca/~rxg/ptsgp.pdf}
-% \item Gradual Liquid Type Inference - \url{https://arxiv.org/pdf/1807.02132.pdf}
-% \item Gradual typing with union and intersection types - \url{https://dl.acm.org/doi/pdf/10.1145/3110285}
-% \item Gradual typing: a new perspective - unions, intersections, dynamic type, and type inference - \url{https://www.irif.fr/~gc/papers/popl19.pdf}
-% \item Gradual refinement types (via abstract interpretation) - \url{https://pleiad.cl/papers/2017/lehmannTanter-popl2017.pdf}
-% \item Consistent subtyping for all - \url{https://xnning.github.io/papers/consistent-subtyping-for-all-toplas.pdf}
-% \item Polymorphic functions with set-theoretic types, part 1 - \url{https://www.irif.fr/~gc/papers/polydeuces-part1.pdf}
-% \item Polymorphic functions with set-theoretic types, part 2 - \url{https://www.irif.fr/~gc/papers/polydeuces-part2.pdf}
-% \item Revisiting occurrence typing - \url{https://arxiv.org/pdf/1907.05590.pdf} 
-% \item An ideal model for recursive polymorphic types; MacQueen, Plotkin, Sethi; Metric/Contraction/Banach fixed point theorem
-% \item Bottom-up synthesis of recursive functional programs using angelic execution - Anders Miltner et al
-% \item Set-theoretic types (Castagna) \url{https://www.irif.fr/~gc/papers/set-theoretic-types-2022.pdf}
+\begin{thebibliography}{}
 
+\bibitem{} Patrick M. Rondon, Ming Kawaguchi, and Ranjit Jhala. Liquid types. In PLDI, 2008.
+% \url{http://goto.ucsd.edu/~rjhala/papers/liquid_types.pdf}
+\bibitem{} 
+Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from polymorphic refinement types. In PLDI, 2016.
+\bibitem{} Benjamin C. Pierce and David N. Turner. Local type inference. In TOPLAS, 2000.
+\bibitem{} Giuseppe Castagna, Tommaso Petrucciani, and Kim Nguyen. Set-theoretic types for polymorphic variants. In ICFP, 2016.
+% \url{https://www.irif.fr/~gc/papers/set-theoretic-types-2022.pdf}
+\bibitem{} Jeremy G. Siek and Walid Taha. Gradual typing for objects. In ECOOP, 2007.
+\bibitem{} Tim Freeman and Frank Pfenning. Refinement types for ML. In PLDI, 1991.
 
-% \end{enumerate}
+% \bibitem{} Refinement types as proof irrelevance by William Lovas and Frank Pfenning 
+% \bibitem{} Example-directed synthesis: a type-theoretic interpretation by Frankle, Osera, Walker, and Zdancewic
+% \bibitem{} Gradual typing for functional languages by Jeremy G. Siek and Walid Taha 
+% \bibitem{} Gradual typing for objects by Jeremy G. Siek and Walid Taha 
+% \bibitem{} Gradual typing with unification-based inference by Siek and Manish Vachharajani 
+% \bibitem{} Dynamic Type Inference for Gradual Hindley–Milner Typing - \url{https://dl.acm.org/doi/pdf/10.1145/3290331}
+% \bibitem{} Principal type schemes for gradual programs - \url{https://www.cs.ubc.ca/~rxg/ptsgp.pdf}
+% \bibitem{} Gradual Liquid Type Inference - \url{https://arxiv.org/pdf/1807.02132.pdf}
+% \bibitem{} Gradual typing with union and intersection types - \url{https://dl.acm.org/doi/pdf/10.1145/3110285}
+% \bibitem{} Gradual typing: a new perspective - unions, intersections, dynamic type, and type inference - \url{https://www.irif.fr/~gc/papers/popl19.pdf}
+% \bibitem{} Gradual refinement types (via abstract interpretation) - \url{https://pleiad.cl/papers/2017/lehmannTanter-popl2017.pdf}
+% \bibitem{} Consistent subtyping for all - \url{https://xnning.github.io/papers/consistent-subtyping-for-all-toplas.pdf}
+% \bibitem{} Polymorphic functions with set-theoretic types, part 1 - \url{https://www.irif.fr/~gc/papers/polydeuces-part1.pdf}
+% \bibitem{} Polymorphic functions with set-theoretic types, part 2 - \url{https://www.irif.fr/~gc/papers/polydeuces-part2.pdf}
+% \bibitem{} Revisiting occurrence typing - \url{https://arxiv.org/pdf/1907.05590.pdf} 
+% \bibitem{} An ideal model for recursive polymorphic types; MacQueen, Plotkin, Sethi; Metric/Contraction/Banach fixed point theorem
+% \bibitem{} Bottom-up synthesis of recursive functional programs using angelic execution - Anders Miltner et al
+
+\end{thebibliography}
+
 
 
 \end{document}
