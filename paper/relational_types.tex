@@ -169,6 +169,29 @@ including expressive subtypes, dynamic types, and type reconstruction.
 \newline 
 
 \noindent
+\textbf{Descriptive types}. We define \textit{descriptive types} as 
+type systems that do not prescribe the types of term constructions, but instead allow  
+term constructions to belong to any type that accurately describes them. 
+Generally speaking, dynamic types are the most precise description, however,
+as their name suggests, that description is determined dynamically (at runtime).
+\textit{Gradual types}\cite[?]{} are a set of design principles for controlling which parts of a program
+should be enforced statically and which parts should be handled dynamically. 
+This allows users to choose between tradeoffs of precise dynamic errors or  
+less precise static errors depending on their particular situations.
+
+\textit{Set-theoretic types} \cite[Castagna et al]{?} offer ways to describe programs statically 
+with union and intersection type combinators (among other set-related features). 
+In contrast to refinement types, where a term constructor is prescribed a particular top type by the datatype mechanism,
+there is no prescribed upper bound on the set that a term may belong to. The set that describes
+a term can be widened with union, or the type expected by a parameter may be narrowed with intersection. 
+
+In our relational type system, we take a set-theoretic approach and combine it with type inference
+resulting in a technique we call \textit{type adjustment} that automatically widens and narrows types 
+with the goal of increasing precision of the type reconstructions. This increased precision naturally
+enables inferring expressive types as well.
+\newline
+
+\noindent
 \textbf{Expressive types}. There are many existing type systems for stating properties beyond 
 merely the interface of objects. \textit{Dependent types} are probably the best known form of expressive types. 
 Systems with dependent types include Twelf\cite[?]{}, ATS (Xi et al), Coq, Lean, and others. By allowing types to depend on terms, 
@@ -190,11 +213,6 @@ By reusing the notion of subtyping our relational type system is enable to infer
 properties that describe the program. By contrast, the liquid type system 
 is a form of refinement type system where simple types can be inferred but
 subtypes must be specified.
-Unlike liquid types, our development does not rely on SMT solvers. In some ways this may be a limitation of our approach, 
-as SMT solvers may provide results very fast for certain problems due to its search space pruning based on SAT's conflict driven clause learning (CDCL) and boolean constraint propagation (BCP). 
-On the other hand, our system is not limited to the theories available for SMT. Finding a way to get the best of both may be 
-a future research direction. Additionally, our system of type reconstruction offers alternative mechanisms for pruning the search  
-space, which may compensate for lack of SAT.
 \newline
 
 \noindent
@@ -209,7 +227,8 @@ While Hindley-Milner is an elegant and complete technique for type reconstructio
 restrictions in the expressivity of the type system and programming language.
 Refinement type systems \cite[?]{} (including Liquid types) are one compromise where users are afforded
 The convenience of Hindley-Milner type inference, but may also introduce subtyping refinement
-with some additional costs of annotation.
+with some additional costs of annotation. Liquid types combine Hindley-Milner type inference 
+with \textit{predicate abstraction}\cite[?]{?} to infer both base types and predicate refinements.
 Another approach to incomplete type reconstruction is \textit{bidirectional typing} \cite[?]{}.
 In bidirectional typing, the goal is to reconstruct types in a language that allows general subtyping 
 and impredicative polymorphism. Bidirectional typing requires type annotations, from which it can 
@@ -217,35 +236,16 @@ propagate expected type information down, such that errors can be detected local
 In other areas where annotations are not required it can partially
 reconstruct types by propagating type information up. \text{roundtrip typing} \cite[?]{} is an extension of 
 bidirectional typing that enables program synthesis guided by liquid types. 
+
 Our relational type system extends both Hindley-Milner and bidirectional typing, 
 such that precise and expressive types may be inferred and errors may be detected locally
 without rigid requirements on where annotations must be placed.  
 Additionally, the combination of upward and downward propagation of types makes type checking more efficient 
-by pruning the search space, just as CDCL and BCP combine to prune the search space in SAT. 
+by pruning the search space, much like how CDCL and BCP combine to prune the search space in SAT. 
+
+\textbf{TODO:} think about connection between between type adjustment and predicate abstraction.
 \newline
 
-
-\noindent
-\textbf{Descriptive types}. We define \textit{descriptive types} as 
-type systems that do not prescribe the types of term constructions, but instead allow  
-term constructions to belong to any type that accurately describes them. 
-Generally speaking, dynamic types are the most precise description, however,
-as their name suggests, that description can only be inferred dynamically (at runtime).
-\textit{Gradual types} are a set of design principles for controlling which parts of a program
-should be enforced statically and which parts should be handled dynamically. 
-This allows users to choose between tradeoffs of precise/dynamic errors or  
-imprecise/static errors depending on their particular situations.
-
-\textit{Set-theoretic types} offer ways to describe programs statically 
-with union and intersection type combinators. 
-In contrast to refinement types, where term constructors are prescribed a top type,
-there is no prescribed upper bound on the set that term may belong to. The set that describes
-a term can be widened with union, or type expected by a parameter may be narrowed with intersection. 
-
-In our relational type system, we take a set-theoretic approach and combine it with type inference
-resulting in a technique we call \textit{type adjustment} that automatically widens and narrows types
-with the goal of increasing precision of the type reconstructions. This increased precision naturally
-enables inferring expressive types as well.
 
 \section{Overview}
 
@@ -291,7 +291,7 @@ are required, so types are propagated in both directions for every syntax rule
 of the language.
 
 
-\subsection{Propagated to widen}
+\subsection{Propagated up}
 Since annotations are not required, it is important to propagate types up to check
 that a term fits its context.
 For example, a function abstraction is not required to be annotated 
@@ -317,7 +317,7 @@ which expects \lstinline{world*str}.
 hello*str $\leq$ world*str
 \end{lstlisting}
 
-\subsection{Propagated to narrow}
+\subsection{Propagated down}
 By propagating down and decomposing types, 
 it is possible to guide the completion of programs with type hints.
 To maintain the spirit of dynamic types, type annotations must remain optional.
@@ -339,7 +339,7 @@ $\lambda$ n : nat $\Rightarrow$
 is propagated and decomposed such that the subtyping constraint 
 \lstinline{nat $\subseteq$ str} is decided. 
 
-\subsection{Adjustable types}
+\subsection{Adjusted types}
 
 In a dynamically typed language, since types are not necessarily prescribed
 for terms of particular constructions (as they are in ML datatypes), 
@@ -348,7 +348,7 @@ When inferring a type that may be associated with various terms throughout a pro
 The optimal type may depend on widening a type as new use cases are discovered,
 or narrowing a type as new restrictions are discovered. 
 
-\subsection{Adjustable with widening}
+\subsection{Adjusted with widening}
 
 In parametric types where a generic input type must be the same as a generic output type,
 The dynamic nature of terms is seemingly at odds with inferring types.
@@ -387,7 +387,7 @@ The result type for \lstinline{(pair n s)} ends up as
 \newline
 \lstinline{(int $\vee$ string) $\times$ (int $\vee$ string)}. 
 
-\subsection{Adjustable with narrowing}
+\subsection{Adjusted with narrowing}
 
 In functions where a parameter has an unknown type and that parameter is 
 internally used as an argument to an application, the dynamically typed 
@@ -2515,6 +2515,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \item Revisiting occurrence typing - \url{https://arxiv.org/pdf/1907.05590.pdf} 
 % \item An ideal model for recursive polymorphic types; MacQueen, Plotkin, Sethi; Metric/Contraction/Banach fixed point theorem
 % \item Bottom-up synthesis of recursive functional programs using angelic execution - Anders Miltner et al
+% \item Set-theoretic types (Castagna) \url{https://www.irif.fr/~gc/papers/set-theoretic-types-2022.pdf}
 
 
 % \end{enumerate}
