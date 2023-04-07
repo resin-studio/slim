@@ -250,6 +250,15 @@ enables inferring expressive types as well.
 
 \textbf{TODO:} Think about connection between between type adjustment and predicate abstraction/iterative weakening and predicate refinement.
 Does RLT's co-inductive type inference with unification correspond to predicate abstraction with fixpoint computation? 
+Is the co-inductive type constructed in the fix rule related to the interpolant concept?
+
+The parameter types are the initial condition. 
+A parameter type variable in is akin to an abstract premise (predicate abstraction). 
+Unification with variable on RHS is an abstract check, where variable assignment 
+is necessary condition (dual of counterproof). 
+Subsequent calls after substitution are concrete checks that validate assignment 
+and generalize by solving for variables on LHS, 
+where variable assignment is proof of necessary condition (failure of counterproof).
 \newline
 
 
