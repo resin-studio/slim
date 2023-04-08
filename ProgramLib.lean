@@ -699,6 +699,31 @@ def linearize_fields : Ty -> Option (List (String × Ty))
 | .top => some [] 
 | _ => none
 
+def extract_nested_fields : Ty -> Option (List Ty)
+| .field l ty => some [ty]
+| .inter (.field l ty1) ty2 => 
+  match extract_nested_fields ty1 with
+  | none => 
+    bind (extract_nested_fields ty2) (fun linear_ty2 =>
+      ty1 :: linear_ty2
+    )
+  | some nested_fields =>
+    bind (extract_nested_fields ty2) (fun linear_ty2 =>
+      nested_fields ++ linear_ty2
+    )
+| .inter ty1 (.field l ty2) => 
+  match extract_nested_fields ty2 with
+  | none => 
+    bind (extract_nested_fields ty1) (fun linear_ty1 =>
+      ty2 :: linear_ty1
+    )
+  | some nested_fields => 
+    bind (extract_nested_fields ty1) (fun linear_ty1 =>
+      nested_fields ++ linear_ty1
+    )
+| .top => some [] 
+| _ => none
+
 
 
 def wellformed_record_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :=
@@ -718,6 +743,10 @@ partial def wellformed_unroll_type (env_ty : PHashMap Nat Ty) (ty : Ty) : Bool :
 
 
 def extract_premise (start : Nat) : Ty -> Option Ty 
+| .univ n [: @ :] [: @ :] ty3 => 
+  Option.bind (extract_premise (start + n) ty3) (fun ty3_prem =>
+    (Ty.exis n [: @ :] [: @ :] ty3_prem)
+  )
 | .univ n (.bvar id) ty0  ty3 => 
   if id == start + n then
     Option.bind (extract_premise (start + n) ty0) (fun ty0_prem => 
@@ -743,6 +772,10 @@ def extract_premise (start : Nat) : Ty -> Option Ty
 | _ => none
 
 def extract_relation (start : Nat) : Ty -> Option Ty 
+| .univ n [: @ :] [: @ :] ty3 => 
+  Option.bind (extract_relation (start + n) ty3) (fun ty3_rel =>
+    (Ty.exis n [: @ :] [: @ :] ty3_rel)
+  )
 | .univ n (.bvar id) ty0 ty3 => 
   if id == start + n then
     Option.bind (extract_relation (start + n) ty0) (fun ty0_rel =>
@@ -885,14 +918,12 @@ partial def Ty.wellfounded (n : Nat) : Ty -> Bool
 | union ty1 ty2 =>
   Ty.wellfounded n ty1 && Ty.wellfounded n ty2
 | inter ty1 ty2 =>
-  match (linearize_fields (inter ty1 ty2)) with
-  | some fields => fields.any (fun (_, ty') => Ty.wellfounded n ty')
+  match (extract_nested_fields (inter ty1 ty2)) with
+  | some fields => fields.any (fun ty' => Ty.wellfounded n ty')
   | none => false
 | case _ _ => false
 | univ _ _ _ _ => false
 | exis n' ty_c1 ty_c2 ty' => 
-  Ty.wellfounded n ty_c1 &&
-  Ty.wellfounded n ty_c2 &&
   Ty.wellfounded (n + n') ty'
 | recur _ => false 
 | corec _ => false
@@ -912,7 +943,7 @@ def Ty.assume_env (i_u_env_ty : Nat × List α)
   -- ensure that variables can be assigned different values and merged 
 -- TODO: always assign variables using union/intersect or join/meet
   -- if variable is fixed it should be substituted with concrete type! 
-partial def Ty.unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_complex : PHashMap (List (String × Ty)) Ty):
+partial def Ty.unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_complex : PHashMap Ty Ty):
 Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
 -- liberally quantified 
@@ -1009,7 +1040,7 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
         (match ty_fd with | (Ty.fvar _) => true | _ => false)
       )
       if is_recur_type && is_consistent_variable_record then
-        let ty_norm := normalize_fields fields
+        let ty_norm := ty_c1 
         ((i, [env_ty]), env_complex.insert ty_norm ty_c2)
 
       else ((i, []), env_complex) 
@@ -1102,14 +1133,13 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
     unify i env_ty env_complex ty' ty
 
 | ty', .recur ty =>
-  -- TODO: add wellfoundend check for .recur ty
   if Ty.wellfounded 1 ty then
     let ty' := (Ty.simplify (Ty.subst env_ty ty'))
-    match (linearize_fields ty') with
+    match (extract_nested_fields ty') with
     | .none => 
       unify i env_ty env_complex ty' (unroll (Ty.recur ty))
     | .some fields =>
-      if List.any fields (fun (k_fd, ty_fd) =>
+      if List.any fields (fun ty_fd =>
         match ty_fd with
         | Ty.tag _ _ => true 
         | Ty.top => true 
@@ -1120,7 +1150,7 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
       ) then  
         unify i env_ty env_complex ty' (unroll (Ty.recur ty))
       else
-        let ty_norm := normalize_fields fields
+        let ty_norm := ty'
         match env_complex.find? ty_norm with
         | .some ty_cache => unify i env_ty env_complex ty_cache (Ty.recur ty)
         | .none => (i, []) 
@@ -1490,12 +1520,17 @@ match t with
 
     let ty_content := List.foldr (fun ty_case ty_acc =>
       let fvs := (Ty.free_vars ty_case).toList.bind (fun (k , _) => [k])
+      let fvs_prem :=  (Ty.free_vars ty_prem)
       let ty_case' := (
-        if fvs.length > 0 then
+        if List.any fvs (fun id => fvs_prem.find? id != none) then
           [:
             (∀ ⟨fvs.length⟩ . ⟨Ty.generalize fvs 0 ty_case⟩ | 
               β[⟨fvs.length⟩] ≤ ⟨Ty.generalize fvs 0 ty_prem⟩ 
             )
+          :]
+        else if fvs.length > 0 then
+          [:
+            (∀ ⟨fvs.length⟩ . ⟨Ty.generalize fvs 0 ty_case⟩)
           :]
         else
           ty_case
@@ -1928,6 +1963,11 @@ def nat_to_list := [:
   (y[0] (succ;zero;()))
 :]
 
+#eval unify_decide 10 
+[: succ*zero*@ :]
+[: (μ 1 . (zero*@ ∨ (∃ 2 . succ*β[0] | β[0] ≤ β[2]))) :]
+
+
 -- regression test
 
 ---------- adjustment ----------------
@@ -2055,3 +2095,37 @@ def other_nat_list := [:
 #eval unify_decide 0 
   [: succ*zero*@ × cons*nil*@ :] 
   other_nat_list
+
+
+#eval infer_reduce 10 [:
+fix(λ y[0] => λ[
+  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+  for (zero;(), y[0]) => y[0],
+  for (y[0], zero;()) => y[0] 
+])
+:]
+
+#eval infer_reduce 10 [:
+(fix(λ y[0] => λ[
+  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+  for (zero;(), y[0]) => y[0],
+  for (y[0], zero;()) => y[0] 
+]) (succ;succ;zero;(), succ;succ;succ;zero;()))
+:]
+
+#eval infer_reduce 10 [:
+let y[0] : α[0] = fix(λ y[0] => λ[
+  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+  for (zero;(), y[0]) => y[0],
+  for (y[0], zero;()) => y[0] 
+]) =>
+y[0]
+:]
+
+def diff := [:
+(ν 1 . ((∀ 3 .
+   ((succ*β[1] × succ*β[2]) ->
+    β[0]) | β[3] ≤ ((β[1] × β[2]) -> β[0])) ∧ ((∀ 1 . ((zero*@ × β[0]) -> β[0])) ∧ (∀ 1 . ((β[0] × zero*@) -> β[0])))))
+:]
+
+#eval rewrite_function_type diff
