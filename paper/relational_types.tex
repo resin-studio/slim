@@ -2743,10 +2743,14 @@ Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from 
 
 % a resolution proof is akin to a program term, e.g. (fix ...)
 
-% an interpolant is aking to a subtype of an implication
+% a resolution proof from formula is akin to type-guided program synthesis/downard propagation
+% model-checking has to construct a proof, since models do not have a compositional structure. 
+% program-checking doesn't necessarily require synthesis, since the program is already compositional.
+
+% an interpolant is akin to a subtype of a function type
 % X -> Y <: A -> B === A, B |- [X -> Y] == A <: X, Y <: B
 
-% an interpolation from resolution is akin to a nu-type  from  (fix ...)
+% an interpolation from resolution is akin to a nu-type from  (fix ...)
 
 
 % /-
