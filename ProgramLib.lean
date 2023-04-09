@@ -2139,6 +2139,10 @@ def spec := [:
 )  
 :]
 
+-- Note: is this in effect, the same thing as PDR/IC3
+-- That is, whatever is learned to strengthen the premise 
+-- is automatically applied to preceding iterations 
+-- due to the wrapping type with the co-inductive nu binder
 #eval infer_reduce 10 
 [:
 let y[0] : ⟨spec⟩ = fix(λ y[0] => λ[

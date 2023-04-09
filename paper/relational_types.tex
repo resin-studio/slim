@@ -2735,6 +2735,12 @@ Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from 
 %         -- type inference finds pre condition that strengthens loop's post-condition invariant  
 %         loop (x0, y0, x0 - y0)
 
+% is the construction of a nu-type from the fix rule
+% in effect, the same thing as PDR/IC3?
+% That is, whatever is learned to strengthen the premise 
+% is automatically applied to preceding iterations 
+% due to the wrapping type with the co-inductive nu binder
+
 
 % /-
 % first order quantification
