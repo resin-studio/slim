@@ -329,7 +329,7 @@ The application is satisfactory since applied to the term \lstinline{4},
 but it fails when checked against the function application's context,
 which expects \lstinline{world*str}.
 \begin{lstlisting}
-hello*str $\leq$ world*str
+hello*str $\sqsubseteq$ world*str
 \end{lstlisting}
 
 \subsection{Propagated down}
@@ -423,17 +423,17 @@ succeed.
 \end{lstlisting}
 
 Once \lstinline{i2n} is applied to \lstinline{x}, 
-the type for \lstinline{x} is specialized to \lstinline{(int $\wedge$ ?)}, 
+the type for \lstinline{x} is specialized to \lstinline{(int $\sqcap$ ?)}, 
 in which intersection with the dynamic type behaves like the bottom type $\bot$,
 availing itself to be used in subsequent applications. 
-Thus, the dynamic type is inferred to be \lstinline{(int $\wedge$ str $\wedge$ ?)}.
+Thus, the dynamic type is inferred to be \lstinline{(int $\sqcap$ str $\sqcap$ ?)}.
 
 The type variable always passes type checking, 
 thus behaving like bottom for term types
 and behaving like top for parameter types.
 As such, the intersections of argument types behave like bottom,
 and the type variable simply falls away in the intersection type of a parameter.
-The external parameter type for ends up as \lstinline{(int $\wedge$ str)}. 
+The external parameter type for ends up as \lstinline{(int $\sqcap$ str)}. 
 
 
 \subsection{Constrained types}
@@ -509,7 +509,7 @@ the following derivation.
         } { 
           \Delta_l \vdash
           \text{unit}
-          \leq
+          \sqsubseteq
           \text{X}
         }
         \\
@@ -520,13 +520,13 @@ the following derivation.
             } { 
               \Delta_l \vdash
               \text{nil}*\text{unit}
-              \leq
+              \sqsubseteq
               \text{nil}*\text{unit}
             }
           } { 
             \Delta_l \vdash
             \text{nil}*\text{unit}
-            \leq
+            \sqsubseteq
             \begin{array}[]{@{} l}
               \text{nil}*\text{unit}\ \vee
               \arcr
@@ -536,25 +536,25 @@ the following derivation.
         } { 
           \Delta_l \vdash
           (\text{nil}*\text{unit})
-          \leq
+          \sqsubseteq
           list
         }
       } { 
         \Delta_l \vdash
         (\text{unit} \times \text{nil}*\text{unit})
-        \leq
+        \sqsubseteq
         (\text{X} \times list(\text{X}))
       }
     } { 
       \Delta_l \vdash
       (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
-      \leq
+      \sqsubseteq
       \text{cons}*(\text{X} \times list(\text{X}))
     }
   } { 
     \Delta_l \vdash
     (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
-    \leq
+    \sqsubseteq
     \begin{array}[]{@{} l}
       \text{nil}*\text{unit}\ \vee
       \arcr
@@ -564,7 +564,7 @@ the following derivation.
 } { 
   \bullet \vdash
   (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
-  \leq
+  \sqsubseteq
   \exists\ \text{X}\ .\ list(\text{X})
 }
 \end{mathpar}
@@ -602,13 +602,13 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
       } { 
         \bullet \vdash
         \text{zero}*\text{unit}
-        \leq
+        \sqsubseteq
         \text{zero}*\text{unit}
       }
     } { 
       \bullet \vdash
       \text{zero}*\text{unit}
-      \leq
+      \sqsubseteq
       \begin{array}[]{@{} l}
         \text{zero}*\text{unit}\ \vee
         \arcr
@@ -625,13 +625,13 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
             } { 
               \bullet \vdash
               \text{succ}*nat 
-              \leq
+              \sqsubseteq
               \text{succ}*nat 
             }
           } { 
             \bullet \vdash
             \text{succ}*nat 
-            \leq
+            \sqsubseteq
             \begin{array}[]{@{} l}
               \text{zero}*\text{unit}\ \vee
               \arcr
@@ -641,19 +641,19 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
         } { 
           \bullet \vdash
           \text{succ}*nat
-          \leq
+          \sqsubseteq
           nat
         }
       } { 
         \bullet \vdash
         \text{succ}*\text{succ}*nat
-        \leq
+        \sqsubseteq
         \text{succ}*nat
       }
     } { 
       \bullet \vdash
       \text{succ}*\text{succ}*nat
-      \leq
+      \sqsubseteq
       \begin{array}[]{@{} l}
         \text{zero}*\text{unit}\ \vee
         \arcr
@@ -667,7 +667,7 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
       \arcr
       \text{succ}*\text{succ}*nat
     \end{array}
-    \leq
+    \sqsubseteq
     \begin{array}[]{@{} l}
       \text{zero}*\text{unit}\ \vee
       \arcr
@@ -676,13 +676,13 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
   }
 } { 
   \bullet \vdash
-  even \leq nat
+  even \sqsubseteq nat
 }
 \end{mathpar}
 
 Notice that the natural numbers are substituted in for the inductively bound variable  
 for both the even number type and the natural number type.
-We justify this manipulation by the induction hypothesis $even \leq nat$. 
+We justify this manipulation by the induction hypothesis $even \sqsubseteq nat$. 
 
 
 By augmenting quantified types with fairly general constraints, 
@@ -706,7 +706,7 @@ nat\_and\_list(\alpha) =
 \\
 \hspace{4mm}\text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
 \\
-\hspace{4mm}\exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \leq \text{P}\ .\ 
+\hspace{4mm}\exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \sqsubseteq \text{P}\ .\ 
 \\
 \hspace{8mm}\text{succ}*\text{N} \times \text{cons}*(\alpha \times \text{XS})
 \end{array}
@@ -749,7 +749,7 @@ A successful trace of the decision algorithm corresponds to the subtyping deriva
         \arcr
         (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
         \end{array}
-        \leq
+        \sqsubseteq
         \begin{array}[]{@{} l @{}}
         \text{succ}*\text{N}\ \times 
         \arcr
@@ -762,12 +762,12 @@ A successful trace of the decision algorithm corresponds to the subtyping deriva
           \vdots
         } {
           \Delta_{nl} \vdash
-          \text{N} \times \text{XS} \leq 
+          \text{N} \times \text{XS} \sqsubseteq 
           \text{zero}*\text{unit} \times \text{nil}*\text{unit}
         }
       } {
         \Delta_{nl} \vdash
-        \text{N} \times \text{XS} \leq nat\_and\_list(\text{X})
+        \text{N} \times \text{XS} \sqsubseteq nat\_and\_list(\text{X})
       }
     } {
       \bullet, \text{X} \mapsto \text{unit} \vdash
@@ -776,9 +776,9 @@ A successful trace of the decision algorithm corresponds to the subtyping deriva
         \arcr
         (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
       \end{array}
-      \leq
+      \sqsubseteq
       \begin{array}[]{@{} l}
-        \exists\ \text{N}\ \text{XS} :: (\text{N} \times \text{XS}) \leq nat\_and\_list(\text{X}) 
+        \exists\ \text{N}\ \text{XS} :: (\text{N} \times \text{XS}) \sqsubseteq nat\_and\_list(\text{X}) 
         \arcr
         \hspace{4mm}\text{succ}*\text{N} \times \text{cons}*(\text{X} \times \text{XS})
       \end{array}
@@ -790,11 +790,11 @@ A successful trace of the decision algorithm corresponds to the subtyping deriva
       \arcr
       (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
     \end{array}
-    \leq
+    \sqsubseteq
     \begin{array}[]{@{} l}
       \text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
       \arcr
-      \exists\ \text{N}\ \text{XS} :: (\text{N} \times \text{XS}) \leq nat\_and\_list(\text{X})
+      \exists\ \text{N}\ \text{XS} :: (\text{N} \times \text{XS}) \sqsubseteq nat\_and\_list(\text{X})
       \arcr
       \hspace{4mm}\text{succ}*\text{N} \times \text{cons}*(\text{X} \times \text{XS})
     \end{array}
@@ -802,7 +802,7 @@ A successful trace of the decision algorithm corresponds to the subtyping deriva
 } { 
   \bullet \vdash
   (\text{succ}*\text{zero}*\text{unit}) \times (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
-  \leq
+  \sqsubseteq
   \exists\ \text{X}\ .\ nat\_and\_list(\text{X})
 }
 \end{mathpar}
@@ -818,7 +818,7 @@ even\_and\_list(\alpha) =
   \\
   \hspace{4mm}\text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
   \\
-  \hspace{4mm}\exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \leq \text{P}\ .\ 
+  \hspace{4mm}\exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \sqsubseteq \text{P}\ .\ 
   \\
   \hspace{8mm}\text{succ}*\text{succ}*\text{N}\ \times 
   \\
@@ -854,14 +854,14 @@ Shown in fig. ?.
             \Delta_{enl}(\text{N} \times \text{XS}) = nat\_and\_list(\text{X})
           } {
             \Delta_{enl} \vdash
-            \text{N} \times \text{XS} \leq nat\_and\_list(\text{X})
+            \text{N} \times \text{XS} \sqsubseteq nat\_and\_list(\text{X})
           }
         } {
           \vdots
         }
       } {
         \Delta_{enl} \vdash
-        \text{succ}*\text{N} \times \text{cons}*\text{XS} \leq nat\_and\_list(\text{X})
+        \text{succ}*\text{N} \times \text{cons}*\text{XS} \sqsubseteq nat\_and\_list(\text{X})
       }
       \\
       \Delta_{enl}(\text{N'}) = \text{succ}*\text{N}
@@ -869,22 +869,22 @@ Shown in fig. ?.
       \Delta_{enl}(\text{XS'}) = \text{cons}*(\text{X} \times \text{XS})
     } {
       \Delta_{enl} \vdash
-      \text{N'} \times \text{XS'} \leq nat\_and\_list(\text{X})
+      \text{N'} \times \text{XS'} \sqsubseteq nat\_and\_list(\text{X})
     }
   } {
     \bullet \vdash
     \begin{array}[]{@{} l @{}}
       \text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
       \arcr
-      \exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \leq nat\_and\_list(\text{X})\ .\ 
+      \exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \sqsubseteq nat\_and\_list(\text{X})\ .\ 
       \arcr
       \hspace{4mm}\text{succ}*\text{succ}*\text{N} \times \text{cons}*(\text{X} \times \text{cons}*(\text{X} \times \text{XS}))
     \end{array}
-    \leq
+    \sqsubseteq
     \begin{array}[]{@{} l @{} }
       \text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
       \arcr
-      \exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \leq nat\_and\_list(\text{X})\ .\ 
+      \exists\ \text{N}\ \text{XS} :: \text{N} \times \text{XS} \sqsubseteq nat\_and\_list(\text{X})\ .\ 
       \arcr
       \hspace{4mm}\text{succ}*\text{N} \times \text{cons}*(\text{X} \times \text{XS})
     \end{array}
@@ -892,7 +892,7 @@ Shown in fig. ?.
 } { 
   \bullet \vdash
   even\_and\_list(\text{X})
-  \leq
+  \sqsubseteq
   nat\_and\_list(\text{X})
 }
 \end{mathpar}
@@ -913,9 +913,9 @@ and an element, and returns a list of $n$ elements.
   \begin{array}[t]{@{} l}
     \forall\ \text{X}\ .\ \text{X} \rightarrow \nu\ \text{I}\ .\ 
     \arcr
-    \hspace*{4mm}\text{zero}*\text{unit} \rightarrow \text{nil}*\text{unit}\ \wedge
+    \hspace*{4mm}\text{zero}*\text{unit} \rightarrow \text{nil}*\text{unit}\ \sqcap
     \arcr
-    \hspace*{4mm}\forall\ \text{N}\ \text{XS} :: \text{I} \leq \text{N} \rightarrow \text{XS}\ .\ 
+    \hspace*{4mm}\forall\ \text{N}\ \text{XS} :: \text{I} \sqsubseteq \text{N} \rightarrow \text{XS}\ .\ 
     \arcr
     \hspace*{8mm}\text{succ}*\text{N} \rightarrow \text{cons}*(\text{X} \times \text{XS})
   \end{array}
@@ -951,10 +951,10 @@ we redefine set of functions from numbers to lists.
 \[
   nat\_to\_list' = 
   \begin{array}[t]{@{} l}
-    \forall\ \text{X}\ .\ \text{X} \rightarrow \forall\ \text{N}\ :: \text{N} \leq nat\ .\ 
+    \forall\ \text{X}\ .\ \text{X} \rightarrow \forall\ \text{N}\ :: \text{N} \sqsubseteq nat\ .\ 
     \arcr
     \hspace*{4mm}\text{N} \rightarrow 
-    (\exists\ \text{XS} :: \text{N} \times \text{XS} \leq nat\_and\_list\ .\ \text{XS})
+    (\exists\ \text{XS} :: \text{N} \times \text{XS} \sqsubseteq nat\_and\_list\ .\ \text{XS})
   \end{array}
 \]
 
@@ -1060,9 +1060,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       \tau\rightarrow\tau 
       \ |\ 
-      \left<\exists \widebar{\alpha}\ .\ \tau\ |\ \tau \leq \tau\right>
+      \left<\exists \widebar{\alpha}\ .\ \tau\ |\ \tau \sqsubseteq \tau\right>
       \ |\ 
-      \left<\forall \widebar{\alpha}\ .\ \tau\ |\ \tau \leq \tau\right>
+      \left<\forall \widebar{\alpha}\ .\ \tau\ |\ \tau \sqsubseteq \tau\right>
       \ |\ 
       \mu \alpha.\tau 
       \ |\ 
@@ -1070,7 +1070,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \ |\ 
       \tau \vee \tau
       \ |\ 
-      \tau \wedge \tau
+      \tau \sqcap \tau
     \end{array}
   \end{array}
 \]
@@ -1150,7 +1150,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{flalign*}
 \begin{mathpar}
   \inferrule { 
-    \Delta \cdot \bullet \Vdash e : \tau \leq \top
+    \Delta \cdot \bullet \Vdash e : \tau \sqsubseteq \top
   } {
     (\text{pack}\ \Delta\ \tau) \in \llbracket e \rrbracket^\sharp
   }
@@ -1540,31 +1540,26 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   }
 
   \inferrule { 
-    \bigwedge
     \Gamma \vdash t_i :  \tau_i  
   } {
-    \Gamma \vdash \sigma\ (\widebar{l_i = t_i})
-    : (\text{reduce} \wedge \widebar{l_i : \tau_i})
+    \Gamma \vdash (\sigma\ \widebar{l_i = t_i})
+    : (\sqcap\ \widebar{l_i : \tau_i})
   } 
 
   \inferrule {
-    \bigwedge
-    \Gamma_i \vdash p_i
-    : \tau_i
-    \ \wedge\
+    \Gamma_i \vdash p_i : \tau_i
+    \\
     \Gamma;\Gamma_i \vdash t_i
     : \tau'_i
   } {
-    \Gamma \vdash \lambda\ (\widebar{m_i \Rightarrow e_i})
-    : (\text{reduce} \wedge \widebar{\tau_i \rightarrow \tau'_i })  
+    \Gamma \vdash (\lambda\ \widebar{m_i \Rightarrow e_i})
+    : (\sqcap\ \widebar{\tau_i \rightarrow \tau'_i })  
   } 
 
   \inferrule {
-    \Gamma \vdash t
-    : l:\tau
+    \Gamma \vdash t : (l:\tau)
   } {
-    \Gamma \vdash t/l
-    : \tau
+    \Gamma \vdash (t/l) : \tau
   } 
 
   \inferrule { 
@@ -1575,18 +1570,19 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     : \tau'
   } {
     \Gamma \vdash (t_1\ t_2)
+    \
     : \tau
   } 
 
   \inferrule { 
     \bullet \vdash 
-    \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
-    : \tau_1
+    \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \sqsubseteq \tau_4\right>
+    \sqsubseteq \tau_1
     \\
     \Gamma \vdash t_1
     : \tau_1
     \\\\
-    \Gamma,x \mapsto \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \leq \tau_4\right>
+    \Gamma,x \mapsto \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \sqsubseteq \tau_4\right>
       \vdash t_2 
     : \tau_2
   } {
@@ -1606,7 +1602,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Gamma \vdash t 
     : \tau' 
     \\
-    \bullet \vdash \tau' \leq \tau
+    \bullet \vdash \tau' \sqsubseteq \tau
   } {
     \Gamma \vdash t
     : \tau
@@ -1660,177 +1656,177 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\Delta \vdash \tau \leq \tau}&
+  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
 \end{flalign*}
 
 \begin{mathpar}
   \inferrule {
     \Delta \vdash \tau_1
-    \leq \tau_2
+    \sqsubseteq \tau_2
   } {
     \Delta \vdash l*\tau_1
-    \leq l*\tau_2
+    \sqsubseteq l*\tau_2
   } 
 
   \inferrule {
     \Delta \vdash \tau_1
-    \leq \tau_2
+    \sqsubseteq \tau_2
   } {
     \Delta \vdash l:\tau_1
-    \leq l:\tau_2
+    \sqsubseteq l:\tau_2
   } 
 
   \inferrule {
     \Delta \vdash \tau_3
-    \leq \tau_1
+    \sqsubseteq \tau_1
     \\
     \Delta \vdash \tau_2
-    \leq \tau_4
+    \sqsubseteq \tau_4
   } {
     \Delta \vdash \tau_1 \rightarrow \tau_2
-    \leq \tau_3 \rightarrow \tau_4
+    \sqsubseteq \tau_3 \rightarrow \tau_4
   } 
 
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
     \forall\ \Delta'\ .\
-    (\Delta;\Delta' \vdash \tau_1 \leq \tau_2)
+    (\Delta;\Delta' \vdash \tau_1 \sqsubseteq \tau_2)
     \longrightarrow
-    (\Delta;\Delta' \vdash \tau_3 \leq \tau_4)
+    (\Delta;\Delta' \vdash \tau_3 \sqsubseteq \tau_4)
   } { 
-    \Delta \vdash \left<\exists \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \leq \tau_2\right>
-    \leq \tau_4
+    \Delta \vdash \left<\exists \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \sqsubseteq \tau_2\right>
+    \sqsubseteq \tau_4
   }
 
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
     \Delta;\Delta' \vdash \tau_1
-    \leq \tau_4
+    \sqsubseteq \tau_4
     \\
     \Delta;\Delta' \vdash \tau_2
-    \leq \tau_3
+    \sqsubseteq \tau_3
   } { 
     \Delta \vdash \tau_1
-    \leq \left<\exists \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \leq \tau_3\right>
+    \sqsubseteq \left<\exists \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \sqsubseteq \tau_3\right>
   }
 
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
     \forall\ \Delta'\ .\
-    (\Delta;\Delta' \vdash \tau_2 \leq \tau_3)
+    (\Delta;\Delta' \vdash \tau_2 \sqsubseteq \tau_3)
     \longrightarrow
-    (\Delta;\Delta' \vdash \tau_1 \leq \tau_4)
+    (\Delta;\Delta' \vdash \tau_1 \sqsubseteq \tau_4)
   } { 
     \Delta \vdash \tau_1
-    \leq \left<\forall \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \leq \tau_3\right>
+    \sqsubseteq \left<\forall \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \sqsubseteq \tau_3\right>
   }
 
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha} \subseteq \emptyset 
     \\\\
     \Delta;\Delta' \vdash \tau_3
-    \leq \tau_4
+    \sqsubseteq \tau_4
     \\
     \Delta;\Delta' \vdash \tau_1
-    \leq \tau_2
+    \sqsubseteq \tau_2
   } { 
-    \Delta \vdash \left<\forall \widebar{\alpha}\ .\ \tau_3\ |\ \tau_1 \leq \tau_2\right>
-    \leq \tau_4
+    \Delta \vdash \left<\forall \widebar{\alpha}\ .\ \tau_3\ |\ \tau_1 \sqsubseteq \tau_2\right>
+    \sqsubseteq \tau_4
   }
 
   \inferrule { 
     \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
-    \leq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
+    \sqsubseteq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
   } { 
     \Delta \vdash \mu \alpha_1 . \tau_1
-    \leq \mu \alpha_2 . \tau_2
+    \sqsubseteq \mu \alpha_2 . \tau_2
   }
 
   \inferrule {
   } {
     \Delta \vdash \tau[\alpha\mapsto\mu \alpha . \tau]
-    \leq \mu \alpha . \tau
+    \sqsubseteq \mu \alpha . \tau
   }
 
   \inferrule {
   } {
     \Delta \vdash \mu\alpha.\tau
-    \leq \tau[\alpha\mapsto\mu \alpha . \tau]
+    \sqsubseteq \tau[\alpha\mapsto\mu \alpha . \tau]
   }
 
   \inferrule { 
     \Delta \vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
-    \leq \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+    \sqsubseteq \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
   } {
     \Delta \vdash \nu \alpha_1 . \tau_1 
-    \leq \nu \alpha_2 . \tau_2
+    \sqsubseteq \nu \alpha_2 . \tau_2
   }
 
   \inferrule {
   } {
     \Delta \vdash \tau[\alpha\mapsto\nu \alpha . \tau]
-    \leq \nu \alpha . \tau
+    \sqsubseteq \nu \alpha . \tau
   }
 
   \inferrule {
   } {
     \Delta \vdash \nu\alpha.\tau
-    \leq \tau[\alpha\mapsto\nu \alpha . \tau]
+    \sqsubseteq \tau[\alpha\mapsto\nu \alpha . \tau]
   }
 
   \inferrule {
     \Delta \vdash \tau_1
-    \leq \tau_3
+    \sqsubseteq \tau_3
     \\
     \Delta \vdash \tau_2
-    \leq \tau_3
+    \sqsubseteq \tau_3
   } {
     \Delta \vdash \tau_1 \vee \tau_2
-    \leq \tau_3
+    \sqsubseteq \tau_3
   }
 
   \inferrule {
   } {
     \Delta \vdash \tau_1
-    \leq \tau_1 \vee \tau_2
+    \sqsubseteq \tau_1 \vee \tau_2
   }
 
   \inferrule {
   } {
     \Delta \vdash \tau_2
-    \leq \tau_1 \vee \tau_2
+    \sqsubseteq \tau_1 \vee \tau_2
   }
 
   \inferrule {
     \Delta \vdash \tau
-    \leq \tau_1
+    \sqsubseteq \tau_1
     \\
     \Delta \vdash \tau
-    \leq \tau_2
+    \sqsubseteq \tau_2
   } {
     \Delta \vdash \tau
-    \leq \tau_1 \wedge \tau_2
+    \sqsubseteq \tau_1 \sqcap \tau_2
   }
 
   \inferrule {
   } {
-    \Delta \vdash \tau_1 \wedge \tau_2
-    \leq \tau_1
+    \Delta \vdash \tau_1 \sqcap \tau_2
+    \sqsubseteq \tau_1
   }
 
   \inferrule {
   } {
-    \Delta \vdash \tau_1 \wedge \tau_2
-    \leq \tau_2
+    \Delta \vdash \tau_1 \sqcap \tau_2
+    \sqsubseteq \tau_2
   }
 
   \inferrule {
   } {
     \Delta \vdash \tau
-    \leq \tau
+    \sqsubseteq \tau
   }
 \end{mathpar}
 \caption{Subtyping}
@@ -1844,47 +1840,47 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % i.e. we don't compare current to previous, we simply look at structure of input.
 % the structure of input decreases as types widen/narrow
 \begin{flalign*}
-  &\boxed{\Delta \cdot \Gamma \Vdash e : \tau \leq \tau}&
+  &\boxed{\Delta \cdot \Gamma \Vdash e : \tau \sqsubseteq \tau}&
 \end{flalign*}
 
 \begin{mathpar}
   \inferrule { 
-    \Delta \cdot \bullet \Vdash (\Gamma\ x) \leq \tau
+    \Delta \cdot \bullet \Vdash (\Gamma\ x) \sqsubseteq \tau
   } {
     \Delta \cdot \Gamma
-    \Vdash x : (\Gamma\ x) \leq \tau
+    \Vdash x : (\Gamma\ x) \sqsubseteq \tau
   } 
 
   \inferrule { 
-    \Delta \cdot \bullet \Vdash \text{unit} \leq \tau
+    \Delta \cdot \bullet \Vdash \text{unit} \sqsubseteq \tau
   } {
     \Delta \cdot \Gamma 
-    \Vdash () : \text{unit} \leq \tau
+    \Vdash () : \text{unit} \sqsubseteq \tau
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha
     \\
-    \Delta \cdot \bullet \Vdash (l * \alpha) \leq \tau
+    \Delta \cdot \bullet \Vdash (l * \alpha) \sqsubseteq \tau
     \\
     \Delta;\Delta' \cdot \Gamma
-    \Vdash e : \tau' \leq \alpha
+    \Vdash e : \tau' \sqsubseteq \alpha
   } {
     \Delta;\Delta' \cdot \Gamma 
-    \Vdash (l \cdot e) : (l * \tau') \leq \tau
+    \Vdash (l \cdot e) : (l * \tau') \sqsubseteq \tau
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha_i
     \\
-    \Delta \cdot \bullet \Vdash (\wedge\ \widebar{l_i : \alpha_i}) \leq \tau
+    \Delta \cdot \bullet \Vdash (\sqcap\ \widebar{l_i : \alpha_i}) \sqsubseteq \tau
     \\
     \Delta;\Delta' \cdot \Gamma
-    \Vdash e_i : \tau_i \leq \alpha_i
+    \Vdash e_i : \tau_i \sqsubseteq \alpha_i
   } {
     \Delta;\Delta' \cdot \Gamma
     \Vdash (\sigma\ \widebar{l_i = e_i}) : 
-    (\wedge\ \widebar{l_i : \tau_i}) \leq \tau
+    (\sqcap\ \widebar{l_i : \tau_i}) \sqsubseteq \tau
   } 
 
   \inferrule { 
@@ -1892,79 +1888,77 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{fresh}\ \alpha_i''
     \\
-    \Delta \cdot \bullet \Vdash (\wedge\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \leq \tau
+    \Delta \cdot \bullet \Vdash (\sqcap\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \sqsubseteq \tau
     \\
     \Delta;\Delta' \cdot \Gamma;(\text{patenv}\ m_i) 
-    \Vdash m_i : \tau'_i \leq \alpha'_i
+    \Vdash m_i : \tau'_i \sqsubseteq \alpha'_i
     \\
     \Delta;\Delta';\Delta'' \cdot \Gamma 
-    \Vdash e_i : \tau''_i \leq \alpha''_i
+    \Vdash e_i : \tau''_i \sqsubseteq \alpha''_i
   } {
     \Delta;\Delta';\Delta'' \cdot \Gamma
     \Vdash
     (\lambda\ \widebar{m_i \Rightarrow e_i}) : 
-    (\wedge\ \widebar{\tau_i' \rightarrow \tau_i''}) \leq 
+    (\sqcap\ \widebar{\tau_i' \rightarrow \tau_i''}) \sqsubseteq 
     \tau
   } 
 
   \inferrule { 
     \Delta \cdot \Gamma
-    \Vdash e : \tau' \leq (l : \tau)
+    \Vdash e : \tau' \sqsubseteq (l : \tau)
     \\
     \text{fresh}\ \alpha
     \\
-    \Delta;\Delta' \cdot \bullet \Vdash \tau' \leq (l : \alpha)
+    \Delta;\Delta' \cdot \bullet \Vdash \tau' \sqsubseteq (l : \alpha)
   } {
     \Delta;\Delta' \cdot \Gamma
-    \Vdash (e/l) : \alpha \leq \tau
+    \Vdash (e/l) : \alpha \sqsubseteq \tau
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha
     \\
     \Delta \cdot \Gamma 
-    \Vdash e_1 : \tau_1 \leq (\alpha \rightarrow \tau)
+    \Vdash e_1 : \tau_1 \sqsubseteq (\alpha \rightarrow \tau)
     \\
     \Delta;\Delta' \cdot \Gamma
-    \Vdash e_2 : \tau_2 \leq \alpha
+    \Vdash e_2 : \tau_2 \sqsubseteq \alpha
     \\
     \text{fresh}\ \alpha'
     \\
-    \Delta;\Delta';\Delta'' \cdot \bullet \Vdash \tau_1 \leq \tau_2 \rightarrow \alpha'
+    \Delta;\Delta';\Delta'' \cdot \bullet \Vdash \tau_1 \sqsubseteq \tau_2 \rightarrow \alpha'
     \\
     \text{fresh}\ \alpha''
     \\
     % need to call unification one more time to liberate existentially quantified variables 
-    \Delta;\Delta';\Delta'';\Delta''' \cdot \bullet \Vdash \alpha'' \leq \alpha'
+    \Delta;\Delta';\Delta'';\Delta''' \cdot \bullet \Vdash \alpha'' \sqsubseteq \alpha'
   } {
     \Delta;\Delta';\Delta'';\Delta''' \cdot \Gamma
-    \Vdash (e_1\ e_2) : \alpha'' \leq \tau
+    \Vdash (e_1\ e_2) : \alpha'' \sqsubseteq \tau
   } 
 
   \inferrule { 
     \Delta \cdot \Gamma 
-    \Vdash e_1 : \tau_1' \leq \tau_1
+    \Vdash e_1 : \tau_1' \sqsubseteq \tau_1
     \\
     \Delta;\Delta' \cdot (\Gamma, x \mapsto \text{pack}\ \Delta\ \tau_1')  
-    \Vdash e_2 : \tau_2' \leq \tau_2
+    \Vdash e_2 : \tau_2' \sqsubseteq \tau_2
     \\
   } {
     \Delta;\Delta' \cdot \Gamma 
     \Vdash 
     (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : 
-    \tau_2' \leq 
+    \tau_2' \sqsubseteq 
     \tau_2
   } 
 
   \inferrule { 
     \text{fresh}\ \alpha_1
     \\
-    \Delta \cdot \Gamma 
-    \Vdash e : \tau' \leq \alpha_1 \rightarrow \tau
-    \\
     \text{fresh}\ \alpha_2
     \\
-    \Delta;\Delta' \cdot \bullet \Vdash \tau' \leq \alpha_1 \rightarrow \alpha_2
+    \Delta \cdot \Gamma 
+    \Vdash e : \tau' \sqsubseteq \alpha_1 \rightarrow \alpha_2
     \\\\
     \alpha_1[\Delta] = \tau_1
     \\
@@ -1973,10 +1967,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{split}\ \tau_2 = \widebar{\tau_i'}
     \\
     \text{fresh}\ \alpha_3
+    \\\\
+    \Delta;\Delta' \cdot \bullet \Vdash (\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) \sqsubseteq \tau 
   } {
     \Delta;\Delta' \cdot \Gamma  
-    \Vdash \text{fix}\ e :(\nu\ \alpha_3\ .\  \wedge_i(\widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) 
-    \leq \tau
+    \Vdash \text{fix}\ e :(\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) 
+    \sqsubseteq \tau
   } 
 
 \end{mathpar}
@@ -1992,7 +1988,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \text{twist}\ \alpha\ \tau_1\ \tau_2
   & {}=  
   \begin{cases}
-    \left<\forall\ \widebar{\alpha_i}\ .\ \tau_2\ |\ \alpha \leq \tau_1 \right> 
+    \left<\forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \alpha \sqsubseteq \tau_1 \right> 
     &\text{if } \alpha_i \in (\text{freevars}\ \tau_2) 
     \\
     \tau_2 &\text{otherwise}
@@ -2021,79 +2017,79 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % here, we distinguish between these sets of types over program variables
 % and sets of types over type variables, thus making type variables explicit.
 \begin{flalign*}
-  &\boxed{\Delta \cdot \Omega \Vdash \tau \leq \tau}&
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
 \end{flalign*}
 \begin{mathpar}
   \inferrule {
     \alpha_i \not\in (\text{dom}\ \Delta)
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \leq \tau_2
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \leq \tau_4
+    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
   } {
     \Delta \cdot \Omega \Vdash  
-      (\forall \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \leq \tau_4)
-      \leq \tau_2
+      (\forall \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4)
+      \sqsubseteq \tau_2
   }
 
   \inferrule {
     \alpha_i \not\in (\text{dom}\ \Delta)
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \leq \tau_2
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \leq \tau_4
+    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
   } {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq 
-      (\exists \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \leq \tau_4)
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq 
+      (\exists \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4)
   }
 
   \inferrule {
     \alpha \not\in (\text{dom}\ \Delta)
   } {
     (\Delta, \alpha \mapsto \text{rolldn}\ \alpha\ \tau) \cdot \Omega 
-    \Vdash \alpha \leq \tau
+    \Vdash \alpha \sqsubseteq \tau
   }
 
   \inferrule {
     (\Delta\ \alpha) = \tau'
     \\
-    (\Delta;\Delta') \cdot \Omega \Vdash \tau' \leq \tau
+    (\Delta;\Delta') \cdot \Omega \Vdash \tau' \sqsubseteq \tau
   } {
-    (\Delta;\Delta') \cdot \Omega \Vdash \alpha \leq \tau
+    (\Delta;\Delta') \cdot \Omega \Vdash \alpha \sqsubseteq \tau
   }
 
   \inferrule {
     (\Delta\ \alpha) = \tau'
     \\
-    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau' \leq \tau)
+    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau' \sqsubseteq \tau)
   } {
-    \Delta, \alpha \mapsto (\text{rolldn}\ \alpha\ (\tau' \wedge \tau))) 
+    \Delta, \alpha \mapsto (\text{rolldn}\ \alpha\ (\tau' \sqcap \tau))) 
     \cdot \Omega 
-    \Vdash \alpha \leq \tau
+    \Vdash \alpha \sqsubseteq \tau
   }
 
   \inferrule {
     \alpha \not\in (\text{dom}\ \Delta)
   } {
     (\Delta, \alpha \mapsto \text{rollup}\ \alpha\ \tau) 
-    \cdot \Omega \Vdash \tau \leq \alpha
+    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
   }
 
   \inferrule {
     (\Delta\ \alpha) = \tau'
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau \leq \tau'
+    \Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \tau'
   } {
-    \Delta;\Delta' \cdot \Omega \Vdash \tau \leq \alpha
+    \Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \alpha
   }
 
   \inferrule {
     (\Delta\ \alpha) = \tau'
     \\
-    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau \leq \tau')
+    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \tau')
   } {
     (\Delta, \alpha \mapsto (\text{rollup}\ \alpha\ (\tau' \vee \tau))) 
-    \cdot \Omega \Vdash \tau \leq \alpha
+    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
   }
 
   \inferrule {
@@ -2101,13 +2097,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{complex}\ \Delta\ \tau_3 = k
     \\\\
-    \Delta;\Delta' \cdot \Omega, k \mapsto \tau_4 \Vdash \tau_1 \leq \tau_2
+    \Delta;\Delta' \cdot \Omega, k \mapsto \tau_4 \Vdash \tau_1 \sqsubseteq \tau_2
     \\
     % safety: bound vars can only assign to bound vars or non-vars
     \text{safe}\ \widebar{\alpha_i}\ \Delta'
   } {
     \Delta \cdot \Omega \Vdash 
-      (\exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \leq \tau_4) \leq
+      (\exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4) \sqsubseteq
       \tau_2
   }
 
@@ -2116,32 +2112,32 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{complex}\ \Delta\ \tau_3 \neq k
     \\\\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \leq \tau_4
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
     \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_1 \leq \tau_2
+    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
     % safety: bound vars can only assign to bound vars or non-vars
     \text{safe}\ \widebar{\alpha_i}\ \Delta''
   } {
     \Delta \cdot \Omega \Vdash 
-      (\exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \leq \tau_4) \leq
+      (\exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4) \sqsubseteq
       \tau_2
   }
 
   \inferrule {
     \alpha_i \not\in (\text{dom}\ \Delta)
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \leq \tau_4
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
     \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_1 \leq \tau_2
+    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
     % safety: bound vars can only assign to bound vars or non-vars
     \text{safe}\ \widebar{\alpha_i}\ \Delta''
   } {
     \Delta \cdot \Omega \Vdash 
       \tau_1
-      \leq
-      (\forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \leq \tau_4)
+      \sqsubseteq
+      (\forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4)
   }
 \end{mathpar}
 \caption{Subtype unification: part 1}
@@ -2149,34 +2145,34 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\Delta \cdot \Omega \Vdash \tau \leq \tau}&
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
 \end{flalign*}
 
 \begin{mathpar}
   \inferrule {
   } {
-    \Delta \cdot \Omega \Vdash \text{unit} \leq \text{unit}
+    \Delta \cdot \Omega \Vdash \text{unit} \sqsubseteq \text{unit}
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
   } {
-    \Delta \cdot \Omega \Vdash l*\tau_1 \leq l*\tau_2
+    \Delta \cdot \Omega \Vdash l*\tau_1 \sqsubseteq l*\tau_2
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
   } {
-    \Delta \cdot \Omega \Vdash l:\tau_1 \leq l:\tau_2
+    \Delta \cdot \Omega \Vdash l:\tau_1 \sqsubseteq l:\tau_2
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_3 \leq \tau_1
+    \Delta \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_1
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_2 \leq \tau_4
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_4
   } {
     \Delta;\Delta' \cdot 
-      \Omega \Vdash \tau_1\rightarrow\tau_2 \leq \tau_3\rightarrow\tau_4	
+      \Omega \Vdash \tau_1\rightarrow\tau_2 \sqsubseteq \tau_3\rightarrow\tau_4	
   }
 
   \inferrule {
@@ -2184,10 +2180,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \Delta \cdot \Omega \Vdash 
       \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] % by induction hypothesis
-      \leq 
+      \sqsubseteq 
       \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
   } {
-    \Delta \cdot \Omega \Vdash \mu \alpha_1 . \tau_1 \leq \mu \alpha_2 . \tau_2
+    \Delta \cdot \Omega \Vdash \mu \alpha_1 . \tau_1 \sqsubseteq \mu \alpha_2 . \tau_2
   }
 
   \inferrule {
@@ -2195,9 +2191,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{complex}\ \tau_1 = k 
     \\
-    \Delta \cdot \Omega \Vdash (\Omega\ k) \leq \mu \alpha . \tau_2
+    \Delta \cdot \Omega \Vdash (\Omega\ k) \sqsubseteq \mu \alpha . \tau_2
   } {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \mu \alpha . \tau_2
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \mu \alpha . \tau_2
   }
 
   \inferrule {
@@ -2205,75 +2201,75 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{complex}\ \tau_1 \neq k 
     \\
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2[\alpha \mapsto \mu \alpha . \tau_2]
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2[\alpha \mapsto \mu \alpha . \tau_2]
   } {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \mu \alpha . \tau_2
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \mu \alpha . \tau_2
   }
 
   \inferrule {
     \Delta \cdot \Omega \Vdash 
         \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
-        \leq 
+        \sqsubseteq 
         \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
         % by co-induction hypothesis
   } {
-    \Delta \cdot \Omega \Vdash \nu \alpha_1 . \tau_1 \leq \nu \alpha_2 . \tau_2	
+    \Delta \cdot \Omega \Vdash \nu \alpha_1 . \tau_1 \sqsubseteq \nu \alpha_2 . \tau_2	
   }
 
   \inferrule {
     \text{rewrite}\ \nu \alpha . \tau_1 = \tau_1'
     \\
-    \Delta \cdot \Omega \Vdash \tau_1' \leq \tau_2
+    \Delta \cdot \Omega \Vdash \tau_1' \sqsubseteq \tau_2
   } {
-    \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \leq \tau_2
+    \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \sqsubseteq \tau_2
   }
 
   \inferrule {
     \text{rewrite}\ \nu \alpha . \tau_2 = \tau_2'
     \\
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2'
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2'
   } {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq  \nu \alpha . \tau_2
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq  \nu \alpha . \tau_2
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_3
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_2 \leq \tau_3
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_3
   } {
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \vee \tau_2 \leq \tau_3
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \vee \tau_2 \sqsubseteq \tau_3
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
   } {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2 \vee \tau_3
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \vee \tau_3
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_3
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
   } {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2 \vee \tau_3
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \vee \tau_3
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_2
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \leq \tau_3
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
   } {
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \leq \tau_2 \wedge \tau_3
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \sqcap \tau_3
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \leq \tau_3
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
   } {
-    \Delta \cdot \Omega \Vdash \tau_1 \wedge \tau_2 \leq \tau_3
+    \Delta \cdot \Omega \Vdash \tau_1 \sqcap \tau_2 \sqsubseteq \tau_3
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_2 \leq \tau_3
+    \Delta \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_3
   } {
-    \Delta \cdot \Omega \Vdash \tau_1 \wedge \tau_2 \leq \tau_3
+    \Delta \cdot \Omega \Vdash \tau_1 \sqcap \tau_2 \sqsubseteq \tau_3
   }
 \end{mathpar}
 \caption{Subtype unification: part 2}
@@ -2348,11 +2344,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \begin{definition}
 % \[
 %   \begin{array}{l @{} l}
-%   \text{reduce} \wedge [] 
+%   \text{reduce} \sqcap [] 
 %   &\ = \top
 %   \\
-%   \text{reduce} \wedge \tau::\widebar{\tau}
-%   &\ = \tau\ \wedge (\text{reduce} \wedge \widebar{\tau})
+%   \text{reduce} \sqcap \tau::\widebar{\tau}
+%   &\ = \tau\ \sqcap (\text{reduce} \sqcap \widebar{\tau})
 %   \end{array}
 % \]
 % \end{definition}
@@ -2363,7 +2359,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 %     N_1 * N_2
 %     &\ = 
 %     \begin{array}[t]{l}
-%       [ \Delta_1 ; \Delta_2 . \tau_1 \wedge \tau_2 \ |\ 
+%       [ \Delta_1 ; \Delta_2 . \tau_1 \sqcap \tau_2 \ |\ 
 %         \Delta_1.\tau_1 \in N_1
 %         \ \ 
 %         \Delta_2.\tau_2 \in N_2
@@ -2410,10 +2406,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 % \subsection*{dualities}
 % \begin{enumerate}
-%   \item \(\bot \leq \top \)
-%   \item \(\tau_1\ \&\ \tau_2  \leq \tau_1\ |\ \tau_2 \)
-%   \item \(\forall \alpha . \tau \leq \exists \alpha . \tau \)
-%   \item \(\nu \alpha . \tau \leq \mu \alpha . \tau \)
+%   \item \(\bot \sqsubseteq \top \)
+%   \item \(\tau_1\ \&\ \tau_2  \sqsubseteq \tau_1\ |\ \tau_2 \)
+%   \item \(\forall \alpha . \tau \sqsubseteq \exists \alpha . \tau \)
+%   \item \(\nu \alpha . \tau \sqsubseteq \mu \alpha . \tau \)
 % \end{enumerate}
 
 % \subsection*{contributions}
@@ -2747,7 +2743,7 @@ Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from 
 % propagation up of types over program term, e.g. (fix ...)
 
 % an interpolant is akin to a subtype of a function type
-% X -> Y <: A -> B === A, B |- [X -> Y] == A <: X, Y <: B
+% X -> Y \sqsubseteq A -> B === A, B |- [X -> Y] == A \sqsubseteq X, Y \sqsubseteq B
 
 % an interpolation from resolution is akin to a nu-type from  (fix ...)
 
@@ -2859,7 +2855,7 @@ Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from 
       % subtyping subsumes constraint semantics and instantiation/generalization
       %e.g. union and intersection, asymmetrical quantification subtyping
       %partial instantiation in generalized polymorphic subtyping
-      % subtyping encodes instantiation: ((ALL X . T) <: T')
+      % subtyping encodes instantiation: ((ALL X . T) \sqsubseteq T')
       % e.g. 
         % g(f : int -> int)
         % h : All X . X -> X
@@ -2877,7 +2873,7 @@ Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from 
   % with general constraints (rather than just upper bound)
   % generalization of subtyping
   % compare to instantiation of other systems
-    % Cardelli's system F<: does not have instantiation
+    % Cardelli's system F\sqsubseteq does not have instantiation
     % Pierce's local type inference (section 3) does not have partial instantiation
     % synquid does not have partial instantiation or polymorphic subtyping 
     % system F does not have instantiation or generalized constraints
