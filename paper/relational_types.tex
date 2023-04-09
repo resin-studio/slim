@@ -2001,9 +2001,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Twisting}
 \end{figure*}
 
-
-
-\begin{figure*}[h]
 % note: type adjustment bears some resemblance 
 % to widening/narrowing in abstraction interpretation.
 % However, it doesn't share all the responsibilities of AI's operators.
@@ -2019,6 +2016,49 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % the set of types that are accepted over program variables .
 % here, we distinguish between these sets of types over program variables
 % and sets of types over type variables, thus making type variables explicit.
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+\begin{mathpar}
+
+\end{mathpar}
+\caption{Subtype unification: structural types}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+\begin{mathpar}
+
+\end{mathpar}
+\caption{Subtype unification: set-theoretic types}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+\begin{mathpar}
+
+\end{mathpar}
+\caption{Subtype unification: predicate types}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+\begin{mathpar}
+
+\end{mathpar}
+\caption{Subtype unification: fixed point types}
+\end{figure*}
+
+
+\begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
 \end{flalign*}
@@ -2031,7 +2071,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
   } {
     \Delta \cdot \Omega \Vdash  
-      (\forall \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4)
+      \left< \forall \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right>
       \sqsubseteq \tau_2
   }
 
@@ -2043,7 +2083,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
   } {
     \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq 
-      (\exists \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4)
+      \left< \exists \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
   }
 
   \inferrule {
@@ -2106,7 +2146,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{safe}\ \widebar{\alpha_i}\ \Delta'
   } {
     \Delta \cdot \Omega \Vdash 
-      (\exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4) \sqsubseteq
+      \left< \exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
       \tau_2
   }
 
@@ -2123,7 +2163,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \text{safe}\ \widebar{\alpha_i}\ \Delta''
   } {
     \Delta \cdot \Omega \Vdash 
-      (\exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4) \sqsubseteq
+      \left< \exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
       \tau_2
   }
 
@@ -2140,7 +2180,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \cdot \Omega \Vdash 
       \tau_1
       \sqsubseteq
-      (\forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4)
+      \left< \forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
   }
 \end{mathpar}
 \caption{Subtype unification: part 1}
