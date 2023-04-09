@@ -2022,176 +2022,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
 \end{flalign*}
 \begin{mathpar}
-
-\end{mathpar}
-\caption{Subtype unification: structural types}
-\end{figure*}
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-\begin{mathpar}
-
-\end{mathpar}
-\caption{Subtype unification: set-theoretic types}
-\end{figure*}
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-\begin{mathpar}
-
-\end{mathpar}
-\caption{Subtype unification: predicate types}
-\end{figure*}
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-\begin{mathpar}
-
-\end{mathpar}
-\caption{Subtype unification: fixed point types}
-\end{figure*}
-
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-\begin{mathpar}
-  \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
-    \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
-    \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
-  } {
-    \Delta \cdot \Omega \Vdash  
-      \left< \forall \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right>
-      \sqsubseteq \tau_2
-  }
-
-  \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
-    \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
-    \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
-  } {
-    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq 
-      \left< \exists \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
-  }
-
-  \inferrule {
-    \alpha \not\in (\text{dom}\ \Delta)
-  } {
-    (\Delta, \alpha \mapsto \text{rolldn}\ \alpha\ \tau) \cdot \Omega 
-    \Vdash \alpha \sqsubseteq \tau
-  }
-
-  \inferrule {
-    (\Delta\ \alpha) = \tau'
-    \\
-    (\Delta;\Delta') \cdot \Omega \Vdash \tau' \sqsubseteq \tau
-  } {
-    (\Delta;\Delta') \cdot \Omega \Vdash \alpha \sqsubseteq \tau
-  }
-
-  \inferrule {
-    (\Delta\ \alpha) = \tau'
-    \\
-    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau' \sqsubseteq \tau)
-  } {
-    \Delta, \alpha \mapsto (\text{rolldn}\ \alpha\ (\tau' \sqcap \tau))) 
-    \cdot \Omega 
-    \Vdash \alpha \sqsubseteq \tau
-  }
-
-  \inferrule {
-    \alpha \not\in (\text{dom}\ \Delta)
-  } {
-    (\Delta, \alpha \mapsto \text{rollup}\ \alpha\ \tau) 
-    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
-  }
-
-  \inferrule {
-    (\Delta\ \alpha) = \tau'
-    \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \tau'
-  } {
-    \Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \alpha
-  }
-
-  \inferrule {
-    (\Delta\ \alpha) = \tau'
-    \\
-    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \tau')
-  } {
-    (\Delta, \alpha \mapsto (\text{rollup}\ \alpha\ (\tau' \vee \tau))) 
-    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
-  }
-
-  \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
-    \\
-    \text{complex}\ \Delta\ \tau_3 = k
-    \\\\
-    \Delta;\Delta' \cdot \Omega, k \mapsto \tau_4 \Vdash \tau_1 \sqsubseteq \tau_2
-    \\
-    % safety: bound vars can only assign to bound vars or non-vars
-    \text{safe}\ \widebar{\alpha_i}\ \Delta'
-  } {
-    \Delta \cdot \Omega \Vdash 
-      \left< \exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
-      \tau_2
-  }
-
-  \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
-    \\
-    \text{complex}\ \Delta\ \tau_3 \neq k
-    \\\\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
-    \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
-    \\
-    % safety: bound vars can only assign to bound vars or non-vars
-    \text{safe}\ \widebar{\alpha_i}\ \Delta''
-  } {
-    \Delta \cdot \Omega \Vdash 
-      \left< \exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
-      \tau_2
-  }
-
-  \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
-    \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
-    \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
-    \\
-    % safety: bound vars can only assign to bound vars or non-vars
-    \text{safe}\ \widebar{\alpha_i}\ \Delta''
-  } {
-    \Delta \cdot \Omega \Vdash 
-      \tau_1
-      \sqsubseteq
-      \left< \forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
-  }
-\end{mathpar}
-\caption{Subtype unification: part 1}
-\end{figure*}
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-
-\begin{mathpar}
   \inferrule {
   } {
     \Delta \cdot \Omega \Vdash \text{unit} \sqsubseteq \text{unit}
@@ -2217,7 +2047,145 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta;\Delta' \cdot 
       \Omega \Vdash \tau_1\rightarrow\tau_2 \sqsubseteq \tau_3\rightarrow\tau_4	
   }
+\end{mathpar}
+\caption{Subtype unification: structural types}
+\end{figure*}
 
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+
+\begin{mathpar}
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_3
+  } {
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqcup \tau_2 \sqsubseteq \tau_3
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \sqcup \tau_3
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \sqcup \tau_3
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+  } {
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \sqcap \tau_3
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqcap \tau_2 \sqsubseteq \tau_3
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_3
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqcap \tau_2 \sqsubseteq \tau_3
+  }
+\end{mathpar}
+\caption{Subtype unification: set-theoretic types}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+
+\begin{mathpar}
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq 
+      \left< \exists \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+  }
+
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \text{complex}\ \Delta\ \tau_3 = k
+    \\
+    \Delta;\Delta' \cdot \Omega, k \mapsto \tau_4 \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    % safety: bound vars can only assign to bound vars or non-vars
+    \text{safe}\ \widebar{\alpha_i}\ \Delta'
+  } {
+    \Delta \cdot \Omega \Vdash 
+      \left< \exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
+      \tau_2
+  }
+
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \text{complex}\ \Delta\ \tau_3 \neq k
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
+    \\
+    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    % safety: bound vars can only assign to bound vars or non-vars
+    \text{safe}\ \widebar{\alpha_i}\ \Delta''
+  } {
+    \Delta \cdot \Omega \Vdash 
+      \left< \exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
+      \tau_2
+  }
+
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
+  } {
+    \Delta \cdot \Omega \Vdash  
+      \left< \forall \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+      \sqsubseteq \tau_2
+  }
+
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
+    \\
+    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    % safety: bound vars can only assign to bound vars or non-vars
+    \text{safe}\ \widebar{\alpha_i}\ \Delta''
+  } {
+    \Delta \cdot \Omega \Vdash 
+      \tau_1
+      \sqsubseteq
+      \left< \forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+  }
+\end{mathpar}
+\caption{Subtype unification: predicate types}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+
+\begin{mathpar}
   \inferrule {
     \text{wellfounded}\ \alpha_2\ \tau_2
     \\
@@ -2248,7 +2216,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } {
     \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \mu \alpha . \tau_2
   }
-
+  \\
   \inferrule {
     \Delta \cdot \Omega \Vdash 
         \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
@@ -2258,7 +2226,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } {
     \Delta \cdot \Omega \Vdash \nu \alpha_1 . \tau_1 \sqsubseteq \nu \alpha_2 . \tau_2	
   }
-
+  \\
   \inferrule {
     \text{rewrite}\ \nu \alpha . \tau_1 = \tau_1'
     \\
@@ -2266,7 +2234,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } {
     \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \sqsubseteq \tau_2
   }
-
+  \\
   \inferrule {
     \text{rewrite}\ \nu \alpha . \tau_2 = \tau_2'
     \\
@@ -2274,49 +2242,68 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } {
     \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq  \nu \alpha . \tau_2
   }
+\end{mathpar}
+\caption{Subtype unification: fixed point types}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+
+\begin{mathpar}
+  \inferrule {
+    \alpha \not\in (\text{dom}\ \Delta)
+  } {
+    (\Delta, \alpha \mapsto \text{rolldn}\ \alpha\ \tau) \cdot \Omega 
+    \Vdash \alpha \sqsubseteq \tau
+  }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+    (\Delta\ \alpha) = \tau'
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_3
+    (\Delta;\Delta') \cdot \Omega \Vdash \tau' \sqsubseteq \tau
   } {
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \vee \tau_2 \sqsubseteq \tau_3
+    (\Delta;\Delta') \cdot \Omega \Vdash \alpha \sqsubseteq \tau
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
-  } {
-    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \vee \tau_3
-  }
-
-  \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
-  } {
-    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \vee \tau_3
-  }
-
-  \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    (\Delta\ \alpha) = \tau'
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau' \sqsubseteq \tau)
   } {
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \sqcap \tau_3
+    (\Delta, \alpha \mapsto \text{rolldn}\ \alpha\ (\tau' \sqcap \tau)) 
+    \cdot \Omega 
+    \Vdash \alpha \sqsubseteq \tau
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+    \alpha \not\in (\text{dom}\ \Delta)
   } {
-    \Delta \cdot \Omega \Vdash \tau_1 \sqcap \tau_2 \sqsubseteq \tau_3
+    (\Delta, \alpha \mapsto \text{rollup}\ \alpha\ \tau) 
+    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
   }
 
   \inferrule {
-    \Delta \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_3
+    (\Delta\ \alpha) = \tau'
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \tau'
   } {
-    \Delta \cdot \Omega \Vdash \tau_1 \sqcap \tau_2 \sqsubseteq \tau_3
+    \Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \alpha
+  }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \tau')
+  } {
+    (\Delta, \alpha \mapsto \text{rollup}\ \alpha\ (\tau' \sqcup \tau))
+    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
   }
 \end{mathpar}
-\caption{Subtype unification: part 2}
+\caption{Subtype unification: abstract types}
 \end{figure*}
+
 
 \begin{figure*}[h]
 \begin{flalign*}
