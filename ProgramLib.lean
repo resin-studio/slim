@@ -1512,9 +1512,9 @@ match t with
 
 | .fix t1 =>
   let (i, ty_prem) := (i + 1, Ty.fvar i) 
-  Ty.assume_env (infer i env_ty env_tm t1 (Ty.case ty_prem ty)) (fun i (env_ty, ty1') =>
   let (i, ty_conc) := (i + 1, Ty.fvar i) 
-  Ty.assume_env (Ty.unify i env_ty {} ty1' (.case ty_prem ty_conc)) (fun i env_ty =>
+  Ty.assume_env (infer i env_ty env_tm t1 (Ty.case ty_prem ty_conc)) (fun i (env_ty, _) =>
+  -- Ty.assume_env (Ty.unify i env_ty {} ty1' (.case ty_prem ty)) (fun i env_ty =>
     let ty_prem := Ty.reduce env_ty ty_prem 
     let ty_conc := Ty.reduce env_ty ty_conc
 
@@ -1539,11 +1539,15 @@ match t with
       (Ty.inter ty_case' ty_acc) 
     ) [: ⊤ :] (split_conjunctions ty_conc)
 
-    let ty' := [: ν 1 . ⟨ty_content⟩ :]
-
     -- constraint that ty' <= ty_prem is built into inductive type
-    (i, [(env_ty, ty')])
-  ))
+    let ty' := [: ν 1 . ⟨ty_content⟩ :]
+    Ty.assume_env (Ty.unify i env_ty {} ty' ty) (fun i env_ty =>
+      (i, [(env_ty, ty')])
+    )
+    -- (i, [(env_ty, ty')])
+  )
+  -- )
+
 
 partial def PHashMap.intersect (m1 : PHashMap Nat Unit) (m2 : PHashMap Nat Unit) :=
   PHashMap.from_list (m1.toList.filter (fun (id, _) => m2.contains id))
@@ -2105,6 +2109,14 @@ fix(λ y[0] => λ[
 ])
 :]
 
+#eval [:
+(ν 1 .
+  (∀ 3 . ((succ*β[1] × succ*β[2]) -> β[0]) | β[3] ≤ ((β[1] × β[2]) -> β[0])) ∧ 
+  (∀ 1 . ((zero*@ × β[0]) -> β[0])) ∧ 
+  (∀ 1 . ((β[0] × zero*@) -> β[0]))
+)
+:]
+
 #eval infer_reduce 10 [:
 (fix(λ y[0] => λ[
   for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
@@ -2113,14 +2125,32 @@ fix(λ y[0] => λ[
 ]) (succ;succ;zero;(), succ;succ;succ;zero;()))
 :]
 
-#eval infer_reduce 10 [:
-let y[0] : α[0] = fix(λ y[0] => λ[
+def spec := [: 
+(α[0] × α[1]) -> (∃ 1 . β[0] | 
+  (x:β[0] ∧ y:α[0] ∧ z:α[1]) ∧ (x:β[0] ∧ y:α[1] ∧ z:α[0]) ≤ ⟨plus⟩
+)  
+:]
+
+#eval infer_reduce 10 
+[:
+let y[0] : ⟨spec⟩ = fix(λ y[0] => λ[
   for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
   for (zero;(), y[0]) => y[0],
   for (y[0], zero;()) => y[0] 
 ]) =>
 y[0]
 :]
+
+#eval infer_reduce 10 
+[:
+let y[0] = fix(λ y[0] => λ[
+  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+  for (zero;(), y[0]) => y[0],
+  for (y[0], zero;()) => y[0] 
+]) =>
+y[0]
+:]
+
 
 def diff := [:
 (ν 1 . ((∀ 3 .
