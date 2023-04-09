@@ -1989,6 +1989,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   & {}=  
   \begin{cases}
     \left<\forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \alpha \sqsubseteq \tau_1 \right> 
+    &\text{if } \alpha_i \in (\text{freevars}\ \tau_2) \wedge (\bigvee_j\  i = j \wedge \alpha_j \in (\text{freevars}\ \tau_1))
+    \\
+    \forall \widebar{\alpha_i}\ .\ \tau_2 
     &\text{if } \alpha_i \in (\text{freevars}\ \tau_2) 
     \\
     \tau_2 &\text{otherwise}
