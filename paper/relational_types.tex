@@ -1860,24 +1860,23 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{figure*}
 
 
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-TODO: convert between conjunction of functions to implication normal form
-\begin{mathpar}
-  % this rule is too coarse; we should craft a more precise rule using predicate types
-  % \inferrule {
-  % } {
-  %   \Delta \vdash 
-  %   (\tau_1 \rightarrow \tau_3) \sqcap  (\tau_2 \rightarrow \tau_4)
-  %   \sqsubseteq
-  %   (\tau_1 \sqcup \tau_2) \rightarrow (\tau_3 \sqcap \tau_4)
-  % }
-\end{mathpar}
-\caption{Subtyping: relational types}
-\end{figure*}
-
+% \begin{figure*}[h]
+% \begin{flalign*}
+%   &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
+% \end{flalign*}
+% TODO: convert between conjunction of functions to implication normal form
+% \begin{mathpar}
+%   % this rule is too coarse; we should craft a more precise rule using predicate types
+%   % \inferrule {
+%   % } {
+%   %   \Delta \vdash 
+%   %   (\tau_1 \rightarrow \tau_3) \sqcap  (\tau_2 \rightarrow \tau_4)
+%   %   \sqsubseteq
+%   %   (\tau_1 \sqcup \tau_2) \rightarrow (\tau_3 \sqcap \tau_4)
+%   % }
+% \end{mathpar}
+% \caption{Subtyping: relational types}
+% \end{figure*}
 
 
 \begin{figure*}[h]
@@ -2023,6 +2022,11 @@ TODO: convert between conjunction of functions to implication normal form
   } 
 
 \end{mathpar}
+\caption*{
+  Input: $\Delta \cdot \Gamma \Vdash e : \_ \sqsubseteq \tau$. The input is the type variable environment, typing environment, the expression, and the expected type.
+  \newline
+  Output: $\Delta \cdot \_ \Vdash \_ : \tau \sqsubseteq \_$. The output is the type variable environment, and the strengthened result type.
+}
 \caption{Type inference}
 \end{figure*}
 
@@ -2095,6 +2099,11 @@ TODO: convert between conjunction of functions to implication normal form
       \Omega \Vdash \tau_1\rightarrow\tau_2 \sqsubseteq \tau_3\rightarrow\tau_4	
   }
 \end{mathpar}
+\caption*{
+  Input: $\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau$. The input is the type variable environment, the complex environment, the subtype, and the supertype. 
+  \newline
+  Output: $\Delta \cdot \_ \Vdash \_ \sqsubseteq \_$. The output is the type variable environment. 
+}
 \caption{Subtype unification: structural types}
 \end{figure*}
 
