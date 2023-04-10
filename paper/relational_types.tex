@@ -1586,7 +1586,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \vdash t_2 
     : \tau_2
   } {
-    \Gamma \vdash \text{let}\ x : \tau_1 = t_1 \text{ in } t_2 
+    \Gamma \vdash (\text{let}\ x : \tau_1 = t_1 \text{ in } t_2) 
     : \tau_2
   } 
 
@@ -1709,14 +1709,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \vdash \tau_2
     \sqsubseteq \tau_3
   } {
-    \Delta \vdash \tau_1 \vee \tau_2
+    \Delta \vdash \tau_1 \sqcup \tau_2
     \sqsubseteq \tau_3
   }
 
   \inferrule {
   } {
     \Delta \vdash \tau_1
-    \sqsubseteq \tau_1 \vee \tau_2
+    \sqsubseteq \tau_1 \sqcup \tau_2
   }
 
   \inferrule {
