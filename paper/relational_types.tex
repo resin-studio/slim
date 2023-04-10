@@ -1970,11 +1970,11 @@ TODO: convert between conjunction of functions to implication normal form
     \\
     \Delta;\Delta' \cdot \Gamma
     \Vdash e_2 : \tau_2 \sqsubseteq \alpha
-    \\
+    \\\\
     \text{fresh}\ \alpha'
     \\
     \Delta;\Delta';\Delta'' \cdot \bullet \Vdash \tau_1 \sqsubseteq \tau_2 \rightarrow \alpha'
-    \\
+    \\\\
     \text{fresh}\ \alpha''
     \\
     % need to call unification one more time to liberate existentially quantified variables 
@@ -2169,7 +2169,7 @@ TODO: convert between conjunction of functions to implication normal form
     \\
     \text{complex}\ \Delta\ \tau_3 = k
     \\
-    \Delta;\Delta' \cdot \Omega, k \mapsto \tau_4 \Vdash \tau_1 \sqsubseteq \tau_2
+    \Delta;\Delta' \cdot \Omega, \downarrow k \mapsto \tau_4 \Vdash \tau_1 \sqsubseteq \tau_2
     \\
     % safety: bound vars can only assign to bound vars or non-vars
     \text{safe}\ \widebar{\alpha_i}\ \Delta'
@@ -2207,9 +2207,27 @@ TODO: convert between conjunction of functions to implication normal form
       \left< \forall \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right>
       \sqsubseteq \tau_2
   }
-
+  \\
   \inferrule {
     \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \text{complex}\ \Delta\ \tau_4 = k
+    \\
+    \Delta;\Delta' \cdot \Omega, \uparrow k \mapsto \tau_3 \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    % safety: bound vars can only assign to bound vars or non-vars
+    \text{safe}\ \widebar{\alpha_i}\ \Delta''
+  } {
+    \Delta \cdot \Omega \Vdash 
+      \tau_1
+      \sqsubseteq
+      \left< \forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+  }
+  \\
+  \inferrule {
+    \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \text{complex}\ \Delta\ \tau_4 \neq k
     \\
     \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
     \\
@@ -2249,7 +2267,7 @@ TODO: convert between conjunction of functions to implication normal form
     \\
     \text{complex}\ \tau_1 = k 
     \\
-    \Delta \cdot \Omega \Vdash (\Omega\ k) \sqsubseteq \mu \alpha . \tau_2
+    \Delta \cdot \Omega \Vdash (\Omega\ \downarrow\ k) \sqsubseteq \mu \alpha . \tau_2
   } {
     \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \mu \alpha . \tau_2
   }
@@ -2265,6 +2283,8 @@ TODO: convert between conjunction of functions to implication normal form
   }
   \\
   \inferrule {
+    \text{wellroofed}\ \alpha\ \tau_1
+    \\
     \Delta \cdot \Omega \Vdash 
         \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
         \sqsubseteq 
@@ -2275,6 +2295,28 @@ TODO: convert between conjunction of functions to implication normal form
   }
   \\
   \inferrule {
+    \text{wellroofed}\ \alpha\ \tau_1
+    \\
+    \text{complex}\ \tau_2 = k 
+    \\
+    \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \sqsubseteq (\Omega\ \uparrow\ k) 
+  } {
+    \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \sqsubseteq \tau_2
+  }
+  % \\
+  % \inferrule {
+  %   \text{wellroofed}\ \alpha\ \tau_1
+  %   \\
+  %   \text{complex}\ \tau_2 \neq k 
+  %   \\
+  %   \Delta \cdot \Omega \Vdash \tau_1[\alpha \mapsto \nu \alpha . \tau_1] \sqsubseteq \tau_2
+  % } {
+  %   \Delta \cdot \Omega \Vdash \nu \alpha_1 . \tau_1 \sqsubseteq \tau_2
+  % }
+  \\
+  \inferrule {
+    \text{complex}\ \tau_2 \neq k 
+    \\
     \text{rewrite}\ \nu \alpha . \tau_1 = \tau_1'
     \\
     \Delta \cdot \Omega \Vdash \tau_1' \sqsubseteq \tau_2
