@@ -1747,6 +1747,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \vdash \tau_1 \sqcap \tau_2
     \sqsubseteq \tau_2
   }
+  \\
+  \inferrule {
+  } {
+    \Delta \vdash 
+    (\tau_1 \rightarrow \tau_3) \sqcap  (\tau_2 \rightarrow \tau_4)
+    \sqsubseteq
+    (\tau_1 \sqcup \tau_2) \rightarrow (\tau_3 \sqcap \tau_4)
+  }
 \end{mathpar}
 \caption{Subtyping: set-theoretic types}
 \end{figure*}
@@ -1756,11 +1764,13 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
 \end{flalign*}
 
+\[  \]
+
 \begin{mathpar}
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
-    \forall\ \Delta'\ .\
+    \bigwedge\nolimits_{\Delta'}
     (\Delta;\Delta' \vdash \tau_1 \sqsubseteq \tau_2)
     \longrightarrow
     (\Delta;\Delta' \vdash \tau_3 \sqsubseteq \tau_4)
@@ -1785,7 +1795,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
-    \forall\ \Delta'\ .\
+    \bigwedge\nolimits_{\Delta'}
     (\Delta;\Delta' \vdash \tau_2 \sqsubseteq \tau_3)
     \longrightarrow
     (\Delta;\Delta' \vdash \tau_1 \sqsubseteq \tau_4)
@@ -1795,7 +1805,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   }
 
   \inferrule { 
-    (\text{freevars}\ \Delta) \cap \widebar{\alpha} \subseteq \emptyset 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
     \Delta;\Delta' \vdash \tau_3
     \sqsubseteq \tau_4
@@ -1803,7 +1813,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta;\Delta' \vdash \tau_1
     \sqsubseteq \tau_2
   } { 
-    \Delta \vdash \left<\forall \widebar{\alpha}\ .\ \tau_3\ |\ \tau_1 \sqsubseteq \tau_2\right>
+    \Delta \vdash \left<\forall \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \sqsubseteq \tau_2\right>
     \sqsubseteq \tau_4
   }
 \end{mathpar}
@@ -2568,7 +2578,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from polymorphic refinement types. In PLDI, 2016.
 \bibitem{} Benjamin C. Pierce and David N. Turner. Local type inference. In TOPLAS, 2000.
 \bibitem{} Giuseppe Castagna, Tommaso Petrucciani, and Kim Nguyen. Set-theoretic types for polymorphic variants. In ICFP, 2016.
+\bibitem{} Giuseppe Castagna and Zhiwu Xu. Set-theoretic foundation of parametric polymorphism and subtyping. In ICFP, 2011.
+% \url{https://www.irif.fr/~gc/papers/icfp11.pdf}
 % \url{https://www.irif.fr/~gc/papers/set-theoretic-types-2022.pdf}
+
 \bibitem{} Jeremy G. Siek and Walid Taha. Gradual typing for objects. In ECOOP, 2007.
 \bibitem{} Tim Freeman and Frank Pfenning. Refinement types for ML. In PLDI, 1991.
 
