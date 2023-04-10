@@ -1747,14 +1747,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \vdash \tau_1 \sqcap \tau_2
     \sqsubseteq \tau_2
   }
-  \\
-  \inferrule {
-  } {
-    \Delta \vdash 
-    (\tau_1 \rightarrow \tau_3) \sqcap  (\tau_2 \rightarrow \tau_4)
-    \sqsubseteq
-    (\tau_1 \sqcup \tau_2) \rightarrow (\tau_3 \sqcap \tau_4)
-  }
 \end{mathpar}
 \caption{Subtyping: set-theoretic types}
 \end{figure*}
@@ -1763,8 +1755,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{flalign*}
   &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
 \end{flalign*}
-
-\[  \]
 
 \begin{mathpar}
   \inferrule { 
@@ -1868,6 +1858,26 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \end{mathpar}
 \caption{Subtyping: fixed point types}
 \end{figure*}
+
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+TODO: convert between conjunction of functions to implication normal form
+\begin{mathpar}
+  % this rule is too coarse; we should craft a more precise rule using predicate types
+  % \inferrule {
+  % } {
+  %   \Delta \vdash 
+  %   (\tau_1 \rightarrow \tau_3) \sqcap  (\tau_2 \rightarrow \tau_4)
+  %   \sqsubseteq
+  %   (\tau_1 \sqcup \tau_2) \rightarrow (\tau_3 \sqcap \tau_4)
+  % }
+\end{mathpar}
+\caption{Subtyping: relational types}
+\end{figure*}
+
 
 
 \begin{figure*}[h]
