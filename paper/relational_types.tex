@@ -1652,14 +1652,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Type environment domain}
 \end{figure}
 
-
-
 \begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
 \end{flalign*}
 
 \begin{mathpar}
+  \inferrule {
+  } {
+    \Delta \vdash \text{unit} \sqsubseteq \text{unit}
+  }
+
   \inferrule {
     \Delta \vdash \tau_1
     \sqsubseteq \tau_2
@@ -1687,6 +1690,73 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \sqsubseteq \tau_3 \rightarrow \tau_4
   } 
 
+\end{mathpar}
+\caption{Subtyping: structural types}
+\end{figure*}
+
+
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+
+\begin{mathpar}
+  \inferrule {
+    \Delta \vdash \tau_1
+    \sqsubseteq \tau_3
+    \\
+    \Delta \vdash \tau_2
+    \sqsubseteq \tau_3
+  } {
+    \Delta \vdash \tau_1 \vee \tau_2
+    \sqsubseteq \tau_3
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \tau_1
+    \sqsubseteq \tau_1 \vee \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \tau_2
+    \sqsubseteq \tau_1 \sqcup \tau_2
+  }
+  \\
+  \inferrule {
+    \Delta \vdash \tau
+    \sqsubseteq \tau_1
+    \\
+    \Delta \vdash \tau
+    \sqsubseteq \tau_2
+  } {
+    \Delta \vdash \tau
+    \sqsubseteq \tau_1 \sqcap \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \tau_1 \sqcap \tau_2
+    \sqsubseteq \tau_1
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \tau_1 \sqcap \tau_2
+    \sqsubseteq \tau_2
+  }
+\end{mathpar}
+\caption{Subtyping: set-theoretic types}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+
+\begin{mathpar}
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
@@ -1736,7 +1806,16 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \vdash \left<\forall \widebar{\alpha}\ .\ \tau_3\ |\ \tau_1 \sqsubseteq \tau_2\right>
     \sqsubseteq \tau_4
   }
+\end{mathpar}
+\caption{Subtyping: predicate types}
+\end{figure*}
 
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+
+\begin{mathpar}
   \inferrule { 
     \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
     \sqsubseteq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
@@ -1776,60 +1855,8 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \vdash \nu\alpha.\tau
     \sqsubseteq \tau[\alpha\mapsto\nu \alpha . \tau]
   }
-
-  \inferrule {
-    \Delta \vdash \tau_1
-    \sqsubseteq \tau_3
-    \\
-    \Delta \vdash \tau_2
-    \sqsubseteq \tau_3
-  } {
-    \Delta \vdash \tau_1 \vee \tau_2
-    \sqsubseteq \tau_3
-  }
-
-  \inferrule {
-  } {
-    \Delta \vdash \tau_1
-    \sqsubseteq \tau_1 \vee \tau_2
-  }
-
-  \inferrule {
-  } {
-    \Delta \vdash \tau_2
-    \sqsubseteq \tau_1 \vee \tau_2
-  }
-
-  \inferrule {
-    \Delta \vdash \tau
-    \sqsubseteq \tau_1
-    \\
-    \Delta \vdash \tau
-    \sqsubseteq \tau_2
-  } {
-    \Delta \vdash \tau
-    \sqsubseteq \tau_1 \sqcap \tau_2
-  }
-
-  \inferrule {
-  } {
-    \Delta \vdash \tau_1 \sqcap \tau_2
-    \sqsubseteq \tau_1
-  }
-
-  \inferrule {
-  } {
-    \Delta \vdash \tau_1 \sqcap \tau_2
-    \sqsubseteq \tau_2
-  }
-
-  \inferrule {
-  } {
-    \Delta \vdash \tau
-    \sqsubseteq \tau
-  }
 \end{mathpar}
-\caption{Subtyping}
+\caption{Subtyping: fixed point types}
 \end{figure*}
 
 
