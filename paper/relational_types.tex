@@ -2252,8 +2252,6 @@ TODO: convert between conjunction of functions to implication normal form
 
 \begin{mathpar}
   \inferrule {
-    \text{wellfounded}\ \alpha_2\ \tau_2
-    \\
     \Delta \cdot \Omega \Vdash 
       \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] % by induction hypothesis
       \sqsubseteq 
@@ -2261,21 +2259,19 @@ TODO: convert between conjunction of functions to implication normal form
   } {
     \Delta \cdot \Omega \Vdash \mu \alpha_1 . \tau_1 \sqsubseteq \mu \alpha_2 . \tau_2
   }
-
+  \\
   \inferrule {
-    \text{wellfounded}\ \alpha\ \tau_2
-    \\
     \text{complex}\ \tau_1 = k 
     \\
     \Delta \cdot \Omega \Vdash (\Omega\ \downarrow\ k) \sqsubseteq \mu \alpha . \tau_2
   } {
     \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \mu \alpha . \tau_2
   }
-
+  \\
   \inferrule {
-    \text{wellfounded}\ \alpha\ \tau_2
-    \\
     \text{complex}\ \tau_1 \neq k 
+    \\
+    \text{wellfounded}\ \alpha\ \tau_2
     \\
     \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2[\alpha \mapsto \mu \alpha . \tau_2]
   } {
@@ -2283,8 +2279,6 @@ TODO: convert between conjunction of functions to implication normal form
   }
   \\
   \inferrule {
-    \text{wellroofed}\ \alpha\ \tau_1
-    \\
     \Delta \cdot \Omega \Vdash 
         \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
         \sqsubseteq 
@@ -2295,8 +2289,6 @@ TODO: convert between conjunction of functions to implication normal form
   }
   \\
   \inferrule {
-    \text{wellroofed}\ \alpha\ \tau_1
-    \\
     \text{complex}\ \tau_2 = k 
     \\
     \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \sqsubseteq (\Omega\ \uparrow\ k) 

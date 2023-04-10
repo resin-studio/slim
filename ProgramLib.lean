@@ -1133,29 +1133,32 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
     unify i env_ty env_complex ty' ty
 
 | ty', .recur ty =>
-  if Ty.wellfounded 1 ty then
-    let ty' := (Ty.simplify (Ty.subst env_ty ty'))
-    match (extract_nested_fields ty') with
-    | .none => 
+  let ty' := (Ty.simplify (Ty.subst env_ty ty'))
+  match (extract_nested_fields ty') with
+  | .none => 
+    if Ty.wellfounded 1 ty then
       unify i env_ty env_complex ty' (unroll (Ty.recur ty))
-    | .some fields =>
-      if List.any fields (fun ty_fd =>
-        match ty_fd with
-        | Ty.tag _ _ => true 
-        | Ty.top => true 
-        | Ty.bot => true 
-        | _ => false
-        -- | Ty.fvar _ => false 
-        -- | _ => true 
-      ) then  
+    else
+      (i, []) 
+  | .some fields =>
+    if List.any fields (fun ty_fd =>
+      match ty_fd with
+      | Ty.tag _ _ => true 
+      | Ty.top => true 
+      | Ty.bot => true 
+      | _ => false
+      -- | Ty.fvar _ => false 
+      -- | _ => true 
+    ) then  
+      if Ty.wellfounded 1 ty then
         unify i env_ty env_complex ty' (unroll (Ty.recur ty))
       else
-        let ty_norm := ty'
-        match env_complex.find? ty_norm with
-        | .some ty_cache => unify i env_ty env_complex ty_cache (Ty.recur ty)
-        | .none => (i, []) 
-  else
-    (i, []) 
+        (i, []) 
+    else
+      let ty_norm := ty'
+      match env_complex.find? ty_norm with
+      | .some ty_cache => unify i env_ty env_complex ty_cache (Ty.recur ty)
+      | .none => (i, []) 
 
 | .corec ty', .corec ty =>
   if Ty.equal env_ty ty' ty then
