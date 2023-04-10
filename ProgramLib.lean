@@ -1157,12 +1157,15 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
   else
     (i, []) 
 
-| ty', .corec ty1 =>
-  -- reduce to "arrow-normal-form" for propagation purposes
-  match rewrite_function_type (.corec ty1) with
-  | .some ty_rw => 
-    unify i env_ty env_complex ty' ty_rw
-  | .none => (i, [])
+| .corec ty', .corec ty =>
+  if Ty.equal env_ty ty' ty then
+    (i, [env_ty])
+  else
+    -- unroll using lhs ty
+    -- by induction hypothesis, ty' ≤ ty
+    let ty' := [: ⟨ty'⟩ ↑ 0 // [ν 1 . ⟨ty'⟩]:]
+    let ty := [: ⟨ty⟩ ↑ 0 // [ν 1 . ⟨ty'⟩]:]
+    unify i env_ty env_complex ty' ty
 
 | .corec ty1, ty =>
   -- reduce to "arrow-normal-form" for propagation purposes
