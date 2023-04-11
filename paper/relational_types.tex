@@ -2857,10 +2857,12 @@ Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from 
 % resolution/clause learning over implication graph is akin to 
 % propagation up of types over program term, e.g. (fix ...)
 
-% an interpolant is akin to a subtype of a function type
+% an interpolant of an implication is akin to a subtype of a function type
 % X -> Y \sqsubseteq A -> B === A, B |- [X -> Y] == A \sqsubseteq X, Y \sqsubseteq B
 
-% an interpolation from resolution is akin to a nu-type from  (fix ...)
+% constructing an interpolant from resolution is akin finding subtype that unifies with a function type 
+
+% an inductive invariant from interpolants is akin to a nu-type from component types of the fix rule 
 
 % predicate abstractions are akin to types with variables
 
@@ -2868,7 +2870,7 @@ Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from 
 
 % safety coniditions are akin to result types
 
-% abstraction-refinement is aking to  unification 
+% abstraction-refinement is akin to  unification 
 
 % goal-abstraction under refined hypothesis (counterproof-generation) is akin to 
 % unification before substitution with variables on rhs (necessary conclusion)
