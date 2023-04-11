@@ -91,7 +91,7 @@ match ty with
 | .tag l ty1 => 
   (l ++ "*" ++ (Ty.repr ty1 n))
 | .field l ty1 => 
-  (l ++ " : " ++ (Ty.repr ty1 n))
+  Format.bracket "(" (l ++ " : " ++ (Ty.repr ty1 n)) ")"
 
 | .union (Ty.tag "inl" inl) (Ty.tag "inr" inr) =>
   Format.bracket "(" ((Ty.repr inl n) ++ " +" ++ Format.line ++ (Ty.repr inr n)) ")"
@@ -984,6 +984,7 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
   | none => 
     (i, [env_ty.insert id (roll_corec id env_ty ty)])
   | some ty' => 
+    -- (unify i env_ty env_complex ty' ty)
     let (i, u_env_ty) := (unify i env_ty env_complex ty' ty)
     if u_env_ty.isEmpty then
       (i, [env_ty.insert id (roll_corec id env_ty (Ty.inter ty ty'))])
@@ -995,6 +996,7 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
   | none => 
     (i, [env_ty.insert id (roll_recur id env_ty ty')])
   | some ty => 
+    -- (unify i env_ty env_complex ty' ty) 
     let (i, u_env_ty) := (unify i env_ty env_complex ty' ty) 
     if u_env_ty.isEmpty then
       (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty' ty))])
@@ -1867,13 +1869,18 @@ def plus := [:
     )
 :]
 
+#eval plus
+
 
 -- TODO: ERROR
+-- the problem is that the variables of the existential on the RHS are being adjusted 
+-- we need to substitute existentials to avoid adjustment.
+-- However universals should be adjusted?
 #eval unify_reduce 30 [:
   (
     x : (α[10]) ∧
-    y : (zero*@) ∧ 
-    z : (succ*succ*succ*succ*zero*@)
+    y : (succ*zero*@) ∧ 
+    z : (zero*@)
   )
 :] plus
 [: α[10] :]
@@ -1898,7 +1905,7 @@ def plus := [:
 
 #eval unify_reduce 30 [:
   (
-    x : α[1] ∧
+    x : succ*α[1] ∧
     y : α[2] ∧
     z : (succ*succ*zero*@)
   )
