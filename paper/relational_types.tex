@@ -2857,12 +2857,12 @@ Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from 
 % resolution/clause learning over implication graph is akin to 
 % propagation up of types over program term, e.g. (fix ...)
 
-% an interpolant of an implication is akin to a subtype of a function type
-% X -> Y \sqsubseteq A -> B === A, B |- [X -> Y] == A \sqsubseteq X, Y \sqsubseteq B
 
-% constructing an interpolant from resolution is akin finding subtype that unifies with a function type 
+% an initial condition is akin to a weakest precondition of the implication type of fix
+% a safety condition is akin to a strongest postcondition of the implication type of fix
 
-% an inductive invariant from interpolants is akin to a nu-type from component types of the fix rule 
+% an interpolant of a fix's implication is akin to a nu-type 
+% a subtype of the strongest postcondition and supertype of the weakest precondition 
 
 % predicate abstractions are akin to types with variables
 
