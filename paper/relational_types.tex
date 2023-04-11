@@ -2858,11 +2858,11 @@ Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from 
 % propagation up of types over program term, e.g. (fix ...)
 
 
-% an initial condition is akin to a weakest precondition of the implication type of fix
-% a safety condition is akin to a strongest postcondition of the implication type of fix
+% an initial condition is akin to a precondition of the implication type of fix
+% a safety condition is akin to a postcondition of the implication type of fix
 
-% an interpolant of a fix's implication is akin to a nu-type 
-% a subtype of the strongest postcondition and supertype of the weakest precondition 
+% an interpolant of a fix's implication is akin to a nu-type:
+% a subtype of the postcondition and supertype of the precondition 
 
 % predicate abstractions are akin to types with variables
 
@@ -2877,6 +2877,13 @@ Nadia Polikarpova, Ivan Kuraj, and Armando Solar-Lezama. Program synthesis from 
 
 % hypothesis-refinement under abstract goal (proof-generation (that counterproof fails)) is akin to 
 %unification after substitution with variables on lhs (necessary premise)
+
+% type inference vs program synthesis vs model checking:
+% in type inference, the fix rule constructs the interpolant
+% in program synthesis, the fix program is learned from the initial and safety conditions
+% in model checking, the resolution proof is learned from the initial and safety conditions
+  % model checking is harder than type inference because the models are themselves abstract
+  % models are just a special syntax for formulas
 
 
 % /-
