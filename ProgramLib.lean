@@ -937,13 +937,11 @@ def Ty.assume_env (i_u_env_ty : Nat × List α)
     (i, u_acc ++ u_env_ty)
   ) (i, []) u_env_ty 
 
--- TODO: rewrite with union of type evironments as list: 
--- union cannot distribute over type environment!
--- TODO: rewrite entails into meets (except for opaque quantification) 
-  -- ensure that variables can be assigned different values and merged 
--- TODO: always assign variables using union/intersect or join/meet
-  -- if variable is fixed it should be substituted with concrete type! 
-partial def Ty.unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_complex : PHashMap Ty Ty):
+inductive Dir : Type
+| up | dn
+deriving Repr, Inhabited, Hashable, BEq
+
+partial def Ty.unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_complex : PHashMap (Dir × Ty) Ty):
 Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
 -- liberally quantified 
@@ -981,15 +979,6 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
   | (_, .some ty) => unify i env_ty env_complex (.fvar id1) ty 
   | (.some ty', _) => unify i env_ty env_complex ty' (.fvar id2) 
 
--- Notes on adjusting:
--- consider a function applied to an argument.
--- the paramater type might have type variables as subparts.
--- The corresponding suparts of the argument should unify with it, 
--- but not preclude the function from apply to other types, so it unifies with union.
--- therefore, adjusting types with union/intersection happens internally in unification.
--- adjusting in unification is a general way to handle substitution of intersection/union into variables
--- it generalized to type checking that can occur anywhere due to up/down propagation 
--- in contrast, for example, to simply substituting in union at application etc.
 | .fvar id, ty  => 
   match env_ty.find? id with 
   | none => 
@@ -1028,7 +1017,7 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
   let op_fields := linearize_fields ty_c1
 
-  let (iu_env_ty, env_complex) := ( 
+  let ((i, contexts), env_complex) := ( 
     match op_fields with 
     | some fields =>
       let is_recur_type := match ty_c2 with 
@@ -1041,7 +1030,7 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
       )
       if is_recur_type && is_consistent_variable_record then
         let ty_norm := ty_c1 
-        ((i, [env_ty]), env_complex.insert ty_norm ty_c2)
+        ((i, [env_ty]), env_complex.insert (.dn, ty_norm) ty_c2)
 
       else ((i, []), env_complex) 
     | none => (unify i (env_ty) env_complex ty_c1 ty_c2, env_complex)
@@ -1049,7 +1038,7 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
   -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
   -- Option.bind op_context (fun (i, env_ty1) =>
-  Ty.assume_env iu_env_ty (fun i env_ty => 
+  Ty.assume_env (i, contexts) (fun i env_ty => 
   Ty.assume_env (unify i env_ty env_complex ty1 ty2) (fun i env_ty =>
     let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
       let var_values := Ty.free_vars ty_value
@@ -1075,7 +1064,26 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
   let ty_c2 := Ty.instantiate 0 args ty_c2
   let ty2 := Ty.instantiate 0 args ty2
 
-  let (i, contexts) := (unify i (env_ty) env_complex ty_c1 ty_c2)
+  let op_fields := linearize_fields ty_c2
+
+  let ((i, contexts), env_complex) := ( 
+    match op_fields with 
+    | some fields =>
+      let is_corec_type := match ty_c1 with 
+      | Ty.corec _ => true
+      | _ => false
+      let is_consistent_variable_record := List.all fields (fun (l, ty_fd) =>
+        let rlabels := extract_record_labels (ty_c1) 
+        rlabels.contains l &&
+        (match ty_fd with | (Ty.fvar _) => true | _ => false)
+      )
+      if is_corec_type && is_consistent_variable_record then
+        let ty_norm := ty_c2
+        ((i, [env_ty]), env_complex.insert (.up, ty_norm) ty_c1)
+
+      else ((i, []), env_complex) 
+    | none => (unify i (env_ty) env_complex ty_c1 ty_c2, env_complex)
+  )
 
   -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
   Ty.assume_env (i, contexts) (fun i env_ty => 
@@ -1092,6 +1100,8 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
     else
       (i, [])
   ))
+
+
 
 -----------------------------------------------------
 
@@ -1122,15 +1132,15 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
     (unify i env_ty env_complex ty2' ty2)
   ) 
 
-| .recur ty', .recur ty =>
-  if Ty.equal env_ty ty' ty then
+| .recur ty1, .recur ty2 =>
+  if Ty.equal env_ty ty1 ty2 then
     (i, [env_ty])
   else
     -- unroll using rhs ty
-    -- by induction hypothesis, ty' ≤ ty
-    let ty' := [: ⟨ty'⟩ ↑ 0 // [μ 1 . ⟨ty⟩]:]
-    let ty := [: ⟨ty⟩ ↑ 0 // [μ 1 . ⟨ty⟩]:]
-    unify i env_ty env_complex ty' ty
+    -- by induction hypothesis, ty1 ≤ ty
+    let ty1' := [: ⟨ty1⟩ ↑ 0 // [μ 1 . ⟨ty2⟩]:]
+    let ty2' := [: ⟨ty2⟩ ↑ 0 // [μ 1 . ⟨ty2⟩]:]
+    unify i env_ty env_complex ty1' ty2'
 
 | ty', .recur ty =>
   let ty' := (Ty.simplify (Ty.subst env_ty ty'))
@@ -1156,26 +1166,54 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
         (i, []) 
     else
       let ty_norm := ty'
-      match env_complex.find? ty_norm with
+      match env_complex.find? (.dn, ty_norm) with
       | .some ty_cache => unify i env_ty env_complex ty_cache (Ty.recur ty)
       | .none => (i, []) 
 
-| .corec ty', .corec ty =>
-  if Ty.equal env_ty ty' ty then
+| .corec ty1, .corec ty2 =>
+  if Ty.equal env_ty ty1 ty2 then
     (i, [env_ty])
   else
+    -- (i, [env_ty])
     -- unroll using lhs ty
     -- by induction hypothesis, ty' ≤ ty
-    let ty' := [: ⟨ty'⟩ ↑ 0 // [ν 1 . ⟨ty'⟩]:]
-    let ty := [: ⟨ty⟩ ↑ 0 // [ν 1 . ⟨ty'⟩]:]
-    unify i env_ty env_complex ty' ty
+    let ty1' := [: ⟨ty1⟩ ↑ 0 // [ν 1 . ⟨ty1⟩]:]
+    let ty2' := [: ⟨ty2⟩ ↑ 0 // [ν 1 . ⟨ty1⟩]:]
+    unify i env_ty env_complex ty1' ty2'
 
 | .corec ty1, ty =>
   -- reduce to "arrow-normal-form" for propagation purposes
-  match rewrite_function_type (.corec ty1) with
-  | .some ty_rw => 
-    unify i env_ty env_complex ty_rw ty 
-  | .none => (i, [])
+  let ty := (Ty.simplify (Ty.subst env_ty ty))
+  match (extract_nested_fields ty) with
+  | .none => 
+    match rewrite_function_type (.corec ty1) with
+    | .some ty_rw => 
+      unify i env_ty env_complex ty_rw ty 
+    | .none => (i, [])
+  | .some fields =>
+    if List.any fields (fun ty_fd =>
+      match ty_fd with
+      | Ty.tag _ _ => true 
+      | Ty.top => true 
+      | Ty.bot => true 
+      | _ => false
+      -- | Ty.fvar _ => false 
+      -- | _ => true 
+    ) then  
+      match rewrite_function_type (.corec ty1) with
+      | .some ty_rw => 
+        unify i env_ty env_complex ty_rw ty 
+      | .none => (i, [])
+    else
+      let ty_norm := ty
+      match env_complex.find? (.up, ty_norm) with
+      | .some ty_cache => unify i env_ty env_complex (Ty.corec ty1) ty_cache 
+      | .none => (i, []) 
+
+  -- match rewrite_function_type (.corec ty1) with
+  -- | .some ty_rw => 
+  --   unify i env_ty env_complex ty_rw ty 
+  -- | .none => (i, [])
 
 
 | Ty.union ty1 ty2, ty => 
@@ -1829,6 +1867,17 @@ def plus := [:
     )
 :]
 
+
+-- TODO: ERROR
+#eval unify_reduce 30 [:
+  (
+    x : (α[10]) ∧
+    y : (zero*@) ∧ 
+    z : (succ*succ*succ*succ*zero*@)
+  )
+:] plus
+[: α[10] :]
+
 #eval unify_reduce 30 [:
   (
     x : (succ*zero*@) ∧ 
@@ -1909,14 +1958,15 @@ def plus := [:
 [: α[10] :]
 
 
+-- TODO: ERROR
 #eval unify_reduce 10 [:
 (
-  x : α[0] ∧
+  x : α[5] ∧
   y : succ*zero*@ ∧
   z : succ*succ*zero*@
 )
 :] plus
-[: α[0] :]
+[: α[5] :]
 
 #eval unify_simple 10 [:
   ⊥
@@ -2073,12 +2123,12 @@ def even_list := [:
   [: hello*@ :] 
   [: α[0] :] 
 
--- ERROR: diverges - not well foundend: induction untagged 
+-- ERROR: potentially diverges - not well foundend: induction untagged 
 #eval unify_decide 0 
   [: hello*@ :] 
   [: μ 1 . wrong*@ ∨ β[0] :] 
 
--- ERROR: diverges - inductive type not well founded
+-- ERROR: potentially diverges - inductive type not well founded
 #eval unify_decide 0 
   [: hello*@ :] 
   [: μ 1 . β[0] :] 
@@ -2177,3 +2227,32 @@ def diff := [:
 :]
 
 #eval rewrite_function_type diff
+
+
+#eval infer_reduce 10 
+[:
+let y[0] : (
+  ∀ 1 . 
+  (hello*β[0] -> world*@) ∧ 
+  (one*β[0] -> two*@)
+) = _ =>
+(y[0] one;())
+:]
+
+def even_to_list := [: 
+  ν 1 . (
+    (zero*@ -> nil*@) ∧ 
+    (∀ 2 . (succ*succ*β[0] -> cons*cons*β[1]) | 
+      β[2] ≤ β[0] -> β[1])
+  )
+:]
+
+#eval unify_decide 0 
+  even_to_list
+  nat_to_list
+-- == false 
+
+#eval unify_decide 0 
+  nat_to_list
+  even_to_list
+-- == true
