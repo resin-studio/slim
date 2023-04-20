@@ -2173,18 +2173,18 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule {
     \Delta \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_1
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_4
+    \Delta \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_4
   } {
-    \Delta;\Delta' \cdot 
+    \Delta \cdot 
       \Omega \Vdash \tau_1\rightarrow\tau_2 \sqsubseteq \tau_3\rightarrow\tau_4	
   }
   \\
   \inferrule {
     \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_3
+    \Delta \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_3
   } {
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqcup \tau_2 \sqsubseteq \tau_3
+    \Delta \cdot \Omega \Vdash \tau_1 \sqcup \tau_2 \sqsubseteq \tau_3
   }
 
   \inferrule {
@@ -2202,9 +2202,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule {
     \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
   } {
-    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \sqcap \tau_3
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \sqcap \tau_3
   }
 
   \inferrule {
