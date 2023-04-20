@@ -1898,7 +1898,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \Delta \cdot \Gamma;\Gamma' \Vdash_i m_i : \tau'_i
     \\
-    \Delta \cdot \Gamma;\Gamma' \Vdash e_i : \tau''_i
+    \Delta \cdot \Gamma;\Gamma' \Vdash_i e_i : \tau''_i
   } {
     \Delta \cdot \Gamma;\Gamma'
     \Vdash
@@ -1908,8 +1908,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
   \inferrule { 
     \Delta \cdot \Gamma \Vdash e : \tau
-    \\
-    \text{fresh}\ \alpha
     \\
     \Delta \cdot \oslash \Vdash \tau \sqsubseteq (l : \alpha)
   } {
@@ -1922,11 +1920,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \Delta \cdot \Gamma \Vdash e_2 : \tau_2
     \\
-    \text{fresh}\ \alpha
-    \\
     \Delta \cdot \oslash \Vdash \tau_1 \sqsubseteq \tau_2 \rightarrow \alpha
-    \\
-    \text{fresh}\ \alpha'
     \\
     % need to call unification one more time to liberate existentially quantified variables 
     \Delta \cdot \oslash \Vdash \alpha' \sqsubseteq \alpha
@@ -1949,17 +1943,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    \text{fresh}\ \alpha
-    \\
-    \text{fresh}\ \alpha'
-    \\
     \Delta \cdot \Gamma \Vdash e : \tau' \sqsubseteq \alpha \rightarrow \alpha'
-    \\\\
+    \\
     \alpha[\Delta] = \tau
     \\
     \alpha'[\Delta] = \sqcap_i \tau_i'
-    \\
-    \text{fresh}\ \alpha''
     \\
     \Delta;\Delta' \cdot \oslash \Vdash (\nu \alpha''\ .\ \sqcap_i\ (\text{twist}\ \alpha''\ \tau\ \tau_i'))
   } {
@@ -2337,16 +2325,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \sqsubseteq
       \left< \forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
   }
-\end{mathpar}
-\caption{Subtype unification: predicate types}
-\end{figure*}
 
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-
-\begin{mathpar}
   \inferrule {
     \Delta \cdot \Omega \Vdash 
       \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] % by induction hypothesis
@@ -2411,16 +2390,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } {
     \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \sqsubseteq \tau_2
   }
-\end{mathpar}
-\caption{Subtype unification: fixed point types}
-\end{figure*}
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-
-\begin{mathpar}
+  \\
   \inferrule {
     \alpha \not\in (\text{dom}\ \Delta)
   } {
@@ -2470,7 +2440,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \cdot \Omega \Vdash \tau \sqsubseteq \alpha
   }
 \end{mathpar}
-\caption{Subtype unification: abstract types}
+\caption{Subtype unification: extended rules}
 \end{figure*}
 
 
