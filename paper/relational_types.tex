@@ -1945,10 +1945,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \alpha'[\Delta] = \sqcap_i \tau_i'
     \\
-    \Delta;\Delta' \cdot \oslash \Vdash (\nu \alpha''\ .\ \sqcap_i (\text{twist}\ \alpha''\ \tau\ \tau_i'))
+    \Delta;\Delta' \cdot \oslash \Vdash (\nu \alpha''\ .\ \sqcap_i (\text{case}\ \alpha''\ \tau\ \tau_i'))
   } {
     \Delta;\Delta' \cdot \Gamma  
-    \Vdash \text{fix}\ e :(\nu \alpha''\ .\ \sqcap_i (\text{twist}\ \alpha''\ \tau\ \tau_i')) 
+    \Vdash \text{fix}\ e :(\nu \alpha''\ .\ \sqcap_i (\text{case}\ \alpha''\ \tau\ \tau_i')) 
   } 
 
 \end{mathpar}
@@ -2112,11 +2112,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\text{twist}\ \alpha\ \tau_1\ \tau_2}&
+  &\boxed{\text{case}\ \alpha\ \tau_1\ \tau_2}&
 \end{flalign*}
 \[
 \begin{array}{l @{}l}
-  \text{twist}\ \alpha\ \tau_1\ \tau_2
+  \text{case}\ \alpha\ \tau_1\ \tau_2
   & {}=  
   \begin{cases}
     \left<\forall \widebar{\alpha_i}^i\ .\ \tau_2\ |\ \alpha \sqsubseteq \tau_1 \right> 
@@ -2129,19 +2129,14 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \end{cases}
 \end{array}
 \]
-% \caption{Twisting. 
-%   \newline
-%   This function constructs a case of a co-inductive function type.  The \alpha input represents the co-inductive fixed point.  The \tau_1 input represents the co-inductive fixed point.
-% }
-
-\caption{Twisting.
+\caption{Co-inductive case construction.
   \newline
   This function constructs a case of a co-inductive function type.  
   \newline
   The input $\alpha$ represents a co-inductive fixed point.  
   \newline
-  The input $\tau_1$ represents a function case type ($\cdot \rightarrow \cdot$) type 
-  constrained to be weaker than the fixed point. 
+  The input $\tau_1$ represents a function case type ($\cdot \rightarrow \cdot$),
+  which is constrained to be weaker than the fixed point. 
   \newline
   The input $\tau_2$ represents the payload/resulting function case type ($\cdot \rightarrow \cdot$).
 }
