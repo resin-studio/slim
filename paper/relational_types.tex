@@ -1894,9 +1894,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;(\text{patenv}\ m_i) \Vdash m_i : \tau'_i
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;\Gamma' \Vdash m_i : \tau'_i
     \\
-    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;(\text{patenv}\ m_i) \Vdash e_i : \tau''_i
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;\Gamma' \Vdash e_i : \tau''_i
   } {
     \Delta \cdot \Gamma
     \Vdash
