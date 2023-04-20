@@ -496,7 +496,7 @@ the the inductive types. The successful trace of the decision algorithm correspo
 the following derivation. 
 
 \[
-  \Delta_l = \bullet, \text{X} \mapsto \text{unit}
+  \Delta_l = \oslash, \text{X} \mapsto \text{unit}
 \]
 
 \begin{mathpar}
@@ -562,7 +562,7 @@ the following derivation.
     \end{array}
   }
 } { 
-  \bullet \vdash
+  \oslash \vdash
   (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
   \sqsubseteq
   \exists\ \text{X}\ .\ list(\text{X})
@@ -600,13 +600,13 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
       \inferrule* {
         \vdots
       } { 
-        \bullet \vdash
+        \oslash \vdash
         \text{zero}*\text{unit}
         \sqsubseteq
         \text{zero}*\text{unit}
       }
     } { 
-      \bullet \vdash
+      \oslash \vdash
       \text{zero}*\text{unit}
       \sqsubseteq
       \begin{array}[]{@{} l}
@@ -623,13 +623,13 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
             \inferrule* {
               \vdots
             } { 
-              \bullet \vdash
+              \oslash \vdash
               \text{succ}*nat 
               \sqsubseteq
               \text{succ}*nat 
             }
           } { 
-            \bullet \vdash
+            \oslash \vdash
             \text{succ}*nat 
             \sqsubseteq
             \begin{array}[]{@{} l}
@@ -639,19 +639,19 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
             \end{array}
           }
         } { 
-          \bullet \vdash
+          \oslash \vdash
           \text{succ}*nat
           \sqsubseteq
           nat
         }
       } { 
-        \bullet \vdash
+        \oslash \vdash
         \text{succ}*\text{succ}*nat
         \sqsubseteq
         \text{succ}*nat
       }
     } { 
-      \bullet \vdash
+      \oslash \vdash
       \text{succ}*\text{succ}*nat
       \sqsubseteq
       \begin{array}[]{@{} l}
@@ -661,7 +661,7 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
       \end{array}
     }
   } { 
-    \bullet \vdash
+    \oslash \vdash
     \begin{array}[]{@{} l @{}}
       \text{zero}*\text{unit}\ \vee
       \arcr
@@ -675,7 +675,7 @@ The successful trace of the decision algorithm corresponds to a subtyping deriva
     \end{array}
   }
 } { 
-  \bullet \vdash
+  \oslash \vdash
   even \sqsubseteq nat
 }
 \end{mathpar}
@@ -726,7 +726,7 @@ Applying the function that expects the relation between lists and numbers
 to the argument generates a corresponding subtyping constraint, 
 which the system attempts to solve. We define the type environment a type environment abbreviation.
 \[
-\Delta_{nl} = \bullet, 
+\Delta_{nl} = \oslash, 
   \text{X} \mapsto \text{unit},
   \text{N} \mapsto \text{zero}*\text{unit}, 
   \text{XS} \mapsto \text{nil}*\text{unit}
@@ -770,7 +770,7 @@ A successful trace of the decision algorithm corresponds to the subtyping deriva
         \text{N} \times \text{XS} \sqsubseteq nat\_and\_list(\text{X})
       }
     } {
-      \bullet, \text{X} \mapsto \text{unit} \vdash
+      \oslash, \text{X} \mapsto \text{unit} \vdash
       \begin{array}[]{@{} l @{}}
         (\text{succ}*\text{zero}*\text{unit})\ \times 
         \arcr
@@ -784,7 +784,7 @@ A successful trace of the decision algorithm corresponds to the subtyping deriva
       \end{array}
       }
   } { 
-    \bullet, \text{X} \mapsto \text{unit} \vdash
+    \oslash, \text{X} \mapsto \text{unit} \vdash
     \begin{array}[]{@{} l @{}}
       (\text{succ}*\text{zero}*\text{unit})\ \times 
       \arcr
@@ -800,7 +800,7 @@ A successful trace of the decision algorithm corresponds to the subtyping deriva
     \end{array}
   }
 } { 
-  \bullet \vdash
+  \oslash \vdash
   (\text{succ}*\text{zero}*\text{unit}) \times (\text{cons}*(\text{unit} \times \text{nil}*\text{unit}))
   \sqsubseteq
   \exists\ \text{X}\ .\ nat\_and\_list(\text{X})
@@ -830,7 +830,7 @@ We verify that the even relation is included in the natural number relation to l
 Shown in fig. ?.
 
 \[
-\Delta_{enl} = \bullet,\ 
+\Delta_{enl} = \oslash,\ 
 \begin{array}[t]{@{} l}
   \text{N} \times \text{XS} \mapsto nat\_and\_list(\text{X}),\ 
   \\
@@ -872,7 +872,7 @@ Shown in fig. ?.
       \text{N'} \times \text{XS'} \sqsubseteq nat\_and\_list(\text{X})
     }
   } {
-    \bullet \vdash
+    \oslash \vdash
     \begin{array}[]{@{} l @{}}
       \text{zero}*\text{unit} \times \text{nil}*\text{unit}\ \vee\ 
       \arcr
@@ -890,7 +890,7 @@ Shown in fig. ?.
     \end{array}
   }
 } { 
-  \bullet \vdash
+  \oslash \vdash
   even\_and\_list(\text{X})
   \sqsubseteq
   nat\_and\_list(\text{X})
@@ -974,21 +974,20 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \section{Language}
 
-\begin{theorem}(Soundness of type analysis)
-\begin{mathpar}
-  \inferrule {} {
-    \alpha\ \llbracket e \rrbracket^\flat \supseteq \llbracket e \rrbracket^\sharp
-    \longleftrightarrow
-    \llbracket e \rrbracket^\flat \subseteq \gamma\ \llbracket e \rrbracket^\sharp
-  } 
-\end{mathpar}
-\end{theorem}
-
+% \begin{theorem}(Soundness of type analysis)
+% \begin{mathpar}
+%   \inferrule {} {
+%     \alpha\ \llbracket e \rrbracket^\flat \supseteq \llbracket e \rrbracket^\sharp
+%     \longleftrightarrow
+%     \llbracket e \rrbracket^\flat \subseteq \gamma\ \llbracket e \rrbracket^\sharp
+%   } 
+% \end{mathpar}
+% \end{theorem}
 
 \begin{theorem}(Progress of typing)
 \begin{mathpar}
   \inferrule { 
-    \bullet \vdash e : \tau
+    \oslash \vdash e : \tau
   } {
     (e = v) \vee 
     e \hookrightarrow e'
@@ -1000,11 +999,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \begin{theorem}(Preservation of typing)
 \begin{mathpar}
   \inferrule { 
-    \bullet \vdash e : \tau
+    \oslash \vdash e : \tau
     \\
     e \hookrightarrow e'
   } {
-    \bullet \vdash e' : \tau
+    \oslash \vdash e' : \tau
   } 
 \end{mathpar}
 \end{theorem}
@@ -1078,21 +1077,21 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 \caption{Syntax}
 \end{figure*}
 
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{ e \in \llbracket e \rrbracket^\flat}&
-\end{flalign*}
-\begin{mathpar}
-  \inferrule { 
-    e
-    \hookrightarrow^* 
-    e'
-  } {
-    e' \in \llbracket e \rrbracket^\flat
-  } 
-\end{mathpar}
-\caption{Collecting semantics}
-\end{figure*}
+% \begin{figure*}[h]
+% \begin{flalign*}
+%   &\boxed{ e \in \llbracket e \rrbracket^\flat}&
+% \end{flalign*}
+% \begin{mathpar}
+%   \inferrule { 
+%     e
+%     \hookrightarrow^* 
+%     e'
+%   } {
+%     e' \in \llbracket e \rrbracket^\flat
+%   } 
+% \end{mathpar}
+% \caption{Collecting semantics}
+% \end{figure*}
 
 % \begin{figure*}
 % \begin{flalign*}
@@ -1110,54 +1109,53 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \caption{Collecting semantics}
 % \end{figure*}
 
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\varsigma \in \gamma\ T}&
-\end{flalign*}
-\begin{mathpar}
-  \inferrule { 
-    \forall\ \tau \in T\ .\ \bullet \vdash e : \tau
-  } {
-    e \in \gamma\ T 
-  } 
-\end{mathpar}
-\caption{Concretization}
-\end{figure*}
+% \begin{figure*}[h]
+% \begin{flalign*}
+%   &\boxed{\varsigma \in \gamma\ T}&
+% \end{flalign*}
+% \begin{mathpar}
+%   \inferrule { 
+%     \forall\ \tau \in T\ .\ \oslash \vdash e : \tau
+%   } {
+%     e \in \gamma\ T 
+%   } 
+% \end{mathpar}
+% \caption{Concretization}
+% \end{figure*}
 
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\tau \in \alpha\ P}&
-\end{flalign*}
-\begin{mathpar}
-  \inferrule { 
-    \exists\ e \in P\ .\ \bullet \vdash e : \tau
-  } {
-    \tau \in \alpha\ P 
-  } 
-\end{mathpar}
-\caption{Abstraction}
-\end{figure*}
+% \begin{figure*}[h]
+% \begin{flalign*}
+%   &\boxed{\tau \in \alpha\ P}&
+% \end{flalign*}
+% \begin{mathpar}
+%   \inferrule { 
+%     \exists\ e \in P\ .\ \oslash \vdash e : \tau
+%   } {
+%     \tau \in \alpha\ P 
+%   } 
+% \end{mathpar}
+% \caption{Abstraction}
+% \end{figure*}
 
 
-\begin{figure*}[h]
 % TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
 % abstract out widening/narrowing operators in unification
 % we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
 % i.e. we don't compare current to previous, we simply look at structure of input.
 % the structure of input decreases as types widen/narrow
-\begin{flalign*}
-  &\boxed{\tau \in \llbracket e \rrbracket^\sharp}&
-\end{flalign*}
-\begin{mathpar}
-  \inferrule { 
-    \Delta \cdot \bullet \Vdash e : \tau \sqsubseteq \top
-  } {
-    (\text{pack}\ \Delta\ \tau) \in \llbracket e \rrbracket^\sharp
-  }
-\end{mathpar}
-\caption{Type analysis}
-\end{figure*}
-
+% \begin{figure*}[h]
+% \begin{flalign*}
+%   &\boxed{\tau \in \llbracket e \rrbracket^\sharp}&
+% \end{flalign*}
+% \begin{mathpar}
+%   \inferrule { 
+%     \Delta \cdot \oslash \Vdash e : \tau \sqsubseteq \top
+%   } {
+%     (\text{pack}\ \Delta\ \tau) \in \llbracket e \rrbracket^\sharp
+%   }
+% \end{mathpar}
+% \caption{Type analysis}
+% \end{figure*}
 % note: Cousot defines concretization by calling runtime semantics
 % this is a bit odd as it could be non-terminating
 % he seems to have some magical way to decide termination
@@ -1235,11 +1233,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \begin{array}{l @{} l}
     \text{unify}\ v\ x 
     &{} =
-    \bullet, x \mapsto v
+    \oslash, x \mapsto v
     \\
     \text{unify}\ ()\ () 
     &{} =
-    \bullet
+    \oslash
     \\
     \text{unify}\ (l \cdot v)\ (l \cdot p) 
     &{} =
@@ -1287,7 +1285,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     H 
     &{} ::=
-    \bullet
+    \oslash
     \ |\ 
     H, x \mapsto v
   \end{array}
@@ -1471,7 +1469,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 %     \rho 
 %     &{} ::=
 %     \begin{array}[t]{@{} l}
-%       \bullet 
+%       \oslash 
 %       \ |\ 
 %       \rho, x \mapsto \left< \rho, w \right> 
 %     \end{array}
@@ -1575,7 +1573,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    \bullet \vdash 
+    \oslash \vdash 
     \left<\forall \widebar{\alpha}\ .\ \tau_5\ |\ \tau_3 \sqsubseteq \tau_4\right>
     \sqsubseteq \tau_1
     \\
@@ -1602,7 +1600,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Gamma \vdash t 
     : \tau' 
     \\
-    \bullet \vdash \tau' \sqsubseteq \tau
+    \oslash \vdash \tau' \sqsubseteq \tau
   } {
     \Gamma \vdash t
     : \tau
@@ -1689,19 +1687,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \vdash \tau_1 \rightarrow \tau_2
     \sqsubseteq \tau_3 \rightarrow \tau_4
   } 
-
-\end{mathpar}
-\caption{Subtyping: structural types}
-\end{figure*}
-
-
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-
-\begin{mathpar}
+  \\
   \inferrule {
     \Delta \vdash \tau_1
     \sqsubseteq \tau_3
@@ -1748,7 +1734,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \sqsubseteq \tau_2
   }
 \end{mathpar}
-\caption{Subtyping: set-theoretic types}
+\caption{Subtyping: standard rules}
 \end{figure*}
 
 \begin{figure*}[h]
@@ -1806,16 +1792,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \vdash \left<\forall \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \sqsubseteq \tau_2\right>
     \sqsubseteq \tau_4
   }
-\end{mathpar}
-\caption{Subtyping: predicate types}
-\end{figure*}
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-
-\begin{mathpar}
+  \\
   \inferrule { 
     \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
     \sqsubseteq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
@@ -1856,7 +1833,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \sqsubseteq \tau[\alpha\mapsto\nu \alpha . \tau]
   }
 \end{mathpar}
-\caption{Subtyping: fixed point types}
+\caption{Subtyping: extended rules}
 \end{figure*}
 
 
@@ -1878,110 +1855,88 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \caption{Subtyping: relational types}
 % \end{figure*}
 
-
-\begin{figure*}[h]
-% TODO: replace (type variables / unification) (top/bottom and widening/narrowing) 
-% abstract out widening/narrowing operators in unification
 % we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
 % i.e. we don't compare current to previous, we simply look at structure of input.
 % the structure of input decreases as types widen/narrow
+\begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\Delta \cdot \Gamma \Vdash e : \tau \sqsubseteq \tau}&
+  &\boxed{\Delta \cdot \Gamma \Vdash e : \tau}&
 \end{flalign*}
 
 \begin{mathpar}
   \inferrule { 
-    \Delta \cdot \bullet \Vdash (\Gamma\ x) \sqsubseteq \tau
+    (\Gamma\ x) = \tau
   } {
     \Delta \cdot \Gamma
-    \Vdash x : (\Gamma\ x) \sqsubseteq \tau
+    \Vdash x : \tau
   } 
 
   \inferrule { 
-    \Delta \cdot \bullet \Vdash \text{unit} \sqsubseteq \tau
   } {
     \Delta \cdot \Gamma 
-    \Vdash () : \text{unit} \sqsubseteq \tau
+    \Vdash () : \text{unit}
   } 
 
   \inferrule { 
-    \text{fresh}\ \alpha
-    \\
-    \Delta \cdot \bullet \Vdash (l * \alpha) \sqsubseteq \tau
-    \\
     \Delta;\Delta' \cdot \Gamma
-    \Vdash e : \tau' \sqsubseteq \alpha
+    \Vdash e : \tau
   } {
     \Delta;\Delta' \cdot \Gamma 
-    \Vdash (l \cdot e) : (l * \tau') \sqsubseteq \tau
+    \Vdash (l \cdot e) : (l * \tau)
   } 
 
   \inferrule { 
-    \text{fresh}\ \alpha_i
-    \\
-    \Delta \cdot \bullet \Vdash (\sqcap\ \widebar{l_i : \alpha_i}) \sqsubseteq \tau
-    \\
-    \Delta;\Delta' \cdot \Gamma
-    \Vdash e_i : \tau_i \sqsubseteq \alpha_i
+    \Delta;\Delta' \cdot \Gamma \Vdash_i e_i : \tau_i
   } {
     \Delta;\Delta' \cdot \Gamma
-    \Vdash (\sigma\ \widebar{l_i = e_i}) : 
-    (\sqcap\ \widebar{l_i : \tau_i}) \sqsubseteq \tau
+    \Vdash \sigma\ \widebar{l_i = e_i}^i : 
+    \sqcap_i\ (l_i : \tau_i)
   } 
 
   \inferrule { 
-    \text{fresh}\ \alpha_i'
+    \Gamma' =\ ;_i (\text{patenv}\ m_i)
     \\
-    \text{fresh}\ \alpha_i''
+    \Delta;\Delta' \cdot \Gamma;\Gamma' \Vdash_i m_i : \tau'_i
     \\
-    \Delta \cdot \bullet \Vdash (\sqcap\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \sqsubseteq \tau
+    \Delta;\Delta';\Delta'' \cdot \Gamma;\Gamma' \Vdash e_i : \tau''_i
+  } {
+    \Delta;\Delta';\Delta'' \cdot \Gamma;\Gamma'
+    \Vdash
+    \lambda\ \widebar{m_i \Rightarrow e_i}^i : 
+    \sqcap_i\ (\tau_i' \rightarrow \tau_i'') 
+  } 
+
+  \inferrule { 
+    \Delta;\Delta' \cdot \Gamma \Vdash e : \tau
     \\
-    \Delta;\Delta' \cdot \Gamma;(\text{patenv}\ m_i) 
-    \Vdash m_i : \tau'_i \sqsubseteq \alpha'_i
+    \text{fresh}\ \alpha
     \\
-    \Delta;\Delta';\Delta'' \cdot \Gamma 
-    \Vdash e_i : \tau''_i \sqsubseteq \alpha''_i
+    \Delta;\Delta';\Delta'' \cdot \oslash \Vdash \tau \sqsubseteq (l : \alpha)
   } {
     \Delta;\Delta';\Delta'' \cdot \Gamma
-    \Vdash
-    (\lambda\ \widebar{m_i \Rightarrow e_i}) : 
-    (\sqcap\ \widebar{\tau_i' \rightarrow \tau_i''}) \sqsubseteq 
-    \tau
+    \Vdash (e/l) : \alpha
   } 
 
   \inferrule { 
-    \Delta \cdot \Gamma
-    \Vdash e : \tau' \sqsubseteq (l : \tau)
+    \\
+    \Delta;\Delta' \cdot \Gamma \Vdash e_1 : \tau_1
+    \\
+    \Delta;\Delta' \cdot \Gamma \Vdash e_2 : \tau_2
     \\
     \text{fresh}\ \alpha
     \\
-    \Delta;\Delta' \cdot \bullet \Vdash \tau' \sqsubseteq (l : \alpha)
-  } {
-    \Delta;\Delta' \cdot \Gamma
-    \Vdash (e/l) : \alpha \sqsubseteq \tau
-  } 
-
-  \inferrule { 
-    \text{fresh}\ \alpha
-    \\
-    \Delta \cdot \Gamma 
-    \Vdash e_1 : \tau_1 \sqsubseteq (\alpha \rightarrow \tau)
-    \\
-    \Delta;\Delta' \cdot \Gamma
-    \Vdash e_2 : \tau_2 \sqsubseteq \alpha
+    \Delta;\Delta';\Delta'' \cdot \oslash \Vdash \tau_1 \sqsubseteq \tau_2 \rightarrow \alpha
     \\\\
     \text{fresh}\ \alpha'
     \\
-    \Delta;\Delta';\Delta'' \cdot \bullet \Vdash \tau_1 \sqsubseteq \tau_2 \rightarrow \alpha'
-    \\\\
-    \text{fresh}\ \alpha''
-    \\
     % need to call unification one more time to liberate existentially quantified variables 
-    \Delta;\Delta';\Delta'';\Delta''' \cdot \bullet \Vdash \alpha'' \sqsubseteq \alpha'
+    \Delta;\Delta';\Delta'';\Delta''' \cdot \oslash \Vdash \alpha' \sqsubseteq \alpha
   } {
     \Delta;\Delta';\Delta'';\Delta''' \cdot \Gamma
-    \Vdash (e_1\ e_2) : \alpha'' \sqsubseteq \tau
+    \Vdash (e_1\ e_2) : \alpha'
   } 
+
+  % TODO: convert following to propagation-up only rules
 
   \inferrule { 
     \Delta \cdot \Gamma 
@@ -2003,8 +1958,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{fresh}\ \alpha_2
     \\
-    \Delta \cdot \Gamma 
-    \Vdash e : \tau' \sqsubseteq \alpha_1 \rightarrow \alpha_2
+    \Delta \cdot \Gamma \Vdash e : \tau' \sqsubseteq \alpha_1 \rightarrow \alpha_2
     \\\\
     \alpha_1[\Delta] = \tau_1
     \\
@@ -2014,7 +1968,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \text{fresh}\ \alpha_3
     \\\\
-    \Delta;\Delta' \cdot \bullet \Vdash (\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) \sqsubseteq \tau 
+    \Delta;\Delta' \cdot \oslash \Vdash (\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) \sqsubseteq \tau 
   } {
     \Delta;\Delta' \cdot \Gamma  
     \Vdash \text{fix}\ e :(\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) 
@@ -2022,13 +1976,163 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
 \end{mathpar}
-\caption*{
-  Input: $\Delta \cdot \Gamma \Vdash e : \_ \sqsubseteq \tau$. The input is the type variable environment, typing environment, the expression, and the expected type.
+\caption{Type inference.
   \newline
-  Output: $\Delta \cdot \_ \Vdash \_ : \tau \sqsubseteq \_$. The output is the type variable environment, and the strengthened result type.
+  Input: $\Delta \cdot \Gamma \Vdash e : \_ $. The input is the type variable environment, typing environment, and the expression.
+  \newline
+  Output: $\Delta \cdot \_ \Vdash \_ : \tau $. The output is the type variable environment, and the result type.
 }
-\caption{Type inference}
 \end{figure*}
+
+
+% we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
+% i.e. we don't compare current to previous, we simply look at structure of input.
+% the structure of input decreases as types widen/narrow
+% \begin{figure*}[h]
+% \begin{flalign*}
+%   &\boxed{\Delta \cdot \Gamma \Vdash e : \tau \sqsubseteq \tau}&
+% \end{flalign*}
+
+% \begin{mathpar}
+%   \inferrule { 
+%     \Delta \cdot \oslash \Vdash (\Gamma\ x) \sqsubseteq \tau
+%   } {
+%     \Delta \cdot \Gamma
+%     \Vdash x : (\Gamma\ x) \sqsubseteq \tau
+%   } 
+
+%   \inferrule { 
+%     \Delta \cdot \oslash \Vdash \text{unit} \sqsubseteq \tau
+%   } {
+%     \Delta \cdot \Gamma 
+%     \Vdash () : \text{unit} \sqsubseteq \tau
+%   } 
+
+%   \inferrule { 
+%     \text{fresh}\ \alpha
+%     \\
+%     \Delta \cdot \oslash \Vdash (l * \alpha) \sqsubseteq \tau
+%     \\
+%     \Delta;\Delta' \cdot \Gamma
+%     \Vdash e : \tau' \sqsubseteq \alpha
+%   } {
+%     \Delta;\Delta' \cdot \Gamma 
+%     \Vdash (l \cdot e) : (l * \tau') \sqsubseteq \tau
+%   } 
+
+%   \inferrule { 
+%     \text{fresh}\ \alpha_i
+%     \\
+%     \Delta \cdot \oslash \Vdash (\sqcap\ \widebar{l_i : \alpha_i}) \sqsubseteq \tau
+%     \\
+%     \Delta;\Delta' \cdot \Gamma
+%     \Vdash e_i : \tau_i \sqsubseteq \alpha_i
+%   } {
+%     \Delta;\Delta' \cdot \Gamma
+%     \Vdash (\sigma\ \widebar{l_i = e_i}) : 
+%     (\sqcap\ \widebar{l_i : \tau_i}) \sqsubseteq \tau
+%   } 
+
+%   \inferrule { 
+%     \text{fresh}\ \alpha_i'
+%     \\
+%     \text{fresh}\ \alpha_i''
+%     \\
+%     \Delta \cdot \oslash \Vdash (\sqcap\ \widebar{\alpha'_i \rightarrow \alpha''_i}) \sqsubseteq \tau
+%     \\
+%     \Delta;\Delta' \cdot \Gamma;(\text{patenv}\ m_i) 
+%     \Vdash m_i : \tau'_i \sqsubseteq \alpha'_i
+%     \\
+%     \Delta;\Delta';\Delta'' \cdot \Gamma 
+%     \Vdash e_i : \tau''_i \sqsubseteq \alpha''_i
+%   } {
+%     \Delta;\Delta';\Delta'' \cdot \Gamma
+%     \Vdash
+%     (\lambda\ \widebar{m_i \Rightarrow e_i}) : 
+%     (\sqcap\ \widebar{\tau_i' \rightarrow \tau_i''}) \sqsubseteq 
+%     \tau
+%   } 
+
+%   \inferrule { 
+%     \Delta \cdot \Gamma
+%     \Vdash e : \tau' \sqsubseteq (l : \tau)
+%     \\
+%     \text{fresh}\ \alpha
+%     \\
+%     \Delta;\Delta' \cdot \oslash \Vdash \tau' \sqsubseteq (l : \alpha)
+%   } {
+%     \Delta;\Delta' \cdot \Gamma
+%     \Vdash (e/l) : \alpha \sqsubseteq \tau
+%   } 
+
+%   \inferrule { 
+%     \text{fresh}\ \alpha
+%     \\
+%     \Delta \cdot \Gamma 
+%     \Vdash e_1 : \tau_1 \sqsubseteq (\alpha \rightarrow \tau)
+%     \\
+%     \Delta;\Delta' \cdot \Gamma
+%     \Vdash e_2 : \tau_2 \sqsubseteq \alpha
+%     \\\\
+%     \text{fresh}\ \alpha'
+%     \\
+%     \Delta;\Delta';\Delta'' \cdot \oslash \Vdash \tau_1 \sqsubseteq \tau_2 \rightarrow \alpha'
+%     \\\\
+%     \text{fresh}\ \alpha''
+%     \\
+%     % need to call unification one more time to liberate existentially quantified variables 
+%     \Delta;\Delta';\Delta'';\Delta''' \cdot \oslash \Vdash \alpha'' \sqsubseteq \alpha'
+%   } {
+%     \Delta;\Delta';\Delta'';\Delta''' \cdot \Gamma
+%     \Vdash (e_1\ e_2) : \alpha'' \sqsubseteq \tau
+%   } 
+
+%   \inferrule { 
+%     \Delta \cdot \Gamma 
+%     \Vdash e_1 : \tau_1' \sqsubseteq \tau_1
+%     \\
+%     \Delta;\Delta' \cdot (\Gamma, x \mapsto \text{pack}\ \Delta\ \tau_1')  
+%     \Vdash e_2 : \tau_2' \sqsubseteq \tau_2
+%     \\
+%   } {
+%     \Delta;\Delta' \cdot \Gamma 
+%     \Vdash 
+%     (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : 
+%     \tau_2' \sqsubseteq 
+%     \tau_2
+%   } 
+
+%   \inferrule { 
+%     \text{fresh}\ \alpha_1
+%     \\
+%     \text{fresh}\ \alpha_2
+%     \\
+%     \Delta \cdot \Gamma 
+%     \Vdash e : \tau' \sqsubseteq \alpha_1 \rightarrow \alpha_2
+%     \\\\
+%     \alpha_1[\Delta] = \tau_1
+%     \\
+%     \alpha_2[\Delta] = \tau_2
+%     \\
+%     \text{split}\ \tau_2 = \widebar{\tau_i'}
+%     \\
+%     \text{fresh}\ \alpha_3
+%     \\\\
+%     \Delta;\Delta' \cdot \oslash \Vdash (\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) \sqsubseteq \tau 
+%   } {
+%     \Delta;\Delta' \cdot \Gamma  
+%     \Vdash \text{fix}\ e :(\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) 
+%     \sqsubseteq \tau
+%   } 
+
+% \end{mathpar}
+% \caption{Type inference: bidirectional.
+%   \newline
+%   Input: $\Delta \cdot \Gamma \Vdash e : \_ \sqsubseteq \tau$. The input is the type variable environment, typing environment, the expression, and the expected type.
+%   \newline
+%   Output: $\Delta \cdot \_ \Vdash \_ : \tau \sqsubseteq \_$. The output is the type variable environment, and the strengthened result type.
+% }
+% \end{figure*}
 
 \begin{figure*}[h]
 \begin{flalign*}
@@ -2098,21 +2202,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta;\Delta' \cdot 
       \Omega \Vdash \tau_1\rightarrow\tau_2 \sqsubseteq \tau_3\rightarrow\tau_4	
   }
-\end{mathpar}
-\caption*{
-  Input: $\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau$. The input is the type variable environment, the complex environment, the subtype, and the supertype. 
-  \newline
-  Output: $\Delta \cdot \_ \Vdash \_ \sqsubseteq \_$. The output is the type variable environment. 
-}
-\caption{Subtype unification: structural types}
-\end{figure*}
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
-\end{flalign*}
-
-\begin{mathpar}
+  \\
   \inferrule {
     \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
     \\
@@ -2153,7 +2243,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \cdot \Omega \Vdash \tau_1 \sqcap \tau_2 \sqsubseteq \tau_3
   }
 \end{mathpar}
-\caption{Subtype unification: set-theoretic types}
+\caption{Subtype unification: standard rules.
+  \newline
+  Input: $\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau$. The input is the type variable environment, the complex environment, the subtype, and the supertype. 
+  \newline
+  Output: $\Delta \cdot \_ \Vdash \_ \sqsubseteq \_$. The output is the type variable environment. 
+}
 \end{figure*}
 
 \begin{figure*}[h]
@@ -2430,7 +2525,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 % \begin{definition}
 % \[
 %   \begin{array}{l @{} l}
-%   \Delta\ ;\ \bullet
+%   \Delta\ ;\ \oslash
 %   &\ = \Delta 
 %   \\
 %   \Delta_1;(\Delta_2,\alpha \mapsto \tau) 
