@@ -2129,7 +2129,22 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \end{cases}
 \end{array}
 \]
-\caption{Twisting}
+% \caption{Twisting. 
+%   \newline
+%   This function constructs a case of a co-inductive function type.  The \alpha input represents the co-inductive fixed point.  The \tau_1 input represents the co-inductive fixed point.
+% }
+
+\caption{Twisting.
+  \newline
+  This function constructs a case of a co-inductive function type.  
+  \newline
+  The input $\alpha$ represents a co-inductive fixed point.  
+  \newline
+  The input $\tau_1$ represents a function case type ($\cdot \rightarrow \cdot$) type 
+  constrained to be weaker than the fixed point. 
+  \newline
+  The input $\tau_2$ represents the payload/resulting function case type ($\cdot \rightarrow \cdot$).
+}
 \end{figure*}
 
 % note: type adjustment bears some resemblance 
@@ -2321,7 +2336,60 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
       \sqsubseteq
       \left< \forall \widebar{\alpha_i}^i\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
   }
+  \\
+  \\
+  %%%%%%%%%%%%%%%%%%%%%%%
+  \inferrule {
+    \alpha \not\in (\text{dom}\ \Delta)
+  } {
+    (\Delta, \alpha \mapsto \text{rolldn}\ \alpha\ \tau) \cdot \Omega 
+    \Vdash \alpha \sqsubseteq \tau
+  }
 
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \Delta \cdot \Omega \Vdash \tau' \sqsubseteq \tau
+  } {
+    \Delta \cdot \Omega \Vdash \alpha \sqsubseteq \tau
+  }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau' \sqsubseteq \tau)
+  } {
+    (\Delta, \alpha \mapsto \text{rolldn}\ \alpha\ (\tau' \sqcap \tau)) 
+    \cdot \Omega 
+    \Vdash \alpha \sqsubseteq \tau
+  }
+
+  \inferrule {
+    \alpha \not\in (\text{dom}\ \Delta)
+  } {
+    (\Delta, \alpha \mapsto \text{rollup}\ \alpha\ \tau) 
+    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
+  }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau'
+  } {
+    \Delta \cdot \Omega \Vdash \tau \sqsubseteq \alpha
+  }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \tau')
+  } {
+    (\Delta, \alpha \mapsto \text{rollup}\ \alpha\ (\tau' \sqcup \tau))
+    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
+  }
+  %%%%%%%%%%%%%%%%%%
+  \\
+  \\
   \inferrule {
     \Delta \cdot \Omega \Vdash 
       \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] % by induction hypothesis
@@ -2385,55 +2453,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \cdot \Omega \Vdash \tau_1' \sqsubseteq \tau_2
   } {
     \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \sqsubseteq \tau_2
-  }
-  \\
-  \inferrule {
-    \alpha \not\in (\text{dom}\ \Delta)
-  } {
-    (\Delta, \alpha \mapsto \text{rolldn}\ \alpha\ \tau) \cdot \Omega 
-    \Vdash \alpha \sqsubseteq \tau
-  }
-
-  \inferrule {
-    (\Delta\ \alpha) = \tau'
-    \\
-    (\Delta;\Delta') \cdot \Omega \Vdash \tau' \sqsubseteq \tau
-  } {
-    (\Delta;\Delta') \cdot \Omega \Vdash \alpha \sqsubseteq \tau
-  }
-
-  \inferrule {
-    (\Delta\ \alpha) = \tau'
-    \\
-    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau' \sqsubseteq \tau)
-  } {
-    (\Delta, \alpha \mapsto \text{rolldn}\ \alpha\ (\tau' \sqcap \tau)) 
-    \cdot \Omega 
-    \Vdash \alpha \sqsubseteq \tau
-  }
-
-  \inferrule {
-    \alpha \not\in (\text{dom}\ \Delta)
-  } {
-    (\Delta, \alpha \mapsto \text{rollup}\ \alpha\ \tau) 
-    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
-  }
-
-  \inferrule {
-    (\Delta\ \alpha) = \tau'
-    \\
-    \Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \tau'
-  } {
-    \Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \alpha
-  }
-
-  \inferrule {
-    (\Delta\ \alpha) = \tau'
-    \\
-    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \tau')
-  } {
-    (\Delta, \alpha \mapsto \text{rollup}\ \alpha\ (\tau' \sqcup \tau))
-    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
   }
 \end{mathpar}
 \caption{Subtype unification: extended rules}
