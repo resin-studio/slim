@@ -1886,7 +1886,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    \Delta \cdot \Gamma \Vdash_i e_i : \tau_i
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma \Vdash e_i : \tau_i
   } {
     \Delta \cdot \Gamma
     \Vdash \sigma\ \widebar{l_i = e_i}^i : 
@@ -1894,13 +1894,11 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    \Gamma' =\ ;_i (\text{patenv}\ m_i)
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;(\text{patenv}\ m_i) \Vdash m_i : \tau'_i
     \\
-    \Delta \cdot \Gamma;\Gamma' \Vdash_i m_i : \tau'_i
-    \\
-    \Delta \cdot \Gamma;\Gamma' \Vdash_i e_i : \tau''_i
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;(\text{patenv}\ m_i) \Vdash e_i : \tau''_i
   } {
-    \Delta \cdot \Gamma;\Gamma'
+    \Delta \cdot \Gamma
     \Vdash
     \lambda\ \widebar{m_i \Rightarrow e_i}^i : 
     \sqcap_i\ (\tau_i' \rightarrow \tau_i'') 
@@ -1928,8 +1926,6 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \Delta \cdot \Gamma
     \Vdash (e_1\ e_2) : \alpha'
   } 
-
-  % TODO: convert following to propagation-up only rules
 
   \inferrule { 
     \Delta \cdot \Gamma \Vdash e_1 : \tau_1' \sqsubseteq \tau_1
@@ -2124,10 +2120,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   & {}=  
   \begin{cases}
     \left<\forall \widebar{\alpha_i}^i\ .\ \tau_2\ |\ \alpha \sqsubseteq \tau_1 \right> 
-    &\text{if } \alpha_i \in (\text{freevars}\ \tau_2) \wedge (\bigvee_j\  i = j \wedge \alpha_j \in (\text{freevars}\ \tau_1))
+    &\text{if}\ \bigwedge_i\ \alpha_i \in (\text{freevars}\ \tau_2) \wedge (\bigvee_j\  i = j \wedge \alpha_j \in (\text{freevars}\ \tau_1))
     \\
     \forall \widebar{\alpha_i}^i\ .\ \tau_2 
-    &\text{if } \alpha_i \in (\text{freevars}\ \tau_2) 
+    &\text{if}\ \bigwedge_i\ \alpha_i \in (\text{freevars}\ \tau_2) 
     \\
     \tau_2 &\text{otherwise}
   \end{cases}
@@ -2238,92 +2234,92 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 
 \begin{mathpar}
   \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
   } {
     \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq 
-      \left< \exists \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+      \left< \exists \widebar{\alpha_i}^i\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
   }
 
   \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \text{complex}\ \Delta\ \tau_3 = k
     \\
     \Delta;\Delta' \cdot \Omega, \downarrow k \mapsto \tau_4 \Vdash \tau_1 \sqsubseteq \tau_2
     \\
     % safety: bound vars can only assign to bound vars or non-vars
-    \text{safe}\ \widebar{\alpha_i}\ \Delta'
+    \bigwedge\nolimits_i\ \text{saferef}\ \alpha_i\ \Delta'
   } {
     \Delta \cdot \Omega \Vdash 
-      \left< \exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
+      \left< \exists \widebar{\alpha_i}^i\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
       \tau_2
   }
 
   \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \text{complex}\ \Delta\ \tau_3 \neq k
     \\
     \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
     \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
     % safety: bound vars can only assign to bound vars or non-vars
-    \text{safe}\ \widebar{\alpha_i}\ \Delta''
+    \bigwedge\nolimits_i\ \text{saferef}\ \alpha_i\ \Delta'
   } {
     \Delta \cdot \Omega \Vdash 
-      \left< \exists \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
+      \left< \exists \widebar{\alpha_i}^i\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
       \tau_2
   }
 
   \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
   } {
     \Delta \cdot \Omega \Vdash  
-      \left< \forall \widebar{\alpha_i}\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+      \left< \forall \widebar{\alpha_i}^i\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right>
       \sqsubseteq \tau_2
   }
   \\
   \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \text{complex}\ \Delta\ \tau_4 = k
     \\
     \Delta;\Delta' \cdot \Omega, \uparrow k \mapsto \tau_3 \Vdash \tau_1 \sqsubseteq \tau_2
     \\
     % safety: bound vars can only assign to bound vars or non-vars
-    \text{safe}\ \widebar{\alpha_i}\ \Delta''
+    \bigwedge\nolimits_i\ \text{saferef}\ \alpha_i\ \Delta'
   } {
     \Delta \cdot \Omega \Vdash 
       \tau_1
       \sqsubseteq
-      \left< \forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+      \left< \forall \widebar{\alpha_i}^i\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
   }
   \\
   \inferrule {
-    \alpha_i \not\in (\text{dom}\ \Delta)
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
     \\
     \text{complex}\ \Delta\ \tau_4 \neq k
     \\
     \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
     \\
-    \Delta;\Delta';\Delta'' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
     % safety: bound vars can only assign to bound vars or non-vars
-    \text{safe}\ \widebar{\alpha_i}\ \Delta''
+    \bigwedge\nolimits_i\ \text{saferef}\ \alpha_i\ \Delta'
   } {
     \Delta \cdot \Omega \Vdash 
       \tau_1
       \sqsubseteq
-      \left< \forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+      \left< \forall \widebar{\alpha_i}^i\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
   }
 
   \inferrule {
