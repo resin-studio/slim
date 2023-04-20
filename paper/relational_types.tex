@@ -1878,17 +1878,17 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    \Delta;\Delta' \cdot \Gamma
+    \Delta \cdot \Gamma
     \Vdash e : \tau
   } {
-    \Delta;\Delta' \cdot \Gamma 
+    \Delta \cdot \Gamma 
     \Vdash (l \cdot e) : (l * \tau)
   } 
 
   \inferrule { 
-    \Delta;\Delta' \cdot \Gamma \Vdash_i e_i : \tau_i
+    \Delta \cdot \Gamma \Vdash_i e_i : \tau_i
   } {
-    \Delta;\Delta' \cdot \Gamma
+    \Delta \cdot \Gamma
     \Vdash \sigma\ \widebar{l_i = e_i}^i : 
     \sqcap_i\ (l_i : \tau_i)
   } 
@@ -1896,83 +1896,75 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \inferrule { 
     \Gamma' =\ ;_i (\text{patenv}\ m_i)
     \\
-    \Delta;\Delta' \cdot \Gamma;\Gamma' \Vdash_i m_i : \tau'_i
+    \Delta \cdot \Gamma;\Gamma' \Vdash_i m_i : \tau'_i
     \\
-    \Delta;\Delta';\Delta'' \cdot \Gamma;\Gamma' \Vdash e_i : \tau''_i
+    \Delta \cdot \Gamma;\Gamma' \Vdash e_i : \tau''_i
   } {
-    \Delta;\Delta';\Delta'' \cdot \Gamma;\Gamma'
+    \Delta \cdot \Gamma;\Gamma'
     \Vdash
     \lambda\ \widebar{m_i \Rightarrow e_i}^i : 
     \sqcap_i\ (\tau_i' \rightarrow \tau_i'') 
   } 
 
   \inferrule { 
-    \Delta;\Delta' \cdot \Gamma \Vdash e : \tau
+    \Delta \cdot \Gamma \Vdash e : \tau
     \\
     \text{fresh}\ \alpha
     \\
-    \Delta;\Delta';\Delta'' \cdot \oslash \Vdash \tau \sqsubseteq (l : \alpha)
+    \Delta \cdot \oslash \Vdash \tau \sqsubseteq (l : \alpha)
   } {
-    \Delta;\Delta';\Delta'' \cdot \Gamma
-    \Vdash (e/l) : \alpha
+    \Delta \cdot \Gamma \Vdash (e/l) : \alpha
   } 
 
   \inferrule { 
     \\
-    \Delta;\Delta' \cdot \Gamma \Vdash e_1 : \tau_1
+    \Delta \cdot \Gamma \Vdash e_1 : \tau_1
     \\
-    \Delta;\Delta' \cdot \Gamma \Vdash e_2 : \tau_2
+    \Delta \cdot \Gamma \Vdash e_2 : \tau_2
     \\
     \text{fresh}\ \alpha
     \\
-    \Delta;\Delta';\Delta'' \cdot \oslash \Vdash \tau_1 \sqsubseteq \tau_2 \rightarrow \alpha
-    \\\\
+    \Delta \cdot \oslash \Vdash \tau_1 \sqsubseteq \tau_2 \rightarrow \alpha
+    \\
     \text{fresh}\ \alpha'
     \\
     % need to call unification one more time to liberate existentially quantified variables 
-    \Delta;\Delta';\Delta'';\Delta''' \cdot \oslash \Vdash \alpha' \sqsubseteq \alpha
+    \Delta \cdot \oslash \Vdash \alpha' \sqsubseteq \alpha
   } {
-    \Delta;\Delta';\Delta'';\Delta''' \cdot \Gamma
+    \Delta \cdot \Gamma
     \Vdash (e_1\ e_2) : \alpha'
   } 
 
   % TODO: convert following to propagation-up only rules
 
   \inferrule { 
-    \Delta \cdot \Gamma 
-    \Vdash e_1 : \tau_1' \sqsubseteq \tau_1
+    \Delta \cdot \Gamma \Vdash e_1 : \tau_1' \sqsubseteq \tau_1
     \\
-    \Delta;\Delta' \cdot (\Gamma, x \mapsto \text{pack}\ \Delta\ \tau_1')  
-    \Vdash e_2 : \tau_2' \sqsubseteq \tau_2
+    \Delta \cdot (\Gamma, x \mapsto \text{pack}\ \Delta\ \tau_1')  \Vdash e_2 : \tau_2
     \\
   } {
-    \Delta;\Delta' \cdot \Gamma 
+    \Delta \cdot \Gamma 
     \Vdash 
-    (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : 
-    \tau_2' \sqsubseteq 
-    \tau_2
+    (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2
   } 
 
   \inferrule { 
-    \text{fresh}\ \alpha_1
+    \text{fresh}\ \alpha
     \\
-    \text{fresh}\ \alpha_2
+    \text{fresh}\ \alpha'
     \\
-    \Delta \cdot \Gamma \Vdash e : \tau' \sqsubseteq \alpha_1 \rightarrow \alpha_2
+    \Delta \cdot \Gamma \Vdash e : \tau' \sqsubseteq \alpha \rightarrow \alpha'
     \\\\
-    \alpha_1[\Delta] = \tau_1
+    \alpha[\Delta] = \tau
     \\
-    \alpha_2[\Delta] = \tau_2
+    \alpha'[\Delta] = \sqcap_i \tau_i'
     \\
-    \text{split}\ \tau_2 = \widebar{\tau_i'}
+    \text{fresh}\ \alpha''
     \\
-    \text{fresh}\ \alpha_3
-    \\\\
-    \Delta;\Delta' \cdot \oslash \Vdash (\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) \sqsubseteq \tau 
+    \Delta;\Delta' \cdot \oslash \Vdash (\nu \alpha''\ .\ \sqcap_i\ (\text{twist}\ \alpha''\ \tau\ \tau_i'))
   } {
     \Delta;\Delta' \cdot \Gamma  
-    \Vdash \text{fix}\ e :(\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) 
-    \sqsubseteq \tau
+    \Vdash \text{fix}\ e :(\nu \alpha''\ .\ \sqcap_i\ (\text{twist}\ \alpha''\ \tau\ \tau_i')) 
   } 
 
 \end{mathpar}
@@ -1980,7 +1972,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \newline
   Input: $\Delta \cdot \Gamma \Vdash e : \_ $. The input is the type variable environment, typing environment, and the expression.
   \newline
-  Output: $\Delta \cdot \_ \Vdash \_ : \tau $. The output is the type variable environment, and the result type.
+  Output: $\Delta \cdot \_ \Vdash \_ : \tau $. The output is the type variable environment and the result type.
 }
 \end{figure*}
 
@@ -2118,10 +2110,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
 %     \\
 %     \text{fresh}\ \alpha_3
 %     \\\\
-%     \Delta;\Delta' \cdot \oslash \Vdash (\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) \sqsubseteq \tau 
+%     \Delta;\Delta' \cdot \oslash \Vdash (\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_3\ \tau_1\ \tau_i'})) \sqsubseteq \tau 
 %   } {
 %     \Delta;\Delta' \cdot \Gamma  
-%     \Vdash \text{fix}\ e :(\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_2\ \tau_1\ \tau_i'})) 
+%     \Vdash \text{fix}\ e :(\nu \alpha_3\ .\ (\sqcap\ \widebar{\text{twist}\ \alpha_3\ \tau_1\ \tau_i'})) 
 %     \sqsubseteq \tau
 %   } 
 
@@ -2143,10 +2135,10 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   \text{twist}\ \alpha\ \tau_1\ \tau_2
   & {}=  
   \begin{cases}
-    \left<\forall \widebar{\alpha_i}\ .\ \tau_2\ |\ \alpha \sqsubseteq \tau_1 \right> 
+    \left<\forall \widebar{\alpha_i}^i\ .\ \tau_2\ |\ \alpha \sqsubseteq \tau_1 \right> 
     &\text{if } \alpha_i \in (\text{freevars}\ \tau_2) \wedge (\bigvee_j\  i = j \wedge \alpha_j \in (\text{freevars}\ \tau_1))
     \\
-    \forall \widebar{\alpha_i}\ .\ \tau_2 
+    \forall \widebar{\alpha_i}^i\ .\ \tau_2 
     &\text{if } \alpha_i \in (\text{freevars}\ \tau_2) 
     \\
     \tau_2 &\text{otherwise}
