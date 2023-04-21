@@ -1939,16 +1939,12 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    \Delta \cdot \Gamma \Vdash e : \tau' \sqsubseteq \alpha \rightarrow \alpha'
+    \Delta \cdot \Gamma \Vdash e : \tau \rightarrow \tau'
     \\
-    \alpha[\Delta] = \tau
-    \\
-    \alpha'[\Delta] = \sqcap_i \tau_i'
-    \\
-    \Delta;\Delta' \cdot \oslash \Vdash (\nu \alpha''\ .\ \sqcap_i (\text{case}\ \alpha''\ \tau\ \tau_i'))
+    \tau' = \sqcap_i \tau_i'
   } {
     \Delta;\Delta' \cdot \Gamma  
-    \Vdash \text{fix}\ e :(\nu \alpha''\ .\ \sqcap_i (\text{case}\ \alpha''\ \tau\ \tau_i')) 
+    \Vdash \text{fix}\ e :(\nu \alpha\ .\ \sqcap_i (\text{case}\ \alpha\ \tau\ \tau_i')) 
   } 
 
 \end{mathpar}
