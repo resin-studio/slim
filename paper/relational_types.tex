@@ -1928,9 +1928,9 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
   } 
 
   \inferrule { 
-    \Delta \cdot \Gamma \Vdash e_1 : \tau_1' \sqsubseteq \tau_1
+    \Delta \cdot \Gamma \Vdash e_1 : \tau_1
     \\
-    \Delta \cdot (\Gamma, x \mapsto \text{pack}\ \Delta\ \tau_1')  \Vdash e_2 : \tau_2
+    \Delta \cdot (\Gamma, x \mapsto \text{generalize}\ \Delta\ \tau_1)  \Vdash e_2 : \tau_2
     \\
   } {
     \Delta \cdot \Gamma 
