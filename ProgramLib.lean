@@ -2266,6 +2266,7 @@ def even_to_list := [:
   nat_to_list
 -- == false 
 
+-- TODO
 #eval unify_decide 0 
   nat_to_list
   even_to_list
@@ -2290,6 +2291,15 @@ def even_to_list := [:
 [: ∀ 1 .  cons*@ :]
 [: ∀ 1 .  β[0] :]
 -- == false 
+
+
+#eval unify_decide 0 
+[: ∃ 1 . (succ*succ*@) :]
+[: ∃ 1 . (succ*succ*β[0]) :]
+
+#eval unify_decide 0 
+[: ∀ 2 . (succ*succ*β[0] -> cons*cons*β[1]) :]
+[: ∀ 2 . (succ*succ*@ -> cons*cons*@) :]
 
 
 
