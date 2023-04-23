@@ -2257,8 +2257,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \Delta;\Delta' \cdot \Omega, \downarrow k \mapsto \tau_4 \Vdash \tau_1 \sqsubseteq \tau_2
     \\
-    % safety: bound vars can only assign to bound vars or non-vars
-    \bigwedge\nolimits_i\ \text{saferef}\ \alpha_i\ \Delta'
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta')
   } {
     \Delta \cdot \Omega \Vdash 
       \left< \exists \widebar{\alpha_i}^i\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
@@ -2274,8 +2273,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
-    % safety: bound vars can only assign to bound vars or non-vars
-    \bigwedge\nolimits_i\ \text{saferef}\ \alpha_i\ \Delta'
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta')
   } {
     \Delta \cdot \Omega \Vdash 
       \left< \exists \widebar{\alpha_i}^i\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
@@ -2301,8 +2299,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \Delta;\Delta' \cdot \Omega, \uparrow k \mapsto \tau_3 \Vdash \tau_1 \sqsubseteq \tau_2
     \\
-    % safety: bound vars can only assign to bound vars or non-vars
-    \bigwedge\nolimits_i\ \text{saferef}\ \alpha_i\ \Delta'
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta')
   } {
     \Delta \cdot \Omega \Vdash 
       \tau_1
@@ -2319,8 +2316,7 @@ $\lambda$ x $\Rightarrow$ fix ($\lambda$ self $\Rightarrow$ $\lambda$ [
     \\
     \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
     \\
-    % safety: bound vars can only assign to bound vars or non-vars
-    \bigwedge\nolimits_i\ \text{saferef}\ \alpha_i\ \Delta'
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta')
   } {
     \Delta \cdot \Omega \Vdash 
       \tau_1

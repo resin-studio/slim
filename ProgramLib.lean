@@ -1050,11 +1050,7 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
   Ty.assume_env (i, contexts) (fun i env_ty => 
   Ty.assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
     let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-      let var_values := Ty.free_vars ty_value
-      ( -- bound vars can only bind to bound vars or non-vars
-        not (is_bound_var key) || 
-        (var_values.toList.all (fun (ty_var_val, Unit.unit) => is_bound_var ty_var_val))
-      )
+      not (is_bound_var key) 
     )
     if is_result_safe then
       (i, [env_ty])
@@ -1098,11 +1094,7 @@ Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
   Ty.assume_env (i, contexts) (fun i env_ty => 
   Ty.assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty => 
     let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-      let var_values := Ty.free_vars ty_value
-      ( -- bound vars can only bind to bind vars or non-vars
-        not (is_bound_var key) || 
-        (var_values.toList.all (fun (ty_var, Unit.unit) => is_bound_var ty_var))
-      )
+      not (is_bound_var key) 
     )
     if is_result_safe then
       (i, [env_ty])
@@ -2278,3 +2270,43 @@ def even_to_list := [:
   nat_to_list
   even_to_list
 -- == true
+
+#eval unify_decide 0 
+[: ∃ 1 .  β[0] :]
+[: ∃ 1 .  cons*@ :]
+-- == false 
+
+#eval unify_decide 0 
+[: ∃ 1 .  cons*@ :]
+[: ∃ 1 .  β[0] :]
+-- == true 
+
+#eval unify_decide 0 
+[: ∀ 1 .  β[0] :]
+[: ∀ 1 .  cons*@ :]
+-- == true 
+
+#eval unify_decide 0 
+[: ∀ 1 .  cons*@ :]
+[: ∀ 1 .  β[0] :]
+-- == false 
+
+
+
+
+-- def nat_to_list := [: 
+--   ν 1 . (
+--     (zero*@ -> nil*@) ∧ 
+--     (∀ 2 . (succ*β[0] -> cons*β[1]) | 
+--       β[2] ≤ β[0] -> β[1])
+--   )
+-- :]
+
+
+-- def even_to_list := [: 
+--   ν 1 . (
+--     (zero*@ -> nil*@) ∧ 
+--     (∀ 2 . (succ*succ*β[0] -> cons*cons*β[1]) | 
+--       β[2] ≤ β[0] -> β[1])
+--   )
+-- :]
