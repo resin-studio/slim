@@ -22,10 +22,10 @@ lean_lib Normal {
   -- add any library configuration options here
 }
 
--- @[default_target]
--- lean_lib SurfaceLib {
---   -- add any library configuration options here
--- }
+@[default_target]
+lean_lib Surface {
+  -- add any library configuration options here
+}
 
 @[default_target]
 lean_lib TestLib {
@@ -34,5 +34,5 @@ lean_lib TestLib {
 
 @[default_target]
 lean_exe «sanity»  {
-  root := `SanityScript
+  root := `Sanity
 }

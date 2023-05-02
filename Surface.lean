@@ -97,8 +97,7 @@ namespace Surface
   inductive Tm : Type
   | hole : Tm 
   | unit : Tm
-  | bvar : String -> Tm 
-  | fvar : String -> Tm 
+  | var : String -> Tm 
   | tag : String -> Tm -> Tm
   | record : List (String × Tm) -> Tm
   | func : List (Tm × Tm) -> Tm
@@ -114,8 +113,7 @@ namespace Surface
     "_"
   | .unit =>
     "()"
-  | .bvar id => id
-  | .fvar id => id
+  | .var id => id
   | .tag l t1 =>
     l ++ ";" ++ (Tm.repr t1 n)
   | record [("l", l), ("r", r)] =>
@@ -188,7 +186,7 @@ namespace Surface
   syntax:20 "λ" surf:30 ":" surf "=>" surf:20 : surf 
   syntax:20 "λ" surf:30 "=>" surf:20 : surf 
   syntax:30 "λ" surf : surf 
-  syntax:30 surf:30 "/" surf:100 : surf 
+  syntax:30 surf:30 "." surf:100 : surf 
   syntax:30 "(" surf:30 surf:30 ")" : surf 
   syntax:30 "let" surf ":" surf:30 "=" surf:30 "=>" surf:30 : surf 
   syntax:30 "let" surf "=" surf:30 "=>" surf:30 : surf 
@@ -200,58 +198,58 @@ namespace Surface
 
   syntax "⟨" term "⟩" : surf 
 
-  syntax "[: " surf ":]" : term
+  syntax "[surf: " surf "]" : term
 
   macro_rules
   -- terminals
-  | `([: $n:num :]) => `($n)
-  | `([: $a:ident:]) => `(Ty.var $(Lean.quote (toString a.getId)))
+  | `([surf: $n:num ]) => `($n)
+  | `([surf: $a:ident]) => `(Ty.var $(Lean.quote (toString a.getId)))
   -- context 
-  | `([: [ $x:surf ] :]) => `([ match [: $x :] with | .var name => name | _ => "" ])
-  | `([: [ $x,$xs:surf,* ] :]) => `([: [ $x ] :] ++ [: [$xs,*] :])
+  | `([surf: [ $x:surf ] ]) => `([ match [surf: $x ] with | .var name => name | _ => "" ])
+  | `([surf: [ $x,$xs:surf,* ] ]) => `([surf: [ $x ] ] ++ [surf: [$xs,*] ])
   -- Ty 
-  | `([: @ :]) => `(Ty.unit)
-  | `([: ⊥ :]) => `(Ty.bot)
-  | `([: ⊤ :]) => `(Ty.top)
-  | `([: $a * $b:surf :]) => `(Ty.tag [: $a :] [: $b :])
-  | `([: $a : $b:surf :]) => `(Ty.field [: $a :] [: $b :])
-  | `([: $a -> $b :]) => `(Ty.case [: $a :] [: $b :])
-  | `([: $a ∨ $b :]) => `(Ty.union [: $a :] [: $b :])
-  | `([: $a + $b :]) => `(Ty.union (Ty.tag "inl" [: $a :]) (Ty.tag "inr" [: $b :]))
-  | `([: $a ∧ $b :]) => `(Ty.inter [: $a :] [: $b :])
-  | `([: $a × $b :]) => `(Ty.inter (Ty.field "l" [: $a :]) (Ty.field "r" [: $b :]))
-  | `([: ∀ $a:surf $d:surf | $b ≤ $c :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
-  | `([: ∀ $a:surf $b:surf :]) => `(Ty.univ [: $a :] [: @ :] [: @ :] [: $b :] )
-  | `([: ∃ $a $d | $b ≤ $c  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
-  | `([: ∃ $a:surf $b:surf :]) => `(Ty.exis [: $a :] [: @ :] [: @ :] [: $b :] )
-  | `([: μ $name $a :]) => `(Ty.recur [: $name :] [: $a :])
-  | `([: ν $name $a :]) => `(Ty.corec [: $name :] [: $a :])
+  | `([surf: @ ]) => `(Ty.unit)
+  | `([surf: ⊥ ]) => `(Ty.bot)
+  | `([surf: ⊤ ]) => `(Ty.top)
+  | `([surf: $a * $b:surf ]) => `(Ty.tag [surf: $a ] [surf: $b ])
+  | `([surf: $a : $b:surf ]) => `(Ty.field [surf: $a ] [surf: $b ])
+  | `([surf: $a -> $b ]) => `(Ty.case [surf: $a ] [surf: $b ])
+  | `([surf: $a ∨ $b ]) => `(Ty.union [surf: $a ] [surf: $b ])
+  | `([surf: $a + $b ]) => `(Ty.union (Ty.tag "inl" [surf: $a ]) (Ty.tag "inr" [surf: $b ]))
+  | `([surf: $a ∧ $b ]) => `(Ty.inter [surf: $a ] [surf: $b ])
+  | `([surf: $a × $b ]) => `(Ty.inter (Ty.field "l" [surf: $a ]) (Ty.field "r" [surf: $b ]))
+  | `([surf: ∀ $a:surf $d:surf | $b ≤ $c ]) => `(Ty.univ [surf: $a ] [surf: $b ] [surf: $c ] [surf: $d ])
+  | `([surf: ∀ $a:surf $b:surf ]) => `(Ty.univ [surf: $a ] [surf: @ ] [surf: @ ] [surf: $b ] )
+  | `([surf: ∃ $a $d | $b ≤ $c  ]) => `(Ty.exis [surf: $a ] [surf: $b ] [surf: $c ] [surf: $d ])
+  | `([surf: ∃ $a:surf $b:surf ]) => `(Ty.exis [surf: $a ] [surf: @ ] [surf: @ ] [surf: $b ] )
+  | `([surf: μ $name $a ]) => `(Ty.recur [surf: $name ] [surf: $a ])
+  | `([surf: ν $name $a ]) => `(Ty.corec [surf: $name ] [surf: $a ])
   --Tm
-  | `([: _ :]) => `(Tm.hole)
-  | `([: () :]) => `(Tm.unit)
-  | `([: $a ; $b :]) => `(Tm.tag [: $a :] [: $b :])
-  | `([: $a := $b :]) => `(([: $a :], [: $b :]))
-  | `([: for $b => $d :]) => `(([: $b :], [: $d :]))
-  | `([: σ $a :]) => `(Tm.record [: $a :])
-  | `([: ( $a , $b ) :]) => `(Tm.record [("l", [: $a :]), ("r", [:$b :])])
-  | `([: λ $b => $d :]) => `(Tm.func [([: $b :], [: $d :])])
-  | `([: λ $a :]) => `(Tm.func [: $a :])
-  | `([: $a / $b :]) => `(Tm.proj [: $a :] [: $b :])
-  | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
-  | `([: let $name : $a = $b => $c :]) => `(Tm.letb [: $name :] (Option.some [: $a :]) [: $b :] [: $c :])
-  | `([: let $name = $b => $c :]) => `(Tm.letb [: $name :] Option.none [: $b :] [: $c :])
-  | `([: fix $a :]) => `(Tm.fix [: $a :])
+  | `([surf: _ ]) => `(Tm.hole)
+  | `([surf: () ]) => `(Tm.unit)
+  | `([surf: $a ; $b ]) => `(Tm.tag [surf: $a ] [surf: $b ])
+  | `([surf: $a := $b ]) => `(([surf: $a ], [surf: $b ]))
+  | `([surf: for $b => $d ]) => `(([surf: $b ], [surf: $d ]))
+  | `([surf: σ $a ]) => `(Tm.record [surf: $a ])
+  | `([surf: ( $a , $b ) ]) => `(Tm.record [("l", [surf: $a ]), ("r", [surf:$b ])])
+  | `([surf: λ $b => $d ]) => `(Tm.func [([surf: $b ], [surf: $d ])])
+  | `([surf: λ $a ]) => `(Tm.func [surf: $a ])
+  | `([surf: $a . $b ]) => `(Tm.proj [surf: $a ] [surf: $b ])
+  | `([surf: ($a $b) ]) => `(Tm.app [surf: $a ] [surf: $b ])
+  | `([surf: let $name : $a = $b => $c ]) => `(Tm.letb [surf: $name ] (Option.some [surf: $a ]) [surf: $b ] [surf: $c ])
+  | `([surf: let $name = $b => $c ]) => `(Tm.letb [surf: $name ] Option.none [surf: $b ] [surf: $c ])
+  | `([surf: fix $a ]) => `(Tm.fix [surf: $a ])
 
   --generic
-  | `([: ($a:surf) :]) => `([: $a :])
+  | `([surf: ($a:surf) ]) => `([surf: $a ])
 
   --escape 
-  | `([: ⟨ $e ⟩ :]) => pure e
+  | `([surf: ⟨ $e ⟩ ]) => pure e
 
 
-  #check [: (x) :]
-  #check [: [x] :]
-  #eval [: ∀ [thing] thing ∨ @ | thing ≤ @ :]
+  #check [surf: (x) ]
+  #check [surf: [x] ]
+  #eval [surf: ∀ [thing] thing ∨ @ | thing ≤ @ ]
 
   -------------------
 
