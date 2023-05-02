@@ -111,7 +111,7 @@ def indent(n : Nat) : String :=
 declare_syntax_cat slm
 syntax:100 num : slm 
 syntax:100 ident : slm
-syntax "[" slm,+ "]" : slm 
+syntax "(" slm,+ ")" : slm 
 -- type
 -- syntax:90 "β["slm:100"]" : slm
 -- syntax:90 "α["slm:100"]" : slm
@@ -127,10 +127,10 @@ syntax:70 slm:71 "∧" slm:70 : slm
 syntax:70 slm:71 "×" slm:70 : slm
 syntax:40 "∃" slm "." slm:40 "|" slm "≤" slm: slm 
 syntax:40 "∃" slm "." slm:40 : slm 
-syntax:40 "∀" slm "." slm:40 "|" slm "≤" slm : slm 
-syntax:40 "∀" slm "." slm:40 : slm 
-syntax:80 "μ " slm "." slm : slm 
-syntax:80 "ν " slm "." slm : slm 
+syntax:40 "∀" slm slm:40 "|" slm "≤" slm : slm 
+syntax:40 "∀" slm slm:40 : slm 
+syntax:80 "μ " slm slm : slm 
+syntax:80 "ν " slm slm : slm 
 
 --term
 syntax:30 "_" : slm
@@ -163,13 +163,11 @@ syntax "[: " slm ":]" : term
 macro_rules
 -- terminals
 | `([: $n:num :]) => `($n)
-| `([: $a:ident:]) => `($(Lean.quote (toString a.getId)))
+| `([: $a:ident:]) => `(Ty.var $(Lean.quote (toString a.getId)))
 -- context 
-| `([: [$x:slm] :]) => `([ [: $x :] ])
-| `([: [$x,$xs:slm,*] :]) => `([: $x :] :: [: [$xs,*] :])
+| `([: ($x:slm) :]) => `([ match [: $x :] with | .var name => name | _ => "" ])
+| `([: ($x,$xs:slm,*) :]) => `([: ( $x ) :] ++ [: ($xs,*):])
 -- Ty 
--- | `([: β[$n] :]) => `(Ty.bvar [: $n :])
--- | `([: α[$n:slm] :]) => `(Ty.fvar [: $n :])
 | `([: @ :]) => `(Ty.unit)
 | `([: ⊥ :]) => `(Ty.bot)
 | `([: ⊤ :]) => `(Ty.top)
@@ -180,8 +178,8 @@ macro_rules
 | `([: $a + $b :]) => `(Ty.union (Ty.tag "inl" [: $a :]) (Ty.tag "inr" [: $b :]))
 | `([: $a ∧ $b :]) => `(Ty.inter [: $a :] [: $b :])
 | `([: $a × $b :]) => `(Ty.inter (Ty.field "l" [: $a :]) (Ty.field "r" [: $b :]))
-| `([: ∀ $a . $d | $b ≤ $c :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
-| `([: ∀ $a:slm . $b:slm :]) => `(Ty.univ [: $a :] [: @ :] [: @ :] [: $b :] )
+| `([: ∀ $a $d | $b ≤ $c :]) => `(Ty.univ [: $a :] [: $b :] [: $c :] [: $d :])
+| `([: ∀ $a:slm $b:slm :]) => `(Ty.univ [: $a :] [: @ :] [: @ :] [: $b :] )
 | `([: ∃ $a . $d | $b ≤ $c  :]) => `(Ty.exis [: $a :] [: $b :] [: $c :] [: $d :])
 | `([: ∃ $a:slm . $b:slm :]) => `(Ty.exis [: $a :] [: @ :] [: @ :] [: $b :] )
 | `([: μ 1 . $a :]) => `(Ty.recur [: $a :])
@@ -190,7 +188,7 @@ macro_rules
 | `([: _ :]) => `(Tm.hole)
 | `([: () :]) => `(Tm.unit)
 -- | `([: y[$n] :]) => `(Tm.bvar [: $n :])
--- | `([: x[$n] :]) => `(Tm.fvar [: $n :])
+-- | `([: x[$n] :]) => `(Tm.var [: $n :])
 | `([: $a ; $b :]) => `(Tm.tag [: $a :] [: $b :])
 | `([: $a := $b :]) => `(([: $a :], [: $b :]))
 | `([: for $b => $d :]) => `(([: $b :], [: $d :]))
@@ -209,6 +207,12 @@ macro_rules
 
 --escape 
   | `([: ⟨ $e ⟩ :]) => pure e
+
+
+#check [: (x) :]
+#eval [: ∀ (thing) thing :]
+
+-------------------
 
 
 protected partial def Tm.repr (t : Tm) (n : Nat) : Format :=
