@@ -1,5 +1,5 @@
 import TestLib
-import ProgramLib
+import NormalLib
 
 open Lean PersistentHashMap
 

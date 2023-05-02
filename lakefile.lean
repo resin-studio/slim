@@ -13,9 +13,14 @@ require mathlib from git
 
 
 @[default_target]
-lean_lib ProgramLib {
+lean_lib NormalLib {
   -- add any library configuration options here
 }
+
+-- @[default_target]
+-- lean_lib SurfaceLib {
+--   -- add any library configuration options here
+-- }
 
 @[default_target]
 lean_lib TestLib {

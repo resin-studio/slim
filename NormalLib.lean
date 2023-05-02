@@ -58,7 +58,15 @@ protected def PHashMap.repr [Repr (α × β)] [BEq α] [Hashable α]
 instance [Repr (α × β)] [BEq α] [Hashable α] : Repr (PHashMap α β) where
   reprPrec := PHashMap.repr
 
+-- TODO: create non-normal types with encoding/decoding to normal types 
+  -- non-normal has named variable binding
 
+-- TODO?: normalize record intersection as Map from fields to type 
+-- TODO?: normalize function intersection as Map from type to type 
+-- TODO?: normalize union as set of types   
+
+-- Normal form of types uses De Bruijn indexing for bound type variables
+-- TODO: Normal form of types using De Bruijn indexing for bound type variables
 -- TODO: convert top and bottom into sugar: ⊤ = ∃ α . α, ⊥  = ∀ α . α
 -- TODO: remove top and bottom types 
 inductive Ty : Type
@@ -1443,6 +1451,7 @@ def Ty.combine (i_u_env_ty : (Nat × List (PHashMap Nat Ty))) (ty : Ty) :=
   let (i, u_env_ty) := i_u_env_ty
   (i, u_env_ty.map fun env_ty => (env_ty, ty))
 
+-- TODO: disjoint pattern check for inferring intersection of arrows
 partial def infer (i : Nat) (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
 (Nat × List (PHashMap Nat Ty × Ty)) :=
 match t with
