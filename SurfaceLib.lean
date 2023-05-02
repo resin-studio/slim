@@ -5,8 +5,7 @@ import Lean.Data.PersistentHashMap
 open Std
 
 inductive Ty : Type
-| bvar : String -> Ty  
-| fvar : String -> Ty
+| var : String -> Ty
 | unit : Ty
 | bot : Ty
 | top : Ty
@@ -17,15 +16,14 @@ inductive Ty : Type
 | case : Ty -> Ty -> Ty
 | univ : List String -> Ty -> Ty -> Ty -> Ty
 | exis : List String -> Ty -> Ty -> Ty -> Ty
-| recur : Ty -> Ty
-| corec : Ty -> Ty
+| recur : String -> Ty -> Ty
+| corec : String -> Ty -> Ty
 deriving Repr, Inhabited, Hashable, BEq
 #check List.repr
 
 protected partial def Ty.repr (ty : Ty) (n : Nat) : Format :=
 match ty with
-| .bvar id => id
-| .fvar id => id
+| .var id => id
 | .unit => "@" 
 | .bot => "⊥" 
 | .top => "⊤" 
@@ -79,11 +77,11 @@ match ty with
       (Ty.repr ty_pl n) ++ " | " ++
       (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
     ) ")"
-| .recur ty1 =>
+| .recur String ty1 =>
   Format.bracket "(" (
     "μ 1 . " ++ (Ty.repr ty1 n)
   ) ")"
-| .corec ty1 =>
+| .corec String ty1 =>
   Format.bracket "(" (
     "ν 1 . " ++ (Ty.repr ty1 n)
   ) ")"
@@ -95,14 +93,14 @@ instance : Repr Ty where
 inductive Tm : Type
 | hole : Tm 
 | unit : Tm
-| bvar : Nat -> Tm 
-| fvar : Nat -> Tm 
+| bvar : String -> Tm 
+| fvar : String -> Tm 
 | tag : String -> Tm -> Tm
 | record : List (String × Tm) -> Tm
 | func : List (Tm × Tm) -> Tm
 | proj : Tm -> String -> Tm
 | app : Tm -> Tm -> Tm
-| letb : Option Ty -> Tm -> Tm -> Tm
+| letb : String -> Option Ty -> Tm -> Tm -> Tm
 | fix : Tm -> Tm
 deriving Repr, Inhabited, BEq
 
@@ -115,8 +113,8 @@ syntax:100 num : slm
 syntax:100 ident : slm
 syntax "[" slm,+ "]" : slm 
 -- type
-syntax:90 "β["slm:100"]" : slm
-syntax:90 "α["slm:100"]" : slm
+-- syntax:90 "β["slm:100"]" : slm
+-- syntax:90 "α["slm:100"]" : slm
 syntax:90 "@" : slm
 syntax:90 "⊥" : slm
 syntax:90 "⊤" : slm
@@ -131,14 +129,14 @@ syntax:40 "∃" slm "." slm:40 "|" slm "≤" slm: slm
 syntax:40 "∃" slm "." slm:40 : slm 
 syntax:40 "∀" slm "." slm:40 "|" slm "≤" slm : slm 
 syntax:40 "∀" slm "." slm:40 : slm 
-syntax:80 "μ 1 ." slm : slm 
-syntax:80 "ν 1 ." slm : slm 
+syntax:80 "μ " slm "." slm : slm 
+syntax:80 "ν " slm "." slm : slm 
 
 --term
 syntax:30 "_" : slm
 syntax:30 "()" : slm
-syntax:30 "y[" slm:90 "]": slm
-syntax:30 "x[" slm:90 "]" : slm
+-- syntax:30 "y[" slm:90 "]": slm
+-- syntax:30 "x[" slm:90 "]" : slm
 syntax:30 slm:100 ";" slm:30 : slm
 syntax:30 slm:100 ":=" slm:30 : slm
 syntax:30 "(" slm "," slm ")" : slm
@@ -150,8 +148,8 @@ syntax:20 "λ" slm:30 "=>" slm:20 : slm
 syntax:30 "λ" slm : slm 
 syntax:30 slm:30 "/" slm:100 : slm 
 syntax:30 "(" slm:30 slm:30 ")" : slm 
-syntax:30 "let y[0]" ":" slm:30 "=" slm:30 "=>" slm:30 : slm 
-syntax:30 "let y[0]" "=" slm:30 "=>" slm:30 : slm 
+syntax:30 "let" slm ":" slm:30 "=" slm:30 "=>" slm:30 : slm 
+syntax:30 "let" slm "=" slm:30 "=>" slm:30 : slm 
 syntax:30 "fix " slm:30 : slm 
 
 syntax:50 slm:50 "⊆" slm:51 : slm
@@ -170,8 +168,8 @@ macro_rules
 | `([: [$x:slm] :]) => `([ [: $x :] ])
 | `([: [$x,$xs:slm,*] :]) => `([: $x :] :: [: [$xs,*] :])
 -- Ty 
-| `([: β[$n] :]) => `(Ty.bvar [: $n :])
-| `([: α[$n:slm] :]) => `(Ty.fvar [: $n :])
+-- | `([: β[$n] :]) => `(Ty.bvar [: $n :])
+-- | `([: α[$n:slm] :]) => `(Ty.fvar [: $n :])
 | `([: @ :]) => `(Ty.unit)
 | `([: ⊥ :]) => `(Ty.bot)
 | `([: ⊤ :]) => `(Ty.top)
@@ -191,8 +189,8 @@ macro_rules
 --Tm
 | `([: _ :]) => `(Tm.hole)
 | `([: () :]) => `(Tm.unit)
-| `([: y[$n] :]) => `(Tm.bvar [: $n :])
-| `([: x[$n] :]) => `(Tm.fvar [: $n :])
+-- | `([: y[$n] :]) => `(Tm.bvar [: $n :])
+-- | `([: x[$n] :]) => `(Tm.fvar [: $n :])
 | `([: $a ; $b :]) => `(Tm.tag [: $a :] [: $b :])
 | `([: $a := $b :]) => `(([: $a :], [: $b :]))
 | `([: for $b => $d :]) => `(([: $b :], [: $d :]))
@@ -202,8 +200,8 @@ macro_rules
 | `([: λ $a :]) => `(Tm.func [: $a :])
 | `([: $a / $b :]) => `(Tm.proj [: $a :] [: $b :])
 | `([: ($a $b) :]) => `(Tm.app [: $a :] [: $b :])
-| `([: let y[0] : $a = $b => $c :]) => `(Tm.letb (Option.some [: $a :]) [: $b :] [: $c :])
-| `([: let y[0] = $b => $c :]) => `(Tm.letb Option.none [: $b :] [: $c :])
+| `([: let $name : $a = $b => $c :]) => `(Tm.letb [: $name :] (Option.some [: $a :]) [: $b :] [: $c :])
+| `([: let $name = $b => $c :]) => `(Tm.letb [: $name :] Option.none [: $b :] [: $c :])
 | `([: fix $a :]) => `(Tm.fix [: $a :])
 
 -- generic
@@ -219,10 +217,8 @@ match t with
   "_"
 | .unit =>
   "()"
-| .bvar id =>
-  "y[" ++ repr id ++ "]"
-| .fvar id => 
-  "x[" ++ repr id ++ "]"
+| .bvar id => id
+| .fvar id => id
 | .tag l t1 =>
   l ++ ";" ++ (Tm.repr t1 n)
 | record [("l", l), ("r", r)] =>
@@ -243,13 +239,13 @@ match t with
   Tm.repr t1 n ++ "/" ++ l
 | .app t1 t2 =>
   Format.bracket "(" (Tm.repr t1 n) ") " ++ "(" ++ Tm.repr t2 n ++ ")"
-| .letb op_ty1 t1 t2 =>
+| .letb name op_ty1 t1 t2 =>
   match op_ty1 with
   | some ty1 =>
-    "let y[0] : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
+    "let " ++ name ++ " : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
     Format.line  ++ (Tm.repr t2 n) 
   | none =>
-    "let y[0] = " ++  (Tm.repr t1 n) ++ " =>" ++
+    "let " ++ name ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
     Format.line  ++ (Tm.repr t2 n) 
 | .fix t1 =>
   Format.bracket "(" ("fix " ++ (Tm.repr t1 n)) ")"
