@@ -13,7 +13,12 @@ require mathlib from git
 
 
 @[default_target]
-lean_lib NormalLib {
+lean_lib Util {
+  -- add any library configuration options here
+}
+
+@[default_target]
+lean_lib Normal {
   -- add any library configuration options here
 }
 
