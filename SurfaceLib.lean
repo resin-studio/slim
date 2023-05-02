@@ -77,13 +77,13 @@ match ty with
       (Ty.repr ty_pl n) ++ " | " ++
       (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
     ) ")"
-| .recur String ty1 =>
+| .recur name ty1 =>
   Format.bracket "(" (
-    "μ 1 . " ++ (Ty.repr ty1 n)
+    "μ " ++ name ++  " . " ++ (Ty.repr ty1 n)
   ) ")"
-| .corec String ty1 =>
+| .corec name ty1 =>
   Format.bracket "(" (
-    "ν 1 . " ++ (Ty.repr ty1 n)
+    "ν " ++ name ++  " . " ++ (Ty.repr ty1 n)
   ) ")"
 
 instance : Repr Ty where
