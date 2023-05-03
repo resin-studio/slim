@@ -34,6 +34,13 @@ lemma v1 (P Q R : Prop) : P ∧ (Q ∨ R) ↔ (P ∧ Q) ∨ (P ∧ R) := by
   )
 )
 
+
+#check Nat.lt
+example (xs : List α) (h : xs.length = 1) : (0 < xs.length) :=
+by simp [h];
+
+
+
 lemma v2 (P Q R : Prop) : P ∧ (Q ∨ R) ↔ (P ∧ Q) ∨ (P ∧ R) := 
   ((Iff.intro
     ((λ h : P ∧ (Q ∨ R) =>
