@@ -9,7 +9,7 @@ open Std
 namespace Surface
 
   inductive Ty : Type
-  | var : String -> Ty
+  | id : String -> Ty
   | unit : Ty
   | bot : Ty
   | top : Ty
@@ -25,79 +25,158 @@ namespace Surface
   deriving Repr, Inhabited, Hashable, BEq
   #check List.repr
 
-  protected partial def Ty.repr (ty : Ty) (n : Nat) : Format :=
-  match ty with
-  | .var id => id
-  | .unit => "@" 
-  | .bot => "⊥" 
-  | .top => "⊤" 
-  | .tag l ty1 => 
-    (l ++ "*" ++ (Ty.repr ty1 n))
-  | .field l ty1 => 
-    Format.bracket "(" (l ++ " : " ++ (Ty.repr ty1 n)) ")"
+  namespace Ty
 
-  | .union (Ty.tag "inl" inl) (Ty.tag "inr" inr) =>
-    Format.bracket "(" ((Ty.repr inl n) ++ " +" ++ Format.line ++ (Ty.repr inr n)) ")"
-  | .union ty1 ty2 =>
-    let _ : ToFormat Ty := ⟨fun ty' => Ty.repr ty' n ⟩
-    let tys := [ty1, ty2] 
-    Format.bracket "("
-      (Format.joinSep tys (" ∨" ++ Format.line))
-    ")"
+    protected partial def repr (ty : Ty) (n : Nat) : Format :=
+    match ty with
+    | .id name => name 
+    | .unit => "@" 
+    | .bot => "⊥" 
+    | .top => "⊤" 
+    | .tag l ty1 => 
+      (l ++ "*" ++ (Ty.repr ty1 n))
+    | .field l ty1 => 
+      Format.bracket "(" (l ++ " : " ++ (Ty.repr ty1 n)) ")"
 
-  | .inter (Ty.field "l" l) (Ty.field "r" r) =>
-    Format.bracket "(" ((Ty.repr l n) ++ " × " ++ (Ty.repr r n)) ")"
-  | .inter ty1 ty2 =>
-    Format.bracket "(" ((Ty.repr ty1 n) ++ " ∧ " ++ (Ty.repr ty2 n)) ")"
-  | .case ty1 ty2 =>
-    Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
-  | .univ names ty_c1 ty_c2 ty_pl =>
-    let bound_names := (Format.bracket "("
-      (Format.joinSep names (", " ++ Format.line))
-    ")")
-    if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-      Format.bracket "(" (
-        "∀ " ++ bound_names ++ Format.line ++ 
-        (Ty.repr ty_pl n)
-      ) ")"
-    else
-      Format.bracket "(" (
-        "∀ " ++ bound_names ++  Format.line ++ 
-        (Ty.repr ty_pl n) ++ " | " ++
-        (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
-      ) ")"
-  | .exis names ty_c1 ty_c2 ty_pl =>
-    let bound_names := (Format.bracket "("
-      (Format.joinSep names (", " ++ Format.line))
-    ")")
-    if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-      Format.bracket "(" (
-        "∃ " ++ bound_names ++ Format.line ++ 
-        (Ty.repr ty_pl n)
-      ) ")"
-    else
-      Format.bracket "(" (
-        "∃ " ++ bound_names ++ Format.line ++ 
-        (Ty.repr ty_pl n) ++ " | " ++
-        (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
-      ) ")"
-  | .recur name ty1 =>
-    Format.bracket "(" (
-      "μ " ++ name ++  " . " ++ (Ty.repr ty1 n)
-    ) ")"
-  | .corec name ty1 =>
-    Format.bracket "(" (
-      "ν " ++ name ++  " . " ++ (Ty.repr ty1 n)
-    ) ")"
+    | .union (Ty.tag "inl" inl) (Ty.tag "inr" inr) =>
+      Format.bracket "(" ((Ty.repr inl n) ++ " +" ++ Format.line ++ (Ty.repr inr n)) ")"
+    | .union ty1 ty2 =>
+      let _ : ToFormat Ty := ⟨fun ty' => Ty.repr ty' n ⟩
+      let tys := [ty1, ty2] 
+      Format.bracket "("
+        (Format.joinSep tys (" ∨" ++ Format.line))
+      ")"
 
-  instance : Repr Ty where
-    reprPrec := Ty.repr
+    | .inter (Ty.field "l" l) (Ty.field "r" r) =>
+      Format.bracket "(" ((Ty.repr l n) ++ " × " ++ (Ty.repr r n)) ")"
+    | .inter ty1 ty2 =>
+      Format.bracket "(" ((Ty.repr ty1 n) ++ " ∧ " ++ (Ty.repr ty2 n)) ")"
+    | .case ty1 ty2 =>
+      Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
+    | .univ names ty_c1 ty_c2 ty_pl =>
+      let bound_names := (Format.bracket "("
+        (Format.joinSep names (", " ++ Format.line))
+      ")")
+      if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
+        Format.bracket "(" (
+          "∀ " ++ bound_names ++ Format.line ++ 
+          (Ty.repr ty_pl n)
+        ) ")"
+      else
+        Format.bracket "(" (
+          "∀ " ++ bound_names ++  Format.line ++ 
+          (Ty.repr ty_pl n) ++ " | " ++
+          (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
+        ) ")"
+    | .exis names ty_c1 ty_c2 ty_pl =>
+      let bound_names := (Format.bracket "("
+        (Format.joinSep names (", " ++ Format.line))
+      ")")
+      if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
+        Format.bracket "(" (
+          "∃ " ++ bound_names ++ Format.line ++ 
+          (Ty.repr ty_pl n)
+        ) ")"
+      else
+        Format.bracket "(" (
+          "∃ " ++ bound_names ++ Format.line ++ 
+          (Ty.repr ty_pl n) ++ " | " ++
+          (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
+        ) ")"
+    | .recur name ty1 =>
+      Format.bracket "(" (
+        "μ " ++ name ++  " . " ++ (Ty.repr ty1 n)
+      ) ")"
+    | .corec name ty1 =>
+      Format.bracket "(" (
+        "ν " ++ name ++  " . " ++ (Ty.repr ty1 n)
+      ) ")"
 
+    instance : Repr Ty where
+      reprPrec := Ty.repr
+
+
+    declare_syntax_cat surftype
+    syntax "(" surftype ")" : surftype
+    syntax "⟨" term "⟩" : surftype 
+    syntax:100 num : surftype 
+    syntax:100 ident : surftype
+    syntax "[" surftype,+ "]" : surftype 
+    -- type
+    syntax:90 "@" : surftype
+    syntax:90 "⊥" : surftype
+    syntax:90 "⊤" : surftype
+    syntax:90 surftype:100 "*" surftype:90 : surftype
+    syntax:90 surftype:100 ":" surftype:90 : surftype
+    syntax:50 surftype:51 "->" surftype:50 : surftype
+    syntax:60 surftype:61 "∨" surftype:60 : surftype
+    syntax:60 surftype:61 "+" surftype:60 : surftype
+    syntax:70 surftype:71 "∧" surftype:70 : surftype
+    syntax:70 surftype:71 "×" surftype:70 : surftype
+    syntax:40 "∃" surftype surftype:40 "|" surftype "≤" surftype: surftype 
+    syntax:40 "∃" surftype surftype:40 : surftype 
+    syntax:40 "∀" surftype surftype:40 "|" surftype "≤" surftype : surftype 
+    syntax:40 "∀" surftype surftype:40 : surftype 
+    syntax:80 "μ " surftype surftype : surftype 
+    syntax:80 "ν " surftype surftype : surftype 
+
+
+    syntax "[surftype: " surftype "]" : term
+
+    def idname v := match v with 
+    | (Ty.id x) => x 
+    | _ => ""
+
+    macro_rules
+    --generic
+    | `([surftype: ($a:surftype) ]) => `([surftype: $a ])
+    --escape 
+    | `([surftype: ⟨ $e ⟩ ]) => pure e
+    -- terminals
+    | `([surftype: $n:num ]) => `($n)
+    | `([surftype: $a:ident]) => `(Ty.id $(Lean.quote (toString a.getId)))
+    -- context 
+    | `([surftype: [ $x:surftype ] ]) => `([ [surftype: $x ] ])
+    | `([surftype: [ $x,$xs:surftype,* ] ]) => `([surftype: [ $x ] ] ++ [surftype: [$xs,*] ])
+    -- Ty 
+    | `([surftype: @ ]) => `(Ty.unit)
+    | `([surftype: ⊥ ]) => `(Ty.bot)
+    | `([surftype: ⊤ ]) => `(Ty.top)
+    | `([surftype: $a * $b:surftype ]) => `(Ty.tag (idname [surftype: $a ]) [surftype: $b ])
+    | `([surftype: $a : $b:surftype ]) => `(Ty.field (idname [surftype: $a ]) [surftype: $b ])
+    | `([surftype: $a -> $b ]) => `(Ty.case [surftype: $a ] [surftype: $b ])
+    | `([surftype: $a ∨ $b ]) => `(Ty.union [surftype: $a ] [surftype: $b ])
+    | `([surftype: $a + $b ]) => `(Ty.union (Ty.tag "inl" [surftype: $a ]) (Ty.tag "inr" [surftype: $b ]))
+    | `([surftype: $a ∧ $b ]) => `(Ty.inter [surftype: $a ] [surftype: $b ])
+    | `([surftype: $a × $b ]) => `(Ty.inter (Ty.field "l" [surftype: $a ]) (Ty.field "r" [surftype: $b ]))
+    | `([surftype: ∀ $a:surftype $d:surftype | $b ≤ $c ]) => `(Ty.univ 
+        (List.map (fun | Ty.id name => name | _ => "") [surftype: $a ]) 
+        [surftype: $b ] [surftype: $c ] [surftype: $d ])
+    | `([surftype: ∀ $a:surftype $b:surftype ]) => `(Ty.univ 
+          (List.map (fun | Ty.id name => name | _ => "") [surftype: $a ]) 
+          [surftype: @ ] [surftype: @ ] [surftype: $b ] )
+    | `([surftype: ∃ $a $d | $b ≤ $c  ]) => `(Ty.exis 
+          (List.map (fun | Ty.id name => name | _ => "") [surftype: $a ]) 
+          [surftype: $b ] [surftype: $c ] [surftype: $d ])
+    | `([surftype: ∃ $a:surftype $b:surftype ]) => `(Ty.exis 
+          (List.map (fun | Ty.id name => name | _ => "") [surftype: $a ]) 
+          [surftype: @ ] [surftype: @ ] [surftype: $b ] )
+    | `([surftype: μ $name $a ]) => `(Ty.recur [surftype: $name ] [surftype: $a ])
+    | `([surftype: ν $name $a ]) => `(Ty.corec [surftype: $name ] [surftype: $a ])
+
+    #check [surftype: (x) ]
+    #check [surftype: [x] ]
+    #eval [surftype: ∀ [thing] thing ∨ @ | thing ≤ @ ]
+
+    #eval [surftype: succ*x ]
+  end Ty
+
+  -------------------
 
   inductive Tm : Type
   | hole : Tm 
   | unit : Tm
-  | var : String -> Tm 
+  | id : String -> Tm 
   | tag : String -> Tm -> Tm
   | record : List (String × Tm) -> Tm
   | func : List (Tm × Tm) -> Tm
@@ -107,151 +186,132 @@ namespace Surface
   | fix : Tm -> Tm
   deriving Repr, Inhabited, BEq
 
-  protected partial def Tm.repr (t : Tm) (n : Nat) : Format :=
-  match t with
-  | .hole => 
-    "_"
-  | .unit =>
-    "()"
-  | .var id => id
-  | .tag l t1 =>
-    l ++ ";" ++ (Tm.repr t1 n)
-  | record [("l", l), ("r", r)] =>
-    let _ : ToFormat Tm := ⟨fun t1 => Tm.repr t1 n ⟩
-    Format.bracket "(" (Format.joinSep [l, r] ("," ++ Format.line)) ")"
-  | record fds =>
-    let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
-      l ++ " := " ++ Tm.repr t1 n ⟩
-    "σ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
-  | func [(pat, tb)] =>
-    "λ " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
-  | func fs =>
-    let _ : ToFormat (Tm × Tm) := ⟨fun (pat, tb) =>
-      "for " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
-    ⟩
-    "λ" ++ Format.bracket "[" (Format.joinSep fs ("," ++ Format.line)) "]"
-  | .proj t1 l =>
-    Tm.repr t1 n ++ "/" ++ l
-  | .app t1 t2 =>
-    Format.bracket "(" (Tm.repr t1 n) ") " ++ "(" ++ Tm.repr t2 n ++ ")"
-  | .letb name op_ty1 t1 t2 =>
-    match op_ty1 with
-    | some ty1 =>
-      "let " ++ name ++ " : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
-      Format.line  ++ (Tm.repr t2 n) 
-    | none =>
-      "let " ++ name ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
-      Format.line  ++ (Tm.repr t2 n) 
-  | .fix t1 =>
-    Format.bracket "(" ("fix " ++ (Tm.repr t1 n)) ")"
+  namespace Tm
 
-  instance : Repr Tm where
-    reprPrec := Tm.repr
+    protected partial def repr (t : Tm) (n : Nat) : Format :=
+    match t with
+    | .hole => 
+      "_"
+    | .unit =>
+      "()"
+    | .id name => name 
+    | .tag l t1 =>
+      l ++ ";" ++ (Tm.repr t1 n)
+    | record [("l", l), ("r", r)] =>
+      let _ : ToFormat Tm := ⟨fun t1 => Tm.repr t1 n ⟩
+      Format.bracket "(" (Format.joinSep [l, r] ("," ++ Format.line)) ")"
+    | record fds =>
+      let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
+        l ++ " := " ++ Tm.repr t1 n ⟩
+      "σ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
+    | func [(pat, tb)] =>
+      "λ " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
+    | func fs =>
+      let _ : ToFormat (Tm × Tm) := ⟨fun (pat, tb) =>
+        "for " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
+      ⟩
+      "λ" ++ Format.bracket "[" (Format.joinSep fs ("," ++ Format.line)) "]"
+    | .proj t1 l =>
+      Tm.repr t1 n ++ "/" ++ l
+    | .app t1 t2 =>
+      Format.bracket "(" (Tm.repr t1 n) ") " ++ "(" ++ Tm.repr t2 n ++ ")"
+    | .letb name op_ty1 t1 t2 =>
+      match op_ty1 with
+      | some ty1 =>
+        "let " ++ name ++ " : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
+        Format.line  ++ (Tm.repr t2 n) 
+      | none =>
+        "let " ++ name ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
+        Format.line  ++ (Tm.repr t2 n) 
+    | .fix t1 =>
+      Format.bracket "(" ("fix " ++ (Tm.repr t1 n)) ")"
 
-
-
-  declare_syntax_cat surf
-  syntax:100 num : surf 
-  syntax:100 ident : surf
-  syntax "[" surf,+ "]" : surf 
-  -- type
-  syntax:90 "@" : surf
-  syntax:90 "⊥" : surf
-  syntax:90 "⊤" : surf
-  syntax:90 surf:100 "*" surf:90 : surf
-  syntax:90 surf:100 ":" surf:90 : surf
-  syntax:50 surf:51 "->" surf:50 : surf
-  syntax:60 surf:61 "∨" surf:60 : surf
-  syntax:60 surf:61 "+" surf:60 : surf
-  syntax:70 surf:71 "∧" surf:70 : surf
-  syntax:70 surf:71 "×" surf:70 : surf
-  syntax:40 "∃" surf surf:40 "|" surf "≤" surf: surf 
-  syntax:40 "∃" surf surf:40 : surf 
-  syntax:40 "∀" surf surf:40 "|" surf "≤" surf : surf 
-  syntax:40 "∀" surf surf:40 : surf 
-  syntax:80 "μ " surf surf : surf 
-  syntax:80 "ν " surf surf : surf 
-
-  --term
-  syntax:30 "_" : surf
-  syntax:30 "()" : surf
-  -- syntax:30 "y[" surf:90 "]": surf
-  -- syntax:30 "x[" surf:90 "]" : surf
-  syntax:30 surf:100 ";" surf:30 : surf
-  syntax:30 surf:100 ":=" surf:30 : surf
-  syntax:30 "(" surf "," surf ")" : surf
-  syntax:30 "σ" surf : surf
-  syntax:20 "for" surf:30 ":" surf "=>" surf:20 : surf 
-  syntax:20 "for" surf:30 "=>" surf:20 : surf 
-  syntax:20 "λ" surf:30 ":" surf "=>" surf:20 : surf 
-  syntax:20 "λ" surf:30 "=>" surf:20 : surf 
-  syntax:30 "λ" surf : surf 
-  syntax:30 surf:30 "." surf:100 : surf 
-  syntax:30 "(" surf:30 surf:30 ")" : surf 
-  syntax:30 "let" surf ":" surf:30 "=" surf:30 "=>" surf:30 : surf 
-  syntax:30 "let" surf "=" surf:30 "=>" surf:30 : surf 
-  syntax:30 "fix " surf:30 : surf 
-
-  syntax:50 surf:50 "⊆" surf:51 : surf
-
-  syntax "(" surf ")" : surf
-
-  syntax "⟨" term "⟩" : surf 
-
-  syntax "[surf: " surf "]" : term
-
-  macro_rules
-  -- terminals
-  | `([surf: $n:num ]) => `($n)
-  | `([surf: $a:ident]) => `(Ty.var $(Lean.quote (toString a.getId)))
-  -- context 
-  | `([surf: [ $x:surf ] ]) => `([ match [surf: $x ] with | .var name => name | _ => "" ])
-  | `([surf: [ $x,$xs:surf,* ] ]) => `([surf: [ $x ] ] ++ [surf: [$xs,*] ])
-  -- Ty 
-  | `([surf: @ ]) => `(Ty.unit)
-  | `([surf: ⊥ ]) => `(Ty.bot)
-  | `([surf: ⊤ ]) => `(Ty.top)
-  | `([surf: $a * $b:surf ]) => `(Ty.tag [surf: $a ] [surf: $b ])
-  | `([surf: $a : $b:surf ]) => `(Ty.field [surf: $a ] [surf: $b ])
-  | `([surf: $a -> $b ]) => `(Ty.case [surf: $a ] [surf: $b ])
-  | `([surf: $a ∨ $b ]) => `(Ty.union [surf: $a ] [surf: $b ])
-  | `([surf: $a + $b ]) => `(Ty.union (Ty.tag "inl" [surf: $a ]) (Ty.tag "inr" [surf: $b ]))
-  | `([surf: $a ∧ $b ]) => `(Ty.inter [surf: $a ] [surf: $b ])
-  | `([surf: $a × $b ]) => `(Ty.inter (Ty.field "l" [surf: $a ]) (Ty.field "r" [surf: $b ]))
-  | `([surf: ∀ $a:surf $d:surf | $b ≤ $c ]) => `(Ty.univ [surf: $a ] [surf: $b ] [surf: $c ] [surf: $d ])
-  | `([surf: ∀ $a:surf $b:surf ]) => `(Ty.univ [surf: $a ] [surf: @ ] [surf: @ ] [surf: $b ] )
-  | `([surf: ∃ $a $d | $b ≤ $c  ]) => `(Ty.exis [surf: $a ] [surf: $b ] [surf: $c ] [surf: $d ])
-  | `([surf: ∃ $a:surf $b:surf ]) => `(Ty.exis [surf: $a ] [surf: @ ] [surf: @ ] [surf: $b ] )
-  | `([surf: μ $name $a ]) => `(Ty.recur [surf: $name ] [surf: $a ])
-  | `([surf: ν $name $a ]) => `(Ty.corec [surf: $name ] [surf: $a ])
-  --Tm
-  | `([surf: _ ]) => `(Tm.hole)
-  | `([surf: () ]) => `(Tm.unit)
-  | `([surf: $a ; $b ]) => `(Tm.tag [surf: $a ] [surf: $b ])
-  | `([surf: $a := $b ]) => `(([surf: $a ], [surf: $b ]))
-  | `([surf: for $b => $d ]) => `(([surf: $b ], [surf: $d ]))
-  | `([surf: σ $a ]) => `(Tm.record [surf: $a ])
-  | `([surf: ( $a , $b ) ]) => `(Tm.record [("l", [surf: $a ]), ("r", [surf:$b ])])
-  | `([surf: λ $b => $d ]) => `(Tm.func [([surf: $b ], [surf: $d ])])
-  | `([surf: λ $a ]) => `(Tm.func [surf: $a ])
-  | `([surf: $a . $b ]) => `(Tm.proj [surf: $a ] [surf: $b ])
-  | `([surf: ($a $b) ]) => `(Tm.app [surf: $a ] [surf: $b ])
-  | `([surf: let $name : $a = $b => $c ]) => `(Tm.letb [surf: $name ] (Option.some [surf: $a ]) [surf: $b ] [surf: $c ])
-  | `([surf: let $name = $b => $c ]) => `(Tm.letb [surf: $name ] Option.none [surf: $b ] [surf: $c ])
-  | `([surf: fix $a ]) => `(Tm.fix [surf: $a ])
-
-  --generic
-  | `([surf: ($a:surf) ]) => `([surf: $a ])
-
-  --escape 
-  | `([surf: ⟨ $e ⟩ ]) => pure e
+    instance : Repr Tm where
+      reprPrec := Tm.repr
 
 
-  #check [surf: (x) ]
-  #check [surf: [x] ]
-  #eval [surf: ∀ [thing] thing ∨ @ | thing ≤ @ ]
 
-  -------------------
+
+    declare_syntax_cat surfterm
+    syntax "(" surfterm ")" : surfterm
+    syntax "⟨" term "⟩" : surfterm 
+    syntax:100 num : surfterm 
+    syntax:100 ident : surfterm
+    syntax "[" surfterm,+ "]" : surfterm 
+    --term
+    syntax:30 "_" : surfterm
+    syntax:30 "()" : surfterm
+    syntax:30 surfterm:100 ";" surfterm:30 : surfterm
+    syntax:30 surfterm:100 ":=" surfterm:30 : surfterm
+    syntax:30 "(" surfterm "," surfterm ")" : surfterm
+    syntax:30 "σ" surfterm : surfterm
+    syntax:20 surfterm:30 "=>" surfterm:20 : surfterm 
+    syntax:20 "λ" surfterm:30 "=>" surfterm:20 : surfterm 
+    syntax:30 "λ" surfterm : surfterm 
+    syntax:30 surfterm:30 "." surfterm:100 : surfterm 
+    syntax:30 "(" surfterm:30 surfterm:30 ")" : surfterm 
+    syntax:30 "let" surfterm ":" surfterm:30 "=" surfterm:30 "=>" surfterm:30 : surfterm 
+    syntax:30 "let" surfterm "=" surfterm:30 "=>" surfterm:30 : surfterm 
+    syntax:30 "fix " surfterm:30 : surfterm 
+
+    syntax "[surfterm: " surfterm "]" : term
+
+    def idname v := match v with 
+    | (Tm.id x) => x 
+    | _ => ""
+
+    macro_rules
+    --generic
+    | `([surfterm: ($a:surfterm) ]) => `([surfterm: $a ])
+    --escape 
+    | `([surfterm: ⟨ $e ⟩ ]) => pure e
+    -- terminals
+    | `([surfterm: $n:num ]) => `($n)
+    | `([surfterm: $a:ident]) => `(Tm.id $(Lean.quote (toString a.getId)))
+    -- context 
+    | `([surfterm: [ $x:surfterm ] ]) => `([ [surfterm: $x ] ])
+    | `([surfterm: [ $x,$xs:surfterm,* ] ]) => `([surfterm: [ $x ] ] ++ [surfterm: [$xs,*] ])
+    --Tm
+    | `([surfterm: _ ]) => `(Tm.hole)
+    | `([surfterm: () ]) => `(Tm.unit)
+    | `([surfterm: $a ; $b ]) => `(Tm.tag (idname [surfterm: $a ]) [surfterm: $b ])
+    | `([surfterm: $a := $b ]) => `((idname [surfterm: $a ], [surfterm: $b ]))
+    | `([surfterm: $b => $d ]) => `(([surfterm: $b ], [surfterm: $d ]))
+    | `([surfterm: σ $a ]) => `(Tm.record [surfterm: $a ])
+    | `([surfterm: ( $a , $b ) ]) => `(Tm.record [("l", [surfterm: $a ]), ("r", [surfterm:$b ])])
+    | `([surfterm: λ $b => $d ]) => `(Tm.func [([surfterm: $b ], [surfterm: $d ])])
+    | `([surfterm: λ $a ]) => `(Tm.func [surfterm: $a ])
+    | `([surfterm: $a . $b ]) => `(Tm.proj [surfterm: $a ] [surfterm: $b ])
+    | `([surfterm: ($a $b) ]) => `(Tm.app [surfterm: $a ] [surfterm: $b ])
+    | `([surfterm: let $name : $a = $b => $c ]) => `(Tm.letb [surfterm: $name ] (Option.some [surfterm: $a ]) [surfterm: $b ] [surfterm: $c ])
+    | `([surfterm: let $name = $b => $c ]) => `(Tm.letb [surfterm: $name ] Option.none [surfterm: $b ] [surfterm: $c ])
+    | `([surfterm: fix $a ]) => `(Tm.fix [surfterm: $a ])
+
+
+  #eval [surfterm:
+      ⟨Tm.id "succ"⟩;x
+  ]
+
+  #eval [surfterm:
+      succ;x
+  ]
+
+  #eval [surfterm:
+    fix(λ self => λ[
+      (succ;x, succ;y) => (self (x, y)),
+      (zero;(), y) => y,
+      (x, zero;()) => x 
+    ])
+  ]
+
+  #eval [surfterm:
+    λ [x => x]
+  ]
+
+  #eval [surfterm:
+    λ [x => ⟨Tm.id "x"⟩]
+  ]
+  end Tm
 
 
 end Surface
