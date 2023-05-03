@@ -2,7 +2,8 @@ import Std.Data.BinomialHeap
 import Init.Data.Hashable
 import Lean.Data.PersistentHashMap
 
--- import Normal
+import Util 
+import Normal
 
 open Std
 
@@ -168,10 +169,62 @@ namespace Surface
     #check [surftype: [x] ]
     #eval [surftype: ∀ [thing] thing ∨ @ | thing ≤ @ ]
 
-    #eval [surftype: succ*x ]
+    -- #eval [surftype: succ*x ]
+    def normalize (bound_vars : List String) : Ty -> Option (List (List String) × Normal.Ty)
+    | id name => 
+      .bind (List.index (fun bv => bv == name) bound_vars) (fun pos => 
+        some ([], .bvar pos)
+      )
+    | .unit => some ([], .unit)
+    | .bot => some ([], .unit)
+    | .top => some ([], .top)
+    | .tag name content => 
+      bind (normalize bound_vars content) (fun (stack, content') =>
+        some (stack, .tag name content')
+      )
+    | .field name content => 
+      bind (normalize bound_vars content) (fun (stack, content') =>
+        some (stack, .field name content')
+      )
+    | .union ty1 ty2 =>  
+      bind (normalize bound_vars ty1) (fun (stack1, ty1') =>
+      bind (normalize bound_vars ty2) (fun (stack2, ty2') =>
+        some (stack1 ++ stack2, .union ty1' ty2')
+      ))
+    | .inter ty1 ty2 =>  
+      bind (normalize bound_vars ty1) (fun (stack1, ty1') =>
+      bind (normalize bound_vars ty2) (fun (stack2, ty2') =>
+        some (stack1 ++ stack2, .inter ty1' ty2')
+      ))
+    | .case ty1 ty2 =>  
+      bind (normalize bound_vars ty1) (fun (stack1, ty1') =>
+      bind (normalize bound_vars ty2) (fun (stack2, ty2') =>
+        some (stack1 ++ stack2, .case ty1' ty2')
+      ))
+    | .univ names ty1 ty2 ty3 =>
+      bind (normalize (names ++ bound_vars) ty1) (fun (stack1, ty1') =>
+      bind (normalize (names ++ bound_vars) ty2) (fun (stack2, ty2') =>
+      bind (normalize (names ++ bound_vars) ty3) (fun (stack3, ty3') =>
+        some (names :: stack1 ++ stack2 ++ stack3, .univ names.length ty1' ty2' ty3')
+      )))
+    | .exis names ty1 ty2 ty3 =>
+      bind (normalize (names ++ bound_vars) ty1) (fun (stack1, ty1') =>
+      bind (normalize (names ++ bound_vars) ty2) (fun (stack2, ty2') =>
+      bind (normalize (names ++ bound_vars) ty3) (fun (stack3, ty3') =>
+        some (names :: stack1 ++ stack2 ++ stack3, .exis names.length ty1' ty2' ty3')
+      )))
+    | .recur name ty =>
+      bind (normalize (name :: bound_vars) ty) (fun (stack, ty') =>
+        some ([name] :: stack, .recur ty')
+      )
+    | .corec name ty =>
+      bind (normalize (name :: bound_vars) ty) (fun (stack, ty') =>
+        some ([name] :: stack, .corec ty')
+      )
+
   end Ty
 
-  -------------------
+  ------------------------------------------------------------------------------------------
 
   inductive Tm : Type
   | hole : Tm 

@@ -53,10 +53,16 @@ end PHashMap
 
 infixl:65   " ; " => PHashMap.insert_all
 
+#check List.toArray
 
-namespace ListPair
-  def lookup [BEq α] (key : α) : List (α × T) -> Option T
-  | (k,v) :: bs => if key == k then some v else lookup key bs 
-  | [] => none
-end ListPair
+namespace List
+  def index (f : α -> Bool) : (xs : List α) -> Option Nat 
+  | [] => none 
+  | x :: xs =>  
+    if f x then
+      some 0 
+    else
+      bind (index f xs) (fun n => some (1 + n))
+
+end List
 
