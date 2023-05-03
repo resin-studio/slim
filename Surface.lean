@@ -283,24 +283,22 @@ namespace Surface
     | .recur ty =>
       match stack with
       | names' :: stack'  =>
-        if h: names'.length = 1 then
-          let name := names'.get ⟨0, by simp[h]⟩ 
-          bind (denormalize (names' ++ names) stack' ty) (fun ty' =>  
+        match names' with
+        | .cons name [] =>
+          bind (denormalize (name :: names) stack' ty) (fun ty' =>  
           some (.recur name ty') 
           )
-        else
-          none
+        | _ => none
       | [] => none
     | .corec ty =>
       match stack with
       | names' :: stack'  =>
-        if h: names'.length = 1 then
-          let name := names'.get ⟨0, by simp[h]⟩ 
-          bind (denormalize (names' ++ names) stack' ty) (fun ty' =>  
+        match names' with
+        | .cons name [] =>
+          bind (denormalize (name :: names) stack' ty) (fun ty' =>  
           some (.corec name ty') 
           )
-        else
-          none
+        | _ => none
       | [] => none
 
   end Ty
