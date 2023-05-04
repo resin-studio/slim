@@ -224,50 +224,43 @@ namespace Surface
     | .unit => some .unit 
     | .bot => some .bot 
     | .top => some .top 
-    | .tag label content => 
-      bind (denormalize names stack content) (fun content' =>  
+    | .tag label content => do
+      let content' <- (denormalize names stack content)   
       some (.tag label content') 
-      )
-    | .field label content => 
-      bind (denormalize names stack content) (fun content' =>  
+    | .field label content => do
+      let content' <- (denormalize names stack content)   
       some (.field label content') 
-      )
-    | .union ty1 ty2 => 
-      bind (denormalize names stack ty1) (fun ty1' =>  
-      bind (denormalize names stack ty2) (fun ty2' =>  
+    | .union ty1 ty2 => do
+      let ty1' <- (denormalize names stack ty1)   
+      let ty2' <- (denormalize names stack ty2)   
       some (.union ty1' ty2') 
-      ))
-    | .inter ty1 ty2 => 
-      bind (denormalize names stack ty1) (fun ty1' =>  
-      bind (denormalize names stack ty2) (fun ty2' =>  
+    | .inter ty1 ty2 => do
+      let ty1' <- (denormalize names stack ty1)   
+      let ty2' <- (denormalize names stack ty2)   
       some (.inter ty1' ty2') 
-      ))
-    | .case ty1 ty2 => 
-      bind (denormalize names stack ty1) (fun ty1' =>  
-      bind (denormalize names stack ty2) (fun ty2' =>  
+    | .case ty1 ty2 => do
+      let ty1' <- (denormalize names stack ty1)   
+      let ty2' <- (denormalize names stack ty2)   
       some (.case ty1' ty2') 
-      ))
     | .univ n ty1 ty2 ty3 => 
       match stack with
       | names' :: stack'  =>
-        if names'.length == n then
-          bind (denormalize (names' ++ names) stack' ty1) (fun ty1' =>  
-          bind (denormalize (names' ++ names) stack' ty2) (fun ty2' =>  
-          bind (denormalize (names' ++ names) stack' ty3) (fun ty3' =>  
+        if names'.length == n then do
+          let ty1' <- (denormalize (names' ++ names) stack' ty1)   
+          let ty2' <- (denormalize (names' ++ names) stack' ty2)   
+          let ty3' <- (denormalize (names' ++ names) stack' ty3)   
           some (.univ names' ty1' ty2' ty3') 
-          )))
         else
           none
       | [] => none
     | .exis n ty1 ty2 ty3 => 
       match stack with
       | names' :: stack'  =>
-        if names'.length == n then
-          bind (denormalize (names' ++ names) stack' ty1) (fun ty1' =>  
-          bind (denormalize (names' ++ names) stack' ty2) (fun ty2' =>  
-          bind (denormalize (names' ++ names) stack' ty3) (fun ty3' =>  
+        if names'.length == n then do
+          let ty1' <- (denormalize (names' ++ names) stack' ty1)   
+          let ty2' <- (denormalize (names' ++ names) stack' ty2)   
+          let ty3' <- (denormalize (names' ++ names) stack' ty3)   
           some (.exis names' ty1' ty2' ty3') 
-          )))
         else
           none
       | [] => none
@@ -275,20 +268,18 @@ namespace Surface
       match stack with
       | names' :: stack'  =>
         match names' with
-        | .cons name [] =>
-          bind (denormalize (name :: names) stack' ty) (fun ty' =>  
+        | .cons name [] => do
+          let ty' <- (denormalize (name :: names) stack' ty)   
           some (.recur name ty') 
-          )
         | _ => none
       | [] => none
     | .corec ty =>
       match stack with
       | names' :: stack'  =>
         match names' with
-        | .cons name [] =>
-          bind (denormalize (name :: names) stack' ty) (fun ty' =>  
+        | .cons name [] => do
+          let ty' <- (denormalize (name :: names) stack' ty)
           some (.corec name ty') 
-          )
         | _ => none
       | [] => none
 
