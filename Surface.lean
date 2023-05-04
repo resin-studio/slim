@@ -5,6 +5,8 @@ import Lean.Data.PersistentHashMap
 import Util 
 import Normal
 
+open Lean PersistentHashMap
+
 open Std
 
 namespace Surface
@@ -168,8 +170,8 @@ namespace Surface
     #check [surftype: (x) ]
     #check [surftype: [x] ]
     #eval [surftype: ∀ [thing] thing ∨ @ | thing ≤ @ ]
+    #eval [surftype: succ*x ]
 
-    -- #eval [surftype: succ*x ]
     def normalize (bound_vars : List String) : Ty -> Option (List (List String) × Normal.Ty)
     | id name => do
       let pos <- (List.index (fun bv => bv == name) bound_vars)
@@ -402,30 +404,58 @@ namespace Surface
     | `([surfterm: fix $a ]) => `(Tm.fix [surfterm: $a ])
 
 
-  #eval [surfterm:
-      ⟨Tm.id "succ"⟩;x
-  ]
+    #eval [surfterm:
+        ⟨Tm.id "succ"⟩;x
+    ]
 
-  #eval [surfterm:
-      succ;x
-  ]
+    #eval [surfterm:
+        succ;x
+    ]
 
-  #eval [surfterm:
-    fix(λ self => λ[
-      (succ;x, succ;y) => (self (x, y)),
-      (zero;(), y) => y,
-      (x, zero;()) => x 
-    ])
-  ]
+    #eval [surfterm:
+      fix(λ self => λ[
+        (succ;x, succ;y) => (self (x, y)),
+        (zero;(), y) => y,
+        (x, zero;()) => x 
+      ])
+    ]
 
-  #eval [surfterm:
-    λ [x => x]
-  ]
+    #eval [surfterm:
+      λ [x => x]
+    ]
 
-  #eval [surfterm:
-    λ [x => ⟨Tm.id "x"⟩]
-  ]
-  end Tm
+    #eval [surfterm:
+      λ [x => ⟨Tm.id "x"⟩]
+    ]
+    end Tm
+
+    structure Bindings where 
+      intros : List String
+      type_map : PHashMap String (List (List String) × Normal.Tm)
+
+    partial def normalize (bound_vars : List String) : Tm -> Option (List Bindings × Normal.Tm)
+    | .hole => some ([], .hole) 
+    | .unit => some ([], .unit)
+    | .id name => do
+      let idx <- bound_vars.index fun bv => name == bv 
+      some ([], .bvar idx) 
+    | .tag label content => do
+      let (stack, content') <- normalize bound_vars content
+      some (stack, .tag label content')
+    | .record fields => do 
+      let (stack, fields') <- List.foldr (fun (label, content) result => do
+        let (stack, fields') <- result
+        let (stack', content) <- normalize bound_vars content
+        some (stack' ++ stack, (label, content) :: fields') 
+      ) none fields
+      some (stack, .record fields')
+    -- TODO
+    -- | .func : List (Tm × Tm) -> Tm
+    -- | .proj : Tm -> String -> Tm
+    -- | .app : Tm -> Tm -> Tm
+    -- | .letb : String -> Option Ty -> Tm -> Tm -> Tm
+    -- | .fix : Tm -> Tm
+    | _ => none
 
 
 end Surface
