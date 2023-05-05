@@ -433,6 +433,24 @@ namespace Surface
       intros : List String
       type_map : PHashMap String (List (List String) × Normal.Tm)
 
+    partial def pattern_bindings : Tm -> Option (List String)
+    | .hole => some []
+    | .unit => some []
+    | .id name => some [name]
+    | .tag _ content => do
+      let names <- pattern_bindings content
+      some names
+    | .record fields => do 
+      List.foldr (fun (_, content) result => do
+        let result_names <- result
+        let names <- pattern_bindings content
+        if List.any names (List.contains result_names) then
+          none
+        else
+          some (names ++ result_names) 
+      ) none fields
+    | _ => none
+
     partial def normalize (bound_vars : List String) : Tm -> Option (List Bindings × Normal.Tm)
     | .hole => some ([], .hole) 
     | .unit => some ([], .unit)
@@ -443,14 +461,23 @@ namespace Surface
       let (stack, content') <- normalize bound_vars content
       some (stack, .tag label content')
     | .record fields => do 
-      let (stack, fields') <- List.foldr (fun (label, content) result => do
-        let (stack, fields') <- result
-        let (stack', content) <- normalize bound_vars content
-        some (stack' ++ stack, (label, content) :: fields') 
+      let (result_stack, result_fields) <- List.foldr (fun (label, content) result => do
+        let (result_stack, result_fields) <- result
+        let (stack', content') <- normalize bound_vars content
+        some (stack' ++ result_stack, (label, content') :: result_fields) 
       ) none fields
-      some (stack, .record fields')
+      some (result_stack, .record result_fields)
+    | .func cases => do 
+      let (result_stack, result_cases) <- List.foldr (fun (pattern, content) result => do
+        let (result_stack, result_cases) <- result
+        let pattern_names <- pattern_bindings pattern
+        let (stack', pattern') <- normalize (pattern_names ++ bound_vars) pattern 
+        let (stack'', content') <- normalize (pattern_names ++ bound_vars) content
+        let bindings : Bindings := ⟨pattern_names, {}⟩ 
+        some (bindings :: stack' ++ stack'' ++ result_stack, (pattern', content') :: result_cases) 
+      ) none cases
+      some (result_stack, .func result_cases)
     -- TODO
-    -- | .func : List (Tm × Tm) -> Tm
     -- | .proj : Tm -> String -> Tm
     -- | .app : Tm -> Tm -> Tm
     -- | .letb : String -> Option Ty -> Tm -> Tm -> Tm
