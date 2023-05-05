@@ -431,7 +431,7 @@ namespace Surface
 
     structure Bindings where 
       intros : List String
-      type_map : PHashMap String (List (List String) × Normal.Tm)
+      type_map : PHashMap String (List (List String) × Normal.Ty)
 
     partial def pattern_bindings : Tm -> Option (List String)
     | .hole => some []
@@ -458,8 +458,8 @@ namespace Surface
       let idx <- bound_vars.index fun bv => name == bv 
       some ([], .bvar idx) 
     | .tag label content => do
-      let (stack, content') <- normalize bound_vars content
-      some (stack, .tag label content')
+      let (stack', content') <- normalize bound_vars content
+      some (stack', .tag label content')
     | .record fields => do 
       let (result_stack, result_fields) <- List.foldr (fun (label, content) result => do
         let (result_stack, result_fields) <- result
@@ -477,12 +477,34 @@ namespace Surface
         some (bindings :: stack' ++ stack'' ++ result_stack, (pattern', content') :: result_cases) 
       ) none cases
       some (result_stack, .func result_cases)
-    -- TODO
-    -- | .proj : Tm -> String -> Tm
-    -- | .app : Tm -> Tm -> Tm
-    -- | .letb : String -> Option Ty -> Tm -> Tm -> Tm
-    -- | .fix : Tm -> Tm
-    | _ => none
+    | .proj record label => do
+      let (stack', record') <- normalize bound_vars record 
+      some (stack', .proj record' label)
+    | .app f arg => do
+      let (stack', f') <- normalize bound_vars f 
+      let (stack'', arg') <- normalize bound_vars arg 
+      .some (stack' ++ stack'', .app f' arg')
+    | .letb name ty_op arg body =>
+      let names_ty_op' := (do
+        let ty <- ty_op 
+        Ty.normalize [] ty
+      )
+      let ty_op' := (do 
+        let (_, ty') <- names_ty_op'
+        some ty'
+      )
+      let ty_map := (match names_ty_op' with
+      | some item => PHashMap.from_list [(name, item)]
+      | none => {}
+      )
+      let bindings : Bindings := ⟨[name], ty_map⟩
+      do
+      let (stack', arg') <- normalize bound_vars arg 
+      let (stack'', body') <- normalize (name :: bound_vars) body 
+      some (bindings :: stack' ++ stack'', .letb ty_op' arg' body')
+    | .fix content => do
+      let (stack', content') <- normalize bound_vars content
+      some (stack', .fix content')
 
 
 end Surface
