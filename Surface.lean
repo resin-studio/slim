@@ -106,7 +106,7 @@ namespace Surface
     syntax:100 ident : surftype
     syntax "[" surftype,+ "]" : surftype 
     -- type
-    syntax:90 "@" : surftype
+    syntax:90 "unit" : surftype
     syntax:90 "⊥" : surftype
     syntax:90 "⊤" : surftype
     syntax:90 surftype:100 "*" surftype:90 : surftype
@@ -120,8 +120,8 @@ namespace Surface
     syntax:40 "∃" surftype surftype:40 : surftype 
     syntax:40 "∀" surftype surftype:40 "|" surftype "≤" surftype : surftype 
     syntax:40 "∀" surftype surftype:40 : surftype 
-    syntax:80 "μ " surftype surftype : surftype 
-    syntax:80 "ν " surftype surftype : surftype 
+    syntax:80 surftype "@" surftype : surftype 
+    syntax:80 "ν " "[" surftype "]" surftype : surftype 
 
 
     syntax "[surftype: " surftype "]" : term
@@ -142,7 +142,7 @@ namespace Surface
     | `([surftype: [ $x:surftype ] ]) => `([ [surftype: $x ] ])
     | `([surftype: [ $x,$xs:surftype,* ] ]) => `([surftype: [ $x ] ] ++ [surftype: [$xs,*] ])
     -- Ty 
-    | `([surftype: @ ]) => `(Ty.unit)
+    | `([surftype: unit ]) => `(Ty.unit)
     | `([surftype: ⊥ ]) => `(Ty.bot)
     | `([surftype: ⊤ ]) => `(Ty.top)
     | `([surftype: $a * $b:surftype ]) => `(Ty.tag (idname [surftype: $a ]) [surftype: $b ])
@@ -153,24 +153,43 @@ namespace Surface
     | `([surftype: $a ∧ $b ]) => `(Ty.inter [surftype: $a ] [surftype: $b ])
     | `([surftype: $a × $b ]) => `(Ty.inter (Ty.field "l" [surftype: $a ]) (Ty.field "r" [surftype: $b ]))
     | `([surftype: ∀ $a:surftype $d:surftype | $b ≤ $c ]) => `(Ty.univ 
-        (List.map (fun | Ty.id name => name | _ => "") [surftype: $a ]) 
+        (List.map idname [surftype: $a ]) 
         [surftype: $b ] [surftype: $c ] [surftype: $d ])
     | `([surftype: ∀ $a:surftype $b:surftype ]) => `(Ty.univ 
-          (List.map (fun | Ty.id name => name | _ => "") [surftype: $a ]) 
-          [surftype: @ ] [surftype: @ ] [surftype: $b ] )
+          (List.map idname [surftype: $a ]) 
+          [surftype: unit ] [surftype: unit ] [surftype: $b ] )
     | `([surftype: ∃ $a $d | $b ≤ $c  ]) => `(Ty.exis 
-          (List.map (fun | Ty.id name => name | _ => "") [surftype: $a ]) 
+          (List.map idname [surftype: $a ]) 
           [surftype: $b ] [surftype: $c ] [surftype: $d ])
     | `([surftype: ∃ $a:surftype $b:surftype ]) => `(Ty.exis 
-          (List.map (fun | Ty.id name => name | _ => "") [surftype: $a ]) 
-          [surftype: @ ] [surftype: @ ] [surftype: $b ] )
-    | `([surftype: μ $name $a ]) => `(Ty.recur [surftype: $name ] [surftype: $a ])
-    | `([surftype: ν $name $a ]) => `(Ty.corec [surftype: $name ] [surftype: $a ])
+          (List.map idname [surftype: $a ]) 
+          [surftype: unit ] [surftype: unit ] [surftype: $b ] )
+    | `([surftype: $name @ $a ]) => `(Ty.recur (idname [surftype: $name ]) [surftype: $a ])
+    | `([surftype: ν [$name] $a ]) => `(Ty.corec (idname [surftype: $name ]) [surftype: $a ])
 
     #check [surftype: (x) ]
     #check [surftype: [x] ]
-    #eval [surftype: ∀ [thing] thing ∨ @ | thing ≤ @ ]
+    #eval [surftype: ∀ [thing] thing ∨ unit | thing ≤ unit ]
     #eval [surftype: succ*x ]
+
+    #eval [surftype: 
+      nat_list @ (
+        (zero*unit × nil*unit) ∨ 
+        (∃ [nat, list] (succ*nat × cons*list) | 
+          nat × list ≤ nat_list)
+      )
+    ]
+    -- TODO: simplify language by using implication to encode universal and greatest fixedpoint.  
+    /-
+    nat_list @ (
+      (zero*unit × nil*unit) ∨ 
+      (succ*nat × cons*list | nat × list ≤ nat_list)
+    )
+    -/
+    -- ∀ X . X -> (∃ Y . Y | X × Y ≤ T)
+    -- ∀ X . X -> (∃ Y . Y | X × Y ≤ T)
+    -- n -> (l | n × l ≤ nat_list)
+
 
     def normalize (bound_vars : List String) : Ty -> Option (List (List String) × Normal.Ty)
     | id name => do
