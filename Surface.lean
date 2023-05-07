@@ -222,7 +222,7 @@ namespace Surface
         some (.id name)
       else
         none
-    | .fvar index => some (.id s!"_x_{index}")
+    | .fvar index => some (.id s!"_α_{index}")
     | .unit => some .unit 
     | .bot => some .bot 
     | .top => some .top 
@@ -429,21 +429,21 @@ namespace Surface
     ]
     end Tm
 
-    structure Bindings where 
-      intros : List String
-      type_map : PHashMap String (List (List String) × Normal.Ty)
+    structure Abstraction where 
+      names : List String
+      type_map : PHashMap String (List (List String))
 
-    partial def pattern_bindings : Tm -> Option (List String)
+    partial def pattern_abstraction : Tm -> Option (List String)
     | .hole => some []
     | .unit => some []
     | .id name => some [name]
     | .tag _ content => do
-      let names <- pattern_bindings content
+      let names <- pattern_abstraction content
       some names
     | .record fields => do 
       List.foldr (fun (_, content) result => do
         let result_names <- result
-        let names <- pattern_bindings content
+        let names <- pattern_abstraction content
         if List.any names (List.contains result_names) then
           none
         else
@@ -451,7 +451,9 @@ namespace Surface
       ) none fields
     | _ => none
 
-    partial def normalize (bound_vars : List String) : Tm -> Option (List Bindings × Normal.Tm)
+
+
+    partial def normalize (bound_vars : List String) : Tm -> Option (List Abstraction × Normal.Tm)
     | .hole => some ([], .hole) 
     | .unit => some ([], .unit)
     | .id name => do
@@ -470,11 +472,11 @@ namespace Surface
     | .func cases => do 
       let (result_stack, result_cases) <- List.foldr (fun (pattern, content) result => do
         let (result_stack, result_cases) <- result
-        let pattern_names <- pattern_bindings pattern
+        let pattern_names <- pattern_abstraction pattern
         let (stack', pattern') <- normalize (pattern_names ++ bound_vars) pattern 
         let (stack'', content') <- normalize (pattern_names ++ bound_vars) content
-        let bindings : Bindings := ⟨pattern_names, {}⟩ 
-        some (bindings :: stack' ++ stack'' ++ result_stack, (pattern', content') :: result_cases) 
+        let absstraction : Abstraction := ⟨pattern_names, {}⟩ 
+        some (absstraction :: stack' ++ stack'' ++ result_stack, (pattern', content') :: result_cases) 
       ) none cases
       some (result_stack, .func result_cases)
     | .proj record label => do
@@ -494,17 +496,71 @@ namespace Surface
         some ty'
       )
       let ty_map := (match names_ty_op' with
-      | some item => PHashMap.from_list [(name, item)]
+      | some (ty_stack', _) => PHashMap.from_list [(name, ty_stack')]
       | none => {}
       )
-      let bindings : Bindings := ⟨[name], ty_map⟩
+      let abstraction : Abstraction := ⟨[name], ty_map⟩
       do
       let (stack', arg') <- normalize bound_vars arg 
       let (stack'', body') <- normalize (name :: bound_vars) body 
-      some (bindings :: stack' ++ stack'', .letb ty_op' arg' body')
+      some (abstraction :: stack' ++ stack'', .letb ty_op' arg' body')
     | .fix content => do
       let (stack', content') <- normalize bound_vars content
       some (stack', .fix content')
+
+    partial def denormalize (abstraction : Abstraction) (stack : List Abstraction) : Normal.Tm ->  Option Surface.Tm
+    | .hole => some .hole 
+    | .unit => some .unit 
+    | .bvar idx =>
+      let names := abstraction.names
+      if h : names.length > idx then
+        let name := names.get ⟨idx, h⟩
+        some (.id name)
+      else
+        none
+    | .fvar index => some (.id s!"_x_{index}")
+    | .tag label content => do
+      let content' <- denormalize abstraction stack content
+      some (.tag label content')
+    | .record fields => do
+      let fields' <- List.foldr (fun (label, content) result => do
+        let fields' <- result
+        let content' <- denormalize abstraction stack content 
+        some ((label, content') :: fields')
+      ) none fields
+      some (.record fields')
+    | .func cases => do 
+      let cases' <- List.foldr (fun (pattern, body) result => do
+        let cases' <- result
+        let pattern' <- denormalize abstraction (abstraction :: stack) pattern 
+        let body' <- denormalize abstraction (abstraction :: stack) body 
+        some ((pattern', body') :: cases')
+      ) none cases
+      some (.func cases')
+    | .proj record label => do
+      let record' <- denormalize abstraction stack record 
+      some (.proj record' label)
+    | .app f arg => do 
+      let f' ← denormalize abstraction stack f 
+      let arg' ← denormalize abstraction stack arg
+      some (.app f' arg') 
+    | .letb ty_op arg body => 
+      match abstraction.names with
+      | [name] => 
+        let ty_op' := (do
+          let ty <- ty_op
+          let ty_stack <- abstraction.type_map.find? name
+          let ty' <- Ty.denormalize [] ty_stack ty 
+          some ty' 
+        )
+        do
+        let arg' ← denormalize abstraction stack arg
+        let body' ← denormalize abstraction stack body
+        some (.letb name ty_op' arg' body') 
+      | _ => none
+    | .fix content => do
+      let content' <- denormalize abstraction stack content 
+      some (.fix content')
 
 
 end Surface
