@@ -1020,22 +1020,25 @@ namespace Normal
           (unify i env_ty env_complex frozen ty2 ty4)
         ) 
       else if n1 >= n3 then
-
-        -- let bound_start := i
-        -- let bound_end := i
-        -- let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
         let (i, ids1) := (i + n1, (List.range n1).map (fun j => i + j))
         let args1 := ids1.map (fun id => Ty.fvar id)
         let ty1' := Ty.instantiate 0 args1 ty1
+        let ty2' := Ty.instantiate 0 args1 ty2
 
         let (i, ids3) := (i + n3, (List.range n3).map (fun j => i + j))
+        let is_opaque := fun key => ids3.contains key 
         let args3 := ids3.map (fun id => Ty.fvar id)
         let ty3' := Ty.instantiate 0 args3 ty3
+        let ty4' := Ty.instantiate 0 args3 ty4
 
-
-
-        Ty.assume_env (unify i env_ty env_complex frozen ty3 ty1) (fun i env_ty =>
-          (unify i env_ty env_complex frozen ty2 ty4)
+        Ty.assume_env (unify i env_ty env_complex frozen ty3' ty1') (fun i env_ty =>
+          let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+            not (is_opaque key)
+          )
+          if is_result_safe then
+            (unify i env_ty env_complex frozen ty2' ty4')
+          else
+            (i, [])
         ) 
       else 
         (i, [])
@@ -1763,52 +1766,11 @@ nat_list
 [norm: α[0] :]
 
 
--- TODO: see if converting universal/implication to existential pairs solves this
+-- treat bound variables in implication as universally quantified 
 #eval unify_reduce 30
 [norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩] :]
 [norm: succ*zero*unit -> cons*α[0] :] 
 [norm: α[0] :]
-
-#eval unify_reduce 30
-[norm: [β[0] × succ*zero*unit × [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩]] :]
-[norm: [β[0] × β[0] × cons*α[0]] :] 
-[norm: α[0] :]
-
-
--------------------------
-
-#eval unify_reduce 30
-[norm: α[1] -> [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
-[norm: succ*zero*unit -> cons*α[0] :] 
-[norm: α[0] :]
-
-#eval unify_reduce 30
-[norm: succ*zero*unit × [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
-[norm: α[1] × cons*α[0] :] 
-[norm: α[0] :]
-
-#eval unify_reduce 30
-[norm: succ*zero*unit × [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
-[norm: l : α[1] :] 
-[norm: α[1] :]
-
-#eval unify_reduce 30
-[norm: succ*zero*unit × [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
-[norm: r : cons*α[0] :] 
-[norm: α[0] :]
-
-#eval unify_reduce_env 30 (PHashMap.from_list [(1, [norm: succ*zero*unit :])])
-[norm: [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
-[norm: cons*α[0] :] 
-[norm: α[0] :]
-
-#eval unify_reduce_env 30 (PHashMap.from_list [(1, [norm: succ*zero*unit :])])
-[norm: [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
-[norm: cons*α[0] :] 
-[norm: α[0] :]
-
--- #eval extract_nested_fields (Ty.simplify (Ty.subst (PHashMap.from_list [(1, [norm: succ*zero*unit :])]) [norm: α[1] × α[2]:]))
--- match (extract_nested_fields ty') with
 
 -----------------------------------------------
 
@@ -1825,6 +1787,10 @@ def even_list := [norm:
 #eval unify_decide 0
 [norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩] :]
 [norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨even_list⟩] :]
+
+#eval unify_decide 30 
+[norm: α[0] -> [β[0] | α[0] × β[0] ≤ ⟨nat_list⟩] :]
+[norm: α[1] -> [β[0] | α[1] × β[0] ≤ ⟨even_list⟩] :]
 ----------------------------
 
 def plus := [norm: 
@@ -1837,19 +1803,14 @@ def plus := [norm:
 
 #eval plus
 
-
--- -- TODO: ERROR
--- -- the problem is that the variables of the existential on the RHS are being adjusted 
--- -- we need to substitute existentials to avoid adjustment.
--- -- However universals should be adjusted?
--- #eval unify_reduce 30 [norm:
---   (
---     x : (α[10]) ∧
---     y : (succ*zero*unit) ∧ 
---     z : (zero*unit)
---   )
--- :] plus
--- [norm: α[10] :]
+#eval unify_reduce 30 [norm:
+  (
+    x : (α[10]) ∧
+    y : (succ*zero*unit) ∧ 
+    z : (succ*succ*zero*unit)
+  )
+:] plus
+[norm: α[10] :]
 
 #eval unify_reduce 30 
   [norm:
