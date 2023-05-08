@@ -67,7 +67,7 @@ namespace Normal
     Format.bracket "("
       (Format.joinSep tys (" ∨" ++ Format.line))
     ")"
-
+ 
   | .inter (Ty.field "l" l) (Ty.field "r" r) =>
     Format.bracket "(" ((Ty.repr l n) ++ " × " ++ (Ty.repr r n)) ")"
   | .inter ty1 ty2 =>
@@ -76,7 +76,10 @@ namespace Normal
     Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
   | .exis ty_c1 ty_c2 ty_pl =>
     if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-      Format.bracket "[" (Ty.repr ty_pl n) "]"
+      if ty_pl == (Ty.bvar 0) then
+        "⊤"
+      else
+        Format.bracket "[" (Ty.repr ty_pl n) "]"
     else
       Format.bracket "(" (
         (Ty.repr ty_pl n) ++ " | " ++
@@ -159,6 +162,7 @@ namespace Normal
   syntax:90 "β["slm:100"]" : slm
   syntax:90 "α["slm:100"]" : slm
   syntax:90 "unit" : slm
+  syntax:90 "⊤" : slm
   syntax:90 "⊥" : slm
   syntax:90 slm:100 "*" slm:90 : slm
   syntax:90 slm:100 ":" slm:90 : slm
@@ -210,6 +214,7 @@ namespace Normal
   | `([norm: β[$n] :]) => `(Ty.bvar [norm: $n :])
   | `([norm: α[$n:slm] :]) => `(Ty.fvar [norm: $n :])
   | `([norm: unit :]) => `(Ty.unit)
+  | `([norm: ⊤ :]) => `(Ty.exis Ty.unit Ty.unit (Ty.bvar 0) )
   | `([norm: ⊥ :]) => `(Ty.bot)
   | `([norm: $a * $b:slm :]) => `(Ty.tag [norm: $a :] [norm: $b :])
   | `([norm: $a : $b:slm :]) => `(Ty.field [norm: $a :] [norm: $b :])
@@ -538,18 +543,16 @@ namespace Normal
     else
       ty 
 
-  partial def roll_corec (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
+  partial def occurs_not (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
     if (Ty.free_vars_env m ty).contains key then
-      -- TODO: rewrite ty intersection into function_type with inductive type.
-      ty
-      -- Ty.subst (PHashMap.from_list [(key, [norm: β[0] :])]) [norm: (ν 1 . ⟨ty⟩) :] 
+      Ty.bot
     else
       ty
 
 
   partial def Ty.subst_default (sign : Bool) : Ty -> Ty
   | .bvar id => Ty.bvar id  
-  | .fvar id => if sign then Ty.bot else .fvar id 
+  | .fvar id => if sign then Ty.bot else [norm: ⊤ :] 
   | .unit => .unit 
   | .bot => .bot 
   | .tag l ty => Ty.tag l (Ty.subst_default sign ty) 
@@ -889,13 +892,13 @@ namespace Normal
   | .fvar id, ty  => 
     match env_ty.find? id with 
     | none => 
-      (i, [env_ty.insert id (roll_corec id env_ty ty)])
+      (i, [env_ty.insert id (occurs_not id env_ty ty)])
     | some ty' => 
       let adjustable := frozen.find? id == .none
       -- (unify i env_ty env_complex ty' ty)
       let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
       if adjustable && u_env_ty.isEmpty then
-        (i, [env_ty.insert id (roll_corec id env_ty (Ty.inter ty ty'))])
+        (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
       else
         (i, u_env_ty)
 
@@ -1301,7 +1304,7 @@ namespace Normal
   def to_pair_type : Ty -> Ty 
   | Ty.case ty1 ty2 => 
     [norm: ⟨ty1⟩ × ⟨ty2⟩ :] 
-  | _ => Ty.bvar 0 
+  | _ =>  [norm: ⊤ :]
 
   -- TODO: disjoint pattern check for inferring intersection of arrows
   partial def infer (i : Nat) (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
@@ -1330,7 +1333,7 @@ namespace Normal
       (i + 1, (l, t1, (Ty.fvar i)) :: ty_acc)
     ) (i, []) fds
 
-    let ty_init := Ty.bvar 0 
+    let ty_init := [norm: ⊤ :] 
 
     let ty' := List.foldr (fun (l, _, ty1) ty_acc => 
       Ty.inter (Ty.field l ty1) ty_acc 
@@ -1343,7 +1346,7 @@ namespace Normal
       ))
     )
 
-    let init := Ty.combine (Ty.unify i env_ty {} {} ty' ty) (Ty.bvar 0)
+    let init := Ty.combine (Ty.unify i env_ty {} {} ty' ty) [norm: ⊤ :]
     List.foldr f_step init trips
 
   | .func fs =>
@@ -1351,7 +1354,7 @@ namespace Normal
       (i + 2, (p, Ty.fvar i, b, Ty.fvar (i + 1)) :: ty_acc)
     ) (i, []) fs
 
-    let case_init := (Ty.bvar 0)
+    let case_init := [norm: ⊤ :]
 
     let (i, ty') := List.foldr (fun (p, ty_p, b, ty_b) (i, ty_acc) => 
       (i, Ty.inter (Ty.case ty_p ty_b) ty_acc) 
@@ -1379,7 +1382,7 @@ namespace Normal
         )))
       )
 
-    let init := Ty.combine (Ty.unify i env_ty {} {} ty' ty) (Ty.bvar 0)
+    let init := Ty.combine (Ty.unify i env_ty {} {} ty' ty) [norm: ⊤ :]
     List.foldr f_step init fs_typed
 
   | .proj t1 l =>
