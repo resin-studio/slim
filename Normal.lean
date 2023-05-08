@@ -1001,16 +1001,6 @@ namespace Normal
 
     -----------------------------------------------------
 
-    -- TODO: rewrite case subtyping into existential subtyping to leverage variable mechanisms. 
-    -- X -> [Y | X × Y ≤ nat_list ]
-    -- X -> [Y | X × Y ≤ even_list ]
-    -- instatiate return type.
-    -- a variable in the premise of a case is considered universally quantified  
-    -- | .case (Ty.bvar 0) ty', ty =>
-    --   let (i, ty_prem) := (i + 1, Ty.fvar (i + 1))
-    --   unify i env_ty env_complex frozen (.case ty_prem ty') ty
-
-
     | .case ty1 ty2, .case ty3 ty4 =>
 
       let n1 := pattern_abstraction ty1 
@@ -1769,7 +1759,7 @@ nat_list
 -- treat bound variables in implication as universally quantified 
 #eval unify_reduce 30
 [norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩] :]
-[norm: succ*zero*unit -> cons*α[0] :] 
+[norm: succ*succ*zero*unit -> cons*α[0] :] 
 [norm: α[0] :]
 
 -----------------------------------------------
@@ -1784,13 +1774,10 @@ def even_list := [norm:
 #eval unify_decide 0 nat_list even_list
 
 
+-- limitation: sound, but incomplete
 #eval unify_decide 0
 [norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩] :]
 [norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨even_list⟩] :]
-
-#eval unify_decide 30 
-[norm: α[0] -> [β[0] | α[0] × β[0] ≤ ⟨nat_list⟩] :]
-[norm: α[1] -> [β[0] | α[1] × β[0] ≤ ⟨even_list⟩] :]
 ----------------------------
 
 def plus := [norm: 
