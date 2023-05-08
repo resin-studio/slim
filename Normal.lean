@@ -866,15 +866,11 @@ namespace Normal
       unify i env_ty env_complex frozen ty_c1 ty_c2
     )
 
-  -- | .univ n ty_c1 ty_c2 ty', ty =>
-  --   let (i, args) := (i + n, (List.range n).map (fun j => .fvar (i + j)))
-  --   let ty_c1 := Ty.instantiate 0 args ty_c1
-  --   let ty_c2 := Ty.instantiate 0 args ty_c2
-  --   let ty' := Ty.instantiate 0 args ty'
-  --   Ty.assume_env (unify i env_ty env_complex frozen ty' ty) (fun i env_ty =>
-  --     (unify i env_ty env_complex frozen ty_c1 ty_c2)
-  --   )
-    
+  -- a variable in the premise of step is considered universally quantified  
+  | .case (Ty.bvar 0) ty', ty =>
+    let (i, ty_prem) := (i + 1, Ty.fvar (i + 1))
+    unify i env_ty env_complex frozen (.case ty_prem ty') ty
+
   -- free variables
   ---------------------------------------------------------------
   | (.fvar id1), (.fvar id2) => 
