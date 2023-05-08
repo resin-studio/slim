@@ -1734,7 +1734,13 @@ nat_list
 [norm: α[0] :]
 
 
+-- TODO: see if converting universal/implication to existential pairs solves this
+#eval unify_reduce 30
+[norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩] :]
+[norm: succ*zero*unit -> cons*α[0] :] 
+[norm: α[0] :]
 
+----------------------------
 def plus := [norm: 
   μ 
     [x : zero*unit ∧ y : β[0] ∧ z : β[0]] ∨ 
