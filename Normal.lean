@@ -598,29 +598,18 @@ namespace Normal
   | .fvar _ => some [] 
   | _ => none
 
-  def extract_nested_fields : Ty -> Option (List Ty)
-  | .field l ty => some [ty]
+  def extract_nested_fields : Ty -> (List Ty)
+  | .field l ty => [ty]
   | .inter (.field l ty1) ty2 => 
     match extract_nested_fields ty1 with
-    | none => 
-      bind (extract_nested_fields ty2) (fun linear_ty2 =>
-        ty1 :: linear_ty2
-      )
-    | some nested_fields =>
-      bind (extract_nested_fields ty2) (fun linear_ty2 =>
-        nested_fields ++ linear_ty2
-      )
+    | [] => ty1 :: (extract_nested_fields ty2)
+    | nested_fields =>
+      nested_fields ++ (extract_nested_fields ty2)
   | .inter ty1 (.field l ty2) => 
     match extract_nested_fields ty2 with
-    | none => 
-      bind (extract_nested_fields ty1) (fun linear_ty1 =>
-        ty2 :: linear_ty1
-      )
-    | some nested_fields => 
-      bind (extract_nested_fields ty1) (fun linear_ty1 =>
-        nested_fields ++ linear_ty1
-      )
-  | _ => none
+    | [] => ty2 :: (extract_nested_fields ty1)
+    | nested_fields => nested_fields ++ (extract_nested_fields ty1)
+  | _ => [] 
 
 
 
@@ -837,8 +826,8 @@ namespace Normal
       Ty.wellfounded n ty1 && Ty.wellfounded n ty2
     | .inter ty1 ty2 =>
       match (extract_nested_fields (inter ty1 ty2)) with
-      | some fields => fields.any (fun ty' => Ty.wellfounded n ty')
-      | none => false
+      | [] => false
+      | fields => fields.any (fun ty' => Ty.wellfounded n ty')
     | .case _ _ => false
     | .exis ty_c1 ty_c2 ty' => 
       let n' := Ty.pattern_abstraction ty' 
@@ -930,10 +919,10 @@ namespace Normal
 
       let op_fields := linearize_fields ty_c1
 
-
       let ((i, contexts), env_complex) := ( 
         match op_fields with 
-        | some fields =>
+        | .none => (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
+        | .some fields =>
           let is_recur_type := match ty_c2 with 
           | Ty.recur _ => true
           | _ => false
@@ -941,8 +930,7 @@ namespace Normal
             let rlabels := extract_record_labels (ty_c2) 
             rlabels.contains l 
           )
-          let extract_type : String × Ty -> Ty := (fun (_, ty_fd) => ty_fd)
-          let unmatchable := !(matchable (List.map extract_type fields))
+          let unmatchable := !(matchable (extract_nested_fields (Ty.simplify (Ty.subst env_ty ty_c1))))
           if is_recur_type && unmatchable  then 
             if is_consistent_variable_record then
               let ty_norm := ty_c1 
@@ -951,7 +939,6 @@ namespace Normal
               ((i, []), env_complex) 
           else
             (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
-        | none => (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
       )
 
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
@@ -1053,7 +1040,7 @@ namespace Normal
         (i, [])
 
     | .field l' ty', .field l ty =>
-      if l' = l then
+      if l' == l then
         unify i env_ty env_complex frozen ty' ty
       else
         (i, [])
@@ -1072,13 +1059,13 @@ namespace Normal
     | ty', .recur ty =>
       let ty' := (Ty.simplify (Ty.subst env_ty ty'))
       match (extract_nested_fields ty') with
-      | .none => 
+      | [] => 
         if Ty.wellfounded 1 ty then
           unify i env_ty env_complex frozen ty' (Ty.instantiate 0 [Ty.recur ty] ty) 
 
         else
           (i, []) 
-      | .some fields =>
+      | fields =>
         if matchable fields then 
           if Ty.wellfounded 1 ty then
             unify i env_ty env_complex frozen ty' (Ty.instantiate 0 [Ty.recur ty] ty)
@@ -1110,7 +1097,10 @@ namespace Normal
     | .inter ty1 ty2, ty => 
       let (i, u_env_ty1) := (unify i env_ty env_complex frozen ty1 ty)
       let (i, u_env_ty2) := (unify i env_ty env_complex frozen ty2 ty)
-      (i, u_env_ty1 ++ u_env_ty2)
+      let (i, u_env_ty3) := Ty.assume_env (i, u_env_ty1) (fun i env_ty => 
+        (unify i env_ty env_complex frozen ty2 ty)
+      )
+      (i, u_env_ty1 ++ u_env_ty2 ++ u_env_ty3)
 
     | _, _ => (i, []) 
 
@@ -1176,6 +1166,12 @@ namespace Normal
         | .none => .some t
         | .some t' => Ty.union t t'
 
+
+  partial def unify_reduce_env (i : Nat) (env_ty : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
+    let (_, u_env_ty) := (Ty.unify i env_ty {} {} ty1 ty2)
+    List.foldr (fun env_ty ty_acc => 
+      Ty.simplify (Ty.subst env_ty (Ty.union ty_result ty_acc))
+    ) Ty.bot u_env_ty
 
   partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
     let (_, u_env_ty) := (Ty.unify i {} {} {} ty1 ty2)
@@ -1771,24 +1767,26 @@ nat_list
 
 #eval unify_reduce 30
 [norm: succ*zero*unit × [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
-[norm: α[1] × cons*α[0] :] 
-[norm: α[0] :]
-
-#eval unify_reduce 30
-[norm: [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] × succ*zero*unit :]
-[norm: cons*α[0] × α[1]:] 
-[norm: α[0] :]
-
-#eval unify_reduce 30
-[norm: succ*zero*unit :]
-[norm: α[1] :] 
+[norm: l : α[1] :] 
 [norm: α[1] :]
 
 #eval unify_reduce 30
-[norm: [β[0] | succ*zero*unit × β[0] ≤ ⟨nat_list⟩] × succ*zero*unit :]
-[norm: cons*α[0] × α[1]:] 
+[norm: succ*zero*unit × [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
+[norm: r : cons*α[0] :] 
 [norm: α[0] :]
 
+#eval unify_reduce_env 30 (PHashMap.from_list [(1, [norm: succ*zero*unit :])])
+[norm: [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
+[norm: cons*α[0] :] 
+[norm: α[0] :]
+
+#eval unify_reduce_env 30 (PHashMap.from_list [(1, [norm: succ*zero*unit :])])
+[norm: [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
+[norm: cons*α[0] :] 
+[norm: α[0] :]
+
+-- #eval extract_nested_fields (Ty.simplify (Ty.subst (PHashMap.from_list [(1, [norm: succ*zero*unit :])]) [norm: α[1] × α[2]:]))
+-- match (extract_nested_fields ty') with
 
 -----------------------------------------------
 
