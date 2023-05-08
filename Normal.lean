@@ -876,11 +876,6 @@ namespace Normal
         unify i env_ty env_complex frozen ty_c1 ty_c2
       )
 
-    -- a variable in the premise of a case is considered universally quantified  
-    | .case (Ty.bvar 0) ty', ty =>
-      let (i, ty_prem) := (i + 1, Ty.fvar (i + 1))
-      unify i env_ty env_complex frozen (.case ty_prem ty') ty
-
     -- free variables
     ---------------------------------------------------------------
     | (.fvar id1), (.fvar id2) => 
@@ -1017,6 +1012,22 @@ namespace Normal
 
     -----------------------------------------------------
 
+    -- TODO: rewrite case subtyping into existential subtyping to leverage variable mechanisms. 
+    -- X -> [Y | X × Y ≤ nat_list ]
+    -- X -> [Y | X × Y ≤ even_list ]
+    -- instatiate return type.
+    -- a variable in the premise of a case is considered universally quantified  
+    -- | .case (Ty.bvar 0) ty', ty =>
+    --   let (i, ty_prem) := (i + 1, Ty.fvar (i + 1))
+    --   unify i env_ty env_complex frozen (.case ty_prem ty') ty
+
+
+    | .case ty1 ty2', .case ty1' ty2 =>
+      Ty.assume_env (unify i env_ty env_complex frozen ty1' ty1) (fun i env_ty =>
+        (unify i env_ty env_complex frozen ty2' ty2)
+      ) 
+    ------------------------------------------------------------------
+
     | .bvar id1, .bvar id2  =>
       if id1 = id2 then 
         (i, [env_ty])
@@ -1039,10 +1050,6 @@ namespace Normal
       else
         (i, [])
 
-    | .case ty1 ty2', .case ty1' ty2 =>
-      Ty.assume_env (unify i env_ty env_complex frozen ty1' ty1) (fun i env_ty =>
-        (unify i env_ty env_complex frozen ty2' ty2)
-      ) 
 
     | .recur ty1, .recur ty2 =>
       if Ty.equal env_ty ty1 ty2 then
