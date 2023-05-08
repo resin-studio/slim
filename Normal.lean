@@ -1011,16 +1011,34 @@ namespace Normal
     --   unify i env_ty env_complex frozen (.case ty_prem ty') ty
 
 
-    | .case ty1 ty2', .case ty1' ty2 =>
+    | .case ty1 ty2, .case ty3 ty4 =>
 
-      -- let n := pattern_abstraction ty1 
-      -- let n' := pattern_abstraction ty1' 
+      let n1 := pattern_abstraction ty1 
+      let n3 := pattern_abstraction ty3 
+      if n1 == 0 && n3 == 0 then 
+        Ty.assume_env (unify i env_ty env_complex frozen ty3 ty1) (fun i env_ty =>
+          (unify i env_ty env_complex frozen ty2 ty4)
+        ) 
+      else if n1 >= n3 then
 
-      -- if n > 
-      -- [norm: ⟨ty1'⟩ ⟨ty2'⟩ :] [norm: ⟨ty1⟩ ⟨ty2⟩ :] 
-      Ty.assume_env (unify i env_ty env_complex frozen ty1' ty1) (fun i env_ty =>
-        (unify i env_ty env_complex frozen ty2' ty2)
-      ) 
+        -- let bound_start := i
+        -- let bound_end := i
+        -- let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
+        let (i, ids1) := (i + n1, (List.range n1).map (fun j => i + j))
+        let args1 := ids1.map (fun id => Ty.fvar id)
+        let ty1' := Ty.instantiate 0 args1 ty1
+
+        let (i, ids3) := (i + n3, (List.range n3).map (fun j => i + j))
+        let args3 := ids3.map (fun id => Ty.fvar id)
+        let ty3' := Ty.instantiate 0 args3 ty3
+
+
+
+        Ty.assume_env (unify i env_ty env_complex frozen ty3 ty1) (fun i env_ty =>
+          (unify i env_ty env_complex frozen ty2 ty4)
+        ) 
+      else 
+        (i, [])
     ------------------------------------------------------------------
 
     | .bvar id1, .bvar id2  =>
@@ -1750,6 +1768,14 @@ nat_list
 [norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩] :]
 [norm: succ*zero*unit -> cons*α[0] :] 
 [norm: α[0] :]
+
+#eval unify_reduce 30
+[norm: [β[0] × succ*zero*unit × [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩]] :]
+[norm: [β[0] × β[0] × cons*α[0]] :] 
+[norm: α[0] :]
+
+
+-------------------------
 
 #eval unify_reduce 30
 [norm: α[1] -> [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
