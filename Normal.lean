@@ -1093,14 +1093,10 @@ namespace Normal
         (unify i env_ty env_complex frozen ty ty2)
       )
 
-
     | .inter ty1 ty2, ty => 
       let (i, u_env_ty1) := (unify i env_ty env_complex frozen ty1 ty)
       let (i, u_env_ty2) := (unify i env_ty env_complex frozen ty2 ty)
-      let (i, u_env_ty3) := Ty.assume_env (i, u_env_ty1) (fun i env_ty => 
-        (unify i env_ty env_complex frozen ty2 ty)
-      )
-      (i, u_env_ty1 ++ u_env_ty2 ++ u_env_ty3)
+      (i, u_env_ty1 ++ u_env_ty2)
 
     | _, _ => (i, []) 
 
