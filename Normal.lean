@@ -1759,6 +1759,36 @@ nat_list
 [norm: succ*zero*unit -> cons*α[0] :] 
 [norm: α[0] :]
 
+#eval unify_reduce 30
+[norm: α[1] -> [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
+[norm: succ*zero*unit -> cons*α[0] :] 
+[norm: α[0] :]
+
+#eval unify_reduce 30
+[norm: succ*zero*unit × [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
+[norm: α[1] × cons*α[0] :] 
+[norm: α[0] :]
+
+#eval unify_reduce 30
+[norm: succ*zero*unit × [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] :]
+[norm: α[1] × cons*α[0] :] 
+[norm: α[0] :]
+
+#eval unify_reduce 30
+[norm: [β[0] | α[1] × β[0] ≤ ⟨nat_list⟩] × succ*zero*unit :]
+[norm: cons*α[0] × α[1]:] 
+[norm: α[0] :]
+
+#eval unify_reduce 30
+[norm: succ*zero*unit :]
+[norm: α[1] :] 
+[norm: α[1] :]
+
+#eval unify_reduce 30
+[norm: [β[0] | succ*zero*unit × β[0] ≤ ⟨nat_list⟩] × succ*zero*unit :]
+[norm: cons*α[0] × α[1]:] 
+[norm: α[0] :]
+
 
 -----------------------------------------------
 
