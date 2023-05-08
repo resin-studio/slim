@@ -866,7 +866,7 @@ namespace Normal
       unify i env_ty env_complex frozen ty_c1 ty_c2
     )
 
-  -- a variable in the premise of step is considered universally quantified  
+  -- a variable in the premise of a case is considered universally quantified  
   | .case (Ty.bvar 0) ty', ty =>
     let (i, ty_prem) := (i + 1, Ty.fvar (i + 1))
     unify i env_ty env_complex frozen (.case ty_prem ty') ty
@@ -1427,13 +1427,13 @@ namespace Normal
       let ty_content := List.foldr (fun ty_case ty_acc =>
         let fvs := (Ty.free_vars ty_case).toList.bind (fun (k , _) => [k])
         let fvs_prem :=  (Ty.free_vars ty_prem)
-        let ty_case' := (
+        let ty_choice := (
           if List.any fvs (fun id => fvs_prem.find? id != none) then
             -- TODO: construct arrow-recursive type
             let fixed_point := fvs.length
             [norm:
               (⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩ | 
-                ⟨Ty.generalize fvs 0 (to_pair_type ty_prem)⟩ ≤ β[⟨fvs.length⟩] 
+                ⟨Ty.generalize fvs 0 (to_pair_type ty_prem)⟩ ≤ β[⟨fixed_point⟩] 
               )
             :]
           else if fvs.length > 0 then
@@ -1442,9 +1442,7 @@ namespace Normal
             ty_case
         )
 
-
-
-        (Ty.union ty_case' ty_acc) 
+        (Ty.union ty_choice ty_acc) 
       ) [norm: ⊥ :] (split_conjunctions ty_conc)
 
       -- constraint that ty' <= ty_prem is built into inductive type
