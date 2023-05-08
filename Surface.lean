@@ -155,10 +155,20 @@ namespace Surface
     #eval [surftype: 
       nat_list @ (
         (zero*unit × nil*unit) ∨ 
-        (succ*nat × cons*list | 
-          nat × list ≤ nat_list)
+        (succ*nat × cons*list | nat × list ≤ nat_list)
       )
     ]
+
+    -- #eval [surftype: 
+    --   nat_to_list @ (
+    --     (zero*unit -> nil*unit) ∧ 
+    --     (succ*nat -> cons*list | nat_to_list ≤ nat -> list)
+    --   )
+    -- ]
+
+    -- #eval [surftype: 
+    --   nat -> (list | nat × list ≤ nat_list) 
+    -- ]
     -- TODO: simplify language by using implication to encode universal and greatest fixedpoint.  
     /-
     nat_list @ (
@@ -239,7 +249,6 @@ namespace Surface
     | .fvar index => some (.id s!"_α_{index}")
     | .unit => some .unit 
     | .bot => some .bot 
-    -- | .top => some .top 
     | .tag label content => do
       let content' <- (denormalize names stack content)   
       some (.tag label content') 
@@ -258,17 +267,6 @@ namespace Surface
       let ty1' <- (denormalize names stack ty1)   
       let ty2' <- (denormalize names stack ty2)   
       some (.case ty1' ty2') 
-    -- | .univ n ty1 ty2 ty3 => 
-    --   match stack with
-    --   | names' :: stack'  =>
-    --     if names'.length == n then do
-    --       let ty1' <- (denormalize (names' ++ names) stack' ty1)   
-    --       let ty2' <- (denormalize (names' ++ names) stack' ty2)   
-    --       let ty3' <- (denormalize (names' ++ names) stack' ty3)   
-    --       some (.univ names' ty1' ty2' ty3') 
-    --     else
-    --       none
-    --   | [] => none
     | .exis n ty1 ty2 ty3 => 
       match stack with
       | names' :: stack'  =>
@@ -289,15 +287,6 @@ namespace Surface
           some (.recur name ty') 
         | _ => none
       | [] => none
-    -- | .corec ty =>
-    --   match stack with
-    --   | names' :: stack'  =>
-    --     match names' with
-    --     | .cons name [] => do
-    --       let ty' <- (denormalize (name :: names) stack' ty)
-    --       some (.corec name ty') 
-    --     | _ => none
-    --   | [] => none
     | _ => none
 
   end Ty
