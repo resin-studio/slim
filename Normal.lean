@@ -849,11 +849,7 @@ namespace Normal
       List.any fields (fun ty_fd =>
         match ty_fd with
         | Ty.tag _ _ => true 
-        | Ty.fvar _ => true 
-        | Ty.bot => true 
         | _ => false
-        -- | Ty.fvar _ => false 
-        -- | _ => true 
       )  
 
     partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_complex : PHashMap (Dir × Ty) Ty)
@@ -1749,9 +1745,8 @@ def even_list := [norm:
     [succ*succ*β[0] × cons*cons*β[1] | (β[0] × β[1]) ≤ β[2]]
 :]
 
--- TODO: deep recursion error
-
--- #eval unify_decide 0 nat_list even_list
+#eval unify_decide 0 even_list nat_list 
+#eval unify_decide 0 nat_list even_list
 ----------------------------
 
 def plus := [norm: 
