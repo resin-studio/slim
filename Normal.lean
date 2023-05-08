@@ -79,12 +79,12 @@ namespace Normal
       if ty_pl == (Ty.bvar 0) then
         "⊤"
       else
-        Format.bracket "[" (Ty.repr ty_pl n) "]"
+        Format.bracket "{" (Ty.repr ty_pl n) "}"
     else
-      Format.bracket "(" (
+      Format.bracket "{" (
         (Ty.repr ty_pl n) ++ " | " ++
         (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
-      ) ")"
+      ) "}"
   | .recur ty1 =>
     Format.bracket "(" (
       "μ " ++ (Ty.repr ty1 n)
@@ -157,7 +157,7 @@ namespace Normal
   declare_syntax_cat slm
   syntax:100 num : slm 
   syntax:100 ident : slm
-  -- syntax "[" slm,+ "]" : slm 
+  syntax "[" slm,+ "]" : slm 
   -- type
   syntax:90 "β["slm:100"]" : slm
   syntax:90 "α["slm:100"]" : slm
@@ -171,8 +171,8 @@ namespace Normal
   syntax:60 slm:61 "+" slm:60 : slm
   syntax:70 slm:71 "∧" slm:70 : slm
   syntax:70 slm:71 "×" slm:70 : slm
-  syntax "[" slm:41 "|" slm:41 "≤" slm:41 "]": slm 
-  syntax "[" slm:41 "]" : slm 
+  syntax "{" slm:41 "|" slm:41 "≤" slm:41 "}": slm 
+  syntax "{" slm:41 "}" : slm 
   syntax "μ " slm:40 : slm 
 
   --term
@@ -208,8 +208,8 @@ namespace Normal
   | `([norm: $n:num :]) => `($n)
   | `([norm: $a:ident:]) => `($(Lean.quote (toString a.getId)))
   -- context 
-  -- | `([norm: [$x:slm] :]) => `([ [norm: $x :] ])
-  -- | `([norm: [$x,$xs:slm,*] :]) => `([norm: $x :] :: [norm: [$xs,*] :])
+  | `([norm: [$x:slm] :]) => `([ [norm: $x :] ])
+  | `([norm: [$x,$xs:slm,*] :]) => `([norm: $x :] :: [norm: [$xs,*] :])
   -- Ty 
   | `([norm: β[$n] :]) => `(Ty.bvar [norm: $n :])
   | `([norm: α[$n:slm] :]) => `(Ty.fvar [norm: $n :])
@@ -223,8 +223,8 @@ namespace Normal
   | `([norm: $a + $b :]) => `(Ty.union (Ty.tag "inl" [norm: $a :]) (Ty.tag "inr" [norm: $b :]))
   | `([norm: $a ∧ $b :]) => `(Ty.inter [norm: $a :] [norm: $b :])
   | `([norm: $a × $b :]) => `(Ty.inter (Ty.field "l" [norm: $a :]) (Ty.field "r" [norm: $b :]))
-  | `([norm: [ $d | $b ≤ $c ]  :]) => `(Ty.exis [norm: $b :] [norm: $c :] [norm: $d :])
-  | `([norm: [ $b:slm ] :]) => `(Ty.exis Ty.unit Ty.unit [norm: $b :] )
+  | `([norm: { $d | $b ≤ $c }  :]) => `(Ty.exis [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: { $b:slm } :]) => `(Ty.exis Ty.unit Ty.unit [norm: $b :] )
   | `([norm: μ $a :]) => `(Ty.recur [norm: $a :])
   --Tm
   | `([norm: _ :]) => `(Tm.hole)
@@ -479,11 +479,11 @@ namespace Normal
       ty
     else
       let ty_ex := [norm:
-        [⟨Ty.generalize fids 0 ty⟩ | 
+        {⟨Ty.generalize fids 0 ty⟩ | 
           ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ 
-        ] 
+        }
       :]
-      [norm: β[0] -> [β[0] | β[1] -> β[0] ≤ ⟨ty_ex⟩] :]
+      [norm: β[0] -> {β[0] | β[1] -> β[0] ≤ ⟨ty_ex⟩} :]
 
     -- -- generalization based on substitution 
     -- let ty1' := Ty.reduce env_ty ty1'
@@ -723,7 +723,7 @@ namespace Normal
   | _ => {} 
 
   def intersect_fields : List (String × Ty) -> Ty
-  | [] => [norm: [β[0]] :] 
+  | [] => [norm: {β[0]} :] 
   | (l, ty) :: fields => Ty.inter (Ty.field l ty) (intersect_fields fields)
 
   def normalize_fields (fields : List (String × Ty)) : List (String × Ty) :=
@@ -741,7 +741,7 @@ namespace Normal
       let fields := 
         prev_fields ++ (l, [norm: β[0] :]) :: var_fields 
       let ty_lhs := intersect_fields fields
-      let ty := [norm: [β[0] | ⟨ty_lhs⟩ ≤ ⟨ty_rhs⟩] :]
+      let ty := [norm: {β[0] | ⟨ty_lhs⟩ ≤ ⟨ty_rhs⟩} :]
       let m : PHashMap Nat Ty := (separate_fields (prev_fields ++ [(l, ty_fd)]) var_fields') ty_rhs
       m.insert id ty
     | _ => {}
@@ -861,47 +861,6 @@ namespace Normal
         unify i env_ty env_complex frozen ty_c1 ty_c2
       )
 
-    -- free variables
-    ---------------------------------------------------------------
-    | (.fvar id1), (.fvar id2) => 
-      match (env_ty.find? id1, env_ty.find? id2) with 
-      | (.none, .none) => 
-        -- ensure older unassigned free variables appear in simplified form
-        if id1 < id2 then
-          (i, [env_ty.insert id2 (Ty.fvar id1)])
-        else if id1 > id2 then
-          (i, [env_ty.insert id1 (Ty.fvar id2)])
-        else
-          (i, [env_ty])
-      | (_, .some ty) => unify i env_ty env_complex frozen (.fvar id1) ty 
-      | (.some ty', _) => unify i env_ty env_complex frozen ty' (.fvar id2) 
-
-    | .fvar id, ty  => 
-      match env_ty.find? id with 
-      | none => 
-        (i, [env_ty.insert id (occurs_not id env_ty ty)])
-      | some ty' => 
-        let adjustable := frozen.find? id == .none
-        -- (unify i env_ty env_complex ty' ty)
-        let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
-        if adjustable && u_env_ty.isEmpty then
-          (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
-        else
-          (i, u_env_ty)
-
-    | ty', .fvar id => 
-      match env_ty.find? id with 
-      | none => 
-        (i, [env_ty.insert id (roll_recur id env_ty ty')])
-      | some ty => 
-        let adjustable := frozen.find? id == .none
-        -- (unify i env_ty env_complex ty' ty) 
-        let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty) 
-        if adjustable && u_env_ty.isEmpty then
-          (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty' ty))])
-        else
-          (i, u_env_ty)
-
     -- opaquely quantified 
     -- TODO: consider requiring normal form check to ensure safety
     -- or using min/max to check both extremes
@@ -954,6 +913,48 @@ namespace Normal
         else
           (i, [])
       ))
+
+    -- free variables
+    ---------------------------------------------------------------
+    | (.fvar id1), (.fvar id2) => 
+      match (env_ty.find? id1, env_ty.find? id2) with 
+      | (.none, .none) => 
+        -- ensure older unassigned free variables appear in simplified form
+        if id1 < id2 then
+          (i, [env_ty.insert id2 (Ty.fvar id1)])
+        else if id1 > id2 then
+          (i, [env_ty.insert id1 (Ty.fvar id2)])
+        else
+          (i, [env_ty])
+      | (_, .some ty) => unify i env_ty env_complex frozen (.fvar id1) ty 
+      | (.some ty', _) => unify i env_ty env_complex frozen ty' (.fvar id2) 
+
+    | .fvar id, ty  => 
+      match env_ty.find? id with 
+      | none => 
+        (i, [env_ty.insert id (occurs_not id env_ty ty)])
+      | some ty' => 
+        let adjustable := frozen.find? id == .none
+        -- (unify i env_ty env_complex ty' ty)
+        let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
+        if adjustable && u_env_ty.isEmpty then
+          (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
+        else
+          (i, u_env_ty)
+
+    | ty', .fvar id => 
+      match env_ty.find? id with 
+      | none => 
+        (i, [env_ty.insert id (roll_recur id env_ty ty')])
+      | some ty => 
+        let adjustable := frozen.find? id == .none
+        -- (unify i env_ty env_complex ty' ty) 
+        let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty) 
+        if adjustable && u_env_ty.isEmpty then
+          (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty' ty))])
+        else
+          (i, u_env_ty)
+
 
     -- | ty1, .univ n ty_c1 ty_c2 ty2 =>
     --   let bound_start := i
@@ -1194,15 +1195,6 @@ namespace Normal
     let (_, result) := (Ty.unify i {} {} {} ty1 ty2)
     !result.isEmpty
 
-
-  -- -- notation convetion:
-  --   -- prime tick marks for updated versions
-  --   -- numbers for new parts
-  --   -- no subscripts
-  --   -- no greek
-  --   -- general to specific, 
-  --     -- e.g. env_ty, (not ty_env)
-  --     -- e.g. ty_recur, (not mu_ty)
 
   partial def pattern_wellformed (i : Nat) : Tm -> Option Nat
   | .hole => some i 
@@ -1455,14 +1447,14 @@ namespace Normal
             -- TODO: construct arrow-recursive type
             let fixed_point := fvs.length
             [norm:
-              [⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩ | 
+              {⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩ | 
                 ⟨Ty.generalize fvs 0 (to_pair_type ty_prem)⟩ ≤ β[⟨fixed_point⟩] 
-              ] 
+              } 
             :]
           else if fvs.length > 0 then
             Ty.generalize fvs 0 (to_pair_type ty_case)
           else
-            ty_case
+            (to_pair_type ty_case)
         )
 
         (Ty.union ty_choice ty_acc) 
@@ -1470,7 +1462,7 @@ namespace Normal
 
       -- constraint that ty' <= ty_prem is built into inductive type
       let relational_type := [norm: μ ⟨ty_content⟩ :]
-      let ty' := [norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨relational_type⟩] :] 
+      let ty' := [norm: β[0] -> {β[0] | β[1] × β[0] ≤ ⟨relational_type⟩} :] 
       Ty.assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
         (i, [(env_ty, ty')])
       )
@@ -1632,22 +1624,6 @@ end Normal
 
 open Normal
 
--- | hole : Tm 
--- | unit : Tm
--- | bvar : Nat -> Tm 
--- | fvar : Nat -> Tm 
--- | tag : String -> Tm -> Tm
--- | record : List (String × Tm) -> Tm
--- | func : List (Tm × Ty × Tm) -> Tm
--- | proj : Tm -> String -> Tm
--- | app : Tm -> Tm -> Tm
--- | letb : Ty -> Tm -> Tm -> Tm
--- | fix : Tm -> Tm
-
-
-
-
-
 
 -- #check BinomialHeap.ofList
 -- #check BinomialHeap.merge
@@ -1736,7 +1712,7 @@ nat_
 def nat_list := [norm: 
   μ 
     (zero*unit × nil*unit) ∨ 
-    [succ*β[0] × cons*β[1] | (β[0] × β[1]) ≤ β[2]]
+    {succ*β[0] × cons*β[1] | (β[0] × β[1]) ≤ β[2]}
 :]
 
 #eval unify_reduce 30
@@ -1751,14 +1727,14 @@ nat_list
 
 -- subtyping via local constraints
 #eval unify_reduce 30
-[norm: [β[0] | succ*zero*unit × β[0] ≤ ⟨nat_list⟩] :]
+[norm: {β[0] | succ*zero*unit × β[0] ≤ ⟨nat_list⟩} :]
 [norm: cons*α[0] :] 
 [norm: α[0] :]
 
 
 -- treat bound variables in implication as universally quantified 
 #eval unify_reduce 30
-[norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩] :]
+[norm: β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
 [norm: succ*succ*zero*unit -> cons*α[0] :] 
 [norm: α[0] :]
 
@@ -1767,7 +1743,7 @@ nat_list
 def even_list := [norm: 
   μ 
     (zero*unit × nil*unit) ∨ 
-    [succ*succ*β[0] × cons*cons*β[1] | (β[0] × β[1]) ≤ β[2]]
+    {succ*succ*β[0] × cons*cons*β[1] | (β[0] × β[1]) ≤ β[2]}
 :]
 
 #eval unify_decide 0 even_list nat_list 
@@ -1776,16 +1752,16 @@ def even_list := [norm:
 
 -- limitation: sound, but incomplete
 #eval unify_decide 0
-[norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩] :]
-[norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨even_list⟩] :]
+[norm: β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+[norm: β[0] -> {β[0] | β[1] × β[0] ≤ ⟨even_list⟩} :]
 ----------------------------
 
 def plus := [norm: 
   μ 
-    [x : zero*unit ∧ y : β[0] ∧ z : β[0]] ∨ 
-    [x : succ*β[0] ∧ y : β[1] ∧ z : succ*β[2] | 
+    {x : zero*unit ∧ y : β[0] ∧ z : β[0]} ∨ 
+    {x : succ*β[0] ∧ y : β[1] ∧ z : succ*β[2] | 
       (x : β[0] ∧ y : β[1] ∧ z : β[2]) ≤ β[3] 
-    ]
+    }
 :]
 
 #eval plus
@@ -1848,10 +1824,6 @@ def plus := [norm:
 [norm: (⟨nat_⟩ × zero*unit) :] 
 [norm: α[0] :]
 
-#eval unify_reduce 30 
-[norm: (α[0] × zero*unit) ∨ (⟨nat_⟩ × α[0]) :] 
-[norm: (⟨nat_⟩ × zero*unit) :] 
-[norm: α[0] :]
 
 
 #eval unify_reduce 30 [norm:
@@ -1901,45 +1873,62 @@ def plus := [norm:
 :] plus
 [norm: α[5] :]
 
--- #eval unify_simple 10 [norm:
---   ⊥
--- :] plus 
+#eval unify_simple 10 
+  [norm: ⊥ :] 
+  plus 
 
--- #eval unify_simple 10 plus [norm:
---   ⊥
--- :] 
+#eval unify_simple 10 
+  plus 
+  [norm: ⊥ :] 
 
--- --- inferring types of recursion --
+------ type inference --------
+#eval infer_reduce 0 [norm:
+  succ;zero;()
+:]
 
--- #eval infer_simple 0 [norm:
---   fix(λ y[0] => λ[
---   for zero;() => nil;(),
---   for succ;y[0] => cons;(y[1] y[0])
---   ])
--- :]
+--- inferring types of recursion --
 
--- #eval infer_reduce 0 [norm:
---   fix(λ y[0] => λ[
---   for zero;() => nil;(),
---   for succ;y[0] => cons;(y[1] y[0])
---   ])
--- :]
+#eval infer_simple 0 [norm:
+  fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ])
+:]
 
--- #eval infer_reduce 0 [norm:
---   let y[0] = fix(λ y[0] => λ[
---   for zero;() => nil;(),
---   for succ;y[0] => cons;(y[1] y[0])
---   ]) =>
---   y[0]
--- :]
+#eval infer_reduce 0 [norm:
+  fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ])
+:]
 
--- #eval infer_reduce 0 [norm:
---   let y[0] = fix(λ y[0] => λ[
---   for zero;() => nil;(),
---   for succ;y[0] => cons;(y[1] y[0])
---   ]) =>
---   (y[0] (succ;zero;()))
--- :]
+#eval infer_reduce 0 [norm:
+  let y[0] = fix(λ y[0] => λ[
+  for zero;() => nil;(),
+  for succ;y[0] => cons;(y[1] y[0])
+  ]) =>
+  y[0]
+:]
+
+-- TODO
+#eval infer_reduce 0 [norm:
+  let y[0] = fix(λ y[0] => λ[
+    for zero;() => nil;(),
+    for succ;y[0] => cons;(y[1] y[0])
+  ]) =>
+  (y[0] (succ;zero;()))
+:]
+
+
+#eval unify_reduce 10 
+[norm: 
+(β[0] -> {β[0] | (β[1] × β[0]) ≤ (μ ((zero*unit × nil*unit) ∨ ({(succ*β[1] × cons*β[0]) | (β[1] × β[0]) ≤ β[2]} ∨ ⊤)))})
+:]
+-- [norm: β[0] -> {β[0] | (β[1] × β[0]) ≤ ⟨nat_list⟩} :]
+[norm: succ*zero*unit -> α[0] :]
+[norm: α[0] :]
+
+
 
 -- def nat_to_list := [norm: 
 --   ν 1 . 
