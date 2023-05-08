@@ -1740,7 +1740,20 @@ nat_list
 [norm: succ*zero*unit -> cons*α[0] :] 
 [norm: α[0] :]
 
+
+-----------------------------------------------
+
+def even_list := [norm: 
+  μ 
+    (zero*unit × nil*unit) ∨ 
+    [succ*succ*β[0] × cons*cons*β[1] | (β[0] × β[1]) ≤ β[2]]
+:]
+
+-- TODO: deep recursion error
+
+-- #eval unify_decide 0 nat_list even_list
 ----------------------------
+
 def plus := [norm: 
   μ 
     [x : zero*unit ∧ y : β[0] ∧ z : β[0]] ∨ 
