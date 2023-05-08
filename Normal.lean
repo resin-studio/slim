@@ -930,31 +930,37 @@ namespace Normal
 
       let op_fields := linearize_fields ty_c1
 
+
       let ((i, contexts), env_complex) := ( 
         match op_fields with 
         | some fields =>
           let is_recur_type := match ty_c2 with 
           | Ty.recur _ => true
           | _ => false
-          let is_consistent_variable_record := List.all fields (fun (l, ty_fd) =>
+          let is_consistent_variable_record := List.all fields (fun (l, _) =>
             let rlabels := extract_record_labels (ty_c2) 
-            rlabels.contains l &&
-            (match ty_fd with | (Ty.fvar _) => true | _ => false)
+            rlabels.contains l 
           )
-          if is_recur_type && is_consistent_variable_record then
-            let ty_norm := ty_c1 
-            ((i, [env_ty]), env_complex.insert (.dn, ty_norm) ty_c2)
-
-          else ((i, []), env_complex) 
+          let extract_type : String × Ty -> Ty := (fun (_, ty_fd) => ty_fd)
+          let unmatchable := !(matchable (List.map extract_type fields))
+          if is_recur_type && unmatchable  then 
+            if is_consistent_variable_record then
+              let ty_norm := ty_c1 
+              ((i, [env_ty]), env_complex.insert (.dn, ty_norm) ty_c2)
+            else 
+              ((i, []), env_complex) 
+          else
+            (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
         | none => (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
       )
 
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
       -- Option.bind op_context (fun (i, env_ty1) =>
       Ty.assume_env (i, contexts) (fun i env_ty => 
+      let locally_constrained := (fun key => env_ty.contains key)
       Ty.assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
         let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-          not (is_bound_var key) 
+          not (is_bound_var key) || (locally_constrained key)
         )
         if is_result_safe then
           (i, [env_ty])
@@ -1019,6 +1025,12 @@ namespace Normal
 
 
     | .case ty1 ty2', .case ty1' ty2 =>
+
+      -- let n := pattern_abstraction ty1 
+      -- let n' := pattern_abstraction ty1' 
+
+      -- if n > 
+      -- [norm: ⟨ty1'⟩ ⟨ty2'⟩ :] [norm: ⟨ty1⟩ ⟨ty2⟩ :] 
       Ty.assume_env (unify i env_ty env_complex frozen ty1' ty1) (fun i env_ty =>
         (unify i env_ty env_complex frozen ty2' ty2)
       ) 
@@ -1729,6 +1741,17 @@ def nat_list := [norm:
 nat_list
 [norm: α[0] :]
 
+#eval unify_reduce 30
+[norm: succ*zero*unit × α[0] :]
+[norm: ⟨nat_list⟩ :]
+[norm: α[0] :]
+
+-- subtyping via local constraints
+#eval unify_reduce 30
+[norm: [β[0] | succ*zero*unit × β[0] ≤ ⟨nat_list⟩] :]
+[norm: cons*α[0] :] 
+[norm: α[0] :]
+
 
 -- TODO: see if converting universal/implication to existential pairs solves this
 #eval unify_reduce 30
@@ -1747,6 +1770,11 @@ def even_list := [norm:
 
 #eval unify_decide 0 even_list nat_list 
 #eval unify_decide 0 nat_list even_list
+
+
+#eval unify_decide 0
+[norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨nat_list⟩] :]
+[norm: β[0] -> [β[0] | β[1] × β[0] ≤ ⟨even_list⟩] :]
 ----------------------------
 
 def plus := [norm: 
