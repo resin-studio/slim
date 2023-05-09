@@ -483,7 +483,7 @@ namespace Normal
           ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ 
         }
       :]
-      [norm: β[0] -> {β[0] | β[1] -> β[0] ≤ ⟨ty_ex⟩} :]
+      [norm: {β[0] -> β[1] | β[0] -> β[1] ≤ ⟨ty_ex⟩} :]
 
     -- -- generalization based on substitution 
     -- let ty1' := Ty.reduce env_ty ty1'
@@ -1319,7 +1319,6 @@ namespace Normal
   | [norm: ⊤ :] =>  [norm: ⊥ :]
   | _ =>  [norm: ⊤ :]
 
-  -- TODO: disjoint pattern check for inferring intersection of arrows
   partial def infer (i : Nat) (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
   (Nat × List (PHashMap Nat Ty × Ty)) :=
   match t with
@@ -1430,6 +1429,7 @@ namespace Normal
     )
 
   | .fix t1 =>
+    -- TODO: disjoint pattern check for inferring intersection of arrows
     let (i, ty_prem) := (i + 1, Ty.fvar i) 
     let (i, ty_conc) := (i + 1, Ty.fvar i) 
     Ty.assume_env (infer i env_ty env_tm t1 (Ty.case ty_prem ty_conc)) (fun i (env_ty, _) =>
@@ -1477,7 +1477,8 @@ namespace Normal
   partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
     let (_, u_env) := (infer i {} {} t ty)
     List.foldr (fun (env_ty, ty') ty_acc => 
-      let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
+      -- let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
+      let ty' := ((Ty.subst env_ty (Ty.union ty' ty_acc)))
       ty'
       -- let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
 
@@ -1948,14 +1949,6 @@ def plus := [norm:
   (y[0] hello;())
 :]
 
--- TODO
-#eval infer_reduce 0 [norm:
-  let y[0] : β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
-  let y[0] = (y[0] hello;()) => 
-  y[0]
-:]
-
--- TODO
 #eval infer_reduce 0 [norm:
   let y[0] : β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   let y[0] = (y[0] hello;()) => 
@@ -1963,7 +1956,6 @@ def plus := [norm:
 :]
 
 -- narrowing
-
 #eval infer_reduce 0 [norm:
 let y[0] : uno*unit -> unit = _ => 
 let y[0] : dos*unit -> unit = _ =>
