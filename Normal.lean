@@ -556,24 +556,12 @@ namespace Normal
   | ty :: tys => [norm: ⟨ty⟩ × ⟨nested_pairs tys⟩ :]
 
   def Ty.pack (boundary : Nat) (env_ty : PHashMap Nat Ty) (ty : Ty) : Ty := 
-    /-  
-    -- -- old generalization based on substitution 
-    -- let ty1' := Ty.reduce env_ty ty1'
-    -- -- prevent over generalizing by filtering at boundary 
-    -- let fvs := List.filter (fun id => id >= free_var_boundary) (
-    --   (Ty.free_vars ty1').toList.reverse.bind (fun | (.fvar k , _) => [k] | _ => [])
-    -- )
-    -- let ty1' := if fvs.isEmpty then ty1' else [norm: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
-    -/
-
     -- avoids substitution, as type variable determines type adjustment
     -- boudary prevents overgeneralizing
     let constraints := reachable_constraints env_ty ty
     let (lhs, rhs) := unzip constraints
     let ty_lhs := nested_pairs lhs
     let ty_rhs := nested_pairs rhs
-
-
 
     let fids := List.filter (fun id => id >= boundary) (
         (Ty.free_vars ty; Ty.free_vars ty_lhs ; Ty.free_vars ty_rhs).toList.bind (fun (k , _) => [k])
@@ -1024,8 +1012,11 @@ namespace Normal
       let ty_c1 := Ty.instantiate 0 args ty_c1
       let ty_c2 := Ty.instantiate 0 args ty_c2
       let ty1 := Ty.instantiate 0 args ty1
-      Ty.assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty => 
-        unify i env_ty env_complex frozen ty_c1 ty_c2
+      -- Ty.assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty => 
+      --   unify i env_ty env_complex frozen ty_c1 ty_c2
+      -- )
+      Ty.assume_env (unify i env_ty env_complex frozen ty_c1 ty_c2) (fun i env_ty => 
+        (unify i env_ty env_complex frozen ty1 ty2)
       )
 
     -- opaquely quantified universal 
@@ -1097,15 +1088,16 @@ namespace Normal
           (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty' ty))])
         else
           (i, u_env_ty)
+
     -- | ty', .fvar id => 
     --   match env_ty.find? id with 
     --   | none => 
     --     let adjustable := frozen.find? id == .none
     --     let (i, ty'') := (
     --       if adjustable then
-    --         (i + 1, Ty.unionize (Ty.fvar i) ty')   
+    --         (i + 1, [norm: α[⟨i⟩] ∨ ⟨ty'⟩ :])
     --       else
-    --         (i, ty')   
+    --         (i, ty')
     --     )
     --     (i, [env_ty.insert id (roll_recur id env_ty ty'')])
     --   | some ty => 
@@ -1640,7 +1632,6 @@ namespace Normal
     let (_, u_env) := (infer i {} {} t ty)
     List.foldr (fun (env_ty, ty') ty_acc => 
       let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
-      -- let ty' := (Ty.union ty' ty_acc)
       ty'
       -- let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
 
@@ -2139,25 +2130,6 @@ namespace Normal
     let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
     (y[0] hello;())
   :]
-
-  -- TODO: instersections because lower bound info has been lost 
-  #eval infer_reduce 0 [norm:
-    let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
-    let y[0] = (y[0] hello;()) => 
-    (y[0] world;())
-  :]
-
-  #eval infer_reduce 0 [norm:
-    let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
-    let y[0] = (y[0] hello;()) => 
-    y[0]
-  :]
-
-  -- #eval infer_simple 0 [norm:
-  --   let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
-  --   let y[0] = (y[0] hello;()) => 
-  --   (y[0] world;())
-  -- :]
 
   #eval infer_reduce 0 [norm:
     let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
