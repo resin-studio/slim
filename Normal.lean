@@ -424,6 +424,10 @@ namespace Normal
     (Ty.signed_free_vars posi ty)
   | .recur ty => (Ty.signed_free_vars posi ty)
 
+
+  -- TODO: make pattern variables indexless or ensure that pattern variables are properly ordered
+  -- . index is determined by order, to ensure canonical form. 
+  -- return non is not wellformed
   def Ty.pattern_abstraction : Ty -> Nat
   | .bvar idx => (idx + 1)
   | .fvar id => 0 
@@ -967,23 +971,22 @@ namespace Normal
       ))
 
     -- liberally quantified universal 
-    | .univ ty_c1 ty_c2 ty, ty' =>
-      let n := Ty.pattern_abstraction ty
-      let (i, args, frozen) := (
+    | .univ ty_c1 ty_c2 ty1, ty2 =>
+      let n := Ty.pattern_abstraction ty1
+      let (i, args) := (
         i + n, 
-        (List.range n).map (fun j => .fvar (i + j)),
-        PHashMap.insert_all frozen (PHashMap.from_list ((List.range n).map (fun j => (i + j, .unit))))
+        (List.range n).map (fun j => .fvar (i + j))
       )
 
       let ty_c1 := Ty.instantiate 0 args ty_c1
       let ty_c2 := Ty.instantiate 0 args ty_c2
-      let ty := Ty.instantiate 0 args ty
-      Ty.assume_env (unify i env_ty env_complex frozen ty' ty) (fun i env_ty => 
+      let ty := Ty.instantiate 0 args ty1
+      Ty.assume_env (unify i env_ty env_complex frozen ty ty2) (fun i env_ty => 
         unify i env_ty env_complex frozen ty_c1 ty_c2
       )
 
     -- opaquely quantified universal 
-    | ty2, .univ ty_c1 ty_c2 ty1  =>
+    | ty1, .univ ty_c1 ty_c2 ty2  =>
       let n := Ty.pattern_abstraction ty1
       let bound_start := i
       let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
@@ -993,7 +996,7 @@ namespace Normal
       let args := ids.map (fun id => Ty.fvar id)
       let ty_c1 := Ty.instantiate 0 args ty_c1
       let ty_c2 := Ty.instantiate 0 args ty_c2
-      let ty1 := Ty.instantiate 0 args ty1
+      let ty1 := Ty.instantiate 0 args ty2
 
       let ((i, contexts), env_complex) := ( 
           (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
@@ -1580,6 +1583,7 @@ namespace Normal
     let (_, u_env) := (infer i {} {} t ty)
     List.foldr (fun (env_ty, ty') ty_acc => 
       let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
+      -- let ty' := (Ty.union ty' ty_acc)
       ty'
       -- let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
 
@@ -2067,17 +2071,10 @@ def plus := [norm:
 ---------- adjustment ----------------
 
 -- widening
--- TODO
 #eval infer_reduce 0 [norm:
   let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   ((y[0] hello;()) world;())
 :]
-
-#eval infer_reduce 0 [norm:
-  let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
-  (y[0] hello;())
-:]
-
 
 #eval infer_reduce 0 [norm:
   let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
@@ -2090,7 +2087,6 @@ def plus := [norm:
   let y[0] = (y[0] hello;()) => 
   y[0]
 :]
-
 
 -- narrowing
 #eval infer_reduce 0 [norm:
