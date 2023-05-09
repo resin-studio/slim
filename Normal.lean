@@ -889,27 +889,6 @@ namespace Normal
 
   namespace Ty
 
-    def traverse (f : α -> ) -> Ty -> PHashMap Nat Unit
-    -- | .bvar id => {} 
-    -- | .fvar id => 
-    --   if posi then
-    --     let u : Unit := Unit.unit
-    --     PHashMap.from_list [(id, u)] 
-    --   else
-    --     {}
-    -- | .unit => {} 
-    -- | .bot => {} 
-    -- | .tag l ty => (Ty.signed_free_vars posi ty) 
-    -- | .field l ty => (Ty.signed_free_vars posi ty)
-    -- | .union ty1 ty2 => Ty.signed_free_vars posi ty1 ; Ty.signed_free_vars posi ty2
-    -- | .inter ty1 ty2 => Ty.signed_free_vars posi ty1 ; Ty.signed_free_vars posi ty2
-    -- | .case ty1 ty2 => (Ty.signed_free_vars (!posi) ty1) ; Ty.signed_free_vars posi ty2
-    -- | .exis ty_c1 ty_c2 ty =>
-    --   (Ty.signed_free_vars posi ty)
-    -- | .univ ty_c1 ty_c2 ty =>
-    --   (Ty.signed_free_vars posi ty)
-    -- | .recur ty => (Ty.signed_free_vars posi ty)
-
     partial def wellfounded (n : Nat) : Ty -> Bool
     | .bvar id => (List.range n).all (fun tar => id != tar)
     | .fvar _ => true 
