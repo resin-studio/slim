@@ -582,12 +582,11 @@ namespace Normal
     if fids.isEmpty then
       ty
     else
-      let exis_ty := [norm:
-        ∃ ⟨fids.length⟩ {⟨Ty.generalize fids 0 ty⟩ | 
-          ⟨Ty.generalize fids 0 ty_lhs⟩ <: ⟨Ty.generalize fids 0 ty_rhs⟩ }
-      :]
+      -- invert existential quantification into universal
+      -- invert constraint (rhs <: lhs)
       [norm:
-        ∀ 1 # β[0] | ⟨exis_ty⟩ <: β[0]
+        ∀ ⟨fids.length⟩ # ⟨Ty.generalize fids 0 ty⟩ | 
+          ⟨Ty.generalize fids 0 ty_rhs⟩ <: ⟨Ty.generalize fids 0 ty_lhs⟩
       :]
 
 
@@ -2113,11 +2112,24 @@ namespace Normal
     y[0]  
   :]
 
-  -- TODO
   #eval infer_reduce 10 [norm:
     let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
     (y[0] (cons;(ooga;(), booga;())))  
   :]
+
+  ----------- debugging ---------------
+  #eval unify_reduce 10 
+  [norm:
+  (# β[0] | β[0] <: ∃ 3 {(cons*(β[0] × β[1]) -> β[0]) | (β[0] × unit) <: (β[2] × unit)})
+  :]
+  [norm:
+    cons*(ooga*unit × booga*unit) -> α[7]
+  :]
+  [norm:
+    cons*(ooga*unit × booga*unit) -> α[7]
+  :]
+  ---------------------------------
+
 
   ---------- adjustment ----------------
 
