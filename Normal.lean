@@ -42,6 +42,7 @@ namespace Normal
   | inter : Ty -> Ty -> Ty
   | case : Ty -> Ty -> Ty
   | exis : Ty -> Ty -> Ty -> Ty
+  | univ : Ty -> Ty -> Ty -> Ty
   | recur : Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
   -- #check List.repr
@@ -85,6 +86,17 @@ namespace Normal
         (Ty.repr ty_pl n) ++ " | " ++
         (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
       ) "}"
+  | .exis ty_c1 ty_c2 ty_pl =>
+    if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
+      if ty_pl == (Ty.bvar 0) then
+        "⊥"
+      else
+        Format.bracket "(" ("∀ " ++ (Ty.repr ty_pl n)) ")"
+    else
+      Format.bracket "(" ("∀ " ++
+        (Ty.repr ty_pl n) ++ " | " ++
+        (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
+      ) ")"
   | .recur ty1 =>
     Format.bracket "(" (
       "μ " ++ (Ty.repr ty1 n)
@@ -173,6 +185,8 @@ namespace Normal
   syntax:70 slm:71 "×" slm:70 : slm
   syntax "{" slm:41 "|" slm:41 "≤" slm:41 "}": slm 
   syntax "{" slm:41 "}" : slm 
+  syntax "∀ " slm:41 "|" slm:41 "≤" slm:41 : slm 
+  syntax "∀ " slm:41 : slm 
   syntax "μ " slm:40 : slm 
 
   --term
@@ -225,6 +239,8 @@ namespace Normal
   | `([norm: $a × $b :]) => `(Ty.inter (Ty.field "l" [norm: $a :]) (Ty.field "r" [norm: $b :]))
   | `([norm: { $d | $b ≤ $c }  :]) => `(Ty.exis [norm: $b :] [norm: $c :] [norm: $d :])
   | `([norm: { $b:slm } :]) => `(Ty.exis Ty.unit Ty.unit [norm: $b :] )
+  | `([norm: ∀ $d | $b ≤ $c  :]) => `(Ty.univ [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: ∀ $b:slm  :]) => `(Ty.univ Ty.unit Ty.unit [norm: $b :] )
   | `([norm: μ $a :]) => `(Ty.recur [norm: $a :])
   --Tm
   | `([norm: _ :]) => `(Tm.hole)
@@ -265,6 +281,10 @@ namespace Normal
   | .inter ty1 ty2 => .inter (Ty.subst m ty1) (Ty.subst m ty2)
   | .case ty1 ty2 => .case (Ty.subst m ty1) (Ty.subst m ty2)
   | .exis ty_c1 ty_c2 ty => (.exis
+    (Ty.subst m ty_c1) (Ty.subst m ty_c2) 
+    (Ty.subst m ty)
+  )
+  | .univ ty_c1 ty_c2 ty => (.univ
     (Ty.subst m ty_c1) (Ty.subst m ty_c2) 
     (Ty.subst m ty)
   )
@@ -325,6 +345,10 @@ namespace Normal
       Ty.exis 
         (Ty.simplify cty1) (Ty.simplify cty2)
         (Ty.simplify ty)
+  | .univ cty1 cty2 ty => 
+      Ty.univ 
+        (Ty.simplify cty1) (Ty.simplify cty2)
+        (Ty.simplify ty)
   | .recur ty => Ty.recur (Ty.simplify ty)
 
 
@@ -370,6 +394,9 @@ namespace Normal
   | .exis ty_c1 ty_c2 ty =>
     -- (Ty.free_vars ty_c1);(Ty.free_vars ty_c2);(Ty.free_vars ty)
     (Ty.free_vars ty)
+  | .univ ty_c1 ty_c2 ty =>
+    -- (Ty.free_vars ty_c1);(Ty.free_vars ty_c2);(Ty.free_vars ty)
+    (Ty.free_vars ty)
   | .recur ty => (Ty.free_vars ty)
 
   partial def Ty.free_vars_env (env_ty : PHashMap Nat Ty) (ty : Ty) : PHashMap Nat Unit :=  
@@ -392,6 +419,8 @@ namespace Normal
   | .inter ty1 ty2 => Ty.signed_free_vars posi ty1 ; Ty.signed_free_vars posi ty2
   | .case ty1 ty2 => (Ty.signed_free_vars (!posi) ty1) ; Ty.signed_free_vars posi ty2
   | .exis ty_c1 ty_c2 ty =>
+    (Ty.signed_free_vars posi ty)
+  | .univ ty_c1 ty_c2 ty =>
     (Ty.signed_free_vars posi ty)
   | .recur ty => (Ty.signed_free_vars posi ty)
 
@@ -482,11 +511,20 @@ namespace Normal
     if fids.isEmpty then
       ty
     else
-      [norm:
+      let exis_ty := [norm:
         {⟨Ty.generalize fids 0 ty⟩ | 
           ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ 
         }
       :]
+
+      exis_ty 
+      /-
+      let univ_ty :=
+      [norm: ∀ β[0] | β[0] ≤ ⟨exis_ty> :]
+      -/
+
+      -- :]
+
 
     -- -- generalization based on substitution 
     -- let ty1' := Ty.reduce env_ty ty1'
