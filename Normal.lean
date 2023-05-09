@@ -1316,6 +1316,7 @@ namespace Normal
   def to_pair_type : Ty -> Ty 
   | Ty.case ty1 ty2 => 
     [norm: ⟨ty1⟩ × ⟨ty2⟩ :] 
+  | [norm: ⊤ :] =>  [norm: ⊥ :]
   | _ =>  [norm: ⊤ :]
 
   -- TODO: disjoint pattern check for inferring intersection of arrows
@@ -1405,15 +1406,12 @@ namespace Normal
     ))
 
   | .app t1 t2 =>
-    let (i, ty2) := (i + 1, Ty.fvar i)
-    Ty.assume_env (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun i (env_ty, ty1) =>
-    Ty.assume_env (infer i env_ty env_tm t2 ty2) (fun i (env_ty, ty2') =>
+    Ty.assume_env (infer i env_ty env_tm t2 [norm: ⊤ :]) (fun i (env_ty, ty2') =>
+    Ty.assume_env (infer i env_ty env_tm t1 (Ty.case ty2' ty)) (fun i (env_ty, ty1) =>
     let (i, ty') := (i + 1, Ty.fvar i)
     Ty.assume_env (Ty.unify i env_ty {} {} ty1 (Ty.case ty2' ty')) (fun i env_ty =>
-    let (i, ty'') := (i + 1, Ty.fvar i)
-    Ty.assume_env (Ty.unify i env_ty {} {} ty'' ty') (fun i env_ty =>
-      (i, [(env_ty, ty'')])
-    ))))
+      (i, [(env_ty, ty')])
+    )))
 
   | .letb op_ty1 t1 t => 
 
@@ -1444,7 +1442,6 @@ namespace Normal
         let fvs_prem :=  (Ty.free_vars ty_prem)
         let ty_choice := (
           if List.any fvs (fun id => fvs_prem.find? id != none) then
-            -- TODO: construct arrow-recursive type
             let fixed_point := fvs.length
             [norm:
               {⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩ | 
@@ -1481,13 +1478,14 @@ namespace Normal
     let (_, u_env) := (infer i {} {} t ty)
     List.foldr (fun (env_ty, ty') ty_acc => 
       let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
-      let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
+      ty'
+      -- let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
 
-      let fvs := pos_neg_set.toList.reverse.bind (fun (k, _) => [k])
-      if fvs.isEmpty then
-        Ty.simplify (Ty.subst_default true ty')
-      else
-        Ty.simplify (Ty.subst_default true (Ty.generalize fvs 0 ty'))
+      -- let fvs := pos_neg_set.toList.reverse.bind (fun (k, _) => [k])
+      -- if fvs.isEmpty then
+      --   Ty.simplify (Ty.subst_default true ty')
+      -- else
+      --   Ty.simplify (Ty.subst_default true (Ty.generalize fvs 0 ty'))
     ) Ty.bot u_env
 
   partial def infer_reduce (i : Nat) (t : Tm) : Ty := infer_reduce_wt (i + 1) t (Ty.fvar i)
@@ -1888,13 +1886,6 @@ def plus := [norm:
 
 --- inferring types of recursion --
 
-#eval infer_simple 0 [norm:
-  fix(λ y[0] => λ[
-  for zero;() => nil;(),
-  for succ;y[0] => cons;(y[1] y[0])
-  ])
-:]
-
 #eval infer_reduce 0 [norm:
   fix(λ y[0] => λ[
   for zero;() => nil;(),
@@ -1910,8 +1901,7 @@ def plus := [norm:
   y[0]
 :]
 
--- TODO
-#eval infer_reduce 0 [norm:
+#eval infer_reduce 10 [norm:
   let y[0] = fix(λ y[0] => λ[
     for zero;() => nil;(),
     for succ;y[0] => cons;(y[1] y[0])
@@ -1920,9 +1910,19 @@ def plus := [norm:
 :]
 
 
-#eval unify_reduce 10 
-[norm: 
-(β[0] -> {β[0] | (β[1] × β[0]) ≤ (μ ((zero*unit × nil*unit) ∨ ({(succ*β[1] × cons*β[0]) | (β[1] × β[0]) ≤ β[2]} ∨ ⊤)))})
+#eval infer_simple 10 [norm:
+  let y[0] = fix(λ y[0] => λ[
+    for zero;() => nil;(),
+    for succ;y[0] => cons;(y[1] y[0])
+  ]) =>
+  (y[0] (succ;zero;()))
+:]
+
+
+#eval unify_reduce 10 [norm: 
+
+(β[0] -> {β[0] | (β[1] × β[0]) ≤ (μ ((zero*unit × nil*unit) ∨ {(succ*β[1] × cons*β[0]) | (β[1] × β[0]) ≤ β[2]}))})
+
 :]
 -- [norm: β[0] -> {β[0] | (β[1] × β[0]) ≤ ⟨nat_list⟩} :]
 [norm: succ*zero*unit -> α[0] :]
