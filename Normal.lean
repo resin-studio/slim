@@ -279,8 +279,10 @@ namespace Normal
 
   -- make assoc right
   def Ty.intersect : Ty -> Ty -> Ty
+  | [norm: ⊤ :], ty2 => ty2 
   | Ty.bot, ty2 => Ty.bot 
   | Ty.inter ty11 ty12, ty2 => Ty.intersect ty11 (Ty.intersect ty12 ty2) 
+  | ty1, [norm: ⊤ :] => ty1 
   | ty1, Ty.bot => Ty.bot 
   | ty1, ty2 => 
       if Ty.inter_contains ty1 ty2 then
@@ -298,8 +300,10 @@ namespace Normal
 
   -- make assoc right
   def Ty.unionize : Ty -> Ty -> Ty
+  | [norm: ⊤ :], ty2 => [norm: ⊤ :]
   | Ty.bot, ty2 => ty2
   | Ty.union ty11 ty12, ty2 => Ty.unionize ty11 (Ty.unionize ty12 ty2) 
+  | ty1, [norm: ⊤ :] => [norm: ⊤ :]
   | ty1, Ty.bot => ty1
   | ty1, ty2 => 
       if Ty.union_contains ty1 ty2 then
@@ -1477,16 +1481,14 @@ namespace Normal
   partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
     let (_, u_env) := (infer i {} {} t ty)
     List.foldr (fun (env_ty, ty') ty_acc => 
-      -- let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
-      let ty' := ((Ty.subst env_ty (Ty.union ty' ty_acc)))
-      ty'
-      -- let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
+      let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
+      let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
 
-      -- let fvs := pos_neg_set.toList.reverse.bind (fun (k, _) => [k])
-      -- if fvs.isEmpty then
-      --   Ty.simplify (Ty.subst_default true ty')
-      -- else
-      --   Ty.simplify (Ty.subst_default true (Ty.generalize fvs 0 ty'))
+      let fvs := pos_neg_set.toList.reverse.bind (fun (k, _) => [k])
+      if fvs.isEmpty then
+        Ty.simplify (Ty.subst_default true ty')
+      else
+        Ty.simplify (Ty.subst_default true (Ty.generalize fvs 0 ty'))
     ) Ty.bot u_env
 
   partial def infer_reduce (i : Nat) (t : Tm) : Ty := infer_reduce_wt (i + 1) t (Ty.fvar i)
