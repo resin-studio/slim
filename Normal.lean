@@ -1551,7 +1551,6 @@ namespace Normal
     )
 
   | .fix t1 =>
-    -- TODO: disjoint pattern check for inferring intersection of arrows
     let (i, ty_prem) := (i + 1, Ty.fvar i) 
     let (i, ty_conc) := (i + 1, Ty.fvar i) 
     Ty.assume_env (infer i env_ty env_tm t1 (Ty.case ty_prem ty_conc)) (fun i (env_ty, _) =>
@@ -1571,7 +1570,7 @@ namespace Normal
               } 
             :]
           else if fvs.length > 0 then
-            Ty.generalize fvs 0 (to_pair_type ty_case)
+            [norm: {⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩} :]
           else
             (to_pair_type ty_case)
         )
@@ -2183,6 +2182,7 @@ def gt := [norm:
     {succ*β[0] × succ*β[1] | (β[0] × β[1]) ≤ β[2]}
 :]
 
+-------------------------------------------------
 
 def spec := [norm: 
 (α[0] × α[1]) -> (
@@ -2216,12 +2216,52 @@ let y[0] = fix(λ y[0] => λ[
 y[0]
 :]
 
+#eval infer_reduce 10 
+[norm:
+let y[0] = fix(λ y[0] => λ[
+  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+  for (zero;(), y[0]) => y[0],
+  for (y[0], zero;()) => y[0] 
+]) =>
+(y[0] (succ;succ;zero;(), succ;zero;()))
+:]
 
--- def diff := [norm:
--- (ν 1 . ((∀ 3 .
---    ((succ*β[1] × succ*β[2]) ->
---     β[0]) | β[3] ≤ ((β[1] × β[2]) -> β[0])) ∧ ((∀ 1 . ((zero*unit × β[0]) -> β[0])) ∧ (∀ 1 . ((β[0] × zero*unit) -> β[0])))))
--- :]
+def diff_rel :=
+[norm:
+  μ 
+    {zero*unit × β[0] × β[0]} ∨ 
+    {β[0] × zero*unit × β[0]} ∨
+    {(succ*β[1] × succ*β[2] × β[0]) | (β[1] × β[2] × β[0]) ≤ β[3]}
+:]
+
+#eval unify_reduce 10
+[norm: succ*succ*zero*unit × succ*zero*unit × α[0] :]
+diff_rel
+[norm: α[0] :]
+
+
+
+def plus_choice := [norm: 
+α[0] × α[1] × (
+  { β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) ≤ ⟨plus⟩} ∨
+  { β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) ≤ ⟨plus⟩}
+)  
+:]
+
+#eval unify_reduce 10
+plus_choice
+diff_rel
+[norm: α[0] :]
+
+
+#eval unify_reduce 10
+[norm:
+∀ β[0] -> {β[0] | (β[1] × β[0]) ≤ ⟨diff_rel⟩}
+:]
+spec
+[norm: α[0] × α[1] :]
+--------------------------------------
+
 
 -- #eval rewrite_function_type diff
 
