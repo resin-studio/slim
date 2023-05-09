@@ -557,7 +557,7 @@ namespace Normal
 
   def Ty.pack (boundary : Nat) (env_ty : PHashMap Nat Ty) (ty : Ty) : Ty := 
     -- avoids substitution, as type variable determines type adjustment
-    -- boudary prevents overgeneralizing
+    -- boundary prevents overgeneralizing
     let constraints := reachable_constraints env_ty ty
     let (lhs, rhs) := unzip constraints
     let ty_lhs := nested_pairs lhs
@@ -1070,7 +1070,6 @@ namespace Normal
         (i, [env_ty.insert id (occurs_not id env_ty ty)])
       | some ty' => 
         let adjustable := frozen.find? id == .none
-        -- (unify i env_ty env_complex ty' ty)
         let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
         if adjustable && u_env_ty.isEmpty then
           (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
@@ -1089,19 +1088,6 @@ namespace Normal
         else
           (i, u_env_ty)
 
-    -- | ty', .fvar id => 
-    --   match env_ty.find? id with 
-    --   | none => 
-    --     let adjustable := frozen.find? id == .none
-    --     let (i, ty'') := (
-    --       if adjustable then
-    --         (i + 1, [norm: α[⟨i⟩] ∨ ⟨ty'⟩ :])
-    --       else
-    --         (i, ty')
-    --     )
-    --     (i, [env_ty.insert id (roll_recur id env_ty ty'')])
-    --   | some ty => 
-    --     (unify i env_ty env_complex frozen ty' ty) 
 
     | .case ty1 ty2, .case ty3 ty4 =>
 
@@ -1631,6 +1617,8 @@ namespace Normal
   partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
     let (_, u_env) := (infer i {} {} t ty)
     List.foldr (fun (env_ty, ty') ty_acc => 
+      -- let ty' := Ty.pack 0 env_ty ty'
+      -- Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
       let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
       ty'
       -- let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
