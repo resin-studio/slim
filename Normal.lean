@@ -1952,6 +1952,25 @@ def plus := [norm:
 :]
 
 -- TODO: let doesn't generalize properly
+#eval unify_reduce 10
+[norm: (cons*(β[2] × α[11]) -> β[2]) :]
+[norm:  cons*(ooga*unit × booga*unit) -> α[7] :]
+[norm: α[7] :]
+
+#eval unify_reduce 10
+[norm: α[4] -> α[5] :]
+[norm: {(cons*(β[0] × β[1]) -> β[0]) | (β[0] × unit) ≤ (β[2] × unit)} :]
+[norm: α[4] -> α[5] :]
+
+#eval unify_reduce 10
+[norm: {(cons*(β[0] × β[1]) -> β[0]) | (β[0] × unit) ≤ (β[2] × unit)} :]
+[norm:  cons*(ooga*unit × booga*unit) -> α[7] :]
+[norm: α[7] :]
+
+#eval infer_reduce 10 [norm:
+  let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
+  y[0]  
+:]
 #eval infer_reduce 10 [norm:
   let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
   (y[0] cons;(ooga;(), booga;()))  
