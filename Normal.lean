@@ -35,6 +35,7 @@ namespace Normal
   | bvar : Nat -> Ty  
   | fvar : Nat -> Ty
   | unit : Ty
+  | top : Ty
   | bot : Ty
   | tag : String -> Ty -> Ty
   | field : String -> Ty -> Ty
@@ -71,6 +72,7 @@ namespace Normal
   | .fvar id =>
     "α[" ++ repr id ++ "]"
   | .unit => "unit" 
+  | .top => "⊤" 
   | .bot => "⊥" 
   | .tag l ty1 => 
     (l ++ "*" ++ (Ty.repr ty1 n))
@@ -245,7 +247,7 @@ namespace Normal
   | `([norm: β[$n] :]) => `(Ty.bvar [norm: $n :])
   | `([norm: α[$n:slm] :]) => `(Ty.fvar [norm: $n :])
   | `([norm: unit :]) => `(Ty.unit)
-  | `([norm: ⊤ :]) => `(Ty.exis Ty.unit Ty.unit (Ty.bvar 0) )
+  | `([norm: ⊤ :]) => `(Ty.top)
   | `([norm: ⊥ :]) => `(Ty.bot)
   | `([norm: $a * $b:slm :]) => `(Ty.tag [norm: $a :] [norm: $b :])
   | `([norm: $a : $b:slm :]) => `(Ty.field [norm: $a :] [norm: $b :])
@@ -291,6 +293,7 @@ namespace Normal
     | none => .fvar id
   )
   | .unit => .unit
+  | .top => .top
   | .bot => .bot
   | .tag l ty => .tag l (Ty.subst m ty) 
   | .field l ty => .field l (Ty.subst m ty)
@@ -337,10 +340,10 @@ namespace Normal
 
   -- make assoc right
   def Ty.unionize : Ty -> Ty -> Ty
-  | [norm: ⊤ :], ty2 => [norm: ⊤ :]
+  | Ty.top, ty2 => Ty.top
   | Ty.bot, ty2 => ty2
   | Ty.union ty11 ty12, ty2 => Ty.unionize ty11 (Ty.unionize ty12 ty2) 
-  | ty1, [norm: ⊤ :] => [norm: ⊤ :]
+  | ty1, Ty.top => Ty.top 
   | ty1, Ty.bot => ty1
   | ty1, ty2 => 
       if Ty.union_contains ty1 ty2 then
@@ -352,6 +355,7 @@ namespace Normal
   | .bvar id => Ty.bvar id  
   | .fvar id => Ty.fvar id
   | .unit => .unit 
+  | .top => .top
   | .bot => .bot 
   | .tag l ty => Ty.tag l (Ty.simplify ty) 
   | .field l ty => Ty.field l (Ty.simplify ty) 
@@ -402,6 +406,7 @@ namespace Normal
   | .bvar id => {} 
   | .fvar id => PHashMap.from_list [(id, Unit.unit)] 
   | .unit => {} 
+  | .top => {} 
   | .bot => {} 
   | .tag l ty => (Ty.free_vars ty) 
   | .field l ty => (Ty.free_vars ty)
@@ -429,6 +434,7 @@ namespace Normal
     else
       {}
   | .unit => {} 
+  | .top => {} 
   | .bot => {} 
   | .tag l ty => (Ty.signed_free_vars posi ty) 
   | .field l ty => (Ty.signed_free_vars posi ty)
@@ -449,6 +455,7 @@ namespace Normal
   | .bvar idx => (idx + 1)
   | .fvar id => 0 
   | .unit => 0 
+  | .top => 0 
   | .bot => 0 
   | .tag l ty =>
     Ty.pattern_abstraction ty 
@@ -475,6 +482,7 @@ namespace Normal
     | .some (bid, _) => .bvar bid
     | .none => .fvar id
   | .unit => .unit
+  | .top => .top
   | .bot => .bot
   | .tag l ty => .tag l (Ty.generalize fids start ty) 
   | .field l ty => .field l (Ty.generalize fids start ty)
@@ -533,20 +541,19 @@ namespace Normal
 
 
 
-    -- let fids := List.filter (fun id => id >= boundary) (
-    --     (Ty.free_vars ty; Ty.free_vars ty_lhs ; Ty.free_vars ty_rhs).toList.bind (fun (k , _) => [k])
-    -- )
-
     let fids := List.filter (fun id => id >= boundary) (
-        (Ty.free_vars ty).toList.bind (fun (k , _) => [k])
+        (Ty.free_vars ty; Ty.free_vars ty_lhs ; Ty.free_vars ty_rhs).toList.bind (fun (k , _) => [k])
     )
 
     if fids.isEmpty then
       ty
     else
+      let exis_ty := [norm:
+        {⟨Ty.generalize fids 0 ty⟩ | 
+          ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ }
+      :]
       [norm:
-        ∀ ⟨Ty.generalize fids 0 ty⟩ | 
-          ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ 
+        ∀ β[0] | ⟨exis_ty⟩ ≤ β[0]
       :]
 
 
@@ -572,6 +579,7 @@ namespace Normal
         .bvar id
   | .fvar id => .fvar id
   | .unit => .unit
+  | .top => .top
   | .bot => .bot
   | .tag l ty => .tag l (Ty.instantiate start args ty) 
   | .field l ty => .field l (Ty.instantiate start args ty)
@@ -619,6 +627,7 @@ namespace Normal
   | .bvar id => Ty.bvar id  
   | .fvar id => if sign then Ty.bot else [norm: ⊤ :] 
   | .unit => .unit 
+  | .top => .top
   | .bot => .bot 
   | .tag l ty => Ty.tag l (Ty.subst_default sign ty) 
   | .field l ty => Ty.field l (Ty.subst_default sign ty) 
@@ -893,6 +902,7 @@ namespace Normal
     | .bvar id => (List.range n).all (fun tar => id != tar)
     | .fvar _ => true 
     | .unit => true 
+    | .top => true 
     | .bot => true 
     | .tag _ _ => true 
     | .field _ ty => Ty.wellfounded n ty
@@ -997,8 +1007,8 @@ namespace Normal
 
       let ty_c1 := Ty.instantiate 0 args ty_c1
       let ty_c2 := Ty.instantiate 0 args ty_c2
-      let ty := Ty.instantiate 0 args ty1
-      Ty.assume_env (unify i env_ty env_complex frozen ty ty2) (fun i env_ty => 
+      let ty1 := Ty.instantiate 0 args ty1
+      Ty.assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty => 
         unify i env_ty env_complex frozen ty_c1 ty_c2
       )
 
@@ -1013,7 +1023,7 @@ namespace Normal
       let args := ids.map (fun id => Ty.fvar id)
       let ty_c1 := Ty.instantiate 0 args ty_c1
       let ty_c2 := Ty.instantiate 0 args ty_c2
-      let ty1 := Ty.instantiate 0 args ty2
+      let ty2 := Ty.instantiate 0 args ty2
 
       let ((i, contexts), env_complex) := ( 
           (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
@@ -1086,7 +1096,7 @@ namespace Normal
         (i, [])
 
     | .bot, _ => (i, [env_ty])
-    -- | _, .top => (i, [env_ty])
+    | _, .top => (i, [env_ty])
     | .unit, .unit => (i, [env_ty])
 
     | .tag l' ty', .tag l ty =>
@@ -1669,6 +1679,7 @@ namespace Normal
   | .bvar id => ([], []) 
   | .fvar id => ([], [])
   | .unit => ([], []) 
+  | .top => ([], [])
   | .bot => ([], [])
   | .tag l ty => 
     let (ls_t, ls_f) := extract_labels ty
@@ -1745,612 +1756,617 @@ namespace Normal
       var :: application :: projections
     )
 
-end Normal
 
-open Normal
+  -- #check BinomialHeap.ofList
+  -- #check BinomialHeap.merge
 
+  -- partial def synthesize_loop (queue : Work.Queue) : Option Tm := 
+  --   Option.bind (queue.deleteMin) (fun (work, queue') =>
+  --     if work.guides.isEmpty then
+  --       some (Tm.subst work.patches work.t)
+  --     else 
+  --       let queue_ext := BinomialHeap.ofList Work.le (
+  --         List.bind work.guides.toList (fun (id, guide) =>
+  --           let hypotheses := enumerate work.i guide.env_tm guide.ty_expected
+  --           List.bind hypotheses (fun h =>
+  --           let contracts := (infer work.i {} guide.env_tm h guide.ty_expected)
+  --           List.bind contracts (fun ⟨i, _, guides, t, _⟩ =>
+  --             let patch := t
+  --             [
+  --               {
+  --                 cost := work.cost + (Tm.cost h),
+  --                 i := i,
+  --                 guides := work.guides.erase id ; (PHashMap.from_list guides),
+  --                 patches := work.patches.insert id patch 
+  --                 t := work.t 
+  --               }
 
--- #check BinomialHeap.ofList
--- #check BinomialHeap.merge
+  --             ]
+  --           ))
+  --         ) 
+  --       )
 
--- partial def synthesize_loop (queue : Work.Queue) : Option Tm := 
---   Option.bind (queue.deleteMin) (fun (work, queue') =>
---     if work.guides.isEmpty then
---       some (Tm.subst work.patches work.t)
---     else 
---       let queue_ext := BinomialHeap.ofList Work.le (
---         List.bind work.guides.toList (fun (id, guide) =>
---           let hypotheses := enumerate work.i guide.env_tm guide.ty_expected
---           List.bind hypotheses (fun h =>
---           let contracts := (infer work.i {} guide.env_tm h guide.ty_expected)
---           List.bind contracts (fun ⟨i, _, guides, t, _⟩ =>
---             let patch := t
---             [
---               {
---                 cost := work.cost + (Tm.cost h),
---                 i := i,
---                 guides := work.guides.erase id ; (PHashMap.from_list guides),
---                 patches := work.patches.insert id patch 
---                 t := work.t 
---               }
+  --       let queue'' := BinomialHeap.merge queue' queue_ext
 
---             ]
---           ))
---         ) 
---       )
-
---       let queue'' := BinomialHeap.merge queue' queue_ext
-
---       synthesize_loop queue''
---   )
+  --       synthesize_loop queue''
+  --   )
 
 
 
--- partial def synthesize (t : Tm) : Option Tm := 
---   let contracts := infer 0 {} {} t [norm: ∃ 1 => β[0] :]
---   let works : List Work := contracts.map (fun contract =>
---     {
---       cost := (Tm.cost t), i := contract.i, 
---       guides := PHashMap.from_list contract.guides, 
---       patches := {},
---       t := contract.t
---     }
---   )
---   let queue := List.foldl (fun queue work =>
---     queue.insert work
---   ) BinomialHeap.empty works
+  -- partial def synthesize (t : Tm) : Option Tm := 
+  --   let contracts := infer 0 {} {} t [norm: ∃ 1 => β[0] :]
+  --   let works : List Work := contracts.map (fun contract =>
+  --     {
+  --       cost := (Tm.cost t), i := contract.i, 
+  --       guides := PHashMap.from_list contract.guides, 
+  --       patches := {},
+  --       t := contract.t
+  --     }
+  --   )
+  --   let queue := List.foldl (fun queue work =>
+  --     queue.insert work
+  --   ) BinomialHeap.empty works
 
---   (synthesize_loop queue) 
+  --   (synthesize_loop queue) 
 
--- partial def synth_reduce (t : Tm) : Tm := 
---   match synthesize t with
---   | some t => t
---   | none => Tm.hole
-
-
---- unification --
-def nat_ := [norm:
-  μ 
-    zero*unit ∨
-    succ*β[0]
-:]
-  
-#eval unify_simple 30
-[norm: (zero*unit) :] 
-[norm: zero*unit ∨ succ*unit :]
+  -- partial def synth_reduce (t : Tm) : Tm := 
+  --   match synthesize t with
+  --   | some t => t
+  --   | none => Tm.hole
 
 
-#eval unify_reduce 30
-[norm: (succ*succ*succ*α[0]) :] 
-[norm: zero*unit ∨ succ*⟨nat_⟩ :] 
-[norm: α[0] :]
-
-#eval unify_simple 30
-[norm: (succ*succ*succ*zero*unit) :] 
-[norm: zero*unit ∨ succ*⟨nat_⟩ :]
-
-#eval unify_reduce 30
-[norm: (succ*α[0]) :] 
-nat_
-[norm: α[0] :]
-
-def nat_list := [norm: 
-  μ 
-    (zero*unit × nil*unit) ∨ 
-    {succ*β[0] × cons*β[1] | (β[0] × β[1]) ≤ β[2]}
-:]
-
-#eval unify_reduce 30
-[norm: (succ*zero*unit) × cons*α[0] :] 
-nat_list
-[norm: α[0] :]
-
-#eval unify_reduce 30
-[norm: succ*zero*unit × α[0] :]
-[norm: ⟨nat_list⟩ :]
-[norm: α[0] :]
-
--- subtyping via local constraints
-#eval unify_reduce 30
-[norm: {β[0] | succ*zero*unit × β[0] ≤ ⟨nat_list⟩} :]
-[norm: cons*α[0] :] 
-[norm: α[0] :]
+  --- unification --
+  def nat_ := [norm:
+    μ 
+      zero*unit ∨
+      succ*β[0]
+  :]
+    
+  #eval unify_simple 30
+  [norm: (zero*unit) :] 
+  [norm: zero*unit ∨ succ*unit :]
 
 
--- expected: cons*nil*unit
-#eval unify_reduce 30
-[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
-[norm: succ*succ*zero*unit -> cons*α[0] :] 
-[norm: α[0] :]
+  #eval unify_reduce 30
+  [norm: (succ*succ*succ*α[0]) :] 
+  [norm: zero*unit ∨ succ*⟨nat_⟩ :] 
+  [norm: α[0] :]
+
+  #eval unify_simple 30
+  [norm: (succ*succ*succ*zero*unit) :] 
+  [norm: zero*unit ∨ succ*⟨nat_⟩ :]
+
+  #eval unify_reduce 30
+  [norm: (succ*α[0]) :] 
+  nat_
+  [norm: α[0] :]
+
+  def nat_list := [norm: 
+    μ 
+      (zero*unit × nil*unit) ∨ 
+      {succ*β[0] × cons*β[1] | (β[0] × β[1]) ≤ β[2]}
+  :]
+
+  #eval unify_reduce 30
+  [norm: (succ*zero*unit) × cons*α[0] :] 
+  nat_list
+  [norm: α[0] :]
+
+  #eval unify_reduce 30
+  [norm: succ*zero*unit × α[0] :]
+  [norm: ⟨nat_list⟩ :]
+  [norm: α[0] :]
+
+  -- subtyping via local constraints
+  #eval unify_reduce 30
+  [norm: {β[0] | succ*zero*unit × β[0] ≤ ⟨nat_list⟩} :]
+  [norm: cons*α[0] :] 
+  [norm: α[0] :]
 
 
--- expected: ⊥
-#eval unify_reduce 30
-[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
-[norm: foo*succ*zero*unit -> α[0] :] 
-[norm: boo*α[0] :]
-
------------------------------------------------
-
-def even_list := [norm: 
-  μ 
-    (zero*unit × nil*unit) ∨ 
-    {succ*succ*β[0] × cons*cons*β[1] | (β[0] × β[1]) ≤ β[2]}
-:]
-
-#eval unify_decide 0 even_list nat_list 
-#eval unify_decide 0 nat_list even_list
-
-def even := [norm: 
-  μ zero*unit ∨ succ*succ*β[0]
-:]
+  -- expected: cons*nil*unit
+  #eval unify_reduce 30
+  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+  [norm: succ*succ*zero*unit -> cons*α[0] :] 
+  [norm: α[0] :]
 
 
--- TODO: limitation: sound, but incomplete
-#eval unify_decide 0
-[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
-[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+  -- expected: ⊥
+  #eval unify_reduce 30
+  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+  [norm: foo*succ*zero*unit -> α[0] :] 
+  [norm: boo*α[0] :]
 
-#eval unify_decide 0
-[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩}  :]
-[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨even_list⟩} | β[0] ≤ ⟨even⟩ :]
+  -----------------------------------------------
 
-#eval unify_decide 0
-[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} | β[0] ≤ ⟨nat_⟩:]
-[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} | β[0] ≤ ⟨even⟩ :]
-----------------------------
+  def even_list := [norm: 
+    μ 
+      (zero*unit × nil*unit) ∨ 
+      {succ*succ*β[0] × cons*cons*β[1] | (β[0] × β[1]) ≤ β[2]}
+  :]
 
-def plus := [norm: 
-  μ 
-    {x : zero*unit ∧ y : β[0] ∧ z : β[0]} ∨ 
-    {x : succ*β[0] ∧ y : β[1] ∧ z : succ*β[2] | 
-      (x : β[0] ∧ y : β[1] ∧ z : β[2]) ≤ β[3] 
-    }
-:]
+  #eval unify_decide 0 even_list nat_list 
+  #eval unify_decide 0 nat_list even_list
 
-#eval plus
+  def even := [norm: 
+    μ zero*unit ∨ succ*succ*β[0]
+  :]
 
-#eval unify_reduce 30 [norm:
-  (
-    x : (α[10]) ∧
-    y : (succ*zero*unit) ∧ 
-    z : (succ*succ*zero*unit)
-  )
-:] plus
-[norm: α[10] :]
 
-#eval unify_reduce 30 
-  [norm:
+  -- TODO: limitation: sound, but incomplete
+  #eval unify_decide 0
+  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+
+  #eval unify_decide 0
+  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩}  :]
+  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨even_list⟩} | β[0] ≤ ⟨even⟩ :]
+
+  #eval unify_decide 0
+  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} | β[0] ≤ ⟨nat_⟩:]
+  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} | β[0] ≤ ⟨even⟩ :]
+  ----------------------------
+
+  def plus := [norm: 
+    μ 
+      {x : zero*unit ∧ y : β[0] ∧ z : β[0]} ∨ 
+      {x : succ*β[0] ∧ y : β[1] ∧ z : succ*β[2] | 
+        (x : β[0] ∧ y : β[1] ∧ z : β[2]) ≤ β[3] 
+      }
+  :]
+
+  #eval plus
+
+  #eval unify_reduce 30 [norm:
     (
-      x : (zero*unit) ∧
-      y : (zero*unit) ∧ 
-      z : (zero*unit)
+      x : (α[10]) ∧
+      y : (succ*zero*unit) ∧ 
+      z : (succ*succ*zero*unit)
     )
-  :] 
-  plus
-  [norm: unit :]
+  :] plus
+  [norm: α[10] :]
 
-#eval unify_reduce 30 
-  [norm:
+  #eval unify_reduce 30 
+    [norm:
+      (
+        x : (zero*unit) ∧
+        y : (zero*unit) ∧ 
+        z : (zero*unit)
+      )
+    :] 
+    plus
+    [norm: unit :]
+
+  #eval unify_reduce 30 
+    [norm:
+      (
+        x : (succ*zero*unit) ∧
+        y : (succ*succ*zero*unit) ∧ 
+        z : (succ*succ*succ*zero*unit)
+      )
+    :] 
+    plus
+    [norm: unit :]
+
+
+  #eval unify_reduce 30 [norm:
     (
-      x : (succ*zero*unit) ∧
-      y : (succ*succ*zero*unit) ∧ 
+      x : (succ*zero*unit) ∧ 
+      y : (α[10]) ∧
       z : (succ*succ*succ*zero*unit)
     )
-  :] 
-  plus
-  [norm: unit :]
+  :] plus
+  [norm: α[10] :]
 
 
-#eval unify_reduce 30 [norm:
+  #eval unify_reduce 30 [norm:
+    (
+      x : succ*α[1] ∧
+      y : α[2] ∧
+      z : (succ*succ*zero*unit)
+    )
+  :] plus
+  [norm: α[1] × α[2] :]
+
+
+
+  #eval unify_reduce 30 
+  [norm: (α[0] × zero*unit) ∨ (zero*unit × α[0]) :] 
+  [norm: (⟨nat_⟩ × zero*unit) :] 
+  [norm: α[0] :]
+
+
+
+  #eval unify_reduce 30 [norm:
+    (
+      x : succ*α[0] ∧
+      y : α[2] ∧
+      z : (succ*succ*zero*unit)
+    )
+  :] plus
+  [norm: succ*α[0] × α[2] :]
+
+  #eval unify_reduce 30 [norm:
+    (
+      x : α[0] ∧
+      y : α[2] ∧
+      z : (succ*succ*zero*unit)
+    )
+  :] plus
+  [norm: α[0] × α[2] :]
+
+  #eval unify_reduce 1 [norm:
+    (
+      x : (succ*succ*zero*unit) ∧ 
+      y : (succ*zero*unit) ∧
+      z : (α[0])
+    )
+  :] plus
+  [norm: α[0] :]
+  -- == [norm: succ*succ*succ*zero*unit :]
+
+  #eval unify_reduce 30 [norm:
+    (
+      x : (succ*zero*unit) ∧ 
+      y : (α[10]) ∧
+      z : (succ*succ*zero*unit)
+    )
+  :] plus
+  [norm: α[10] :]
+
+
+  #eval unify_reduce 10 [norm:
   (
-    x : (succ*zero*unit) ∧ 
-    y : (α[10]) ∧
-    z : (succ*succ*succ*zero*unit)
+    x : α[5] ∧
+    y : succ*zero*unit ∧
+    z : succ*succ*zero*unit
   )
-:] plus
-[norm: α[10] :]
+  :] plus
+  [norm: α[5] :]
 
+  #eval unify_simple 10 
+    [norm: ⊥ :] 
+    plus 
 
-#eval unify_reduce 30 [norm:
-  (
-    x : succ*α[1] ∧
-    y : α[2] ∧
-    z : (succ*succ*zero*unit)
-  )
-:] plus
-[norm: α[1] × α[2] :]
+  #eval unify_simple 10 
+    plus 
+    [norm: ⊥ :] 
 
+  ------ type inference --------
+  #eval infer_reduce 0 [norm:
+    succ;zero;()
+  :]
 
+  -- expected: cons*nil*unit
+  #eval infer_reduce 0 [norm:
+    let y[0] : ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} = _ =>
+    (y[0] (succ;zero;()))
+  :]
 
-#eval unify_reduce 30 
-[norm: (α[0] × zero*unit) ∨ (zero*unit × α[0]) :] 
-[norm: (⟨nat_⟩ × zero*unit) :] 
-[norm: α[0] :]
-
-
-
-#eval unify_reduce 30 [norm:
-  (
-    x : succ*α[0] ∧
-    y : α[2] ∧
-    z : (succ*succ*zero*unit)
-  )
-:] plus
-[norm: succ*α[0] × α[2] :]
-
-#eval unify_reduce 30 [norm:
-  (
-    x : α[0] ∧
-    y : α[2] ∧
-    z : (succ*succ*zero*unit)
-  )
-:] plus
-[norm: α[0] × α[2] :]
-
-#eval unify_reduce 1 [norm:
-  (
-    x : (succ*succ*zero*unit) ∧ 
-    y : (succ*zero*unit) ∧
-    z : (α[0])
-  )
-:] plus
-[norm: α[0] :]
--- == [norm: succ*succ*succ*zero*unit :]
-
-#eval unify_reduce 30 [norm:
-  (
-    x : (succ*zero*unit) ∧ 
-    y : (α[10]) ∧
-    z : (succ*succ*zero*unit)
-  )
-:] plus
-[norm: α[10] :]
-
-
-#eval unify_reduce 10 [norm:
-(
-  x : α[5] ∧
-  y : succ*zero*unit ∧
-  z : succ*succ*zero*unit
-)
-:] plus
-[norm: α[5] :]
-
-#eval unify_simple 10 
-  [norm: ⊥ :] 
-  plus 
-
-#eval unify_simple 10 
-  plus 
-  [norm: ⊥ :] 
-
------- type inference --------
-#eval infer_reduce 0 [norm:
-  succ;zero;()
-:]
-
--- expected: cons*nil*unit
-#eval infer_reduce 0 [norm:
-  let y[0] : ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} = _ =>
-  (y[0] (succ;zero;()))
-:]
-
-#eval infer_reduce 0 [norm:
-  fix(λ y[0] => λ[
-  for zero;() => nil;(),
-  for succ;y[0] => cons;(y[1] y[0])
-  ])
-:]
-
-#eval infer_reduce 0 [norm:
-  let y[0] = fix(λ y[0] => λ[
-  for zero;() => nil;(),
-  for succ;y[0] => cons;(y[1] y[0])
-  ]) =>
-  y[0]
-:]
-
--- expected: cons*nil*unit
-#eval infer_reduce 10 [norm:
-  let y[0] = fix(λ y[0] => λ[
+  #eval infer_reduce 0 [norm:
+    fix(λ y[0] => λ[
     for zero;() => nil;(),
     for succ;y[0] => cons;(y[1] y[0])
+    ])
+  :]
+
+  #eval infer_reduce 0 [norm:
+    let y[0] = fix(λ y[0] => λ[
+    for zero;() => nil;(),
+    for succ;y[0] => cons;(y[1] y[0])
+    ]) =>
+    y[0]
+  :]
+
+  -- expected: cons*nil*unit
+  #eval infer_reduce 10 [norm:
+    let y[0] = fix(λ y[0] => λ[
+      for zero;() => nil;(),
+      for succ;y[0] => cons;(y[1] y[0])
+    ]) =>
+    (y[0] (succ;zero;()))
+  :]
+
+
+  -- expected: cons*nil*unit
+  #eval infer_reduce 0 [norm:
+    let y[0] : (zero*unit -> nil*unit) ∧ (succ*zero*unit -> cons*nil*unit) = _ =>
+    (y[0] (succ;zero;()))
+  :]
+
+
+  ---------- generics ----------------
+
+  #eval infer_reduce 10 [norm:
+    ((λ cons;(y[0], y[1]) => y[0]) (cons;(ooga;(), booga;())))
+  :]
+
+  #eval infer_reduce 10 [norm:
+    let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
+    y[0]  
+  :]
+
+  -- TODO
+  #eval infer_reduce 10 [norm:
+    let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
+    (y[0] (cons;(ooga;(), booga;())))  
+  :]
+
+  ---------- adjustment ----------------
+
+  -- widening
+  #eval infer_reduce 0 [norm:
+    let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    ((y[0] hello;()) world;())
+  :]
+
+  #eval infer_reduce 0 [norm:
+    let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] = (y[0] hello;()) => 
+    (y[0] world;())
+  :]
+
+  #eval infer_simple 0 [norm:
+    let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] = (y[0] hello;()) => 
+    y[0]
+  :]
+
+  #eval infer_reduce 0 [norm:
+    let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] = (y[0] hello;()) => 
+    y[0]
+  :]
+
+  -- narrowing
+  #eval infer_reduce 0 [norm:
+  let y[0] : uno*unit -> unit = _ => 
+  let y[0] : dos*unit -> unit = _ =>
+  (λ y[0] =>
+    ((y[2] y[0]), (y[1] y[0])))
+  :]
+
+  #eval infer_reduce 0 [norm:
+  let y[0] : uno*unit -> unit = _ => 
+  let y[0] : dos*unit -> unit = _ =>
+  (λ y[0] =>
+    let y[0] = (y[2] y[0]) => 
+    let y[0] = (y[2] y[1]) =>
+    (y[0], y[1]))
+  :]
+
+  ----------------------------------
+  #eval [norm: σ[x := hello;()] :]
+
+  #eval unify_decide 0 
+    [norm: hello*unit :] 
+    [norm: α[0] :] 
+
+  -- not well foundend: induction untagged 
+  #eval unify_decide 0 
+    [norm: hello*unit :] 
+    [norm: μ wrong*unit ∨ β[0] :] 
+
+  -- potentially diverges - inductive type not well founded
+  #eval unify_decide 0 
+    [norm: hello*unit :] 
+    [norm: μ β[0] :] 
+
+  def bad_nat_list := [norm: 
+    μ 
+      (zero*unit × nil*unit) ∨ 
+      {(β[0] × β[1]) | β[0] × β[1] ≤ β[2]}
+  :]
+
+  #eval unify_decide 0 
+    [norm: zero*unit × nil*unit :] 
+    bad_nat_list
+
+  def other_nat_list := [norm: 
+    μ {(succ*β[0] × cons*β[1]) | β[0] × β[1] ≤ β[2]}
+  :]
+
+  #eval unify_decide 0 
+    [norm: succ*zero*unit × cons*nil*unit :] 
+    other_nat_list
+
+
+  #eval infer_reduce 10 [norm:
+  fix(λ y[0] => λ[
+    for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+    for (zero;(), y[0]) => y[0],
+    for (y[0], zero;()) => y[0] 
+  ])
+  :]
+
+  -- TODO
+  #eval infer_reduce 10 [norm:
+  (fix(λ y[0] => λ[
+    for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+    for (zero;(), y[0]) => y[0],
+    for (y[0], zero;()) => y[0] 
+  ]) (succ;succ;zero;(), succ;succ;succ;zero;()))
+  :]
+
+  ----------------------------------
+
+  def gt := [norm: 
+    μ  
+      {succ*β[0] × zero*unit} ∨ 
+      {succ*β[0] × succ*β[1] | (β[0] × β[1]) ≤ β[2]}
+  :]
+
+  -------------------------------------------------
+
+  def spec := [norm: 
+  (α[0] × α[1]) -> (
+    { β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) ≤ ⟨plus⟩} ∨
+    { β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) ≤ ⟨plus⟩}
+  )  
+  :]
+
+  -- Note: is this in effect, the same thing as PDR/IC3
+  -- That is, whatever is learned to strengthen the premise 
+  -- is automatically applied to preceding iterations 
+  -- due to the wrapping type with the co-inductive nu binder
+  -- TODO
+  #eval infer_reduce 10 
+  [norm:
+  let y[0] : ⟨spec⟩ = fix(λ y[0] => λ[
+    for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+    for (zero;(), y[0]) => y[0],
+    for (y[0], zero;()) => y[0] 
   ]) =>
-  (y[0] (succ;zero;()))
-:]
-
-
--- expected: cons*nil*unit
-#eval infer_reduce 0 [norm:
-  let y[0] : (zero*unit -> nil*unit) ∧ (succ*zero*unit -> cons*nil*unit) = _ =>
-  (y[0] (succ;zero;()))
-:]
-
-
----------- generics ----------------
-
-#eval infer_reduce 10 [norm:
-  ((λ cons;(y[0], y[1]) => y[0]) (cons;(ooga;(), booga;())))
-:]
-
-#eval infer_reduce 10 [norm:
-  let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
-  y[0]  
-:]
-
-#eval infer_reduce 10 [norm:
-  let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
-  (y[0] (cons;(ooga;(), booga;())))  
-:]
-
----------- adjustment ----------------
-
--- widening
-#eval infer_reduce 0 [norm:
-  let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
-  ((y[0] hello;()) world;())
-:]
-
-#eval infer_reduce 0 [norm:
-  let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
-  let y[0] = (y[0] hello;()) => 
-  (y[0] world;())
-:]
-
-#eval infer_reduce 0 [norm:
-  let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
-  let y[0] = (y[0] hello;()) => 
   y[0]
-:]
+  :]
 
--- narrowing
-#eval infer_reduce 0 [norm:
-let y[0] : uno*unit -> unit = _ => 
-let y[0] : dos*unit -> unit = _ =>
-(λ y[0] =>
-  ((y[2] y[0]), (y[1] y[0])))
-:]
+  #eval infer_reduce 10 
+  [norm:
+  let y[0] = fix(λ y[0] => λ[
+    for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+    for (zero;(), y[0]) => y[0],
+    for (y[0], zero;()) => y[0] 
+  ]) =>
+  y[0]
+  :]
 
-#eval infer_reduce 0 [norm:
-let y[0] : uno*unit -> unit = _ => 
-let y[0] : dos*unit -> unit = _ =>
-(λ y[0] =>
-  let y[0] = (y[2] y[0]) => 
-  let y[0] = (y[2] y[1]) =>
-  (y[0], y[1]))
-:]
+  #eval infer_reduce 10 
+  [norm:
+  let y[0] = fix(λ y[0] => λ[
+    for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+    for (zero;(), y[0]) => y[0],
+    for (y[0], zero;()) => y[0] 
+  ]) =>
+  (y[0] (succ;succ;zero;(), succ;zero;()))
+  :]
 
-----------------------------------
-#eval [norm: σ[x := hello;()] :]
+  def diff_rel :=
+  [norm:
+    μ 
+      {zero*unit × β[0] × β[0]} ∨ 
+      {β[0] × zero*unit × β[0]} ∨
+      {(succ*β[1] × succ*β[2] × β[0]) | (β[1] × β[2] × β[0]) ≤ β[3]}
+  :]
 
-#eval unify_decide 0 
-  [norm: hello*unit :] 
-  [norm: α[0] :] 
-
--- not well foundend: induction untagged 
-#eval unify_decide 0 
-  [norm: hello*unit :] 
-  [norm: μ wrong*unit ∨ β[0] :] 
-
--- potentially diverges - inductive type not well founded
-#eval unify_decide 0 
-  [norm: hello*unit :] 
-  [norm: μ β[0] :] 
-
-def bad_nat_list := [norm: 
-  μ 
-    (zero*unit × nil*unit) ∨ 
-    {(β[0] × β[1]) | β[0] × β[1] ≤ β[2]}
-:]
-
-#eval unify_decide 0 
-  [norm: zero*unit × nil*unit :] 
-  bad_nat_list
-
-def other_nat_list := [norm: 
-  μ {(succ*β[0] × cons*β[1]) | β[0] × β[1] ≤ β[2]}
-:]
-
-#eval unify_decide 0 
-  [norm: succ*zero*unit × cons*nil*unit :] 
-  other_nat_list
-
-
-#eval infer_reduce 10 [norm:
-fix(λ y[0] => λ[
-  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
-  for (zero;(), y[0]) => y[0],
-  for (y[0], zero;()) => y[0] 
-])
-:]
-
--- TODO
-#eval infer_reduce 10 [norm:
-(fix(λ y[0] => λ[
-  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
-  for (zero;(), y[0]) => y[0],
-  for (y[0], zero;()) => y[0] 
-]) (succ;succ;zero;(), succ;succ;succ;zero;()))
-:]
-
-----------------------------------
-
-def gt := [norm: 
-  μ  
-    {succ*β[0] × zero*unit} ∨ 
-    {succ*β[0] × succ*β[1] | (β[0] × β[1]) ≤ β[2]}
-:]
-
--------------------------------------------------
-
-def spec := [norm: 
-(α[0] × α[1]) -> (
-  { β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) ≤ ⟨plus⟩} ∨
-  { β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) ≤ ⟨plus⟩}
-)  
-:]
-
--- Note: is this in effect, the same thing as PDR/IC3
--- That is, whatever is learned to strengthen the premise 
--- is automatically applied to preceding iterations 
--- due to the wrapping type with the co-inductive nu binder
--- TODO
-#eval infer_reduce 10 
-[norm:
-let y[0] : ⟨spec⟩ = fix(λ y[0] => λ[
-  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
-  for (zero;(), y[0]) => y[0],
-  for (y[0], zero;()) => y[0] 
-]) =>
-y[0]
-:]
-
-#eval infer_reduce 10 
-[norm:
-let y[0] = fix(λ y[0] => λ[
-  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
-  for (zero;(), y[0]) => y[0],
-  for (y[0], zero;()) => y[0] 
-]) =>
-y[0]
-:]
-
-#eval infer_reduce 10 
-[norm:
-let y[0] = fix(λ y[0] => λ[
-  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
-  for (zero;(), y[0]) => y[0],
-  for (y[0], zero;()) => y[0] 
-]) =>
-(y[0] (succ;succ;zero;(), succ;zero;()))
-:]
-
-def diff_rel :=
-[norm:
-  μ 
-    {zero*unit × β[0] × β[0]} ∨ 
-    {β[0] × zero*unit × β[0]} ∨
-    {(succ*β[1] × succ*β[2] × β[0]) | (β[1] × β[2] × β[0]) ≤ β[3]}
-:]
-
-#eval unify_reduce 10
-[norm: succ*succ*zero*unit × succ*zero*unit × α[0] :]
-diff_rel
-[norm: α[0] :]
+  #eval unify_reduce 10
+  [norm: succ*succ*zero*unit × succ*zero*unit × α[0] :]
+  diff_rel
+  [norm: α[0] :]
 
 
 
-def plus_choice := [norm: 
-α[0] × α[1] × (
-  { β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) ≤ ⟨plus⟩} ∨
-  { β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) ≤ ⟨plus⟩}
-)  
-:]
+  def plus_choice := [norm: 
+  α[0] × α[1] × (
+    { β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) ≤ ⟨plus⟩} ∨
+    { β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) ≤ ⟨plus⟩}
+  )  
+  :]
 
-#eval unify_reduce 10
-plus_choice
-diff_rel
-[norm: α[0] :]
-
-
-#eval unify_reduce 10
-[norm:
-∀ β[0] -> {β[0] | (β[1] × β[0]) ≤ ⟨diff_rel⟩}
-:]
-spec
-[norm: α[0] × α[1] :]
---------------------------------------
+  #eval unify_reduce 10
+  plus_choice
+  diff_rel
+  [norm: α[0] :]
 
 
--- #eval rewrite_function_type diff
+  #eval unify_reduce 10
+  [norm:
+  ∀ β[0] -> {β[0] | (β[1] × β[0]) ≤ ⟨diff_rel⟩}
+  :]
+  spec
+  [norm: α[0] × α[1] :]
+  --------------------------------------
 
 
-#eval infer_reduce 10 
-[norm:
-let y[0] : (
-  (∀ (hello*β[0] -> world*unit)) ∧ 
-  (∀ one*β[0] -> two*unit)
-) = _ =>
-(y[0] one;())
-:]
-
-#eval infer_reduce 10 
-[norm:
-let y[0] : (
-  (∀ 
-    (hello*β[0] -> world*unit) ∧ 
-    (one*β[0] -> two*unit)
-  )
-) = _ =>
-(y[0] one;())
-:]
-
--- def even_to_list := [norm: 
---   ν 1 . (
---     (zero*unit -> nil*unit) ∧ 
---     (∀ 2 . (succ*succ*β[0] -> cons*cons*β[1]) | 
---       β[2] ≤ β[0] -> β[1])
---   )
--- :]
-
--- #eval unify_decide 0 
---   even_to_list
---   nat_to_list
--- -- == false 
-
--- -- TODO
--- #eval unify_decide 0 
---   nat_to_list
---   even_to_list
--- -- == true
-
--- #eval unify_decide 0 
--- [norm: ∃ 1 .  β[0] :]
--- [norm: ∃ 1 .  cons*unit :]
--- -- == false 
-
--- #eval unify_decide 0 
--- [norm: ∃ 1 .  cons*unit :]
--- [norm: ∃ 1 .  β[0] :]
--- -- == true 
-
--- #eval unify_decide 0 
--- [norm: ∀ 1 .  β[0] :]
--- [norm: ∀ 1 .  cons*unit :]
--- -- == true 
-
--- #eval unify_decide 0 
--- [norm: ∀ 1 .  cons*unit :]
--- [norm: ∀ 1 .  β[0] :]
--- -- == false 
+  -- #eval rewrite_function_type diff
 
 
--- #eval unify_decide 0 
--- [norm: ∃ 1 . (succ*succ*unit) :]
--- [norm: ∃ 1 . (succ*succ*β[0]) :]
+  #eval infer_reduce 10 
+  [norm:
+  let y[0] : (
+    (∀ (hello*β[0] -> world*unit)) ∧ 
+    (∀ one*β[0] -> two*unit)
+  ) = _ =>
+  (y[0] one;())
+  :]
 
--- #eval unify_decide 0 
--- [norm: ∀ 2 . (succ*succ*β[0] -> cons*cons*β[1]) :]
--- [norm: ∀ 2 . (succ*succ*unit -> cons*cons*unit) :]
+  #eval infer_reduce 10 
+  [norm:
+  let y[0] : (
+    (∀ 
+      (hello*β[0] -> world*unit) ∧ 
+      (one*β[0] -> two*unit)
+    )
+  ) = _ =>
+  (y[0] one;())
+  :]
+
+  -- def even_to_list := [norm: 
+  --   ν 1 . (
+  --     (zero*unit -> nil*unit) ∧ 
+  --     (∀ 2 . (succ*succ*β[0] -> cons*cons*β[1]) | 
+  --       β[2] ≤ β[0] -> β[1])
+  --   )
+  -- :]
+
+  -- #eval unify_decide 0 
+  --   even_to_list
+  --   nat_to_list
+  -- -- == false 
+
+  -- -- TODO
+  -- #eval unify_decide 0 
+  --   nat_to_list
+  --   even_to_list
+  -- -- == true
+
+  -- #eval unify_decide 0 
+  -- [norm: ∃ 1 .  β[0] :]
+  -- [norm: ∃ 1 .  cons*unit :]
+  -- -- == false 
+
+  -- #eval unify_decide 0 
+  -- [norm: ∃ 1 .  cons*unit :]
+  -- [norm: ∃ 1 .  β[0] :]
+  -- -- == true 
+
+  -- #eval unify_decide 0 
+  -- [norm: ∀ 1 .  β[0] :]
+  -- [norm: ∀ 1 .  cons*unit :]
+  -- -- == true 
+
+  -- #eval unify_decide 0 
+  -- [norm: ∀ 1 .  cons*unit :]
+  -- [norm: ∀ 1 .  β[0] :]
+  -- -- == false 
+
+
+  -- #eval unify_decide 0 
+  -- [norm: ∃ 1 . (succ*succ*unit) :]
+  -- [norm: ∃ 1 . (succ*succ*β[0]) :]
+
+  -- #eval unify_decide 0 
+  -- [norm: ∀ 2 . (succ*succ*β[0] -> cons*cons*β[1]) :]
+  -- [norm: ∀ 2 . (succ*succ*unit -> cons*cons*unit) :]
 
 
 
 
--- -- def nat_to_list := [norm: 
--- --   ν 1 . (
--- --     (zero*unit -> nil*unit) ∧ 
--- --     (∀ 2 . (succ*β[0] -> cons*β[1]) | 
--- --       β[2] ≤ β[0] -> β[1])
--- --   )
--- -- :]
+  -- -- def nat_to_list := [norm: 
+  -- --   ν 1 . (
+  -- --     (zero*unit -> nil*unit) ∧ 
+  -- --     (∀ 2 . (succ*β[0] -> cons*β[1]) | 
+  -- --       β[2] ≤ β[0] -> β[1])
+  -- --   )
+  -- -- :]
 
 
--- -- def even_to_list := [norm: 
--- --   ν 1 . (
--- --     (zero*unit -> nil*unit) ∧ 
--- --     (∀ 2 . (succ*succ*β[0] -> cons*cons*β[1]) | 
--- --       β[2] ≤ β[0] -> β[1])
--- --   )
--- -- :]
+  -- -- def even_to_list := [norm: 
+  -- --   ν 1 . (
+  -- --     (zero*unit -> nil*unit) ∧ 
+  -- --     (∀ 2 . (succ*succ*β[0] -> cons*cons*β[1]) | 
+  -- --       β[2] ≤ β[0] -> β[1])
+  -- --   )
+  -- -- :]
 
+
+end Normal

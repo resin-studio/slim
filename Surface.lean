@@ -15,16 +15,14 @@ namespace Surface
   | id : String -> Ty
   | unit : Ty
   | bot : Ty
-  -- | top : Ty
   | tag : String -> Ty -> Ty
   | field : String -> Ty -> Ty
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
   | case : Ty -> Ty -> Ty
-  -- | univ : List String -> Ty -> Ty -> Ty -> Ty
+  | univ : Ty -> Ty -> Ty -> Ty
   | exis : Ty -> Ty -> Ty -> Ty
   | recur : String -> Ty -> Ty
-  -- | corec : String -> Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
   #check List.repr
 
@@ -56,37 +54,28 @@ namespace Surface
       Format.bracket "(" ((Ty.repr ty1 n) ++ " ∧ " ++ (Ty.repr ty2 n)) ")"
     | .case ty1 ty2 =>
       Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
-    -- | .univ names ty_c1 ty_c2 ty_pl =>
-    --   let bound_names := (Format.bracket "("
-    --     (Format.joinSep names (", " ++ Format.line))
-    --   ")")
-    --   if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-    --     Format.bracket "(" (
-    --       "∀ " ++ bound_names ++ Format.line ++ 
-    --       (Ty.repr ty_pl n)
-    --     ) ")"
-    --   else
-    --     Format.bracket "(" (
-    --       "∀ " ++ bound_names ++  Format.line ++ 
-    --       (Ty.repr ty_pl n) ++ " | " ++
-    --       (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
-    --     ) ")"
-    | .exis ty_c1 ty_c2 ty_pl =>
+    | .univ ty_c1 ty_c2 ty_pl =>
       if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-        Format.bracket "(" (Ty.repr ty_pl n) ")"
+        Format.bracket "(" (
+          "# " ++ (Ty.repr ty_pl n)
+        ) ")"
       else
         Format.bracket "(" (
+          "# " ++ (Ty.repr ty_pl n) ++ " | " ++
+          (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
+        ) ")"
+    | .exis ty_c1 ty_c2 ty_pl =>
+      if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
+        Format.bracket "{" (Ty.repr ty_pl n) "}"
+      else
+        Format.bracket "{" (
           (Ty.repr ty_pl n) ++ " | " ++
           (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
-        ) ")"
+        ) "}"
     | .recur name ty1 =>
       Format.bracket "(" (
         name ++  " @ " ++ (Ty.repr ty1 n)
       ) ")"
-    -- | .corec name ty1 =>
-    --   Format.bracket "(" (
-    --     "ν " ++ name ++  " . " ++ (Ty.repr ty1 n)
-    --   ) ")"
 
     instance : Repr Ty where
       reprPrec := Ty.repr
@@ -97,7 +86,7 @@ namespace Surface
     syntax "⟨" term "⟩" : surftype 
     syntax:100 num : surftype 
     syntax:100 ident : surftype
-    -- syntax "[" surftype,+ "]" : surftype 
+    syntax "[" surftype,+ "]" : surftype 
     -- type
     syntax:90 "unit" : surftype
     syntax:90 "⊥" : surftype
@@ -109,9 +98,11 @@ namespace Surface
     syntax:60 surftype:61 "+" surftype:60 : surftype
     syntax:70 surftype:71 "∧" surftype:70 : surftype
     syntax:70 surftype:71 "×" surftype:70 : surftype
-    syntax:40 surftype:40 "|" surftype "≤" surftype: surftype 
-    syntax:40 "[" surftype:40 "]" : surftype 
-    syntax:30 surftype "@" surftype : surftype 
+    syntax "{" surftype:41 "|" surftype "<:" surftype "}" : surftype
+    syntax "{" surftype:41 "}" : surftype  
+    syntax "#" surftype:41 "|" surftype "<:" surftype: surftype 
+    syntax "#" surftype:41 : surftype 
+    syntax:40 surftype "@" surftype : surftype 
 
 
     syntax "[surftype: " surftype "]" : term
@@ -129,8 +120,8 @@ namespace Surface
     | `([surftype: $n:num ]) => `($n)
     | `([surftype: $a:ident]) => `(Ty.id $(Lean.quote (toString a.getId)))
     -- context 
-    -- | `([surftype: [ $x:surftype ] ]) => `([ [surftype: $x ] ])
-    -- | `([surftype: [ $x,$xs:surftype,* ] ]) => `([surftype: [ $x ] ] ++ [surftype: [$xs,*] ])
+    | `([surftype: [ $x:surftype ] ]) => `([ [surftype: $x ] ])
+    | `([surftype: [ $x,$xs:surftype,* ] ]) => `([surftype: [ $x ] ] ++ [surftype: [$xs,*] ])
     -- Ty 
     | `([surftype: unit ]) => `(Ty.unit)
     | `([surftype: ⊥ ]) => `(Ty.bot)
@@ -142,29 +133,28 @@ namespace Surface
     | `([surftype: $a + $b ]) => `(Ty.union (Ty.tag "inl" [surftype: $a ]) (Ty.tag "inr" [surftype: $b ]))
     | `([surftype: $a ∧ $b ]) => `(Ty.inter [surftype: $a ] [surftype: $b ])
     | `([surftype: $a × $b ]) => `(Ty.inter (Ty.field "l" [surftype: $a ]) (Ty.field "r" [surftype: $b ]))
-    | `([surftype: $d | $b ≤ $c  ]) => `(Ty.exis [surftype: $b ] [surftype: $c ] [surftype: $d ])
-    | `([surftype: [$b:surftype]]) => `(Ty.exis 
-          [surftype: unit ] [surftype: unit ] [surftype: $b ] )
+    | `([surftype: { $d | $b <: $c } ]) => `(Ty.exis [surftype: $b ] [surftype: $c ] [surftype: $d ])
+    | `([surftype: { $b:surftype } ]) => `(Ty.exis [surftype: unit ] [surftype: unit ] [surftype: $b ] )
+    | `([surftype: # $d | $b <: $c  ]) => `(Ty.univ [surftype: $b ] [surftype: $c ] [surftype: $d ])
+    | `([surftype: # $b:surftype]) => `(Ty.univ [surftype: unit ] [surftype: unit ] [surftype: $b ] )
     | `([surftype: $name @ $a ]) => `(Ty.recur (idname [surftype: $name ]) [surftype: $a ])
 
     #check [surftype: (x) ]
     #check [surftype: [x] ]
-    #eval [surftype: thing ∨ unit | thing ≤ unit ]
+    #eval [surftype: {thing ∨ unit | thing <: unit }]
     #eval [surftype: succ*x ]
+    #eval [surftype: 
+        (zero*unit × nil*unit) ∨ 
+        {succ*nat × cons*list | nat × list <: nat_list}
+    ]
 
     #eval [surftype: 
       nat_list @ (
         (zero*unit × nil*unit) ∨ 
-        (succ*nat × cons*list | nat × list ≤ nat_list)
+        {succ*nat × cons*list | nat × list <: nat_list}
       )
     ]
 
-    -- #eval [surftype: 
-    --   nat_to_list @ (
-    --     (zero*unit -> nil*unit) ∧ 
-    --     (succ*nat -> cons*list | nat_to_list ≤ nat -> list)
-    --   )
-    -- ]
 
     -- #eval [surftype: 
     --   nat -> (list | nat × list ≤ nat_list) 
@@ -233,7 +223,13 @@ namespace Surface
       let (stack1, ty1') <- (normalize (names ++ bound_vars) ty1) 
       let (stack2, ty2') <- (normalize (names ++ bound_vars) ty2) 
       let (stack3, ty3') <- (normalize (names ++ bound_vars) ty3) 
-      some (names :: stack1 ++ stack2 ++ stack3, .exis names.length ty1' ty2' ty3')
+      some (names :: stack1 ++ stack2 ++ stack3, .exis ty1' ty2' ty3')
+    | .univ ty1 ty2 ty3 => do
+      let names <- pattern_abstraction ty3
+      let (stack1, ty1') <- (normalize (names ++ bound_vars) ty1) 
+      let (stack2, ty2') <- (normalize (names ++ bound_vars) ty2) 
+      let (stack3, ty3') <- (normalize (names ++ bound_vars) ty3) 
+      some (names :: stack1 ++ stack2 ++ stack3, .univ ty1' ty2' ty3')
     | .recur name ty => do
       let (stack, ty') <- (normalize (name :: bound_vars) ty) 
       some ([name] :: stack, .recur ty')
@@ -267,14 +263,27 @@ namespace Surface
       let ty1' <- (denormalize names stack ty1)   
       let ty2' <- (denormalize names stack ty2)   
       some (.case ty1' ty2') 
-    | .exis n ty1 ty2 ty3 => 
+    | .exis ty1 ty2 ty3 => 
       match stack with
       | names' :: stack'  =>
+        let n := Normal.Ty.pattern_abstraction ty1
         if names'.length == n then do
           let ty1' <- (denormalize (names' ++ names) stack' ty1)   
           let ty2' <- (denormalize (names' ++ names) stack' ty2)   
           let ty3' <- (denormalize (names' ++ names) stack' ty3)   
           some (.exis ty1' ty2' ty3') 
+        else
+          none
+      | [] => none
+    | .univ ty1 ty2 ty3 => 
+      match stack with
+      | names' :: stack'  =>
+        let n := Normal.Ty.pattern_abstraction ty1
+        if names'.length == n then do
+          let ty1' <- (denormalize (names' ++ names) stack' ty1)   
+          let ty2' <- (denormalize (names' ++ names) stack' ty2)   
+          let ty3' <- (denormalize (names' ++ names) stack' ty3)   
+          some (.univ ty1' ty2' ty3') 
         else
           none
       | [] => none
@@ -287,7 +296,6 @@ namespace Surface
           some (.recur name ty') 
         | _ => none
       | [] => none
-    | _ => none
 
   end Ty
 
@@ -566,5 +574,19 @@ namespace Surface
       let content' <- denormalize abstraction stack content 
       some (.fix content')
 
+
+
+--------------------------------------
+
+  def nat_list := [surftype: 
+    nat_list @ (
+      (zero*unit × nil*unit) ∨ 
+      {succ*nat × cons*list | nat × list <: nat_list}
+    )
+  ]
+
+  def nat_to_list := [surftype:
+    # nat -> {list | nat × list <: nat_list}
+  ] 
 
 end Surface
