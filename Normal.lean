@@ -41,7 +41,7 @@ namespace Normal
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
   | case : Ty -> Ty -> Ty
-  | quant : Ty -> Ty -> Ty -> Ty
+  | exis : Ty -> Ty -> Ty -> Ty
   | recur : Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
   -- #check List.repr
@@ -74,7 +74,7 @@ namespace Normal
     Format.bracket "(" ((Ty.repr ty1 n) ++ " ∧ " ++ (Ty.repr ty2 n)) ")"
   | .case ty1 ty2 =>
     Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
-  | .quant ty_c1 ty_c2 ty_pl =>
+  | .exis ty_c1 ty_c2 ty_pl =>
     if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
       if ty_pl == (Ty.bvar 0) then
         "⊤"
@@ -214,7 +214,7 @@ namespace Normal
   | `([norm: β[$n] :]) => `(Ty.bvar [norm: $n :])
   | `([norm: α[$n:slm] :]) => `(Ty.fvar [norm: $n :])
   | `([norm: unit :]) => `(Ty.unit)
-  | `([norm: ⊤ :]) => `(Ty.quant Ty.unit Ty.unit (Ty.bvar 0) )
+  | `([norm: ⊤ :]) => `(Ty.exis Ty.unit Ty.unit (Ty.bvar 0) )
   | `([norm: ⊥ :]) => `(Ty.bot)
   | `([norm: $a * $b:slm :]) => `(Ty.tag [norm: $a :] [norm: $b :])
   | `([norm: $a : $b:slm :]) => `(Ty.field [norm: $a :] [norm: $b :])
@@ -223,8 +223,8 @@ namespace Normal
   | `([norm: $a + $b :]) => `(Ty.union (Ty.tag "inl" [norm: $a :]) (Ty.tag "inr" [norm: $b :]))
   | `([norm: $a ∧ $b :]) => `(Ty.inter [norm: $a :] [norm: $b :])
   | `([norm: $a × $b :]) => `(Ty.inter (Ty.field "l" [norm: $a :]) (Ty.field "r" [norm: $b :]))
-  | `([norm: { $d | $b ≤ $c }  :]) => `(Ty.quant [norm: $b :] [norm: $c :] [norm: $d :])
-  | `([norm: { $b:slm } :]) => `(Ty.quant Ty.unit Ty.unit [norm: $b :] )
+  | `([norm: { $d | $b ≤ $c }  :]) => `(Ty.exis [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: { $b:slm } :]) => `(Ty.exis Ty.unit Ty.unit [norm: $b :] )
   | `([norm: μ $a :]) => `(Ty.recur [norm: $a :])
   --Tm
   | `([norm: _ :]) => `(Tm.hole)
@@ -264,7 +264,7 @@ namespace Normal
   | .union ty1 ty2 => .union (Ty.subst m ty1) (Ty.subst m ty2)
   | .inter ty1 ty2 => .inter (Ty.subst m ty1) (Ty.subst m ty2)
   | .case ty1 ty2 => .case (Ty.subst m ty1) (Ty.subst m ty2)
-  | .quant ty_c1 ty_c2 ty => (.quant
+  | .exis ty_c1 ty_c2 ty => (.exis
     (Ty.subst m ty_c1) (Ty.subst m ty_c2) 
     (Ty.subst m ty)
   )
@@ -321,8 +321,8 @@ namespace Normal
   | .union ty1 ty2 => Ty.unionize (Ty.simplify ty1) (Ty.simplify ty2)
   | .inter ty1 ty2 => Ty.intersect (Ty.simplify ty1) (Ty.simplify ty2)
   | .case ty1 ty2 => Ty.case (Ty.simplify ty1) (Ty.simplify ty2)
-  | .quant cty1 cty2 ty => 
-      Ty.quant 
+  | .exis cty1 cty2 ty => 
+      Ty.exis 
         (Ty.simplify cty1) (Ty.simplify cty2)
         (Ty.simplify ty)
   | .recur ty => Ty.recur (Ty.simplify ty)
@@ -367,7 +367,7 @@ namespace Normal
   | .union ty1 ty2 => Ty.free_vars ty1 ; Ty.free_vars ty2
   | .inter ty1 ty2 => Ty.free_vars ty1 ; Ty.free_vars ty2
   | .case ty1 ty2 => Ty.free_vars ty1 ; Ty.free_vars ty2
-  | .quant ty_c1 ty_c2 ty =>
+  | .exis ty_c1 ty_c2 ty =>
     -- (Ty.free_vars ty_c1);(Ty.free_vars ty_c2);(Ty.free_vars ty)
     (Ty.free_vars ty)
   | .recur ty => (Ty.free_vars ty)
@@ -391,7 +391,7 @@ namespace Normal
   | .union ty1 ty2 => Ty.signed_free_vars posi ty1 ; Ty.signed_free_vars posi ty2
   | .inter ty1 ty2 => Ty.signed_free_vars posi ty1 ; Ty.signed_free_vars posi ty2
   | .case ty1 ty2 => (Ty.signed_free_vars (!posi) ty1) ; Ty.signed_free_vars posi ty2
-  | .quant ty_c1 ty_c2 ty =>
+  | .exis ty_c1 ty_c2 ty =>
     (Ty.signed_free_vars posi ty)
   | .recur ty => (Ty.signed_free_vars posi ty)
 
@@ -431,9 +431,9 @@ namespace Normal
   | .union ty1 ty2 => .union (Ty.generalize fids start ty1) (Ty.generalize fids start ty2)
   | .inter ty1 ty2 => .inter (Ty.generalize fids start ty1) (Ty.generalize fids start ty2)
   | .case ty1 ty2 => .case (Ty.generalize fids start ty1) (Ty.generalize fids start ty2)
-  | .quant ty_c1 ty_c2 ty => 
+  | .exis ty_c1 ty_c2 ty => 
     let n := Ty.pattern_abstraction ty
-    (.quant
+    (.exis
       (Ty.generalize fids (start + n) ty_c1) (Ty.generalize fids (start + n) ty_c2)
       (Ty.generalize fids (start + n) ty)
     )
@@ -482,12 +482,11 @@ namespace Normal
     if fids.isEmpty then
       ty
     else
-      let ty_ex := [norm:
+      [norm:
         {⟨Ty.generalize fids 0 ty⟩ | 
           ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ 
         }
       :]
-      [norm: {β[0] -> β[1] | β[0] -> β[1] ≤ ⟨ty_ex⟩} :]
 
     -- -- generalization based on substitution 
     -- let ty1' := Ty.reduce env_ty ty1'
@@ -517,9 +516,9 @@ namespace Normal
   | .union ty1 ty2 => .union (Ty.instantiate start args ty1) (Ty.instantiate start args ty2)
   | .inter ty1 ty2 => .inter (Ty.instantiate start args ty1) (Ty.instantiate start args ty2)
   | .case ty1 ty2 => .case (Ty.instantiate start args ty1) (Ty.instantiate start args ty2)
-  | .quant ty_c1 ty_c2 ty => 
+  | .exis ty_c1 ty_c2 ty => 
     let n := Ty.pattern_abstraction ty
-    (.quant
+    (.exis
       (Ty.instantiate (start + n) args ty_c1) (Ty.instantiate (start + n) args ty_c2)
       (Ty.instantiate (start + n) args ty)
     )
@@ -560,9 +559,9 @@ namespace Normal
   | .inter ty1 ty2 =>
     Ty.inter (Ty.subst_default sign ty1) (Ty.subst_default sign ty2)
   | .case ty1 ty2 => Ty.case (Ty.subst_default (!sign) ty1) (Ty.subst_default sign ty2)
-  | .quant cty1 cty2 ty => 
+  | .exis cty1 cty2 ty => 
       -- can't sub away if constrained
-      Ty.quant cty1 cty2 ty
+      Ty.exis cty1 cty2 ty
   | .recur ty => Ty.recur (Ty.subst_default sign ty)
 
 
@@ -636,13 +635,13 @@ namespace Normal
   -- def extract_premise (start : Nat) : Ty -> Option Ty 
   -- | .univ n [norm: unit :] [norm: unit :] ty3 => 
   --   Option.bind (extract_premise (start + n) ty3) (fun ty3_prem =>
-  --     (Ty.quant n [norm: unit :] [norm: unit :] ty3_prem)
+  --     (Ty.exis n [norm: unit :] [norm: unit :] ty3_prem)
   --   )
   -- | .univ n (.bvar id) ty0  ty3 => 
   --   if id == start + n then
   --     Option.bind (extract_premise (start + n) ty0) (fun ty0_prem => 
   --     Option.bind (extract_premise (start + n) ty3) (fun ty3_prem =>
-  --       (Ty.quant n ty0_prem (.bvar (start + n)) ty3_prem)
+  --       (Ty.exis n ty0_prem (.bvar (start + n)) ty3_prem)
   --     ))
   --   else 
   --     none
@@ -666,13 +665,13 @@ namespace Normal
   -- -- TODO: convert universal to arrow type with variable parameter type
   -- | .univ n [norm: unit :] [norm: unit :] ty3 => 
   --   Option.bind (extract_relation (start + n) ty3) (fun ty3_rel =>
-  --     (Ty.quant n [norm: unit :] [norm: unit :] ty3_rel)
+  --     (Ty.exis n [norm: unit :] [norm: unit :] ty3_rel)
   --   )
   -- | .univ n (.bvar id) ty0 ty3 => 
   --   if id == start + n then
   --     Option.bind (extract_relation (start + n) ty0) (fun ty0_rel =>
   --     Option.bind (extract_relation (start + n) ty3) (fun ty3_rel =>
-  --       (Ty.quant n ty0_rel (.bvar (start + n)) ty3_rel)
+  --       (Ty.exis n ty0_rel (.bvar (start + n)) ty3_rel)
   --     ))
   --   else 
   --     none
@@ -722,7 +721,7 @@ namespace Normal
     match linearize_fields (Ty.inter ty1 ty2) with
     | .none => {} 
     | .some fields => PHashMap.from_list (fields.map (fun (l, _) => (l, Unit.unit)))
-  | .quant ty_c1 ty_c2 ty => (extract_record_labels ty)
+  | .exis ty_c1 ty_c2 ty => (extract_record_labels ty)
   | .recur ty => extract_record_labels ty
   | _ => {} 
 
@@ -833,7 +832,7 @@ namespace Normal
       | [] => false
       | fields => fields.any (fun ty' => Ty.wellfounded n ty')
     | .case _ _ => false
-    | .quant ty_c1 ty_c2 ty' => 
+    | .exis ty_c1 ty_c2 ty' => 
       let n' := Ty.pattern_abstraction ty' 
       Ty.wellfounded (n + n') ty'
     | .recur _ => false 
@@ -850,7 +849,7 @@ namespace Normal
     Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
     -- liberally quantified 
-    | ty', .quant ty_c1 ty_c2 ty =>
+    | ty', .exis ty_c1 ty_c2 ty =>
       let n := Ty.pattern_abstraction ty
       let (i, args, frozen) := (
         i + n, 
@@ -868,7 +867,7 @@ namespace Normal
     -- opaquely quantified 
     -- TODO: consider requiring normal form check to ensure safety
     -- or using min/max to check both extremes
-    | .quant ty_c1 ty_c2 ty1, ty2 =>
+    | .exis ty_c1 ty_c2 ty1, ty2 =>
       let n := Ty.pattern_abstraction ty1
       let bound_start := i
       let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
@@ -1156,11 +1155,11 @@ namespace Normal
   --     let (i, cty2) := Ty.refresh i cty2
   --     let (i, ty) := Ty.refresh i ty
   --     (i, .univ n cty1 cty2 ty)
-  --   | .quant n cty1 cty2 ty => 
+  --   | .exis n cty1 cty2 ty => 
   --     let (i, cty1) := Ty.refresh i cty1
   --     let (i, cty2) := Ty.refresh i cty2
   --     let (i, ty) := Ty.refresh i ty
-  --     (i, .quant n cty1 cty2 ty)
+  --     (i, .exis n cty1 cty2 ty)
   --   | .recur ty =>
   --     let (i, ty) := Ty.refresh i ty
   --     (i, .recur ty)
@@ -1482,13 +1481,14 @@ namespace Normal
     let (_, u_env) := (infer i {} {} t ty)
     List.foldr (fun (env_ty, ty') ty_acc => 
       let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
-      let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
+      ty'
+      -- let pos_neg_set := PHashMap.intersect (Ty.signed_free_vars true ty') (Ty.signed_free_vars false ty')
 
-      let fvs := pos_neg_set.toList.reverse.bind (fun (k, _) => [k])
-      if fvs.isEmpty then
-        Ty.simplify (Ty.subst_default true ty')
-      else
-        Ty.simplify (Ty.subst_default true (Ty.generalize fvs 0 ty'))
+      -- let fvs := pos_neg_set.toList.reverse.bind (fun (k, _) => [k])
+      -- if fvs.isEmpty then
+      --   Ty.simplify (Ty.subst_default true ty')
+      -- else
+      --   Ty.simplify (Ty.subst_default true (Ty.generalize fvs 0 ty'))
     ) Ty.bot u_env
 
   partial def infer_reduce (i : Nat) (t : Tm) : Ty := infer_reduce_wt (i + 1) t (Ty.fvar i)
@@ -1569,7 +1569,7 @@ namespace Normal
     let (ls_t1, ls_f1) := extract_labels ty1
     let (ls_t2, ls_f2) := extract_labels ty2
     (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
-  | .quant ty_c1 ty_c2 ty =>
+  | .exis ty_c1 ty_c2 ty =>
     let (ls_tc1, ls_fc1) := extract_labels ty_c1
     let (ls_tc2, ls_fc2) := extract_labels ty_c2
     let (ls_t, ls_f) := extract_labels ty
@@ -1938,6 +1938,32 @@ def plus := [norm:
 :]
 
 
+---------- generics ----------------
+
+-- TODO: case variable quantification seems a bit brittle
+-- TODO: does instantiation and generalization need to be updated for case variables?
+-- {β[1] | (β[1] × (β[0] × unit)) ≤ ((β[0] -> (β[0] × β[0])) × (hello*unit × unit))}
+-- ≤ 
+-- world*unit -> α[0]
+
+
+#eval infer_reduce 10 [norm:
+  ((λ cons;(y[0], y[1]) => y[0]) (cons;(ooga;(), booga;())))
+:]
+
+-- TODO: let doesn't generalize properly
+#eval infer_reduce 10 [norm:
+  let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
+  (y[0] cons;(ooga;(), booga;()))  
+:]
+
+
+#eval infer_reduce 0 [norm:
+  let y[0] : {β[1] | β[1] ≤ (β[0] -> (β[0] × β[0]))} = _ => 
+  (y[0] hello;())
+:]
+
+
 ---------- adjustment ----------------
 
 -- widening
@@ -1951,11 +1977,19 @@ def plus := [norm:
   (y[0] hello;())
 :]
 
+
 #eval infer_reduce 0 [norm:
   let y[0] : β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   let y[0] = (y[0] hello;()) => 
   (y[0] world;())
 :]
+
+#eval infer_reduce 0 [norm:
+  let y[0] : β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] = (y[0] hello;()) => 
+  y[0]
+:]
+
 
 -- narrowing
 #eval infer_reduce 0 [norm:
@@ -1965,6 +1999,7 @@ let y[0] : dos*unit -> unit = _ =>
   ((y[2] y[0]), (y[1] y[0])))
 :]
 
+-- TODO
 #eval infer_reduce 0 [norm:
 let y[0] : uno*unit -> unit = _ => 
 let y[0] : dos*unit -> unit = _ =>
