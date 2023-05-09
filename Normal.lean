@@ -510,21 +510,23 @@ namespace Normal
     let ty_lhs := nested_pairs lhs
     let ty_rhs := nested_pairs rhs
 
+
+
+    -- let fids := List.filter (fun id => id >= boundary) (
+    --     (Ty.free_vars ty; Ty.free_vars ty_lhs ; Ty.free_vars ty_rhs).toList.bind (fun (k , _) => [k])
+    -- )
+
     let fids := List.filter (fun id => id >= boundary) (
-        (Ty.free_vars ty; Ty.free_vars ty_lhs ; Ty.free_vars ty_rhs).toList.bind (fun (k , _) => [k])
+        (Ty.free_vars ty).toList.bind (fun (k , _) => [k])
     )
 
     if fids.isEmpty then
       ty
     else
-      let exis_ty := [norm:
-        {⟨Ty.generalize fids 0 ty⟩ | 
+      [norm:
+        ∀ ⟨Ty.generalize fids 0 ty⟩ | 
           ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ 
-        }
       :]
-
-      let univ_ty := [norm: ∀ β[0] | β[0] ≤ ⟨exis_ty⟩ :]
-      univ_ty
 
 
     -- -- generalization based on substitution 
@@ -2048,73 +2050,43 @@ def plus := [norm:
 
 ---------- generics ----------------
 
--- TODO: case variable quantification seems a bit brittle
--- TODO: does instantiation and generalization need to be updated for case variables?
--- {β[1] | (β[1] × (β[0] × unit)) ≤ ((β[0] -> (β[0] × β[0])) × (hello*unit × unit))}
--- ≤ 
--- world*unit -> α[0]
-
-
 #eval infer_reduce 10 [norm:
   ((λ cons;(y[0], y[1]) => y[0]) (cons;(ooga;(), booga;())))
 :]
 
--- TODO: let doesn't generalize properly
 #eval infer_reduce 10 [norm:
   let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
   y[0]  
 :]
 
-#eval unify_reduce 10
-[norm: α[7] -> α[8]:]
-[norm:
-  {(cons*(β[0] × β[1]) -> β[0]) | (β[0] × unit) ≤ (β[2] × unit)}
+#eval infer_reduce 10 [norm:
+  let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
+  (y[0] (cons;(ooga;(), booga;())))  
 :]
-[norm: α[7] -> α[8]:]
-
-#eval unify_reduce 10
-[norm:
-  ∀ (cons*(β[2] × α[11]) -> β[2])
-  -- {(cons*(β[0] × β[1]) -> β[0]) | (β[0] × unit) ≤ (β[2] × unit)}
-  -- cons*(β[2] × α[11])
-:]
-[norm: cons*(ooga*unit × booga*unit) -> α[7]:]
-[norm: α[7]:]
-
--- #eval infer_reduce 10 [norm:
---   let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
---   (y[0] cons;(ooga;(), booga;()))  
--- :]
-
-
-#eval infer_reduce 0 [norm:
-  let y[0] : {β[1] | β[1] ≤ (β[0] -> (β[0] × β[0]))} = _ => 
-  (y[0] hello;())
-:]
-
 
 ---------- adjustment ----------------
 
 -- widening
+-- TODO
 #eval infer_reduce 0 [norm:
-  let y[0] : β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   ((y[0] hello;()) world;())
 :]
 
 #eval infer_reduce 0 [norm:
-  let y[0] : β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   (y[0] hello;())
 :]
 
 
 #eval infer_reduce 0 [norm:
-  let y[0] : β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   let y[0] = (y[0] hello;()) => 
   (y[0] world;())
 :]
 
 #eval infer_reduce 0 [norm:
-  let y[0] : β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
   let y[0] = (y[0] hello;()) => 
   y[0]
 :]
@@ -2128,7 +2100,6 @@ let y[0] : dos*unit -> unit = _ =>
   ((y[2] y[0]), (y[1] y[0])))
 :]
 
--- TODO
 #eval infer_reduce 0 [norm:
 let y[0] : uno*unit -> unit = _ => 
 let y[0] : dos*unit -> unit = _ =>
