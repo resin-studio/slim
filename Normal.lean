@@ -2122,147 +2122,99 @@ let y[0] : dos*unit -> unit = _ =>
   (y[0], y[1]))
 :]
 
--- ----------------------------------------
+----------------------------------
+#eval [norm: σ[x := hello;()] :]
 
--- def nat_list := [norm: 
---   μ 1 . (
---     (zero*unit × nil*unit) ∨ 
---     (∃ 2 . (succ*β[0] × cons*β[1]) | 
---       β[0] × β[1] ≤ β[2])
---   )
--- :]
+#eval unify_decide 0 
+  [norm: hello*unit :] 
+  [norm: α[0] :] 
 
--- def even_list := [norm: 
---   μ 1 . (
---     (zero*unit × nil*unit) ∨ 
---     (∃ 2 . (succ*succ*β[0] × cons*cons*β[1]) | 
---       β[0] × β[1] ≤ β[2])
---   )
--- :]
+-- not well foundend: induction untagged 
+#eval unify_decide 0 
+  [norm: hello*unit :] 
+  [norm: μ wrong*unit ∨ β[0] :] 
 
--- #eval nat_list
+-- potentially diverges - inductive type not well founded
+#eval unify_decide 0 
+  [norm: hello*unit :] 
+  [norm: μ β[0] :] 
 
--- #eval unify_decide 0 
---   even_list
---   nat_list
--- -- == true
+def bad_nat_list := [norm: 
+  μ 
+    (zero*unit × nil*unit) ∨ 
+    {(β[0] × β[1]) | β[0] × β[1] ≤ β[2]}
+:]
 
--- #eval unify_decide 0 
---   nat_list
---   even_list
--- -- == false 
+#eval unify_decide 0 
+  [norm: zero*unit × nil*unit :] 
+  bad_nat_list
 
--- -- env_complextive let-poly
--- -- env_complextives cannot escape unification back into inference
--- #eval infer_reduce 0 [norm:
---   let y[0] : ⟨nat_list⟩ = _ =>
---   y[0] 
--- :]
+def other_nat_list := [norm: 
+  μ {(succ*β[0] × cons*β[1]) | β[0] × β[1] ≤ β[2]}
+:]
 
--- ----------
--- #eval [norm: σ[x := hello;()] :]
+#eval unify_decide 0 
+  [norm: succ*zero*unit × cons*nil*unit :] 
+  other_nat_list
 
 
+#eval infer_reduce 10 [norm:
+fix(λ y[0] => λ[
+  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+  for (zero;(), y[0]) => y[0],
+  for (y[0], zero;()) => y[0] 
+])
+:]
 
--- #eval unify_decide 0 
---   [norm: hello*unit :] 
---   [norm: α[0] :] 
+-- TODO
+#eval infer_reduce 10 [norm:
+(fix(λ y[0] => λ[
+  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+  for (zero;(), y[0]) => y[0],
+  for (y[0], zero;()) => y[0] 
+]) (succ;succ;zero;(), succ;succ;succ;zero;()))
+:]
 
--- -- ERROR: potentially diverges - not well foundend: induction untagged 
--- #eval unify_decide 0 
---   [norm: hello*unit :] 
---   [norm: μ 1 . wrong*unit ∨ β[0] :] 
+----------------------------------
 
--- -- ERROR: potentially diverges - inductive type not well founded
--- #eval unify_decide 0 
---   [norm: hello*unit :] 
---   [norm: μ 1 . β[0] :] 
-
--- def bad_nat_list := [norm: 
---   μ 1 . (
---     (zero*unit × nil*unit) ∨ 
---     (∃ 2 . (β[0] × β[1]) | 
---       β[0] × β[1] ≤ β[2])
---   )
--- :]
-
--- #eval unify_decide 0 
---   [norm: zero*unit × nil*unit :] 
---   bad_nat_list
-
--- def other_nat_list := [norm: 
---   μ 1 . (
---     (∃ 2 . (succ*β[0] × cons*β[1]) | 
---       β[0] × β[1] ≤ β[2])
---   )
--- :]
-
--- #eval unify_decide 0 
---   [norm: succ*zero*unit × cons*nil*unit :] 
---   other_nat_list
+def gt := [norm: 
+  μ  
+    {succ*β[0] × zero*unit} ∨ 
+    {succ*β[0] × succ*β[1] | (β[0] × β[1]) ≤ β[2]}
+:]
 
 
--- #eval infer_reduce 10 [norm:
--- fix(λ y[0] => λ[
---   for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
---   for (zero;(), y[0]) => y[0],
---   for (y[0], zero;()) => y[0] 
--- ])
--- :]
+def spec := [norm: 
+(α[0] × α[1]) -> (
+  { β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) ≤ ⟨plus⟩} ∨
+  { β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) ≤ ⟨plus⟩}
+)  
+:]
 
--- #eval [norm:
--- (ν 1 .
---   (∀ 3 . ((succ*β[1] × succ*β[2]) -> β[0]) | β[3] ≤ ((β[1] × β[2]) -> β[0])) ∧ 
---   (∀ 1 . ((zero*unit × β[0]) -> β[0])) ∧ 
---   (∀ 1 . ((β[0] × zero*unit) -> β[0]))
--- )
--- :]
+-- Note: is this in effect, the same thing as PDR/IC3
+-- That is, whatever is learned to strengthen the premise 
+-- is automatically applied to preceding iterations 
+-- due to the wrapping type with the co-inductive nu binder
+-- TODO
+#eval infer_reduce 10 
+[norm:
+let y[0] : ⟨spec⟩ = fix(λ y[0] => λ[
+  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+  for (zero;(), y[0]) => y[0],
+  for (y[0], zero;()) => y[0] 
+]) =>
+y[0]
+:]
 
--- #eval infer_reduce 10 [norm:
--- (fix(λ y[0] => λ[
---   for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
---   for (zero;(), y[0]) => y[0],
---   for (y[0], zero;()) => y[0] 
--- ]) (succ;succ;zero;(), succ;succ;succ;zero;()))
--- :]
-
--- def gt := [norm: 
---   μ 1 . 
---     (∃ 1 . succ*β[0] × zero*unit) ∨ 
---     (∃ 2 . succ*β[0] × succ*β[1] | (β[0] × β[1]) ≤ β[2])
--- :]
-
-
--- def spec := [norm: 
--- (α[0] × α[1]) -> (
---   (∃ 1 . β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) ≤ ⟨plus⟩) ∨
---   (∃ 1 . β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) ≤ ⟨plus⟩)
--- )  
--- :]
-
--- -- Note: is this in effect, the same thing as PDR/IC3
--- -- That is, whatever is learned to strengthen the premise 
--- -- is automatically applied to preceding iterations 
--- -- due to the wrapping type with the co-inductive nu binder
--- #eval infer_reduce 10 
--- [norm:
--- let y[0] : ⟨spec⟩ = fix(λ y[0] => λ[
---   for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
---   for (zero;(), y[0]) => y[0],
---   for (y[0], zero;()) => y[0] 
--- ]) =>
--- y[0]
--- :]
-
--- #eval infer_reduce 10 
--- [norm:
--- let y[0] = fix(λ y[0] => λ[
---   for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
---   for (zero;(), y[0]) => y[0],
---   for (y[0], zero;()) => y[0] 
--- ]) =>
--- y[0]
--- :]
+#eval infer_reduce 10 
+[norm:
+let y[0] = fix(λ y[0] => λ[
+  for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+  for (zero;(), y[0]) => y[0],
+  for (y[0], zero;()) => y[0] 
+]) =>
+y[0]
+:]
 
 
 -- def diff := [norm:
@@ -2274,15 +2226,25 @@ let y[0] : dos*unit -> unit = _ =>
 -- #eval rewrite_function_type diff
 
 
--- #eval infer_reduce 10 
--- [norm:
--- let y[0] : (
---   ∀ 1 . 
---   (hello*β[0] -> world*unit) ∧ 
---   (one*β[0] -> two*unit)
--- ) = _ =>
--- (y[0] one;())
--- :]
+#eval infer_reduce 10 
+[norm:
+let y[0] : (
+  (∀ (hello*β[0] -> world*unit)) ∧ 
+  (∀ one*β[0] -> two*unit)
+) = _ =>
+(y[0] one;())
+:]
+
+#eval infer_reduce 10 
+[norm:
+let y[0] : (
+  (∀ 
+    (hello*β[0] -> world*unit) ∧ 
+    (one*β[0] -> two*unit)
+  )
+) = _ =>
+(y[0] one;())
+:]
 
 -- def even_to_list := [norm: 
 --   ν 1 . (
