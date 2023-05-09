@@ -582,21 +582,10 @@ namespace Normal
     if fids.isEmpty then
       ty
     else
-      -- invert existential quantification into universal
-      -- invert constraint (rhs <: lhs)
       [norm:
         ∀ ⟨fids.length⟩ # ⟨Ty.generalize fids 0 ty⟩ | 
-          ⟨Ty.generalize fids 0 ty_rhs⟩ <: ⟨Ty.generalize fids 0 ty_lhs⟩
+          ⟨Ty.generalize fids 0 ty_lhs⟩ <: ⟨Ty.generalize fids 0 ty_rhs⟩
       :]
-
-
-    -- -- generalization based on substitution 
-    -- let ty1' := Ty.reduce env_ty ty1'
-    -- -- prevent over generalizing by filtering at boundary 
-    -- let fvs := List.filter (fun id => id >= free_var_boundary) (
-    --   (Ty.free_vars ty1').toList.reverse.bind (fun | (.fvar k , _) => [k] | _ => [])
-    -- )
-    -- let ty1' := if fvs.isEmpty then ty1' else [norm: ∀ ⟨fvs.length⟩ => ⟨Ty.generalize fvs 0 ty1'⟩ :]
 
 
 
@@ -1108,6 +1097,19 @@ namespace Normal
           (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty' ty))])
         else
           (i, u_env_ty)
+    -- | ty', .fvar id => 
+    --   match env_ty.find? id with 
+    --   | none => 
+    --     let adjustable := frozen.find? id == .none
+    --     let (i, ty'') := (
+    --       if adjustable then
+    --         (i + 1, Ty.unionize (Ty.fvar i) ty')   
+    --       else
+    --         (i, ty')   
+    --     )
+    --     (i, [env_ty.insert id (roll_recur id env_ty ty'')])
+    --   | some ty => 
+    --     (unify i env_ty env_complex frozen ty' ty) 
 
     | .case ty1 ty2, .case ty3 ty4 =>
 
@@ -1480,7 +1482,10 @@ namespace Normal
   partial def infer (i : Nat) (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
   (Nat × List (PHashMap Nat Ty × Ty)) :=
   match t with
-  | Tm.hole => (i, [(env_ty, ty)])
+  | Tm.hole => 
+    let (i, ty') := (i + 1, Ty.fvar i)
+    let (i, u_env_ty) := (Ty.unify i env_ty {} {} ty' ty) 
+    (i, u_env_ty.map fun env_ty => (env_ty, ty'))
   | Tm.unit => 
     let (i, u_env_ty) := (Ty.unify i env_ty {} {} Ty.unit ty) 
     (i, u_env_ty.map fun env_ty => (env_ty, Ty.unit))
@@ -1578,9 +1583,9 @@ namespace Normal
 
     let free_var_boundary := i
     Ty.assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
-      let ty1' := Ty.pack free_var_boundary env_ty ty1'
+      let ty1_schema := Ty.pack free_var_boundary env_ty ty1'
 
-      let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1')]) 
+      let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1_schema)]) 
       let t := Tm.instantiate 0 [x] t 
 
       (infer i env_ty (env_tm ; env_tmx) t ty) 
@@ -2109,27 +2114,18 @@ namespace Normal
 
   #eval infer_reduce 10 [norm:
     let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
-    y[0]  
+    (y[0] (cons;(ooga;(), booga;())))  
   :]
 
   #eval infer_reduce 10 [norm:
     let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
+    y[0]  
+  :]
+
+  #eval infer_reduce 10 [norm:
+    let y[0] : # cons * (β[0] × β[1]) -> β[0] = _ =>
     (y[0] (cons;(ooga;(), booga;())))  
   :]
-
-  ----------- debugging ---------------
-  #eval unify_reduce 10 
-  [norm:
-  (# β[0] | β[0] <: ∃ 3 {(cons*(β[0] × β[1]) -> β[0]) | (β[0] × unit) <: (β[2] × unit)})
-  :]
-  [norm:
-    cons*(ooga*unit × booga*unit) -> α[7]
-  :]
-  [norm:
-    cons*(ooga*unit × booga*unit) -> α[7]
-  :]
-  ---------------------------------
-
 
   ---------- adjustment ----------------
 
@@ -2141,20 +2137,32 @@ namespace Normal
 
   #eval infer_reduce 0 [norm:
     let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
-    let y[0] = (y[0] hello;()) => 
-    (y[0] world;())
+    (y[0] hello;())
   :]
 
-  #eval infer_simple 0 [norm:
+  -- TODO: instersections because lower bound info has been lost 
+  #eval infer_reduce 0 [norm:
     let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
     let y[0] = (y[0] hello;()) => 
-    y[0]
+    (y[0] world;())
   :]
 
   #eval infer_reduce 0 [norm:
     let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
     let y[0] = (y[0] hello;()) => 
     y[0]
+  :]
+
+  -- #eval infer_simple 0 [norm:
+  --   let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+  --   let y[0] = (y[0] hello;()) => 
+  --   (y[0] world;())
+  -- :]
+
+  #eval infer_reduce 0 [norm:
+    let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] = (y[0] hello;()) => 
+    (y[0] world;())
   :]
 
   -- narrowing
