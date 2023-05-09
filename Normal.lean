@@ -42,8 +42,8 @@ namespace Normal
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
   | case : Ty -> Ty -> Ty
-  | exis : Ty -> Ty -> Ty -> Ty
-  | univ : Ty -> Ty -> Ty -> Ty
+  | exis : Nat -> Ty -> Ty -> Ty -> Ty
+  | univ : Nat -> Ty -> Ty -> Ty -> Ty
   | recur : Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
   -- #check List.repr
@@ -64,6 +64,34 @@ namespace Normal
   | univ : α -> α -> α -> TyResult α
   | recur : α -> TyResult α
   deriving Repr, Inhabited, Hashable, BEq
+
+  -- TODO: make pattern variables indexless or ensure that pattern variables are properly ordered
+  -- . index is determined by order, to ensure canonical form. 
+  -- return non is not wellformed
+  def Ty.pattern_abstraction : Ty -> Nat
+  | .bvar idx => (idx + 1)
+  | .fvar id => 0 
+  | .unit => 0 
+  | .top => 0 
+  | .bot => 0 
+  | .tag l ty =>
+    Ty.pattern_abstraction ty 
+  | .field l ty => 
+    Ty.pattern_abstraction ty 
+  | .union ty1 ty2 => 
+    let n1 := Ty.pattern_abstraction ty1 
+    let n2 := Ty.pattern_abstraction ty2
+    if n1 > n2 then n1 else n2 
+  | .inter ty1 ty2 => 
+    let n1 := Ty.pattern_abstraction ty1 
+    let n2 := Ty.pattern_abstraction ty2
+    if n1 > n2 then n1 else n2 
+  | .case ty1 ty2 =>
+    let n1 := Ty.pattern_abstraction ty1 
+    let n2 := Ty.pattern_abstraction ty2
+    if n1 > n2 then n1 else n2 
+   | _ => 0 -- TODO: this should be an error/none 
+
 
   protected partial def Ty.repr (ty : Ty) (n : Nat) : Format :=
   match ty with
@@ -94,27 +122,37 @@ namespace Normal
     Format.bracket "(" ((Ty.repr ty1 n) ++ " ∧ " ++ (Ty.repr ty2 n)) ")"
   | .case ty1 ty2 =>
     Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
-  | .exis ty_c1 ty_c2 ty_pl =>
-    if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-      if ty_pl == (Ty.bvar 0) then
-        "⊤"
+  | .exis n ty_c1 ty_c2 ty_pl =>
+    let n_str := (
+      if n == pattern_abstraction ty_pl then
+        ""
       else
+        "∃ " ++ (Nat.repr n) ++ " "
+    )
+
+    n_str ++ (
+      if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
         Format.bracket "{" (Ty.repr ty_pl n) "}"
-    else
-      Format.bracket "{" (
-        (Ty.repr ty_pl n) ++ " | " ++
-        (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
-      ) "}"
-  | .univ ty_c1 ty_c2 ty_pl =>
-    if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-      if ty_pl == (Ty.bvar 0) then
-        "⊥"
       else
-        Format.bracket "(" ("∀ " ++ (Ty.repr ty_pl n)) ")"
+        Format.bracket "{" (
+          (Ty.repr ty_pl n) ++ " | " ++
+          (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
+        ) "}"
+    )
+  | .univ n ty_c1 ty_c2 ty_pl =>
+    let n_str := (
+      if n == pattern_abstraction ty_pl then
+        ""
+      else
+        "∀ " ++ (Nat.repr n) ++ " "
+    )
+
+    if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
+      Format.bracket "(" (n_str ++ "# " ++ (Ty.repr ty_pl n)) ")"
     else
-      Format.bracket "(" ("∀ " ++
+      Format.bracket "(" (n_str ++ "# " ++
         (Ty.repr ty_pl n) ++ " | " ++
-        (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
+        (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
       ) ")"
   | .recur ty1 =>
     Format.bracket "(" (
@@ -202,11 +240,20 @@ namespace Normal
   syntax:60 slm:61 "+" slm:60 : slm
   syntax:70 slm:71 "∧" slm:70 : slm
   syntax:70 slm:71 "×" slm:70 : slm
-  syntax "{" slm:41 "|" slm:41 "≤" slm:41 "}": slm 
+
+  syntax "∃" slm "{" slm:41 "|" slm:41 "<:" slm:41 "}": slm 
+  syntax "∃" slm "{" slm:41 "}" : slm 
+
+  syntax "{" slm:41 "|" slm:41 "<:" slm:41 "}": slm 
   syntax "{" slm:41 "}" : slm 
-  syntax "∀ " slm:41 "|" slm:41 "≤" slm:41 : slm 
-  syntax "∀ " slm:41 : slm 
-  syntax "μ " slm:40 : slm 
+
+  syntax "∀" slm "#" slm:41 "|" slm:41 "<:" slm:41 : slm 
+  syntax "∀" slm "#" slm:41 : slm 
+
+  syntax "#" slm:41 "|" slm:41 "<:" slm:41 : slm 
+  syntax "#" slm:41 : slm 
+
+  syntax "μ" slm:40 : slm 
 
   --term
   syntax:30 "_" : slm
@@ -256,10 +303,25 @@ namespace Normal
   | `([norm: $a + $b :]) => `(Ty.union (Ty.tag "inl" [norm: $a :]) (Ty.tag "inr" [norm: $b :]))
   | `([norm: $a ∧ $b :]) => `(Ty.inter [norm: $a :] [norm: $b :])
   | `([norm: $a × $b :]) => `(Ty.inter (Ty.field "l" [norm: $a :]) (Ty.field "r" [norm: $b :]))
-  | `([norm: { $d | $b ≤ $c }  :]) => `(Ty.exis [norm: $b :] [norm: $c :] [norm: $d :])
-  | `([norm: { $b:slm } :]) => `(Ty.exis Ty.unit Ty.unit [norm: $b :] )
-  | `([norm: ∀ $d | $b ≤ $c  :]) => `(Ty.univ [norm: $b :] [norm: $c :] [norm: $d :])
-  | `([norm: ∀ $b:slm  :]) => `(Ty.univ Ty.unit Ty.unit [norm: $b :] )
+
+  | `([norm: ∃ $n { $d | $b <: $c }  :]) => `(Ty.exis [norm: $n :] [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: ∃ $n { $b:slm } :]) => `(Ty.exis [norm: $n :] Ty.unit Ty.unit [norm: $b :] )
+
+  | `([norm: { $d | $b <: $c }  :]) => 
+    `(Ty.exis (Ty.pattern_abstraction [norm: $d :]) [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: { $b:slm } :]) => 
+    `(Ty.exis (Ty.pattern_abstraction [norm: $b :]) Ty.unit Ty.unit [norm: $b :] )
+
+  | `([norm: # $d | $b <: $c  :]) => 
+    `(Ty.univ (Ty.pattern_abstraction [norm: $d :]) [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: # $b:slm  :]) => 
+    `(Ty.univ (Ty.pattern_abstraction [norm: $b :]) Ty.unit Ty.unit [norm: $b :] )
+
+
+  | `([norm: ∀ $n # $d | $b <: $c  :]) => `(Ty.univ [norm: $n :] [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: ∀ $n # $b:slm  :]) => `(Ty.univ [norm: $n :] Ty.unit Ty.unit [norm: $b :] )
+
+
   | `([norm: μ $a :]) => `(Ty.recur [norm: $a :])
   --Tm
   | `([norm: _ :]) => `(Tm.hole)
@@ -286,6 +348,7 @@ namespace Normal
   | `([norm: ⟨ $e ⟩ :]) => pure e
 
 
+
   partial def Ty.subst (m : PHashMap Nat Ty) : Ty -> Ty
   | .bvar id => .bvar id 
   | .fvar id => (match m.find? id with
@@ -300,11 +363,11 @@ namespace Normal
   | .union ty1 ty2 => .union (Ty.subst m ty1) (Ty.subst m ty2)
   | .inter ty1 ty2 => .inter (Ty.subst m ty1) (Ty.subst m ty2)
   | .case ty1 ty2 => .case (Ty.subst m ty1) (Ty.subst m ty2)
-  | .exis ty_c1 ty_c2 ty => (.exis
+  | .exis n ty_c1 ty_c2 ty => (.exis n
     (Ty.subst m ty_c1) (Ty.subst m ty_c2) 
     (Ty.subst m ty)
   )
-  | .univ ty_c1 ty_c2 ty => (.univ
+  | .univ n ty_c1 ty_c2 ty => (.univ n
     (Ty.subst m ty_c1) (Ty.subst m ty_c2) 
     (Ty.subst m ty)
   )
@@ -362,12 +425,12 @@ namespace Normal
   | .union ty1 ty2 => Ty.unionize (Ty.simplify ty1) (Ty.simplify ty2)
   | .inter ty1 ty2 => Ty.intersect (Ty.simplify ty1) (Ty.simplify ty2)
   | .case ty1 ty2 => Ty.case (Ty.simplify ty1) (Ty.simplify ty2)
-  | .exis cty1 cty2 ty => 
-      Ty.exis 
+  | .exis n cty1 cty2 ty => 
+      Ty.exis n 
         (Ty.simplify cty1) (Ty.simplify cty2)
         (Ty.simplify ty)
-  | .univ cty1 cty2 ty => 
-      Ty.univ 
+  | .univ n cty1 cty2 ty => 
+      Ty.univ n 
         (Ty.simplify cty1) (Ty.simplify cty2)
         (Ty.simplify ty)
   | .recur ty => Ty.recur (Ty.simplify ty)
@@ -413,10 +476,10 @@ namespace Normal
   | .union ty1 ty2 => Ty.free_vars ty1 ; Ty.free_vars ty2
   | .inter ty1 ty2 => Ty.free_vars ty1 ; Ty.free_vars ty2
   | .case ty1 ty2 => Ty.free_vars ty1 ; Ty.free_vars ty2
-  | .exis ty_c1 ty_c2 ty =>
+  | .exis n ty_c1 ty_c2 ty =>
     -- (Ty.free_vars ty_c1);(Ty.free_vars ty_c2);(Ty.free_vars ty)
     (Ty.free_vars ty)
-  | .univ ty_c1 ty_c2 ty =>
+  | .univ n ty_c1 ty_c2 ty =>
     -- (Ty.free_vars ty_c1);(Ty.free_vars ty_c2);(Ty.free_vars ty)
     (Ty.free_vars ty)
   | .recur ty => (Ty.free_vars ty)
@@ -441,39 +504,12 @@ namespace Normal
   | .union ty1 ty2 => Ty.signed_free_vars posi ty1 ; Ty.signed_free_vars posi ty2
   | .inter ty1 ty2 => Ty.signed_free_vars posi ty1 ; Ty.signed_free_vars posi ty2
   | .case ty1 ty2 => (Ty.signed_free_vars (!posi) ty1) ; Ty.signed_free_vars posi ty2
-  | .exis ty_c1 ty_c2 ty =>
+  | .exis n ty_c1 ty_c2 ty =>
     (Ty.signed_free_vars posi ty)
-  | .univ ty_c1 ty_c2 ty =>
+  | .univ n ty_c1 ty_c2 ty =>
     (Ty.signed_free_vars posi ty)
   | .recur ty => (Ty.signed_free_vars posi ty)
 
-
-  -- TODO: make pattern variables indexless or ensure that pattern variables are properly ordered
-  -- . index is determined by order, to ensure canonical form. 
-  -- return non is not wellformed
-  def Ty.pattern_abstraction : Ty -> Nat
-  | .bvar idx => (idx + 1)
-  | .fvar id => 0 
-  | .unit => 0 
-  | .top => 0 
-  | .bot => 0 
-  | .tag l ty =>
-    Ty.pattern_abstraction ty 
-  | .field l ty => 
-    Ty.pattern_abstraction ty 
-  | .union ty1 ty2 => 
-    let n1 := Ty.pattern_abstraction ty1 
-    let n2 := Ty.pattern_abstraction ty2
-    if n1 > n2 then n1 else n2 
-  | .inter ty1 ty2 => 
-    let n1 := Ty.pattern_abstraction ty1 
-    let n2 := Ty.pattern_abstraction ty2
-    if n1 > n2 then n1 else n2 
-  | .case ty1 ty2 =>
-    let n1 := Ty.pattern_abstraction ty1 
-    let n2 := Ty.pattern_abstraction ty2
-    if n1 > n2 then n1 else n2 
-   | _ => 0 -- TODO: this should be an error/none 
 
   def Ty.generalize (fids : List Nat) (start : Nat) : Ty -> Ty
   | .bvar id => .bvar id 
@@ -489,15 +525,13 @@ namespace Normal
   | .union ty1 ty2 => .union (Ty.generalize fids start ty1) (Ty.generalize fids start ty2)
   | .inter ty1 ty2 => .inter (Ty.generalize fids start ty1) (Ty.generalize fids start ty2)
   | .case ty1 ty2 => .case (Ty.generalize fids start ty1) (Ty.generalize fids start ty2)
-  | .exis ty_c1 ty_c2 ty => 
-    let n := Ty.pattern_abstraction ty
-    (.exis
+  | .exis n ty_c1 ty_c2 ty => 
+    (.exis n
       (Ty.generalize fids (start + n) ty_c1) (Ty.generalize fids (start + n) ty_c2)
       (Ty.generalize fids (start + n) ty)
     )
-  | .univ ty_c1 ty_c2 ty => 
-    let n := Ty.pattern_abstraction ty
-    (.univ
+  | .univ n ty_c1 ty_c2 ty => 
+    (.univ n
       (Ty.generalize fids (start + n) ty_c1) (Ty.generalize fids (start + n) ty_c2)
       (Ty.generalize fids (start + n) ty)
     )
@@ -549,11 +583,11 @@ namespace Normal
       ty
     else
       let exis_ty := [norm:
-        {⟨Ty.generalize fids 0 ty⟩ | 
-          ⟨Ty.generalize fids 0 ty_lhs⟩ ≤ ⟨Ty.generalize fids 0 ty_rhs⟩ }
+        ∃ ⟨fids.length⟩ {⟨Ty.generalize fids 0 ty⟩ | 
+          ⟨Ty.generalize fids 0 ty_lhs⟩ <: ⟨Ty.generalize fids 0 ty_rhs⟩ }
       :]
       [norm:
-        ∀ β[0] | ⟨exis_ty⟩ ≤ β[0]
+        ∀ 1 # β[0] | ⟨exis_ty⟩ <: β[0]
       :]
 
 
@@ -586,15 +620,13 @@ namespace Normal
   | .union ty1 ty2 => .union (Ty.instantiate start args ty1) (Ty.instantiate start args ty2)
   | .inter ty1 ty2 => .inter (Ty.instantiate start args ty1) (Ty.instantiate start args ty2)
   | .case ty1 ty2 => .case (Ty.instantiate start args ty1) (Ty.instantiate start args ty2)
-  | .exis ty_c1 ty_c2 ty => 
-    let n := Ty.pattern_abstraction ty
-    (.exis
+  | .exis n ty_c1 ty_c2 ty => 
+    (.exis n
       (Ty.instantiate (start + n) args ty_c1) (Ty.instantiate (start + n) args ty_c2)
       (Ty.instantiate (start + n) args ty)
     )
-  | .univ ty_c1 ty_c2 ty => 
-    let n := Ty.pattern_abstraction ty
-    (.univ
+  | .univ n ty_c1 ty_c2 ty => 
+    (.univ n
       (Ty.instantiate (start + n) args ty_c1) (Ty.instantiate (start + n) args ty_c2)
       (Ty.instantiate (start + n) args ty)
     )
@@ -636,12 +668,12 @@ namespace Normal
   | .inter ty1 ty2 =>
     Ty.inter (Ty.subst_default sign ty1) (Ty.subst_default sign ty2)
   | .case ty1 ty2 => Ty.case (Ty.subst_default (!sign) ty1) (Ty.subst_default sign ty2)
-  | .exis cty1 cty2 ty => 
+  | .exis n cty1 cty2 ty => 
       -- can't sub away if constrained
-      Ty.exis cty1 cty2 ty
-  | .univ cty1 cty2 ty => 
+      Ty.exis n cty1 cty2 ty
+  | .univ n cty1 cty2 ty => 
       -- can't sub away if constrained
-      Ty.univ cty1 cty2 ty
+      Ty.univ n cty1 cty2 ty
   | .recur ty => Ty.recur (Ty.subst_default sign ty)
 
 
@@ -801,7 +833,7 @@ namespace Normal
     match linearize_fields (Ty.inter ty1 ty2) with
     | .none => {} 
     | .some fields => PHashMap.from_list (fields.map (fun (l, _) => (l, Unit.unit)))
-  | .exis ty_c1 ty_c2 ty => (extract_record_labels ty)
+  | .exis n ty_c1 ty_c2 ty => (extract_record_labels ty)
   | .recur ty => extract_record_labels ty
   | _ => {} 
 
@@ -824,7 +856,7 @@ namespace Normal
       let fields := 
         prev_fields ++ (l, [norm: β[0] :]) :: var_fields 
       let ty_lhs := intersect_fields fields
-      let ty := [norm: {β[0] | ⟨ty_lhs⟩ ≤ ⟨ty_rhs⟩} :]
+      let ty := [norm: ∃ 1 {β[0] | ⟨ty_lhs⟩ <: ⟨ty_rhs⟩} :]
       let m : PHashMap Nat Ty := (separate_fields (prev_fields ++ [(l, ty_fd)]) var_fields') ty_rhs
       m.insert id ty
     | _ => {}
@@ -913,10 +945,9 @@ namespace Normal
       | [] => false
       | fields => fields.any (fun ty' => Ty.wellfounded n ty')
     | .case _ _ => false
-    | .exis ty_c1 ty_c2 ty' => 
-      let n' := Ty.pattern_abstraction ty' 
+    | .exis n' ty_c1 ty_c2 ty' => 
       Ty.wellfounded (n + n') ty'
-    | .univ _ _ _ => false 
+    | .univ _ _ _ _ => false 
     | .recur _ => false 
 
     def matchable (fields : List Ty) : Bool := 
@@ -931,8 +962,7 @@ namespace Normal
     Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
     -- liberally quantified 
-    | ty', .exis ty_c1 ty_c2 ty =>
-      let n := Ty.pattern_abstraction ty
+    | ty', .exis n ty_c1 ty_c2 ty =>
       let (i, args, frozen) := (
         i + n, 
         (List.range n).map (fun j => .fvar (i + j)),
@@ -947,8 +977,7 @@ namespace Normal
       )
 
     -- opaquely quantified 
-    | .exis ty_c1 ty_c2 ty1, ty2 =>
-      let n := Ty.pattern_abstraction ty1
+    | .exis n ty_c1 ty_c2 ty1, ty2 =>
       let bound_start := i
       let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
       let bound_end := i
@@ -998,8 +1027,7 @@ namespace Normal
       ))
 
     -- liberally quantified universal 
-    | .univ ty_c1 ty_c2 ty1, ty2 =>
-      let n := Ty.pattern_abstraction ty1
+    | .univ n ty_c1 ty_c2 ty1, ty2 =>
       let (i, args) := (
         i + n, 
         (List.range n).map (fun j => .fvar (i + j))
@@ -1013,8 +1041,7 @@ namespace Normal
       )
 
     -- opaquely quantified universal 
-    | ty1, .univ ty_c1 ty_c2 ty2  =>
-      let n := Ty.pattern_abstraction ty1
+    | ty1, .univ n ty_c1 ty_c2 ty2  =>
       let bound_start := i
       let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
       let bound_end := i
@@ -1575,12 +1602,12 @@ namespace Normal
           if List.any fvs (fun id => fvs_prem.find? id != none) then
             let fixed_point := fvs.length
             [norm:
-              {⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩ | 
-                ⟨Ty.generalize fvs 0 (to_pair_type ty_prem)⟩ ≤ β[⟨fixed_point⟩] 
+              ∃ ⟨fvs.length⟩ {⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩ | 
+                ⟨Ty.generalize fvs 0 (to_pair_type ty_prem)⟩ <: β[⟨fixed_point⟩] 
               } 
             :]
           else if fvs.length > 0 then
-            [norm: {⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩} :]
+            [norm: ∃ ⟨fvs.length⟩ {⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩} :]
           else
             (to_pair_type ty_case)
         )
@@ -1590,7 +1617,7 @@ namespace Normal
 
       -- constraint that ty' <= ty_prem is built into inductive type
       let relational_type := [norm: μ ⟨ty_content⟩ :]
-      let ty' := [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨relational_type⟩} :] 
+      let ty' := [norm: ∀ 1 # β[0] -> ∃ 1 {β[0] | β[1] × β[0] <: ⟨relational_type⟩} :] 
       Ty.assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
         (i, [(env_ty, ty')])
       )
@@ -1699,12 +1726,12 @@ namespace Normal
     let (ls_t1, ls_f1) := extract_labels ty1
     let (ls_t2, ls_f2) := extract_labels ty2
     (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
-  | .exis ty_c1 ty_c2 ty =>
+  | .exis n ty_c1 ty_c2 ty =>
     let (ls_tc1, ls_fc1) := extract_labels ty_c1
     let (ls_tc2, ls_fc2) := extract_labels ty_c2
     let (ls_t, ls_f) := extract_labels ty
     (ls_tc1 ++ ls_tc2 ++ ls_t, ls_fc1 ++ ls_fc2 ++ ls_f) 
-  | .univ ty_c1 ty_c2 ty =>
+  | .univ n ty_c1 ty_c2 ty =>
     let (ls_tc1, ls_fc1) := extract_labels ty_c1
     let (ls_tc2, ls_fc2) := extract_labels ty_c2
     let (ls_t, ls_f) := extract_labels ty
@@ -1844,7 +1871,7 @@ namespace Normal
   def nat_list := [norm: 
     μ 
       (zero*unit × nil*unit) ∨ 
-      {succ*β[0] × cons*β[1] | (β[0] × β[1]) ≤ β[2]}
+      {succ*β[0] × cons*β[1] | (β[0] × β[1]) <: β[2]}
   :]
 
   #eval unify_reduce 30
@@ -1859,21 +1886,21 @@ namespace Normal
 
   -- subtyping via local constraints
   #eval unify_reduce 30
-  [norm: {β[0] | succ*zero*unit × β[0] ≤ ⟨nat_list⟩} :]
+  [norm: {β[0] | succ*zero*unit × β[0] <: ⟨nat_list⟩} :]
   [norm: cons*α[0] :] 
   [norm: α[0] :]
 
 
   -- expected: cons*nil*unit
   #eval unify_reduce 30
-  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
   [norm: succ*succ*zero*unit -> cons*α[0] :] 
   [norm: α[0] :]
 
 
   -- expected: ⊥
   #eval unify_reduce 30
-  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
   [norm: foo*succ*zero*unit -> α[0] :] 
   [norm: boo*α[0] :]
 
@@ -1882,7 +1909,7 @@ namespace Normal
   def even_list := [norm: 
     μ 
       (zero*unit × nil*unit) ∨ 
-      {succ*succ*β[0] × cons*cons*β[1] | (β[0] × β[1]) ≤ β[2]}
+      {succ*succ*β[0] × cons*cons*β[1] | (β[0] × β[1]) <: β[2]}
   :]
 
   #eval unify_decide 0 even_list nat_list 
@@ -1895,23 +1922,23 @@ namespace Normal
 
   -- TODO: limitation: sound, but incomplete
   #eval unify_decide 0
-  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
-  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+  [norm: ∀ 1 # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
+  [norm: ∀ 1 # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
 
   #eval unify_decide 0
-  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩}  :]
-  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨even_list⟩} | β[0] ≤ ⟨even⟩ :]
+  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩}  :]
+  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨even_list⟩} | β[0] <: ⟨even⟩ :]
 
   #eval unify_decide 0
-  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} | β[0] ≤ ⟨nat_⟩:]
-  [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} | β[0] ≤ ⟨even⟩ :]
+  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} | β[0] <: ⟨nat_⟩:]
+  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} | β[0] <: ⟨even⟩ :]
   ----------------------------
 
   def plus := [norm: 
     μ 
       {x : zero*unit ∧ y : β[0] ∧ z : β[0]} ∨ 
       {x : succ*β[0] ∧ y : β[1] ∧ z : succ*β[2] | 
-        (x : β[0] ∧ y : β[1] ∧ z : β[2]) ≤ β[3] 
+        (x : β[0] ∧ y : β[1] ∧ z : β[2]) <: β[3] 
       }
   :]
 
@@ -2039,7 +2066,7 @@ namespace Normal
 
   -- expected: cons*nil*unit
   #eval infer_reduce 0 [norm:
-    let y[0] : ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} = _ =>
+    let y[0] : # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} = _ =>
     (y[0] (succ;zero;()))
   :]
 
@@ -2096,24 +2123,24 @@ namespace Normal
 
   -- widening
   #eval infer_reduce 0 [norm:
-    let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
     ((y[0] hello;()) world;())
   :]
 
   #eval infer_reduce 0 [norm:
-    let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
     let y[0] = (y[0] hello;()) => 
     (y[0] world;())
   :]
 
   #eval infer_simple 0 [norm:
-    let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
     let y[0] = (y[0] hello;()) => 
     y[0]
   :]
 
   #eval infer_reduce 0 [norm:
-    let y[0] : ∀ β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
     let y[0] = (y[0] hello;()) => 
     y[0]
   :]
@@ -2155,7 +2182,7 @@ namespace Normal
   def bad_nat_list := [norm: 
     μ 
       (zero*unit × nil*unit) ∨ 
-      {(β[0] × β[1]) | β[0] × β[1] ≤ β[2]}
+      {(β[0] × β[1]) | β[0] × β[1] <: β[2]}
   :]
 
   #eval unify_decide 0 
@@ -2163,7 +2190,7 @@ namespace Normal
     bad_nat_list
 
   def other_nat_list := [norm: 
-    μ {(succ*β[0] × cons*β[1]) | β[0] × β[1] ≤ β[2]}
+    μ {(succ*β[0] × cons*β[1]) | β[0] × β[1] <: β[2]}
   :]
 
   #eval unify_decide 0 
@@ -2193,15 +2220,15 @@ namespace Normal
   def gt := [norm: 
     μ  
       {succ*β[0] × zero*unit} ∨ 
-      {succ*β[0] × succ*β[1] | (β[0] × β[1]) ≤ β[2]}
+      {succ*β[0] × succ*β[1] | (β[0] × β[1]) <: β[2]}
   :]
 
   -------------------------------------------------
 
   def spec := [norm: 
   (α[0] × α[1]) -> (
-    { β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) ≤ ⟨plus⟩} ∨
-    { β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) ≤ ⟨plus⟩}
+    { β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) <: ⟨plus⟩} ∨
+    { β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) <: ⟨plus⟩}
   )  
   :]
 
@@ -2245,7 +2272,7 @@ namespace Normal
     μ 
       {zero*unit × β[0] × β[0]} ∨ 
       {β[0] × zero*unit × β[0]} ∨
-      {(succ*β[1] × succ*β[2] × β[0]) | (β[1] × β[2] × β[0]) ≤ β[3]}
+      {(succ*β[1] × succ*β[2] × β[0]) | (β[1] × β[2] × β[0]) <: β[3]}
   :]
 
   #eval unify_reduce 10
@@ -2257,8 +2284,8 @@ namespace Normal
 
   def plus_choice := [norm: 
   α[0] × α[1] × (
-    { β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) ≤ ⟨plus⟩} ∨
-    { β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) ≤ ⟨plus⟩}
+    { β[0] | (x:β[0] ∧ y:α[1] ∧ z:α[0]) <: ⟨plus⟩} ∨
+    { β[0] | (x:β[0] ∧ y:α[0] ∧ z:α[1]) <: ⟨plus⟩}
   )  
   :]
 
@@ -2270,7 +2297,7 @@ namespace Normal
 
   #eval unify_reduce 10
   [norm:
-  ∀ β[0] -> {β[0] | (β[1] × β[0]) ≤ ⟨diff_rel⟩}
+  # β[0] -> {β[0] | (β[1] × β[0]) <: ⟨diff_rel⟩}
   :]
   spec
   [norm: α[0] × α[1] :]
@@ -2283,8 +2310,8 @@ namespace Normal
   #eval infer_reduce 10 
   [norm:
   let y[0] : (
-    (∀ (hello*β[0] -> world*unit)) ∧ 
-    (∀ one*β[0] -> two*unit)
+    (# (hello*β[0] -> world*unit)) ∧ 
+    (# one*β[0] -> two*unit)
   ) = _ =>
   (y[0] one;())
   :]
@@ -2292,7 +2319,7 @@ namespace Normal
   #eval infer_reduce 10 
   [norm:
   let y[0] : (
-    (∀ 
+    (# 
       (hello*β[0] -> world*unit) ∧ 
       (one*β[0] -> two*unit)
     )
