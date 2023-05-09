@@ -86,7 +86,7 @@ namespace Normal
         (Ty.repr ty_pl n) ++ " | " ++
         (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
       ) "}"
-  | .exis ty_c1 ty_c2 ty_pl =>
+  | .univ ty_c1 ty_c2 ty_pl =>
     if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
       if ty_pl == (Ty.bvar 0) then
         "⊥"
@@ -466,6 +466,12 @@ namespace Normal
       (Ty.generalize fids (start + n) ty_c1) (Ty.generalize fids (start + n) ty_c2)
       (Ty.generalize fids (start + n) ty)
     )
+  | .univ ty_c1 ty_c2 ty => 
+    let n := Ty.pattern_abstraction ty
+    (.univ
+      (Ty.generalize fids (start + n) ty_c1) (Ty.generalize fids (start + n) ty_c2)
+      (Ty.generalize fids (start + n) ty)
+    )
   | .recur ty => .recur (Ty.generalize fids (start + 1) ty)
 
   partial def reachable_constraints (env_ty : PHashMap Nat Ty) (ty : Ty) : List (Ty × Ty) :=
@@ -517,13 +523,8 @@ namespace Normal
         }
       :]
 
-      exis_ty 
-      /-
-      let univ_ty :=
-      [norm: ∀ β[0] | β[0] ≤ ⟨exis_ty> :]
-      -/
-
-      -- :]
+      let univ_ty := [norm: ∀ β[0] | β[0] ≤ ⟨exis_ty⟩ :]
+      univ_ty
 
 
     -- -- generalization based on substitution 
@@ -557,6 +558,12 @@ namespace Normal
   | .exis ty_c1 ty_c2 ty => 
     let n := Ty.pattern_abstraction ty
     (.exis
+      (Ty.instantiate (start + n) args ty_c1) (Ty.instantiate (start + n) args ty_c2)
+      (Ty.instantiate (start + n) args ty)
+    )
+  | .univ ty_c1 ty_c2 ty => 
+    let n := Ty.pattern_abstraction ty
+    (.univ
       (Ty.instantiate (start + n) args ty_c1) (Ty.instantiate (start + n) args ty_c2)
       (Ty.instantiate (start + n) args ty)
     )
@@ -600,6 +607,9 @@ namespace Normal
   | .exis cty1 cty2 ty => 
       -- can't sub away if constrained
       Ty.exis cty1 cty2 ty
+  | .univ cty1 cty2 ty => 
+      -- can't sub away if constrained
+      Ty.univ cty1 cty2 ty
   | .recur ty => Ty.recur (Ty.subst_default sign ty)
 
 
@@ -873,6 +883,7 @@ namespace Normal
     | .exis ty_c1 ty_c2 ty' => 
       let n' := Ty.pattern_abstraction ty' 
       Ty.wellfounded (n + n') ty'
+    | .univ _ _ _ => false 
     | .recur _ => false 
 
     def matchable (fields : List Ty) : Bool := 
@@ -903,8 +914,6 @@ namespace Normal
       )
 
     -- opaquely quantified 
-    -- TODO: consider requiring normal form check to ensure safety
-    -- or using min/max to check both extremes
     | .exis ty_c1 ty_c2 ty1, ty2 =>
       let n := Ty.pattern_abstraction ty1
       let bound_start := i
@@ -955,6 +964,53 @@ namespace Normal
           (i, [])
       ))
 
+    -- liberally quantified universal 
+    | .univ ty_c1 ty_c2 ty, ty' =>
+      let n := Ty.pattern_abstraction ty
+      let (i, args, frozen) := (
+        i + n, 
+        (List.range n).map (fun j => .fvar (i + j)),
+        PHashMap.insert_all frozen (PHashMap.from_list ((List.range n).map (fun j => (i + j, .unit))))
+      )
+
+      let ty_c1 := Ty.instantiate 0 args ty_c1
+      let ty_c2 := Ty.instantiate 0 args ty_c2
+      let ty := Ty.instantiate 0 args ty
+      Ty.assume_env (unify i env_ty env_complex frozen ty' ty) (fun i env_ty => 
+        unify i env_ty env_complex frozen ty_c1 ty_c2
+      )
+
+    -- opaquely quantified universal 
+    | ty2, .univ ty_c1 ty_c2 ty1  =>
+      let n := Ty.pattern_abstraction ty1
+      let bound_start := i
+      let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
+      let bound_end := i
+      let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
+
+      let args := ids.map (fun id => Ty.fvar id)
+      let ty_c1 := Ty.instantiate 0 args ty_c1
+      let ty_c2 := Ty.instantiate 0 args ty_c2
+      let ty1 := Ty.instantiate 0 args ty1
+
+      let ((i, contexts), env_complex) := ( 
+          (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
+      )
+
+      -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
+      -- Option.bind op_context (fun (i, env_ty1) =>
+      Ty.assume_env (i, contexts) (fun i env_ty => 
+      let locally_constrained := (fun key => env_ty.contains key)
+      Ty.assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
+        let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+          not (is_bound_var key) || (locally_constrained key)
+        )
+        if is_result_safe then
+          (i, [env_ty])
+        else
+          (i, [])
+      ))
+
     -- free variables
     ---------------------------------------------------------------
     | (.fvar id1), (.fvar id2) => 
@@ -989,92 +1045,17 @@ namespace Normal
         (i, [env_ty.insert id (roll_recur id env_ty ty')])
       | some ty => 
         let adjustable := frozen.find? id == .none
-        -- (unify i env_ty env_complex ty' ty) 
         let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty) 
         if adjustable && u_env_ty.isEmpty then
           (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty' ty))])
         else
           (i, u_env_ty)
 
-
-    -- | ty1, .univ n ty_c1 ty_c2 ty2 =>
-    --   let bound_start := i
-    --   let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
-    --   let bound_end := i
-    --   let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
-
-    --   let args := ids.map (fun id => Ty.fvar id)
-    --   let ty_c1 := Ty.instantiate 0 args ty_c1
-    --   let ty_c2 := Ty.instantiate 0 args ty_c2
-    --   let ty2 := Ty.instantiate 0 args ty2
-
-    --   let op_fields := linearize_fields ty_c2
-
-    --   let ((i, contexts), env_complex) := ( 
-    --     match op_fields with 
-    --     | some fields =>
-    --       let is_corec_type := match ty_c1 with 
-    --       | Ty.corec _ => true
-    --       | _ => false
-    --       let is_consistent_variable_record := List.all fields (fun (l, ty_fd) =>
-    --         let rlabels := extract_record_labels (ty_c1) 
-    --         rlabels.contains l &&
-    --         (match ty_fd with | (Ty.fvar _) => true | _ => false)
-    --       )
-    --       if is_corec_type && is_consistent_variable_record then
-    --         let ty_norm := ty_c2
-    --         ((i, [env_ty]), env_complex.insert (.up, ty_norm) ty_c1)
-
-    --       else ((i, []), env_complex) 
-    --     | none => (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
-    --   )
-
-    --   -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
-    --   Ty.assume_env (i, contexts) (fun i env_ty => 
-    --   Ty.assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty => 
-    --     let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-    --       not (is_bound_var key) 
-    --     )
-    --     if is_result_safe then
-    --       (i, [env_ty])
-    --     else
-    --       (i, [])
-    --   ))
-
-    -----------------------------------------------------
-
     | .case ty1 ty2, .case ty3 ty4 =>
 
-      let n1 := pattern_abstraction ty1 
-      let n3 := pattern_abstraction ty3 
-      if n1 == 0 && n3 == 0 then 
-        Ty.assume_env (unify i env_ty env_complex frozen ty3 ty1) (fun i env_ty =>
-          (unify i env_ty env_complex frozen ty2 ty4)
-        ) 
-      else if n1 >= n3 then
-        let (i, ids1) := (i + n1, (List.range n1).map (fun j => i + j))
-        let args1 := ids1.map (fun id => Ty.fvar id)
-        let ty1' := Ty.instantiate 0 args1 ty1
-        let ty2' := Ty.instantiate 0 args1 ty2
-
-        let (i, ids3) := (i + n3, (List.range n3).map (fun j => i + j))
-        let is_opaque := fun key => ids3.contains key 
-        let args3 := ids3.map (fun id => Ty.fvar id)
-        let ty3' := Ty.instantiate 0 args3 ty3
-        let ty4' := Ty.instantiate 0 args3 ty4
-
-        Ty.assume_env (unify i env_ty env_complex frozen ty3' ty1') (fun i env_ty =>
-          let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-            not (is_opaque key)
-          )
-          if is_result_safe then
-            (unify i env_ty env_complex frozen ty2' ty4')
-          else
-            (i, [])
-        ) 
-      else 
-        (i, [])
-    ------------------------------------------------------------------
+      Ty.assume_env (unify i env_ty env_complex frozen ty3 ty1) (fun i env_ty =>
+        (unify i env_ty env_complex frozen ty2 ty4)
+      ) 
 
     | .bvar id1, .bvar id2  =>
       if id1 = id2 then 
@@ -1152,6 +1133,84 @@ namespace Normal
       (i, u_env_ty1 ++ u_env_ty2)
 
     | _, _ => (i, []) 
+
+    --------------------- OLD STUFF -------------------------------------
+    -- | ty1, .univ n ty_c1 ty_c2 ty2 =>
+    --   let bound_start := i
+    --   let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
+    --   let bound_end := i
+    --   let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
+
+    --   let args := ids.map (fun id => Ty.fvar id)
+    --   let ty_c1 := Ty.instantiate 0 args ty_c1
+    --   let ty_c2 := Ty.instantiate 0 args ty_c2
+    --   let ty2 := Ty.instantiate 0 args ty2
+
+    --   let op_fields := linearize_fields ty_c2
+
+    --   let ((i, contexts), env_complex) := ( 
+    --     match op_fields with 
+    --     | some fields =>
+    --       let is_corec_type := match ty_c1 with 
+    --       | Ty.corec _ => true
+    --       | _ => false
+    --       let is_consistent_variable_record := List.all fields (fun (l, ty_fd) =>
+    --         let rlabels := extract_record_labels (ty_c1) 
+    --         rlabels.contains l &&
+    --         (match ty_fd with | (Ty.fvar _) => true | _ => false)
+    --       )
+    --       if is_corec_type && is_consistent_variable_record then
+    --         let ty_norm := ty_c2
+    --         ((i, [env_ty]), env_complex.insert (.up, ty_norm) ty_c1)
+
+    --       else ((i, []), env_complex) 
+    --     | none => (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
+    --   )
+
+    --   -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
+    --   Ty.assume_env (i, contexts) (fun i env_ty => 
+    --   Ty.assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty => 
+    --     let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+    --       not (is_bound_var key) 
+    --     )
+    --     if is_result_safe then
+    --       (i, [env_ty])
+    --     else
+    --       (i, [])
+    --   ))
+
+    -- | .case ty1 ty2, .case ty3 ty4 =>
+
+    --   let n1 := pattern_abstraction ty1 
+    --   let n3 := pattern_abstraction ty3 
+    --   if n1 == 0 && n3 == 0 then 
+    --     Ty.assume_env (unify i env_ty env_complex frozen ty3 ty1) (fun i env_ty =>
+    --       (unify i env_ty env_complex frozen ty2 ty4)
+    --     ) 
+    --   else if n1 >= n3 then
+    --     let (i, ids1) := (i + n1, (List.range n1).map (fun j => i + j))
+    --     let args1 := ids1.map (fun id => Ty.fvar id)
+    --     let ty1' := Ty.instantiate 0 args1 ty1
+    --     let ty2' := Ty.instantiate 0 args1 ty2
+
+    --     let (i, ids3) := (i + n3, (List.range n3).map (fun j => i + j))
+    --     let is_opaque := fun key => ids3.contains key 
+    --     let args3 := ids3.map (fun id => Ty.fvar id)
+    --     let ty3' := Ty.instantiate 0 args3 ty3
+    --     let ty4' := Ty.instantiate 0 args3 ty4
+
+    --     Ty.assume_env (unify i env_ty env_complex frozen ty3' ty1') (fun i env_ty =>
+    --       let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+    --         not (is_opaque key)
+    --       )
+    --       if is_result_safe then
+    --         (unify i env_ty env_complex frozen ty2' ty4')
+    --       else
+    --         (i, [])
+    --     ) 
+    --   else 
+    --     (i, [])
+    -----------------------------------------------------------------------
 
   end Ty
 
@@ -1500,7 +1559,7 @@ namespace Normal
 
       -- constraint that ty' <= ty_prem is built into inductive type
       let relational_type := [norm: μ ⟨ty_content⟩ :]
-      let ty' := [norm: β[0] -> {β[0] | β[1] × β[0] ≤ ⟨relational_type⟩} :] 
+      let ty' := [norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨relational_type⟩} :] 
       Ty.assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
         (i, [(env_ty, ty')])
       )
@@ -1608,6 +1667,11 @@ namespace Normal
     let (ls_t2, ls_f2) := extract_labels ty2
     (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
   | .exis ty_c1 ty_c2 ty =>
+    let (ls_tc1, ls_fc1) := extract_labels ty_c1
+    let (ls_tc2, ls_fc2) := extract_labels ty_c2
+    let (ls_t, ls_f) := extract_labels ty
+    (ls_tc1 ++ ls_tc2 ++ ls_t, ls_fc1 ++ ls_fc2 ++ ls_f) 
+  | .univ ty_c1 ty_c2 ty =>
     let (ls_tc1, ls_fc1) := extract_labels ty_c1
     let (ls_tc2, ls_fc2) := extract_labels ty_c2
     let (ls_t, ls_f) := extract_labels ty
@@ -1771,15 +1835,16 @@ nat_list
 [norm: α[0] :]
 
 
--- treat bound variables in implication as universally quantified 
+-- expected: cons*nil*unit
 #eval unify_reduce 30
-[norm: β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
 [norm: succ*succ*zero*unit -> cons*α[0] :] 
 [norm: α[0] :]
 
 
+-- expected: ⊥
 #eval unify_reduce 30
-[norm: β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
 [norm: foo*succ*zero*unit -> α[0] :] 
 [norm: boo*α[0] :]
 
@@ -1799,14 +1864,18 @@ def even := [norm:
 :]
 
 
--- limitation: sound, but incomplete
+-- TODO: limitation: sound, but incomplete
 #eval unify_decide 0
-[norm: {β[1] -> β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
-[norm: {β[1] -> β[0] | β[1] × β[0] ≤ ⟨even_list⟩} :]
+[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
 
 #eval unify_decide 0
-[norm: {β[0]} -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
-[norm: {β[0] | β[0] ≤ ⟨even⟩} -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} :]
+[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩}  :]
+[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨even_list⟩} | β[0] ≤ ⟨even⟩ :]
+
+#eval unify_decide 0
+[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} | β[0] ≤ ⟨nat_⟩:]
+[norm: ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} | β[0] ≤ ⟨even⟩ :]
 ----------------------------
 
 def plus := [norm: 
@@ -1941,7 +2010,7 @@ def plus := [norm:
 
 -- expected: cons*nil*unit
 #eval infer_reduce 0 [norm:
-  let y[0] : β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} = _ =>
+  let y[0] : ∀ β[0] -> {β[0] | β[1] × β[0] ≤ ⟨nat_list⟩} = _ =>
   (y[0] (succ;zero;()))
 :]
 
@@ -1969,6 +2038,7 @@ def plus := [norm:
   (y[0] (succ;zero;()))
 :]
 
+
 -- expected: cons*nil*unit
 #eval infer_reduce 0 [norm:
   let y[0] : (zero*unit -> nil*unit) ∧ (succ*zero*unit -> cons*nil*unit) = _ =>
@@ -1992,8 +2062,29 @@ def plus := [norm:
 -- TODO: let doesn't generalize properly
 #eval infer_reduce 10 [norm:
   let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
-  (y[0] cons;(ooga;(), booga;()))  
+  y[0]  
 :]
+
+#eval unify_reduce 10
+[norm: α[7] -> α[8]:]
+[norm:
+  {(cons*(β[0] × β[1]) -> β[0]) | (β[0] × unit) ≤ (β[2] × unit)}
+:]
+[norm: α[7] -> α[8]:]
+
+#eval unify_reduce 10
+[norm:
+  ∀ (cons*(β[2] × α[11]) -> β[2])
+  -- {(cons*(β[0] × β[1]) -> β[0]) | (β[0] × unit) ≤ (β[2] × unit)}
+  -- cons*(β[2] × α[11])
+:]
+[norm: cons*(ooga*unit × booga*unit) -> α[7]:]
+[norm: α[7]:]
+
+-- #eval infer_reduce 10 [norm:
+--   let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
+--   (y[0] cons;(ooga;(), booga;()))  
+-- :]
 
 
 #eval infer_reduce 0 [norm:
