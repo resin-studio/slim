@@ -511,7 +511,7 @@ namespace Normal
   | .recur ty => (Ty.signed_free_vars posi ty)
 
 
-  def Ty.generalize (fids : List Nat) (start : Nat) : Ty -> Ty
+  def Ty.abstract (fids : List Nat) (start : Nat) : Ty -> Ty
   | .bvar id => .bvar id 
   | .fvar id => 
     match (fids.enumFrom start).find? (fun (_, fid) => fid == id) with
@@ -520,22 +520,22 @@ namespace Normal
   | .unit => .unit
   | .top => .top
   | .bot => .bot
-  | .tag l ty => .tag l (Ty.generalize fids start ty) 
-  | .field l ty => .field l (Ty.generalize fids start ty)
-  | .union ty1 ty2 => .union (Ty.generalize fids start ty1) (Ty.generalize fids start ty2)
-  | .inter ty1 ty2 => .inter (Ty.generalize fids start ty1) (Ty.generalize fids start ty2)
-  | .case ty1 ty2 => .case (Ty.generalize fids start ty1) (Ty.generalize fids start ty2)
+  | .tag l ty => .tag l (Ty.abstract fids start ty) 
+  | .field l ty => .field l (Ty.abstract fids start ty)
+  | .union ty1 ty2 => .union (Ty.abstract fids start ty1) (Ty.abstract fids start ty2)
+  | .inter ty1 ty2 => .inter (Ty.abstract fids start ty1) (Ty.abstract fids start ty2)
+  | .case ty1 ty2 => .case (Ty.abstract fids start ty1) (Ty.abstract fids start ty2)
   | .exis n ty_c1 ty_c2 ty => 
     (.exis n
-      (Ty.generalize fids (start + n) ty_c1) (Ty.generalize fids (start + n) ty_c2)
-      (Ty.generalize fids (start + n) ty)
+      (Ty.abstract fids (start + n) ty_c1) (Ty.abstract fids (start + n) ty_c2)
+      (Ty.abstract fids (start + n) ty)
     )
   | .univ n ty_c1 ty_c2 ty => 
     (.univ n
-      (Ty.generalize fids (start + n) ty_c1) (Ty.generalize fids (start + n) ty_c2)
-      (Ty.generalize fids (start + n) ty)
+      (Ty.abstract fids (start + n) ty_c1) (Ty.abstract fids (start + n) ty_c2)
+      (Ty.abstract fids (start + n) ty)
     )
-  | .recur ty => .recur (Ty.generalize fids (start + 1) ty)
+  | .recur ty => .recur (Ty.abstract fids (start + 1) ty)
 
   partial def reachable_constraints (env_ty : PHashMap Nat Ty) (ty : Ty) : List (Ty × Ty) :=
     let fvs := (Ty.free_vars ty).toList
@@ -555,7 +555,7 @@ namespace Normal
   | [] => Ty.unit 
   | ty :: tys => [norm: ⟨ty⟩ × ⟨nested_pairs tys⟩ :]
 
-  def Ty.pack (boundary : Nat) (env_ty : PHashMap Nat Ty) (ty : Ty) : Ty := 
+  def Ty.generalize (boundary : Nat) (env_ty : PHashMap Nat Ty) (ty : Ty) : Ty := 
     -- avoids substitution, as type variable determines type adjustment
     -- boundary prevents overgeneralizing
     let constraints := reachable_constraints env_ty ty
@@ -571,8 +571,8 @@ namespace Normal
       ty
     else
       [norm:
-        ∀ ⟨fids.length⟩ # ⟨Ty.generalize fids 0 ty⟩ | 
-          ⟨Ty.generalize fids 0 ty_lhs⟩ <: ⟨Ty.generalize fids 0 ty_rhs⟩
+        ∀ ⟨fids.length⟩ # ⟨Ty.abstract fids 0 ty⟩ | 
+          ⟨Ty.abstract fids 0 ty_lhs⟩ <: ⟨Ty.abstract fids 0 ty_rhs⟩
       :]
 
 
@@ -1351,7 +1351,7 @@ namespace Normal
   | .letb _ _ _ => none
   | .fix _ => none
 
-  partial def Tm.generalize (fids : List Nat) (start : Nat) : Tm -> Tm
+  partial def Tm.abstract (fids : List Nat) (start : Nat) : Tm -> Tm
   | .hole => Tm.hole 
   | .unit => Tm.unit 
   | .bvar id => Tm.bvar id 
@@ -1359,32 +1359,32 @@ namespace Normal
     match (fids.enumFrom start).find? (fun (_, fid) => fid == id) with
     | .some (bid, _) => .bvar bid
     | .none => .fvar id 
-  | .tag l t => .tag l (Tm.generalize fids start t) 
+  | .tag l t => .tag l (Tm.abstract fids start t) 
   | .record fds =>
     Tm.record (List.map (fun (l, t) =>
-      (l, Tm.generalize fids start t)
+      (l, Tm.abstract fids start t)
     ) fds)
   | .func fs =>
     Tm.func (List.map (fun (tp, tb) =>
       let n := match pattern_wellformed 0 tp with
       | .some n => n 
       | .none => 0 
-      let tp := Tm.generalize fids (start + n) tp 
-      let tb := Tm.generalize fids (start + n) tb
+      let tp := Tm.abstract fids (start + n) tp 
+      let tb := Tm.abstract fids (start + n) tb
       (tp, tb)
     ) fs)
   | .proj t l => 
-    Tm.proj (Tm.generalize fids start t) l
+    Tm.proj (Tm.abstract fids start t) l
   | .app t1 t2 =>
     Tm.app 
-      (Tm.generalize fids start t1) 
-      (Tm.generalize fids start t2)
+      (Tm.abstract fids start t1) 
+      (Tm.abstract fids start t2)
   | .letb ty1 t1 t2 =>
     Tm.letb ty1 
-      (Tm.generalize fids start t1)
-      (Tm.generalize fids (start + 1) t2)
+      (Tm.abstract fids start t1)
+      (Tm.abstract fids (start + 1) t2)
   | .fix t =>
-    Tm.fix (Tm.generalize fids start t)
+    Tm.fix (Tm.abstract fids start t)
 
 
   partial def Tm.instantiate (start : Nat) (args : List Tm) : Tm -> Tm
@@ -1561,7 +1561,7 @@ namespace Normal
 
     let free_var_boundary := i
     Ty.assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
-      let ty1_schema := Ty.pack free_var_boundary env_ty ty1'
+      let ty1_schema := Ty.generalize free_var_boundary env_ty ty1'
 
       let (i, x, env_tmx) := (i + 1, Tm.fvar i, PHashMap.from_list [(i, ty1_schema)]) 
       let t := Tm.instantiate 0 [x] t 
@@ -1584,12 +1584,12 @@ namespace Normal
           if List.any fvs (fun id => fvs_prem.find? id != none) then
             let fixed_point := fvs.length
             [norm:
-              ∃ ⟨fvs.length⟩ {⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩ | 
-                ⟨Ty.generalize fvs 0 (to_pair_type ty_prem)⟩ <: β[⟨fixed_point⟩] 
+              ∃ ⟨fvs.length⟩ {⟨Ty.abstract fvs 0 (to_pair_type ty_case)⟩ | 
+                ⟨Ty.abstract fvs 0 (to_pair_type ty_prem)⟩ <: β[⟨fixed_point⟩] 
               } 
             :]
           else if fvs.length > 0 then
-            [norm: ∃ ⟨fvs.length⟩ {⟨Ty.generalize fvs 0 (to_pair_type ty_case)⟩} :]
+            [norm: ∃ ⟨fvs.length⟩ {⟨Ty.abstract fvs 0 (to_pair_type ty_case)⟩} :]
           else
             (to_pair_type ty_case)
         )
@@ -1617,7 +1617,7 @@ namespace Normal
   partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
     let (_, u_env) := (infer i {} {} t ty)
     List.foldr (fun (env_ty, ty') ty_acc => 
-      -- let ty' := Ty.pack 0 env_ty ty'
+      -- let ty' := Ty.generalize 0 env_ty ty'
       -- Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
       let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
       ty'
@@ -1627,7 +1627,7 @@ namespace Normal
       -- if fvs.isEmpty then
       --   Ty.simplify (Ty.subst_default true ty')
       -- else
-      --   Ty.simplify (Ty.subst_default true (Ty.generalize fvs 0 ty'))
+      --   Ty.simplify (Ty.subst_default true (Ty.abstract fvs 0 ty'))
     ) Ty.bot u_env
 
   partial def infer_reduce (i : Nat) (t : Tm) : Ty := infer_reduce_wt (i + 1) t (Ty.fvar i)
