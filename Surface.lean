@@ -20,6 +20,7 @@ namespace Surface
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
   | case : Ty -> Ty -> Ty
+  -- TODO: Add explicit quantification  
   | univ : Ty -> Ty -> Ty -> Ty
   | exis : Ty -> Ty -> Ty -> Ty
   | recur : String -> Ty -> Ty
@@ -100,6 +101,8 @@ namespace Surface
     syntax:70 surftype:71 "×" surftype:70 : surftype
     syntax "{" surftype:41 "|" surftype "<:" surftype "}" : surftype
     syntax "{" surftype:41 "}" : surftype  
+
+    -- TODO: move constraint to the front
     syntax "#" surftype:41 "|" surftype "<:" surftype: surftype 
     syntax "#" surftype:41 : surftype 
     syntax:40 surftype "@" surftype : surftype 

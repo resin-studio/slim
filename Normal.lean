@@ -247,6 +247,7 @@ namespace Normal
   syntax "{" slm:41 "|" slm:41 "<:" slm:41 "}": slm 
   syntax "{" slm:41 "}" : slm 
 
+  -- TODO: move constraint to the front
   syntax "∀" slm "#" slm:41 "|" slm:41 "<:" slm:41 : slm 
   syntax "∀" slm "#" slm:41 : slm 
 
