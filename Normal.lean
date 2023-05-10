@@ -65,103 +65,40 @@ namespace Normal
   | recur : α -> TyResult α
   deriving Repr, Inhabited, Hashable, BEq
 
-  -- TODO: make pattern variables indexless or ensure that pattern variables are properly ordered
-  -- . index is determined by order, to ensure canonical form. 
-  -- return non is not wellformed
-  def Ty.pattern_abstraction : Ty -> Nat
-  | .bvar idx => (idx + 1)
+  def Ty.infer_abstraction (start : Nat) : Ty -> Nat
+  | .bvar idx => (idx + 1) - start
   | .fvar id => 0 
   | .unit => 0 
   | .top => 0 
   | .bot => 0 
   | .tag l ty =>
-    Ty.pattern_abstraction ty 
+    Ty.infer_abstraction start ty 
   | .field l ty => 
-    Ty.pattern_abstraction ty 
+    Ty.infer_abstraction start ty 
   | .union ty1 ty2 => 
-    let n1 := Ty.pattern_abstraction ty1 
-    let n2 := Ty.pattern_abstraction ty2
+    let n1 := Ty.infer_abstraction start ty1 
+    let n2 := Ty.infer_abstraction start ty2
     if n1 > n2 then n1 else n2 
   | .inter ty1 ty2 => 
-    let n1 := Ty.pattern_abstraction ty1 
-    let n2 := Ty.pattern_abstraction ty2
+    let n1 := Ty.infer_abstraction start ty1 
+    let n2 := Ty.infer_abstraction start ty2
     if n1 > n2 then n1 else n2 
   | .case ty1 ty2 =>
-    let n1 := Ty.pattern_abstraction ty1 
-    let n2 := Ty.pattern_abstraction ty2
+    let n1 := Ty.infer_abstraction start ty1 
+    let n2 := Ty.infer_abstraction start ty2
     if n1 > n2 then n1 else n2 
-   | _ => 0 -- TODO: this should be an error/none 
-
-
-  protected partial def Ty.repr (ty : Ty) (n : Nat) : Format :=
-  match ty with
-  | .bvar id => 
-    "β[" ++ repr id ++ "]"
-  | .fvar id =>
-    "α[" ++ repr id ++ "]"
-  | .unit => "unit" 
-  | .top => "⊤" 
-  | .bot => "⊥" 
-  | .tag l ty1 => 
-    (l ++ "*" ++ (Ty.repr ty1 n))
-  | .field l ty1 => 
-    Format.bracket "(" (l ++ " : " ++ (Ty.repr ty1 n)) ")"
-
-  | .union (Ty.tag "inl" inl) (Ty.tag "inr" inr) =>
-    Format.bracket "(" ((Ty.repr inl n) ++ " +" ++ Format.line ++ (Ty.repr inr n)) ")"
-  | .union ty1 ty2 =>
-    let _ : ToFormat Ty := ⟨fun ty' => Ty.repr ty' n ⟩
-    let tys := [ty1, ty2] 
-    Format.bracket "("
-      (Format.joinSep tys (" ∨" ++ Format.line))
-    ")"
- 
-  | .inter (Ty.field "l" l) (Ty.field "r" r) =>
-    Format.bracket "(" ((Ty.repr l n) ++ " × " ++ (Ty.repr r n)) ")"
-  | .inter ty1 ty2 =>
-    Format.bracket "(" ((Ty.repr ty1 n) ++ " ∧ " ++ (Ty.repr ty2 n)) ")"
-  | .case ty1 ty2 =>
-    Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
-  | .exis n ty_c1 ty_c2 ty_pl =>
-    let n_str := (
-      if n == pattern_abstraction ty_pl then
-        ""
-      else
-        "∃ " ++ (Nat.repr n) ++ " "
-    )
-
-    n_str ++ (
-      if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-        Format.bracket "{" (Ty.repr ty_pl n) "}"
-      else
-        Format.bracket "{" (
-          (Ty.repr ty_pl n) ++ " | " ++
-          (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
-        ) "}"
-    )
-  | .univ n ty_c1 ty_c2 ty_pl =>
-    let n_str := (
-      if n == pattern_abstraction ty_pl then
-        ""
-      else
-        "∀ " ++ (Nat.repr n) ++ " "
-    )
-
-    if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-      Format.bracket "(" (n_str ++ "# " ++ (Ty.repr ty_pl n)) ")"
-    else
-      Format.bracket "(" (n_str ++ "# " ++
-        (Ty.repr ty_pl n) ++ " | " ++
-        (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
-      ) ")"
-  | .recur ty1 =>
-    Format.bracket "(" (
-      "μ " ++ (Ty.repr ty1 n)
-    ) ")"
-
-  instance : Repr Ty where
-    reprPrec := Ty.repr
-
+  | exis n ty_c1 ty_c2 ty_pl =>
+    let n_c1 := Ty.infer_abstraction (start + n) ty_c1 
+    let n_c2 := Ty.infer_abstraction (start + n) ty_c2
+    let n_pl := Ty.infer_abstraction (start + n) ty_pl  
+    Nat.max (Nat.max n_c1 n_c2) n_pl
+  | univ n ty_c1 ty_c2 ty_pl =>
+    let n_c1 := Ty.infer_abstraction (start + n) ty_c1 
+    let n_c2 := Ty.infer_abstraction (start + n) ty_c2
+    let n_pl := Ty.infer_abstraction (start + n) ty_pl  
+    Nat.max (Nat.max n_c1 n_c2) n_pl
+  | recur content =>
+    Ty.infer_abstraction (start + 1) content 
 
   inductive Tm : Type
   | hole : Tm 
@@ -176,52 +113,6 @@ namespace Normal
   | letb : Option Ty -> Tm -> Tm -> Tm
   | fix : Tm -> Tm
   deriving Repr, Inhabited, BEq
-
-  protected partial def Tm.repr (t : Tm) (n : Nat) : Format :=
-  match t with
-  | .hole => 
-    "_"
-  | .unit =>
-    "()"
-  | .bvar id =>
-    "y[" ++ repr id ++ "]"
-  | .fvar id => 
-    "x[" ++ repr id ++ "]"
-  | .tag l t1 =>
-    l ++ ";" ++ (Tm.repr t1 n)
-  | record [("l", l), ("r", r)] =>
-    let _ : ToFormat Tm := ⟨fun t1 => Tm.repr t1 n ⟩
-    Format.bracket "(" (Format.joinSep [l, r] ("," ++ Format.line)) ")"
-  | record fds =>
-    let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
-      l ++ " := " ++ Tm.repr t1 n ⟩
-    "σ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
-  | func [(pat, tb)] =>
-    "λ " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
-  | func fs =>
-    let _ : ToFormat (Tm × Tm) := ⟨fun (pat, tb) =>
-      "for " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
-    ⟩
-    "λ" ++ Format.bracket "[" (Format.joinSep fs ("," ++ Format.line)) "]"
-  | .proj t1 l =>
-    Tm.repr t1 n ++ "/" ++ l
-  | .app t1 t2 =>
-    Format.bracket "(" (Tm.repr t1 n) ") " ++ "(" ++ Tm.repr t2 n ++ ")"
-  | .letb op_ty1 t1 t2 =>
-    match op_ty1 with
-    | some ty1 =>
-      "let y[0] : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
-      Format.line  ++ (Tm.repr t2 n) 
-    | none =>
-      "let y[0] = " ++  (Tm.repr t1 n) ++ " =>" ++
-      Format.line  ++ (Tm.repr t2 n) 
-  | .fix t1 =>
-    Format.bracket "(" ("fix " ++ (Tm.repr t1 n)) ")"
-
-  instance : Repr Tm where
-    reprPrec := Tm.repr
-
-
 
   declare_syntax_cat slm
   syntax:100 num : slm 
@@ -247,11 +138,10 @@ namespace Normal
   syntax "{" slm:41 "|" slm:41 "<:" slm:41 "}": slm 
   syntax "{" slm:41 "}" : slm 
 
-  -- TODO: move constraint to the front
-  syntax "∀" slm "#" slm:41 "|" slm:41 "<:" slm:41 : slm 
+  syntax "∀" slm "#" slm:41 "<:" slm:41 "." slm:41 : slm 
   syntax "∀" slm "#" slm:41 : slm 
 
-  syntax "#" slm:41 "|" slm:41 "<:" slm:41 : slm 
+  syntax "#" slm:41 "<:" slm:41 "." slm:41 : slm 
   syntax "#" slm:41 : slm 
 
   syntax "μ" slm:40 : slm 
@@ -309,17 +199,17 @@ namespace Normal
   | `([norm: ∃ $n { $b:slm } :]) => `(Ty.exis [norm: $n :] Ty.unit Ty.unit [norm: $b :] )
 
   | `([norm: { $d | $b <: $c }  :]) => 
-    `(Ty.exis (Ty.pattern_abstraction [norm: $d :]) [norm: $b :] [norm: $c :] [norm: $d :])
+    `(Ty.exis (Ty.infer_abstraction 0 [norm: $d :]) [norm: $b :] [norm: $c :] [norm: $d :])
   | `([norm: { $b:slm } :]) => 
-    `(Ty.exis (Ty.pattern_abstraction [norm: $b :]) Ty.unit Ty.unit [norm: $b :] )
+    `(Ty.exis (Ty.infer_abstraction 0 [norm: $b :]) Ty.unit Ty.unit [norm: $b :] )
 
-  | `([norm: # $d | $b <: $c  :]) => 
-    `(Ty.univ (Ty.pattern_abstraction [norm: $d :]) [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: # $b <: $c . $d  :]) => 
+    `(Ty.univ (Ty.infer_abstraction 0 [norm: $d :]) [norm: $b :] [norm: $c :] [norm: $d :])
   | `([norm: # $b:slm  :]) => 
-    `(Ty.univ (Ty.pattern_abstraction [norm: $b :]) Ty.unit Ty.unit [norm: $b :] )
+    `(Ty.univ (Ty.infer_abstraction 0 [norm: $b :]) Ty.unit Ty.unit [norm: $b :] )
 
 
-  | `([norm: ∀ $n # $d | $b <: $c  :]) => `(Ty.univ [norm: $n :] [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: ∀ $n # $b <: $c . $d   :]) => `(Ty.univ [norm: $n :] [norm: $b :] [norm: $c :] [norm: $d :])
   | `([norm: ∀ $n # $b:slm  :]) => `(Ty.univ [norm: $n :] Ty.unit Ty.unit [norm: $b :] )
 
 
@@ -347,6 +237,115 @@ namespace Normal
 
   --escape 
   | `([norm: ⟨ $e ⟩ :]) => pure e
+
+
+
+  protected partial def Ty.repr (ty : Ty) (n : Nat) : Format :=
+  match ty with
+  | .bvar id => 
+    "β[" ++ repr id ++ "]"
+  | .fvar id =>
+    "α[" ++ repr id ++ "]"
+  | .unit => "unit" 
+  | .top => "⊤" 
+  | .bot => "⊥" 
+  | .tag l ty1 => 
+    (l ++ "*" ++ (Ty.repr ty1 n))
+  | .field l ty1 => 
+    Format.bracket "(" (l ++ " : " ++ (Ty.repr ty1 n)) ")"
+
+  | .union (Ty.tag "inl" inl) (Ty.tag "inr" inr) =>
+    Format.bracket "(" ((Ty.repr inl n) ++ " +" ++ Format.line ++ (Ty.repr inr n)) ")"
+  | .union ty1 ty2 =>
+    let _ : ToFormat Ty := ⟨fun ty' => Ty.repr ty' n ⟩
+    let tys := [ty1, ty2] 
+    Format.bracket "("
+      (Format.joinSep tys (" ∨" ++ Format.line))
+    ")"
+ 
+  | .inter (Ty.field "l" l) (Ty.field "r" r) =>
+    Format.bracket "(" ((Ty.repr l n) ++ " × " ++ (Ty.repr r n)) ")"
+  | .inter ty1 ty2 =>
+    Format.bracket "(" ((Ty.repr ty1 n) ++ " ∧ " ++ (Ty.repr ty2 n)) ")"
+  | .case ty1 ty2 =>
+    Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
+  | .exis n ty_c1 ty_c2 ty_pl =>
+    let n_str := ("∃ " ++ (Nat.repr n) ++ " ")
+
+    n_str ++ (
+      if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
+        Format.bracket "{" (Ty.repr ty_pl n) "}"
+      else
+        Format.bracket "{" (
+          (Ty.repr ty_pl n) ++ " | " ++
+          (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
+        ) "}"
+    )
+  | .univ n ty_c1 ty_c2 ty_pl =>
+    let n_str := ("∀ " ++ (Nat.repr n) ++ " ")
+
+    if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
+      Format.bracket "(" (n_str ++ "# " ++ (Ty.repr ty_pl n)) ")"
+    else
+      Format.bracket "(" (n_str ++ "# " ++
+        (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n) ++ " . " ++
+        (Ty.repr ty_pl n)
+      ) ")"
+  | .recur ty1 =>
+    Format.bracket "(" (
+      "μ " ++ (Ty.repr ty1 n)
+    ) ")"
+
+  instance : Repr Ty where
+    reprPrec := Ty.repr
+
+
+  #eval [norm: # β[0] -> {β[0] | β[0] <: β[1] × β[2] }  :]
+
+  protected partial def Tm.repr (t : Tm) (n : Nat) : Format :=
+  match t with
+  | .hole => 
+    "_"
+  | .unit =>
+    "()"
+  | .bvar id =>
+    "y[" ++ repr id ++ "]"
+  | .fvar id => 
+    "x[" ++ repr id ++ "]"
+  | .tag l t1 =>
+    l ++ ";" ++ (Tm.repr t1 n)
+  | record [("l", l), ("r", r)] =>
+    let _ : ToFormat Tm := ⟨fun t1 => Tm.repr t1 n ⟩
+    Format.bracket "(" (Format.joinSep [l, r] ("," ++ Format.line)) ")"
+  | record fds =>
+    let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
+      l ++ " := " ++ Tm.repr t1 n ⟩
+    "σ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
+  | func [(pat, tb)] =>
+    "λ " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
+  | func fs =>
+    let _ : ToFormat (Tm × Tm) := ⟨fun (pat, tb) =>
+      "for " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
+    ⟩
+    "λ" ++ Format.bracket "[" (Format.joinSep fs ("," ++ Format.line)) "]"
+  | .proj t1 l =>
+    Tm.repr t1 n ++ "/" ++ l
+  | .app t1 t2 =>
+    Format.bracket "(" (Tm.repr t1 n) ") " ++ "(" ++ Tm.repr t2 n ++ ")"
+  | .letb op_ty1 t1 t2 =>
+    match op_ty1 with
+    | some ty1 =>
+      "let y[0] : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
+      Format.line  ++ (Tm.repr t2 n) 
+    | none =>
+      "let y[0] = " ++  (Tm.repr t1 n) ++ " =>" ++
+      Format.line  ++ (Tm.repr t2 n) 
+  | .fix t1 =>
+    Format.bracket "(" ("fix " ++ (Tm.repr t1 n)) ")"
+
+  instance : Repr Tm where
+    reprPrec := Tm.repr
+
 
 
 
@@ -442,30 +441,6 @@ namespace Normal
 
 
 
-  declare_syntax_cat sub
-  syntax slm "//" slm : sub 
-  syntax "[" sub,+ "]" : sub
-  syntax "[sub:" sub ":]" : term 
-
-  macro_rules
-    | `([sub: $a:slm // $b:slm :]) => `(([norm: $a :], [norm: $b :])) 
-
-  macro_rules
-    | `([sub: [$x:sub] :]) => `([ [sub: $x :] ])
-    | `([sub: [$x,$xs:sub,*] :]) => `([sub: $x :] :: [sub: [$xs,*] :])
-
-
-  -- syntax slm ";" sub : slm 
-  -- macro_rules
-  --   | `([norm: $a ; $b:sub :]) => `(Ty.subst (PHashMap.from_list [sub: $b :]) [norm: $a :])
-
-
-  -- #check [norm: (β[1]) ; [1 // α[0]] :]
-  -- #check [norm: (β[1]) ; [1//α[0]] :]
-
-
-
-  -- TODO: only extract variables in type bodies.
   partial def Ty.free_vars: Ty -> PHashMap Nat Unit
   | .bvar id => {} 
   | .fvar id => PHashMap.from_list [(id, Unit.unit)] 
@@ -572,8 +547,8 @@ namespace Normal
       ty
     else
       [norm:
-        ∀ ⟨fids.length⟩ # ⟨Ty.abstract fids 0 ty⟩ | 
-          ⟨Ty.abstract fids 0 ty_lhs⟩ <: ⟨Ty.abstract fids 0 ty_rhs⟩
+        ∀ ⟨fids.length⟩ # ⟨Ty.abstract fids 0 ty_lhs⟩ <: ⟨Ty.abstract fids 0 ty_rhs⟩ .
+        ⟨Ty.abstract fids 0 ty⟩
       :]
 
 
@@ -1220,8 +1195,8 @@ namespace Normal
 
     -- | .case ty1 ty2, .case ty3 ty4 =>
 
-    --   let n1 := pattern_abstraction ty1 
-    --   let n3 := pattern_abstraction ty3 
+    --   let n1 := infer_abstraction ty1 
+    --   let n3 := infer_abstraction ty3 
     --   if n1 == 0 && n3 == 0 then 
     --     Ty.assume_env (unify i env_ty env_complex frozen ty3 ty1) (fun i env_ty =>
     --       (unify i env_ty env_complex frozen ty2 ty4)
@@ -1913,11 +1888,14 @@ namespace Normal
 
   #eval unify_decide 0
   [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩}  :]
-  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨even_list⟩} | β[0] <: ⟨even⟩ :]
+  [norm: # β[0] <: ⟨even⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨even_list⟩} :]
+
+
+  #eval [norm: # β[0] <: ⟨even⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨even_list⟩} :]
 
   #eval unify_decide 0
-  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} | β[0] <: ⟨nat_⟩:]
-  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} | β[0] <: ⟨even⟩ :]
+  [norm: # β[0] <: ⟨nat_⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
+  [norm: # β[0] <: ⟨even⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
   ----------------------------
 
   def plus := [norm: 
