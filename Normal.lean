@@ -1599,6 +1599,8 @@ namespace Normal
 
       -- constraint that ty' <= ty_prem is built into inductive type
       let relational_type := [norm: μ ⟨ty_content⟩ :]
+      -- TODO: need to add constraint to premise to avoid being to strong: 
+      -- i.e. premise accepts anything and conclusion becomes false.
       let ty' := [norm: ∀ 1 # β[0] -> ∃ 1 {β[0] | β[1] × β[0] <: ⟨relational_type⟩} :] 
       Ty.assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
         (i, [(env_ty, ty')])
