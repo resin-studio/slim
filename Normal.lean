@@ -154,12 +154,10 @@ namespace Normal
   syntax:30 slm:100 ";" slm:30 : slm
   syntax:30 slm:100 ":=" slm:30 : slm
   syntax:30 "(" slm "," slm ")" : slm
-  syntax:30 "σ" slm : slm
-  syntax:20 "for" slm:30 ":" slm "=>" slm:20 : slm 
-  syntax:20 "for" slm:30 "=>" slm:20 : slm 
-  syntax:20 "λ" slm:30 ":" slm "=>" slm:20 : slm 
-  syntax:20 "λ" slm:30 "=>" slm:20 : slm 
-  syntax:30 "λ" slm : slm 
+  syntax:30 "row" slm : slm
+  syntax:20 "|" slm:30 "=>" slm:20 : slm 
+  syntax:20 "fun" slm:30 "=>" slm:20 : slm 
+  syntax:30 "fun" slm : slm 
   syntax:30 slm:30 "/" slm:100 : slm 
   syntax:30 "(" slm:30 slm:30 ")" : slm 
   syntax:30 "let y[0]" ":" slm:30 "=" slm:30 "=>" slm:30 : slm 
@@ -181,6 +179,7 @@ namespace Normal
   -- context 
   | `([norm: [$x:slm] :]) => `([ [norm: $x :] ])
   | `([norm: [$x,$xs:slm,*] :]) => `([norm: $x :] :: [norm: [$xs,*] :])
+  ----------
   -- Ty 
   | `([norm: β[$n] :]) => `(Ty.bvar [norm: $n :])
   | `([norm: α[$n:slm] :]) => `(Ty.fvar [norm: $n :])
@@ -221,11 +220,11 @@ namespace Normal
   | `([norm: x[$n] :]) => `(Tm.fvar [norm: $n :])
   | `([norm: $a ; $b :]) => `(Tm.tag [norm: $a :] [norm: $b :])
   | `([norm: $a := $b :]) => `(([norm: $a :], [norm: $b :]))
-  | `([norm: for $b => $d :]) => `(([norm: $b :], [norm: $d :]))
-  | `([norm: σ $a :]) => `(Tm.record [norm: $a :])
+  | `([norm: | $b => $d :]) => `(([norm: $b :], [norm: $d :]))
+  | `([norm: row $a :]) => `(Tm.record [norm: $a :])
   | `([norm: ( $a , $b ) :]) => `(Tm.record [("l", [norm: $a :]), ("r", [norm:$b :])])
-  | `([norm: λ $b => $d :]) => `(Tm.func [([norm: $b :], [norm: $d :])])
-  | `([norm: λ $a :]) => `(Tm.func [norm: $a :])
+  | `([norm: fun $b => $d :]) => `(Tm.func [([norm: $b :], [norm: $d :])])
+  | `([norm: fun $a :]) => `(Tm.func [norm: $a :])
   | `([norm: $a / $b :]) => `(Tm.proj [norm: $a :] [norm: $b :])
   | `([norm: ($a $b) :]) => `(Tm.app [norm: $a :] [norm: $b :])
   | `([norm: let y[0] : $a = $b => $c :]) => `(Tm.letb (Option.some [norm: $a :]) [norm: $b :] [norm: $c :])
@@ -1724,7 +1723,7 @@ namespace Normal
 
     let cases := enumerate_cases ls_t
     let functions := (
-      [norm: λ y[0] => _ :] :: 
+      [norm: fun y[0] => _ :] :: 
       (cases.map (fun cases => Tm.func cases))
     )
 
@@ -2035,25 +2034,25 @@ namespace Normal
   :]
 
   #eval infer_reduce 0 [norm:
-    fix(λ y[0] => λ[
-    for zero;() => nil;(),
-    for succ;y[0] => cons;(y[1] y[0])
+    fix(fun y[0] => fun[
+    | zero;() => nil;(),
+    | succ;y[0] => cons;(y[1] y[0])
     ])
   :]
 
   #eval infer_reduce 0 [norm:
-    let y[0] = fix(λ y[0] => λ[
-    for zero;() => nil;(),
-    for succ;y[0] => cons;(y[1] y[0])
+    let y[0] = fix(fun y[0] => fun[
+    | zero;() => nil;(),
+    | succ;y[0] => cons;(y[1] y[0])
     ]) =>
     y[0]
   :]
 
   -- expected: cons*nil*unit
   #eval infer_reduce 10 [norm:
-    let y[0] = fix(λ y[0] => λ[
-      for zero;() => nil;(),
-      for succ;y[0] => cons;(y[1] y[0])
+    let y[0] = fix(fun y[0] => fun[
+      | zero;() => nil;(),
+      | succ;y[0] => cons;(y[1] y[0])
     ]) =>
     (y[0] (succ;zero;()))
   :]
@@ -2069,16 +2068,16 @@ namespace Normal
   ---------- generics ----------------
 
   #eval infer_reduce 10 [norm:
-    ((λ cons;(y[0], y[1]) => y[0]) (cons;(ooga;(), booga;())))
+    ((fun cons;(y[0], y[1]) => y[0]) (cons;(ooga;(), booga;())))
   :]
 
   #eval infer_reduce 10 [norm:
-    let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
+    let y[0] = (fun cons;(y[0], y[1]) => y[0]) =>
     (y[0] (cons;(ooga;(), booga;())))  
   :]
 
   #eval infer_reduce 10 [norm:
-    let y[0] = (λ cons;(y[0], y[1]) => y[0]) =>
+    let y[0] = (fun cons;(y[0], y[1]) => y[0]) =>
     y[0]  
   :]
 
@@ -2110,21 +2109,21 @@ namespace Normal
   #eval infer_reduce 0 [norm:
   let y[0] : uno*unit -> unit = _ => 
   let y[0] : dos*unit -> unit = _ =>
-  (λ y[0] =>
+  (fun y[0] =>
     ((y[2] y[0]), (y[1] y[0])))
   :]
 
   #eval infer_reduce 0 [norm:
   let y[0] : uno*unit -> unit = _ => 
   let y[0] : dos*unit -> unit = _ =>
-  (λ y[0] =>
+  (fun y[0] =>
     let y[0] = (y[2] y[0]) => 
     let y[0] = (y[2] y[1]) =>
     (y[0], y[1]))
   :]
 
   ----------------------------------
-  #eval [norm: σ[x := hello;()] :]
+  #eval [norm: row[x := hello;()] :]
 
   #eval unify_decide 0 
     [norm: hello*unit :] 
@@ -2160,19 +2159,19 @@ namespace Normal
 
 
   #eval infer_reduce 10 [norm:
-  fix(λ y[0] => λ[
-    for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
-    for (zero;(), y[0]) => y[0],
-    for (y[0], zero;()) => y[0] 
+  fix(fun y[0] => fun[
+    | (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+    | (zero;(), y[0]) => y[0],
+    | (y[0], zero;()) => y[0] 
   ])
   :]
 
   -- TODO
   #eval infer_reduce 10 [norm:
-  (fix(λ y[0] => λ[
-    for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
-    for (zero;(), y[0]) => y[0],
-    for (y[0], zero;()) => y[0] 
+  (fix(fun y[0] => fun[
+    | (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+    | (zero;(), y[0]) => y[0],
+    | (y[0], zero;()) => y[0] 
   ]) (succ;succ;zero;(), succ;succ;succ;zero;()))
   :]
 
@@ -2200,30 +2199,30 @@ namespace Normal
   -- TODO
   #eval infer_reduce 10 
   [norm:
-  let y[0] : ⟨spec⟩ = fix(λ y[0] => λ[
-    for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
-    for (zero;(), y[0]) => y[0],
-    for (y[0], zero;()) => y[0] 
+  let y[0] : ⟨spec⟩ = fix(fun y[0] => fun[
+    | (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+    | (zero;(), y[0]) => y[0],
+    | (y[0], zero;()) => y[0] 
   ]) =>
   y[0]
   :]
 
   #eval infer_reduce 10 
   [norm:
-  let y[0] = fix(λ y[0] => λ[
-    for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
-    for (zero;(), y[0]) => y[0],
-    for (y[0], zero;()) => y[0] 
+  let y[0] = fix(fun y[0] => fun[
+    | (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+    | (zero;(), y[0]) => y[0],
+    | (y[0], zero;()) => y[0] 
   ]) =>
   y[0]
   :]
 
   #eval infer_reduce 10 
   [norm:
-  let y[0] = fix(λ y[0] => λ[
-    for (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
-    for (zero;(), y[0]) => y[0],
-    for (y[0], zero;()) => y[0] 
+  let y[0] = fix(fun y[0] => fun[
+    | (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1])),
+    | (zero;(), y[0]) => y[0],
+    | (y[0], zero;()) => y[0] 
   ]) =>
   (y[0] (succ;succ;zero;(), succ;zero;()))
   :]
