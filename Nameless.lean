@@ -17,20 +17,24 @@ partial def multi_step {T : Type} [BEq T] (step : T -> T) (source : T): T :=
     multi_step step sink
 
 
+/- OLD: don't think normal form is relevant here
+  -- TODO: create non-normal types with encoding/decoding to normal types 
+    -- non-normal has named variable binding
 
--- TODO: create non-normal types with encoding/decoding to normal types 
-  -- non-normal has named variable binding
+  -- TODO?: normalize record intersection as Map from fields to type 
+  -- TODO?: normalize function intersection as Map from type to type 
+    -- requires notion of intersectable.
+    -- if adding field to intersection of fields 
+    -- if adding function to function or intersectino of functions
+  -- TODO?: normalize union as set of types   
+    -- requires notion of unionable.
+  -- Normal form of types uses De Bruijn indexing for bound type variables
+  -- TODO: Normal form of types using De Bruijn indexing for bound type variables
+  -- TODO: convert top and bottom into sugar: ⊤ = ∃ α . α, ⊥  = ∀ α . α
+  -- TODO: remove top and bottom types 
+-/
 
--- TODO?: normalize record intersection as Map from fields to type 
--- TODO?: normalize function intersection as Map from type to type 
--- TODO?: normalize union as set of types   
-
--- Normal form of types uses De Bruijn indexing for bound type variables
--- TODO: Normal form of types using De Bruijn indexing for bound type variables
--- TODO: convert top and bottom into sugar: ⊤ = ∃ α . α, ⊥  = ∀ α . α
--- TODO: remove top and bottom types 
-
-namespace Normal
+namespace Nameless 
   inductive Ty : Type
   | bvar : Nat -> Ty  
   | fvar : Nat -> Ty
@@ -322,6 +326,9 @@ namespace Normal
 
 
   #eval [norm: forall β[0] -> {β[0] | β[0] <: β[1] × β[2] }  :]
+
+  #eval [norm: forall β[0] -> {β[0] ∨ unit | β[1] <: β[0] } :]
+
 
   protected partial def Tm.repr (t : Tm) (n : Nat) : Format :=
   match t with
@@ -2399,4 +2406,4 @@ namespace Normal
   -- -- :]
 
 
-end Normal
+end Nameless 

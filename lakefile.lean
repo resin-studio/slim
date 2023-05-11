@@ -18,7 +18,7 @@ lean_lib Util {
 }
 
 @[default_target]
-lean_lib Normal {
+lean_lib Nameless {
   -- add any library configuration options here
 }
 

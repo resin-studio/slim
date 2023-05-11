@@ -3,7 +3,7 @@ import Init.Data.Hashable
 import Lean.Data.PersistentHashMap
 
 import Util 
-import Normal
+import Nameless
 
 open Lean PersistentHashMap
 
@@ -15,26 +15,73 @@ namespace Surface
   | id : String -> Ty
   | unit : Ty
   | bot : Ty
+  | top : Ty
   | tag : String -> Ty -> Ty
   | field : String -> Ty -> Ty
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
   | case : Ty -> Ty -> Ty
-  -- TODO: Add explicit quantification  
-  | univ : Ty -> Ty -> Ty -> Ty
-  | exis : Ty -> Ty -> Ty -> Ty
+  | univ : List String -> Ty -> Ty -> Ty -> Ty
+  | exis : List String -> Ty -> Ty -> Ty -> Ty
   | recur : String -> Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
   #check List.repr
 
+
+  def to_set [BEq α] [Hashable α] (xs : List α) : PHashMap α Unit :=
+    PHashMap.from_list (xs.map fun x => (x, Unit.unit))
+
+  def to_list [BEq α] [Hashable α] (xs : PHashMap α Unit) : List α :=
+    xs.toList.map fun (x, _) => x
+
   namespace Ty
+
+    def Ty.infer_abstraction (exclude : PHashMap String Unit) : Ty -> PHashMap String Unit 
+    | .id name => 
+      if exclude.contains name then
+        {}
+      else
+        PHashMap.from_list [(name, Unit.unit)]
+    | .unit => {} 
+    | .top => {} 
+    | .bot => {} 
+    | .tag l ty =>
+      Ty.infer_abstraction exclude ty 
+    | .field l ty => 
+      Ty.infer_abstraction exclude ty 
+    | .union ty1 ty2 => 
+      let n1 := Ty.infer_abstraction exclude ty1 
+      let n2 := Ty.infer_abstraction exclude ty2
+      n1 ; n2 
+    | .inter ty1 ty2 => 
+      let n1 := Ty.infer_abstraction exclude ty1 
+      let n2 := Ty.infer_abstraction exclude ty2
+      n1 ; n2 
+    | .case ty1 ty2 =>
+      let n1 := Ty.infer_abstraction exclude ty1 
+      let n2 := Ty.infer_abstraction exclude ty2
+      n1 ; n2 
+    | exis n ty_c1 ty_c2 ty_pl =>
+      let exclude' := exclude ; (to_set n)  
+      let n_c1 := Ty.infer_abstraction exclude' ty_c1 
+      let n_c2 := Ty.infer_abstraction exclude' ty_c2
+      let n_pl := Ty.infer_abstraction exclude' ty_pl  
+      n_c1 ; n_c2 ; n_pl
+    | univ n ty_c1 ty_c2 ty_pl =>
+      let exclude' := exclude ; (to_set n)  
+      let n_c1 := Ty.infer_abstraction exclude' ty_c1 
+      let n_c2 := Ty.infer_abstraction exclude' ty_c2
+      let n_pl := Ty.infer_abstraction exclude' ty_pl  
+      n_c1 ; n_c2 ; n_pl
+    | recur name content =>
+      Ty.infer_abstraction (exclude ; to_set [name]) content 
 
     protected partial def repr (ty : Ty) (n : Nat) : Format :=
     match ty with
     | .id name => name 
     | .unit => "unit" 
     | .bot => "⊥" 
-    -- | .top => "⊤" 
+    | .top => "⊤" 
     | .tag l ty1 => 
       (l ++ "*" ++ (Ty.repr ty1 n))
     | .field l ty1 => 
@@ -55,27 +102,32 @@ namespace Surface
       Format.bracket "(" ((Ty.repr ty1 n) ++ " ∧ " ++ (Ty.repr ty2 n)) ")"
     | .case ty1 ty2 =>
       Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
-    | .univ ty_c1 ty_c2 ty_pl =>
+    | .univ names ty_c1 ty_c2 ty_pl =>
+      let names_format := Format.bracket "[" (Format.joinSep names ", ") "]"
       if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
         Format.bracket "(" (
-          "# " ++ (Ty.repr ty_pl n)
+          "forall " ++ names_format ++ " " ++ (Ty.repr ty_pl n)
         ) ")"
       else
         Format.bracket "(" (
-          "# " ++ (Ty.repr ty_pl n) ++ " | " ++
-          (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
+          "forall " ++ names_format ++ " " ++ (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n) ++
+            " . " ++ (Ty.repr ty_pl n)
         ) ")"
-    | .exis ty_c1 ty_c2 ty_pl =>
+    | .exis names ty_c1 ty_c2 ty_pl =>
+      let names_format := Format.bracket "[" (Format.joinSep names ", ") "]"
       if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-        Format.bracket "{" (Ty.repr ty_pl n) "}"
+        Format.bracket "{" (
+          names_format ++ " " ++ 
+          Ty.repr ty_pl n) "}"
       else
         Format.bracket "{" (
+          names_format ++ " " ++ 
           (Ty.repr ty_pl n) ++ " | " ++
           (Ty.repr ty_c1 n) ++ " ≤ " ++ (Ty.repr ty_c2 n)
         ) "}"
     | .recur name ty1 =>
       Format.bracket "(" (
-        name ++  " @ " ++ (Ty.repr ty1 n)
+        "induct " ++ "[" ++ name ++ "] " ++ (Ty.repr ty1 n)
       ) ")"
 
     instance : Repr Ty where
@@ -87,7 +139,7 @@ namespace Surface
     syntax "⟨" term "⟩" : surftype 
     syntax:100 num : surftype 
     syntax:100 ident : surftype
-    syntax "[" surftype,+ "]" : surftype 
+    syntax "[" ident,+ "]" : surftype 
     -- type
     syntax:90 "unit" : surftype
     syntax:90 "⊥" : surftype
@@ -99,13 +151,22 @@ namespace Surface
     syntax:60 surftype:61 "+" surftype:60 : surftype
     syntax:70 surftype:71 "∧" surftype:70 : surftype
     syntax:70 surftype:71 "×" surftype:70 : surftype
-    syntax "{" surftype:41 "|" surftype "<:" surftype "}" : surftype
-    syntax "{" surftype:41 "}" : surftype  
 
-    -- TODO: move constraint to the front
-    syntax "#" surftype:41 "|" surftype "<:" surftype: surftype 
-    syntax "#" surftype:41 : surftype 
-    syntax:40 surftype "@" surftype : surftype 
+    syntax "{" surftype surftype:41 "|" surftype:41 "<:" surftype:41 "}": surftype 
+    syntax "{" surftype surftype:41 "}" : surftype 
+
+    syntax "{" surftype:41 "|" surftype:41 "<:" surftype:41 "}": surftype 
+    syntax "{" surftype:41 "}" : surftype 
+
+
+    syntax "forall" surftype surftype:41 "<:" surftype:41 "." surftype:41 : surftype 
+    syntax "forall" surftype surftype:41 : surftype 
+
+    syntax "forall" surftype:41 "<:" surftype:41 "." surftype:41 : surftype 
+    syntax "forall" surftype:41 : surftype 
+
+
+    syntax:40 "induct" "[" ident "]" surftype : surftype 
 
 
     syntax "[surftype: " surftype "]" : term
@@ -123,8 +184,8 @@ namespace Surface
     | `([surftype: $n:num ]) => `($n)
     | `([surftype: $a:ident]) => `(Ty.id $(Lean.quote (toString a.getId)))
     -- context 
-    | `([surftype: [ $x:surftype ] ]) => `([ [surftype: $x ] ])
-    | `([surftype: [ $x,$xs:surftype,* ] ]) => `([surftype: [ $x ] ] ++ [surftype: [$xs,*] ])
+    | `([surftype: [ $x:ident ] ]) => `([ $(Lean.quote (toString x.getId)) ])
+    | `([surftype: [ $x,$xs:ident,* ] ]) => `([surftype: [ $x ] ] ++ [surftype: [$xs,*] ])
     -- Ty 
     | `([surftype: unit ]) => `(Ty.unit)
     | `([surftype: ⊥ ]) => `(Ty.bot)
@@ -136,15 +197,38 @@ namespace Surface
     | `([surftype: $a + $b ]) => `(Ty.union (Ty.tag "inl" [surftype: $a ]) (Ty.tag "inr" [surftype: $b ]))
     | `([surftype: $a ∧ $b ]) => `(Ty.inter [surftype: $a ] [surftype: $b ])
     | `([surftype: $a × $b ]) => `(Ty.inter (Ty.field "l" [surftype: $a ]) (Ty.field "r" [surftype: $b ]))
-    | `([surftype: { $d | $b <: $c } ]) => `(Ty.exis [surftype: $b ] [surftype: $c ] [surftype: $d ])
-    | `([surftype: { $b:surftype } ]) => `(Ty.exis [surftype: unit ] [surftype: unit ] [surftype: $b ] )
-    | `([surftype: # $d | $b <: $c  ]) => `(Ty.univ [surftype: $b ] [surftype: $c ] [surftype: $d ])
-    | `([surftype: # $b:surftype]) => `(Ty.univ [surftype: unit ] [surftype: unit ] [surftype: $b ] )
-    | `([surftype: $name @ $a ]) => `(Ty.recur (idname [surftype: $name ]) [surftype: $a ])
+
+    | `([surftype: { $n $d | $b <: $c }  ]) => `(Ty.exis [surftype: $n ] [surftype: $b ] [surftype: $c ] [surftype: $d ])
+    | `([surftype: { $n $b:surftype } ]) => `(Ty.exis [surftype: $n ] Ty.unit Ty.unit [surftype: $b ] )
+
+    | `([surftype: { $d | $b <: $c }  ]) => 
+      `(Ty.exis (to_list (Ty.infer_abstraction {} [surftype: $d ])) [surftype: $b ] [surftype: $c ] [surftype: $d ])
+    | `([surftype: { $b:surftype } ]) => 
+      `(Ty.exis (to_list (Ty.infer_abstraction {} [surftype: $b ])) Ty.unit Ty.unit [surftype: $b ] )
+
+    | `([surftype: forall $b <: $c . $d  ]) => 
+      `(Ty.univ (to_list (Ty.infer_abstraction {} [surftype: $d ])) [surftype: $b ] [surftype: $c ] [surftype: $d ])
+    | `([surftype: forall $b:surftype  ]) => 
+      `(Ty.univ (to_list (Ty.infer_abstraction {} [surftype: $b ])) Ty.unit Ty.unit [surftype: $b ] )
+
+    | `([surftype: forall $n $b <: $c . $d ]) => `(Ty.univ [surftype: $n ] [surftype: $b ] [surftype: $c ] [surftype: $d ])
+    | `([surftype: forall $n $b:surftype ]) => `(Ty.univ [surftype: $n ] Ty.unit Ty.unit [surftype: $b ] )
+
+    | `([surftype: induct [ $name ] $a ]) => `(Ty.recur $(Lean.quote (toString name.getId)) [surftype: $a ])
 
     #check [surftype: (x) ]
     #check [surftype: [x] ]
+    #eval Ty.infer_abstraction {} [surftype: thing ]
     #eval [surftype: {thing ∨ unit | thing <: unit }]
+
+
+    #eval [surftype: forall bob -> {thing ∨ unit | thing <: bob }]
+    #eval [surftype: forall thing -> {thing ∨ bob ∨ unit | thing <: unit }]
+    -- #eval [normam: forall β[0] -> {β[1] ∨ β[0] ∨ unit | β[1] <: unit }]
+
+    #eval [surftype: {[thing, or] thing ∨ unit | thing <: unit }]
+    #eval [surftype: {thing ∨ unit | thing <: unit }]
+    -- #eval Ty.infer_abstraction 0 [surftype: $d ]) [surftype: $b ] [surftype: $c ] [surftype: $d ]
     #eval [surftype: succ*x ]
     #eval [surftype: 
         (zero*unit × nil*unit) ∨ 
@@ -152,7 +236,7 @@ namespace Surface
     ]
 
     #eval [surftype: 
-      nat_list @ (
+      induct nat_list @ (
         (zero*unit × nil*unit) ∨ 
         {succ*nat × cons*list | nat × list <: nat_list}
       )
@@ -197,12 +281,13 @@ namespace Surface
       some (names1 ++ names2) 
     | _ => none
 
-    def normalize (bound_vars : List String) : Ty -> Option (List (List String) × Normal.Ty)
+    def normalize (bound_vars : List String) : Ty -> Option (List (List String) × Nameless.Ty)
     | id name => do
       let pos <- (List.index (fun bv => bv == name) bound_vars)
       some ([], .bvar pos)
     | .unit => some ([], .unit)
-    | .bot => some ([], .unit)
+    | .bot => some ([], .bot)
+    | .top => some ([], .top)
     | .tag name content => do 
       let (stack, content') <- normalize bound_vars content
       some (stack, .tag name content')
@@ -221,24 +306,24 @@ namespace Surface
       let (stack1, ty1') <- (normalize bound_vars ty1) 
       let (stack2, ty2') <- (normalize bound_vars ty2) 
       some (stack1 ++ stack2, .case ty1' ty2')
-    | .exis ty1 ty2 ty3 => do
+    | .exis names ty1 ty2 ty3 => do
       let names <- pattern_abstraction ty3
       let (stack1, ty1') <- (normalize (names ++ bound_vars) ty1) 
       let (stack2, ty2') <- (normalize (names ++ bound_vars) ty2) 
       let (stack3, ty3') <- (normalize (names ++ bound_vars) ty3) 
-      some (names :: stack1 ++ stack2 ++ stack3, .exis ty1' ty2' ty3')
-    | .univ ty1 ty2 ty3 => do
+      some (names :: stack1 ++ stack2 ++ stack3, .exis names.length ty1' ty2' ty3')
+    | .univ names ty1 ty2 ty3 => do
       let names <- pattern_abstraction ty3
       let (stack1, ty1') <- (normalize (names ++ bound_vars) ty1) 
       let (stack2, ty2') <- (normalize (names ++ bound_vars) ty2) 
       let (stack3, ty3') <- (normalize (names ++ bound_vars) ty3) 
-      some (names :: stack1 ++ stack2 ++ stack3, .univ ty1' ty2' ty3')
+      some (names :: stack1 ++ stack2 ++ stack3, .univ names.length ty1' ty2' ty3')
     | .recur name ty => do
       let (stack, ty') <- (normalize (name :: bound_vars) ty) 
       some ([name] :: stack, .recur ty')
 
 
-    def denormalize (names : List String) (stack : List (List String)) : Normal.Ty ->  Option Surface.Ty
+    def denormalize (names : List String) (stack : List (List String)) : Nameless.Ty ->  Option Surface.Ty
     | .bvar index =>  
       if h : names.length > index then
         let name := names.get ⟨index, h⟩
@@ -248,6 +333,7 @@ namespace Surface
     | .fvar index => some (.id s!"_α_{index}")
     | .unit => some .unit 
     | .bot => some .bot 
+    | .top => some .top 
     | .tag label content => do
       let content' <- (denormalize names stack content)   
       some (.tag label content') 
@@ -266,27 +352,25 @@ namespace Surface
       let ty1' <- (denormalize names stack ty1)   
       let ty2' <- (denormalize names stack ty2)   
       some (.case ty1' ty2') 
-    | .exis ty1 ty2 ty3 => 
+    | .exis n ty1 ty2 ty3 => 
       match stack with
       | names' :: stack'  =>
-        let n := Normal.Ty.pattern_abstraction ty1
         if names'.length == n then do
           let ty1' <- (denormalize (names' ++ names) stack' ty1)   
           let ty2' <- (denormalize (names' ++ names) stack' ty2)   
           let ty3' <- (denormalize (names' ++ names) stack' ty3)   
-          some (.exis ty1' ty2' ty3') 
+          some (.exis names' ty1' ty2' ty3') 
         else
           none
       | [] => none
-    | .univ ty1 ty2 ty3 => 
+    | .univ n ty1 ty2 ty3 => 
       match stack with
       | names' :: stack'  =>
-        let n := Normal.Ty.pattern_abstraction ty1
         if names'.length == n then do
           let ty1' <- (denormalize (names' ++ names) stack' ty1)   
           let ty2' <- (denormalize (names' ++ names) stack' ty2)   
           let ty3' <- (denormalize (names' ++ names) stack' ty3)   
-          some (.univ ty1' ty2' ty3') 
+          some (.univ names' ty1' ty2' ty3') 
         else
           none
       | [] => none
@@ -468,7 +552,7 @@ namespace Surface
 
 
 
-    partial def normalize (bound_vars : List String) : Tm -> Option (List Abstraction × Normal.Tm)
+    partial def normalize (bound_vars : List String) : Tm -> Option (List Abstraction × Nameless.Tm)
     | .hole => some ([], .hole) 
     | .unit => some ([], .unit)
     | .id name => do
@@ -523,7 +607,7 @@ namespace Surface
       let (stack', content') <- normalize bound_vars content
       some (stack', .fix content')
 
-    partial def denormalize (abstraction : Abstraction) (stack : List Abstraction) : Normal.Tm ->  Option Surface.Tm
+    partial def denormalize (abstraction : Abstraction) (stack : List Abstraction) : Nameless.Tm ->  Option Surface.Tm
     | .hole => some .hole 
     | .unit => some .unit 
     | .bvar idx =>
@@ -582,14 +666,17 @@ namespace Surface
 --------------------------------------
 
   def nat_list := [surftype: 
-    nat_list @ (
+    induct [nat_list] (
       (zero*unit × nil*unit) ∨ 
       {succ*nat × cons*list | nat × list <: nat_list}
     )
   ]
+  #eval nat_list
 
   def nat_to_list := [surftype:
-    # nat -> {list | nat × list <: nat_list}
+    forall nat -> {list | nat × list <: nat_list}
   ] 
+
+  #eval nat_to_list
 
 end Surface
