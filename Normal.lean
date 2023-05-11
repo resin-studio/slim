@@ -132,19 +132,22 @@ namespace Normal
   syntax:70 slm:71 "∧" slm:70 : slm
   syntax:70 slm:71 "×" slm:70 : slm
 
-  syntax "∃" slm "{" slm:41 "|" slm:41 "<:" slm:41 "}": slm 
-  syntax "∃" slm "{" slm:41 "}" : slm 
+  syntax "{" slm "@" slm:41 "|" slm:41 "<:" slm:41 "}": slm 
+  syntax "{" slm "@" slm:41 "}" : slm 
 
   syntax "{" slm:41 "|" slm:41 "<:" slm:41 "}": slm 
   syntax "{" slm:41 "}" : slm 
 
-  syntax "∀" slm "#" slm:41 "<:" slm:41 "." slm:41 : slm 
-  syntax "∀" slm "#" slm:41 : slm 
+  syntax "forall" slm "@" slm:41 "<:" slm:41 "." slm:41 : slm 
+  syntax "forall" slm "@" slm:41 : slm 
 
-  syntax "#" slm:41 "<:" slm:41 "." slm:41 : slm 
-  syntax "#" slm:41 : slm 
+  syntax "forall" slm:41 "<:" slm:41 "." slm:41 : slm 
+  syntax "forall" slm:41 : slm 
 
-  syntax "μ" slm:40 : slm 
+  syntax "induct" slm:40 : slm 
+
+  syntax ("#" slm)+  : slm 
+
 
   --term
   syntax:30 "_" : slm
@@ -152,9 +155,10 @@ namespace Normal
   syntax:30 "y[" slm:90 "]": slm
   syntax:30 "x[" slm:90 "]" : slm
   syntax:30 slm:100 ";" slm:30 : slm
-  syntax:30 slm:100 ":=" slm:30 : slm
+  syntax:30 "#" slm:100 "=" slm:30 : slm
+  syntax:30 "#" slm:100 "=" slm:30 slm: slm
+  syntax "{" slm,+ "}" : slm 
   syntax:30 "(" slm "," slm ")" : slm
-  syntax:30 "row" slm : slm
   syntax:20 "|" slm:30 "=>" slm:20 : slm 
   syntax:20 "fun" slm:30 "=>" slm:20 : slm 
   syntax:30 "fun" slm : slm 
@@ -171,6 +175,10 @@ namespace Normal
   syntax "⟨" term "⟩" : slm 
 
   syntax "[norm: " slm ":]" : term
+
+  def Tm.record_fields : Tm -> List (String × Tm)
+  | Tm.record fields => fields
+  | _ =>  []
 
   macro_rules
   -- terminals
@@ -194,34 +202,36 @@ namespace Normal
   | `([norm: $a ∧ $b :]) => `(Ty.inter [norm: $a :] [norm: $b :])
   | `([norm: $a × $b :]) => `(Ty.inter (Ty.field "l" [norm: $a :]) (Ty.field "r" [norm: $b :]))
 
-  | `([norm: ∃ $n { $d | $b <: $c }  :]) => `(Ty.exis [norm: $n :] [norm: $b :] [norm: $c :] [norm: $d :])
-  | `([norm: ∃ $n { $b:slm } :]) => `(Ty.exis [norm: $n :] Ty.unit Ty.unit [norm: $b :] )
+  | `([norm: { $n @ $d | $b <: $c }  :]) => `(Ty.exis [norm: $n :] [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: { $n @ $b:slm } :]) => `(Ty.exis [norm: $n :] Ty.unit Ty.unit [norm: $b :] )
 
   | `([norm: { $d | $b <: $c }  :]) => 
     `(Ty.exis (Ty.infer_abstraction 0 [norm: $d :]) [norm: $b :] [norm: $c :] [norm: $d :])
   | `([norm: { $b:slm } :]) => 
     `(Ty.exis (Ty.infer_abstraction 0 [norm: $b :]) Ty.unit Ty.unit [norm: $b :] )
 
-  | `([norm: # $b <: $c . $d  :]) => 
+  | `([norm: forall $b <: $c . $d  :]) => 
     `(Ty.univ (Ty.infer_abstraction 0 [norm: $d :]) [norm: $b :] [norm: $c :] [norm: $d :])
-  | `([norm: # $b:slm  :]) => 
+  | `([norm: forall $b:slm  :]) => 
     `(Ty.univ (Ty.infer_abstraction 0 [norm: $b :]) Ty.unit Ty.unit [norm: $b :] )
 
 
-  | `([norm: ∀ $n # $b <: $c . $d   :]) => `(Ty.univ [norm: $n :] [norm: $b :] [norm: $c :] [norm: $d :])
-  | `([norm: ∀ $n # $b:slm  :]) => `(Ty.univ [norm: $n :] Ty.unit Ty.unit [norm: $b :] )
+  | `([norm: forall $n @ $b <: $c . $d   :]) => `(Ty.univ [norm: $n :] [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: forall $n @ $b:slm  :]) => `(Ty.univ [norm: $n :] Ty.unit Ty.unit [norm: $b :] )
 
 
-  | `([norm: μ $a :]) => `(Ty.recur [norm: $a :])
+  | `([norm: induct $a :]) => `(Ty.recur [norm: $a :])
   --Tm
   | `([norm: _ :]) => `(Tm.hole)
   | `([norm: () :]) => `(Tm.unit)
   | `([norm: y[$n] :]) => `(Tm.bvar [norm: $n :])
   | `([norm: x[$n] :]) => `(Tm.fvar [norm: $n :])
   | `([norm: $a ; $b :]) => `(Tm.tag [norm: $a :] [norm: $b :])
-  | `([norm: $a := $b :]) => `(([norm: $a :], [norm: $b :]))
   | `([norm: | $b => $d :]) => `(([norm: $b :], [norm: $d :]))
-  | `([norm: row $a :]) => `(Tm.record [norm: $a :])
+
+  | `([norm: # $a = $b :]) => `( Tm.record [ ([norm: $a :], [norm: $b :]) ]  )
+  | `([norm: # $a = $b $xs :]) => `( Tm.record (([norm: $a :], [norm: $b :]) :: (Tm.record_fields [norm: $xs :])))
+
   | `([norm: ( $a , $b ) :]) => `(Tm.record [("l", [norm: $a :]), ("r", [norm:$b :])])
   | `([norm: fun $b => $d :]) => `(Tm.func [([norm: $b :], [norm: $d :])])
   | `([norm: fun $a :]) => `(Tm.func [norm: $a :])
@@ -269,37 +279,36 @@ namespace Normal
   | .case ty1 ty2 =>
     Format.bracket "(" ((Ty.repr ty1 n) ++ " ->" ++ Format.line ++ (Ty.repr ty2 n)) ")"
   | .exis n ty_c1 ty_c2 ty_pl =>
-    let n_str := ("∃ " ++ (Nat.repr n) ++ " ")
-
-    n_str ++ (
-      if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-        Format.bracket "{" (Ty.repr ty_pl n) "}"
-      else
-        Format.bracket "{" (
-          (Ty.repr ty_pl n) ++ " | " ++
-          (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
-        ) "}"
-    )
-  | .univ n ty_c1 ty_c2 ty_pl =>
-    let n_str := ("∀ " ++ (Nat.repr n) ++ " ")
-
     if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-      Format.bracket "(" (n_str ++ "# " ++ (Ty.repr ty_pl n)) ")"
+      Format.bracket "{" (
+        (Nat.repr n) ++ " @ " ++
+        Ty.repr ty_pl n
+      ) "}"
     else
-      Format.bracket "(" (n_str ++ "# " ++
+      Format.bracket "{" (
+        (Nat.repr n) ++ " @ " ++
+        (Ty.repr ty_pl n) ++ " | " ++
+        (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
+      ) "}"
+  | .univ n ty_c1 ty_c2 ty_pl =>
+    if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
+      Format.bracket "(" ("forall " ++ (Nat.repr n) ++ " @ " ++ (Ty.repr ty_pl n)) ")"
+    else
+      Format.bracket "(" (
+        "forall " ++ (Nat.repr n) ++ " @ " ++
         (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n) ++ " . " ++
         (Ty.repr ty_pl n)
       ) ")"
   | .recur ty1 =>
     Format.bracket "(" (
-      "μ " ++ (Ty.repr ty1 n)
+      "induct " ++ (Ty.repr ty1 n)
     ) ")"
 
   instance : Repr Ty where
     reprPrec := Ty.repr
 
 
-  #eval [norm: # β[0] -> {β[0] | β[0] <: β[1] × β[2] }  :]
+  #eval [norm: forall β[0] -> {β[0] | β[0] <: β[1] × β[2] }  :]
 
   protected partial def Tm.repr (t : Tm) (n : Nat) : Format :=
   match t with
@@ -317,9 +326,8 @@ namespace Normal
     let _ : ToFormat Tm := ⟨fun t1 => Tm.repr t1 n ⟩
     Format.bracket "(" (Format.joinSep [l, r] ("," ++ Format.line)) ")"
   | record fds =>
-    let _ : ToFormat (String × Tm) := ⟨fun (l, t1) =>
-      l ++ " := " ++ Tm.repr t1 n ⟩
-    "σ" ++ Format.bracket "[" (Format.joinSep fds ("," ++ Format.line)) "]"
+    let _ : ToFormat (String × Tm) := ⟨fun (l, t1) => "#" ++ l ++ " = " ++ Tm.repr t1 n⟩
+    (Format.joinSep fds (" " ++ Format.line))
   | func [(pat, tb)] =>
     "λ " ++ (Tm.repr pat n) ++ " => " ++ (Tm.repr tb (n))
   | func fs =>
@@ -546,7 +554,7 @@ namespace Normal
       ty
     else
       [norm:
-        ∀ ⟨fids.length⟩ # ⟨Ty.abstract fids 0 ty_lhs⟩ <: ⟨Ty.abstract fids 0 ty_rhs⟩ .
+        forall ⟨fids.length⟩ @ ⟨Ty.abstract fids 0 ty_lhs⟩ <: ⟨Ty.abstract fids 0 ty_rhs⟩ .
         ⟨Ty.abstract fids 0 ty⟩
       :]
 
@@ -590,12 +598,12 @@ namespace Normal
 
 
   def τ := [norm: α[0] :]
-  -- #check [norm: ⟨τ⟩ ↑ 0 // [μ β[0] => ⟨τ⟩]:]
+  -- #check [norm: ⟨τ⟩ ↑ 0 // [induct β[0] => ⟨τ⟩]:]
 
 
   partial def roll_recur (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
     if (Ty.free_vars_env m ty).contains key then
-      Ty.subst (PHashMap.from_list [(key, [norm: β[0] :])]) [norm: (μ ⟨ty⟩) :] 
+      Ty.subst (PHashMap.from_list [(key, [norm: β[0] :])]) [norm: (induct ⟨ty⟩) :] 
     else
       ty 
 
@@ -807,7 +815,7 @@ namespace Normal
       let fields := 
         prev_fields ++ (l, [norm: β[0] :]) :: var_fields 
       let ty_lhs := intersect_fields fields
-      let ty := [norm: ∃ 1 {β[0] | ⟨ty_lhs⟩ <: ⟨ty_rhs⟩} :]
+      let ty := [norm: {1 @ β[0] | ⟨ty_lhs⟩ <: ⟨ty_rhs⟩} :]
       let m : PHashMap Nat Ty := (separate_fields (prev_fields ++ [(l, ty_fd)]) var_fields') ty_rhs
       m.insert id ty
     | _ => {}
@@ -1559,12 +1567,12 @@ namespace Normal
           if List.any fvs (fun id => fvs_prem.find? id != none) then
             let fixed_point := fvs.length
             [norm:
-              ∃ ⟨fvs.length⟩ {⟨Ty.abstract fvs 0 (to_pair_type ty_case)⟩ | 
+              {⟨fvs.length⟩ @ ⟨Ty.abstract fvs 0 (to_pair_type ty_case)⟩ | 
                 ⟨Ty.abstract fvs 0 (to_pair_type ty_prem)⟩ <: β[⟨fixed_point⟩] 
               } 
             :]
           else if fvs.length > 0 then
-            [norm: ∃ ⟨fvs.length⟩ {⟨Ty.abstract fvs 0 (to_pair_type ty_case)⟩} :]
+            [norm: {⟨fvs.length⟩ @ ⟨Ty.abstract fvs 0 (to_pair_type ty_case)⟩} :]
           else
             (to_pair_type ty_case)
         )
@@ -1573,10 +1581,10 @@ namespace Normal
       ) [norm: ⊥ :] (split_conjunctions ty_conc)
 
       -- constraint that ty' <= ty_prem is built into inductive type
-      let relational_type := [norm: μ ⟨ty_content⟩ :]
+      let relational_type := [norm: induct ⟨ty_content⟩ :]
       -- TODO: need to add constraint to premise to avoid being to strong: 
       -- i.e. premise accepts anything and conclusion becomes false.
-      let ty' := [norm: ∀ 1 # β[0] -> ∃ 1 {β[0] | β[1] × β[0] <: ⟨relational_type⟩} :] 
+      let ty' := [norm: forall 1 @ β[0] -> {1 @ β[0] | β[1] × β[0] <: ⟨relational_type⟩} :] 
       Ty.assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
         (i, [(env_ty, ty')])
       )
@@ -1804,7 +1812,7 @@ namespace Normal
 
   --- unification --
   def nat_ := [norm:
-    μ 
+    induct 
       zero*unit ∨
       succ*β[0]
   :]
@@ -1829,7 +1837,7 @@ namespace Normal
   [norm: α[0] :]
 
   def nat_list := [norm: 
-    μ 
+    induct 
       (zero*unit × nil*unit) ∨ 
       {succ*β[0] × cons*β[1] | (β[0] × β[1]) <: β[2]}
   :]
@@ -1853,21 +1861,21 @@ namespace Normal
 
   -- expected: cons*nil*unit
   #eval unify_reduce 30
-  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
+  [norm: forall β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
   [norm: succ*succ*zero*unit -> cons*α[0] :] 
   [norm: α[0] :]
 
 
   -- expected: ⊥
   #eval unify_reduce 30
-  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
+  [norm: forall β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
   [norm: foo*succ*zero*unit -> α[0] :] 
   [norm: boo*α[0] :]
 
   -----------------------------------------------
 
   def even_list := [norm: 
-    μ 
+    induct 
       (zero*unit × nil*unit) ∨ 
       {succ*succ*β[0] × cons*cons*β[1] | (β[0] × β[1]) <: β[2]}
   :]
@@ -1876,29 +1884,29 @@ namespace Normal
   #eval unify_decide 0 nat_list even_list
 
   def even := [norm: 
-    μ zero*unit ∨ succ*succ*β[0]
+    induct zero*unit ∨ succ*succ*β[0]
   :]
 
 
   -- TODO: limitation: sound, but incomplete
   #eval unify_decide 0
-  [norm: ∀ 1 # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
-  [norm: ∀ 1 # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
+  [norm: forall 1 @ β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
+  [norm: forall 1 @ β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
 
   #eval unify_decide 0
-  [norm: # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩}  :]
-  [norm: # β[0] <: ⟨even⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨even_list⟩} :]
+  [norm: forall β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩}  :]
+  [norm: forall β[0] <: ⟨even⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨even_list⟩} :]
 
 
-  #eval [norm: # β[0] <: ⟨even⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨even_list⟩} :]
+  #eval [norm: forall β[0] <: ⟨even⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨even_list⟩} :]
 
   #eval unify_decide 0
-  [norm: # β[0] <: ⟨nat_⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
-  [norm: # β[0] <: ⟨even⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
+  [norm: forall β[0] <: ⟨nat_⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
+  [norm: forall β[0] <: ⟨even⟩ . β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} :]
   ----------------------------
 
   def plus := [norm: 
-    μ 
+    induct 
       {x : zero*unit ∧ y : β[0] ∧ z : β[0]} ∨ 
       {x : succ*β[0] ∧ y : β[1] ∧ z : succ*β[2] | 
         (x : β[0] ∧ y : β[1] ∧ z : β[2]) <: β[3] 
@@ -2029,7 +2037,7 @@ namespace Normal
 
   -- expected: cons*nil*unit
   #eval infer_reduce 0 [norm:
-    let y[0] : # β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} = _ =>
+    let y[0] : forall β[0] -> {β[0] | β[1] × β[0] <: ⟨nat_list⟩} = _ =>
     (y[0] (succ;zero;()))
   :]
 
@@ -2082,7 +2090,7 @@ namespace Normal
   :]
 
   #eval infer_reduce 10 [norm:
-    let y[0] : # cons * (β[0] × β[1]) -> β[0] = _ =>
+    let y[0] : forall cons * (β[0] × β[1]) -> β[0] = _ =>
     (y[0] (cons;(ooga;(), booga;())))  
   :]
 
@@ -2090,17 +2098,17 @@ namespace Normal
 
   -- widening
   #eval infer_reduce 0 [norm:
-    let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] : forall β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
     ((y[0] hello;()) world;())
   :]
 
   #eval infer_reduce 0 [norm:
-    let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] : forall β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
     (y[0] hello;())
   :]
 
   #eval infer_reduce 0 [norm:
-    let y[0] : # β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+    let y[0] : forall β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
     let y[0] = (y[0] hello;()) => 
     (y[0] world;())
   :]
@@ -2123,7 +2131,8 @@ namespace Normal
   :]
 
   ----------------------------------
-  #eval [norm: row[x := hello;()] :]
+  #eval [norm: #x = hello;() #y = world;():]
+  --------------------------------------
 
   #eval unify_decide 0 
     [norm: hello*unit :] 
@@ -2132,15 +2141,15 @@ namespace Normal
   -- not well foundend: induction untagged 
   #eval unify_decide 0 
     [norm: hello*unit :] 
-    [norm: μ wrong*unit ∨ β[0] :] 
+    [norm: induct wrong*unit ∨ β[0] :] 
 
   -- potentially diverges - inductive type not well founded
   #eval unify_decide 0 
     [norm: hello*unit :] 
-    [norm: μ β[0] :] 
+    [norm: induct β[0] :] 
 
   def bad_nat_list := [norm: 
-    μ 
+    induct 
       (zero*unit × nil*unit) ∨ 
       {(β[0] × β[1]) | β[0] × β[1] <: β[2]}
   :]
@@ -2150,7 +2159,7 @@ namespace Normal
     bad_nat_list
 
   def other_nat_list := [norm: 
-    μ {(succ*β[0] × cons*β[1]) | β[0] × β[1] <: β[2]}
+    induct {(succ*β[0] × cons*β[1]) | β[0] × β[1] <: β[2]}
   :]
 
   #eval unify_decide 0 
@@ -2178,7 +2187,7 @@ namespace Normal
   ----------------------------------
 
   def gt := [norm: 
-    μ  
+    induct  
       {succ*β[0] × zero*unit} ∨ 
       {succ*β[0] × succ*β[1] | (β[0] × β[1]) <: β[2]}
   :]
@@ -2229,7 +2238,7 @@ namespace Normal
 
   def diff_rel :=
   [norm:
-    μ 
+    induct 
       {zero*unit × β[0] × β[0]} ∨ 
       {β[0] × zero*unit × β[0]} ∨
       {(succ*β[1] × succ*β[2] × β[0]) | (β[1] × β[2] × β[0]) <: β[3]}
@@ -2257,7 +2266,7 @@ namespace Normal
 
   #eval unify_reduce 10
   [norm:
-  # β[0] -> {β[0] | (β[1] × β[0]) <: ⟨diff_rel⟩}
+  forall β[0] -> {β[0] | (β[1] × β[0]) <: ⟨diff_rel⟩}
   :]
   spec
   [norm: α[0] × α[1] :]
@@ -2270,8 +2279,8 @@ namespace Normal
   #eval infer_reduce 10 
   [norm:
   let y[0] : (
-    (# (hello*β[0] -> world*unit)) ∧ 
-    (# one*β[0] -> two*unit)
+    (forall (hello*β[0] -> world*unit)) ∧ 
+    (forall one*β[0] -> two*unit)
   ) = _ =>
   (y[0] one;())
   :]
@@ -2279,7 +2288,7 @@ namespace Normal
   #eval infer_reduce 10 
   [norm:
   let y[0] : (
-    (# 
+    (forall 
       (hello*β[0] -> world*unit) ∧ 
       (one*β[0] -> two*unit)
     )
