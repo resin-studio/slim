@@ -1244,7 +1244,8 @@ namespace Nameless
 
         -- constraint that ty' <= ty_prem is built into inductive type
         let relational_type := [lesstype| induct ⟨ty_content⟩ ]
-        -- TODO: need to add constraint to premise to avoid being to strong: 
+        -- TODO: need to add constraint to premise to avoid being too strong: 
+          -- Actually, lack of annotation means weakest precondition
         -- i.e. premise accepts anything and conclusion becomes false.
         let ty' := [lesstype| forall [1] β[0] -> {[1] β[0] with β[1] * β[0] <: ⟨relational_type⟩} ] 
         assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
