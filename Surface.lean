@@ -11,6 +11,13 @@ open Std
 
 namespace Surface
 
+  def to_set [BEq α] [Hashable α] (xs : List α) : PHashMap α Unit :=
+    PHashMap.from_list (xs.map fun x => (x, Unit.unit))
+
+  def to_list [BEq α] [Hashable α] (xs : PHashMap α Unit) : List α :=
+    xs.toList.map fun (x, _) => x
+
+
   inductive Ty : Type
   | id : String -> Ty
   | unit : Ty
@@ -27,12 +34,6 @@ namespace Surface
   deriving Repr, Inhabited, Hashable, BEq
   #check List.repr
 
-
-  def to_set [BEq α] [Hashable α] (xs : List α) : PHashMap α Unit :=
-    PHashMap.from_list (xs.map fun x => (x, Unit.unit))
-
-  def to_list [BEq α] [Hashable α] (xs : PHashMap α Unit) : List α :=
-    xs.toList.map fun (x, _) => x
 
   namespace Ty
 
@@ -277,51 +278,82 @@ namespace Surface
       some (names1 ++ names2) 
     | _ => none
 
-    def normalize (bound_vars : List String) : Ty -> Option (List (List String) × Nameless.Ty)
+    def normalize (free_vars : List String) (bound_vars : List String) : Ty -> Option (List (List String) × Nameless.Ty)
     | id name => do
-      let pos <- (List.index (fun bv => bv == name) bound_vars)
-      some ([], .bvar pos)
+      match (List.index (fun bv => bv == name) bound_vars) with
+      | some pos => some ([], .bvar pos)
+      | none => do
+        let pos <- (List.index (fun fv => fv == name) free_vars)
+        some ([], .fvar pos)
     | .unit => some ([], .unit)
     | .bot => some ([], .bot)
     | .top => some ([], .top)
     | .tag name content => do 
-      let (stack, content') <- normalize bound_vars content
+      let (stack, content') <- normalize free_vars bound_vars content
       some (stack, .tag name content')
     | .field name content => do
-      let (stack, content') <- normalize bound_vars content
+      let (stack, content') <- normalize free_vars bound_vars content
       some (stack, .field name content')
     | .union ty1 ty2 => do 
-      let (stack1, ty1') <- (normalize bound_vars ty1) 
-      let (stack2, ty2') <- (normalize bound_vars ty2) 
+      let (stack1, ty1') <- (normalize free_vars bound_vars ty1) 
+      let (stack2, ty2') <- (normalize free_vars bound_vars ty2) 
       some (stack1 ++ stack2, .union ty1' ty2')
     | .inter ty1 ty2 => do
-      let (stack1, ty1') <- (normalize bound_vars ty1) 
-      let (stack2, ty2') <- (normalize bound_vars ty2) 
+      let (stack1, ty1') <- (normalize free_vars bound_vars ty1) 
+      let (stack2, ty2') <- (normalize free_vars bound_vars ty2) 
       some (stack1 ++ stack2, .inter ty1' ty2')
     | .case ty1 ty2 => do 
-      let (stack1, ty1') <- (normalize bound_vars ty1) 
-      let (stack2, ty2') <- (normalize bound_vars ty2) 
+      let (stack1, ty1') <- (normalize free_vars bound_vars ty1) 
+      let (stack2, ty2') <- (normalize free_vars bound_vars ty2) 
       some (stack1 ++ stack2, .case ty1' ty2')
     | .exis names ty1 ty2 ty3 => do
-      let (stack1, ty1') <- (normalize (names ++ bound_vars) ty1) 
-      let (stack2, ty2') <- (normalize (names ++ bound_vars) ty2) 
-      let (stack3, ty3') <- (normalize (names ++ bound_vars) ty3) 
+      let (stack1, ty1') <- (normalize free_vars (names ++ bound_vars) ty1) 
+      let (stack2, ty2') <- (normalize free_vars (names ++ bound_vars) ty2) 
+      let (stack3, ty3') <- (normalize free_vars (names ++ bound_vars) ty3) 
       some (names :: stack1 ++ stack2 ++ stack3, .exis names.length ty1' ty2' ty3')
     | .univ names ty1 ty2 ty3 => do
-      let (stack1, ty1') <- (normalize (names ++ bound_vars) ty1) 
-      let (stack2, ty2') <- (normalize (names ++ bound_vars) ty2) 
-      let (stack3, ty3') <- (normalize (names ++ bound_vars) ty3) 
+      let (stack1, ty1') <- (normalize free_vars (names ++ bound_vars) ty1) 
+      let (stack2, ty2') <- (normalize free_vars (names ++ bound_vars) ty2) 
+      let (stack3, ty3') <- (normalize free_vars (names ++ bound_vars) ty3) 
       some (names :: stack1 ++ stack2 ++ stack3, .univ names.length ty1' ty2' ty3')
     | .recur name ty => do
-      let (stack, ty') <- (normalize (name :: bound_vars) ty) 
+      let (stack, ty') <- (normalize free_vars (name :: bound_vars) ty) 
       some ([name] :: stack, .recur ty')
 
+    def extract_free_vars : Ty -> PHashMap String Unit
+    | id name => to_set [name] 
+    | .unit => {} 
+    | bot => {} 
+    | top => {} 
+    | tag _ content => 
+      extract_free_vars content
+    | field _ content => 
+      extract_free_vars content
+    | union ty1 ty2  => 
+      extract_free_vars ty1 ; extract_free_vars ty2 
+    | inter ty1 ty2  =>
+      extract_free_vars ty1 ; extract_free_vars ty2 
+    | case ty1 ty2  =>
+      extract_free_vars ty1 ; extract_free_vars ty2 
+    | univ bound_names tyc1 tyc2 ty_pl =>
+      let names := (extract_free_vars tyc1) ; (extract_free_vars tyc2) ; (extract_free_vars ty_pl)
+      PHashMap.from_list (names.toList.filter (fun (n, _) => !(bound_names.contains n)))
+    | exis bound_names tyc1 tyc2 ty_pl =>
+      let names := (extract_free_vars tyc1) ; (extract_free_vars tyc2) ; (extract_free_vars ty_pl)
+      PHashMap.from_list (names.toList.filter (fun (n, _) => !(bound_names.contains n)))
+    | recur bound_name ty =>
+      let names := (extract_free_vars ty)
+      PHashMap.from_list (names.toList.filter (fun (n, _) => n != bound_name))
 
-    def denormalize (names : List String) (stack : List (List String)) : Nameless.Ty ->  Option Surface.Ty
+
+    def denormalize (free_names : List String) (names : List String) (stack : List (List String)) : Nameless.Ty ->  Option Surface.Ty
     | .bvar index =>  
-      if h : names.length > index then
-        let name := names.get ⟨index, h⟩
+      if names_proof : names.length > index then
+        let name := names.get ⟨index, names_proof⟩
         some (.id name)
+      else if free_names_proof : free_names.length > index then
+        let free_name := free_names.get ⟨index, free_names_proof⟩
+        some (.id free_name)
       else
         none
     | .fvar index => some (.id s!"_α_{index}")
@@ -329,30 +361,30 @@ namespace Surface
     | .bot => some .bot 
     | .top => some .top 
     | .tag label content => do
-      let content' <- (denormalize names stack content)   
+      let content' <- (denormalize free_names names stack content)   
       some (.tag label content') 
     | .field label content => do
-      let content' <- (denormalize names stack content)   
+      let content' <- (denormalize free_names names stack content)   
       some (.field label content') 
     | .union ty1 ty2 => do
-      let ty1' <- (denormalize names stack ty1)   
-      let ty2' <- (denormalize names stack ty2)   
+      let ty1' <- (denormalize free_names names stack ty1)   
+      let ty2' <- (denormalize free_names names stack ty2)   
       some (.union ty1' ty2') 
     | .inter ty1 ty2 => do
-      let ty1' <- (denormalize names stack ty1)   
-      let ty2' <- (denormalize names stack ty2)   
+      let ty1' <- (denormalize free_names names stack ty1)   
+      let ty2' <- (denormalize free_names names stack ty2)   
       some (.inter ty1' ty2') 
     | .case ty1 ty2 => do
-      let ty1' <- (denormalize names stack ty1)   
-      let ty2' <- (denormalize names stack ty2)   
+      let ty1' <- (denormalize free_names names stack ty1)   
+      let ty2' <- (denormalize free_names names stack ty2)   
       some (.case ty1' ty2') 
     | .exis n ty1 ty2 ty3 => 
       match stack with
       | names' :: stack'  =>
         if names'.length == n then do
-          let ty1' <- (denormalize (names' ++ names) stack' ty1)   
-          let ty2' <- (denormalize (names' ++ names) stack' ty2)   
-          let ty3' <- (denormalize (names' ++ names) stack' ty3)   
+          let ty1' <- (denormalize free_names (names' ++ names) stack' ty1)   
+          let ty2' <- (denormalize free_names (names' ++ names) stack' ty2)   
+          let ty3' <- (denormalize free_names (names' ++ names) stack' ty3)   
           some (.exis names' ty1' ty2' ty3') 
         else
           none
@@ -361,9 +393,9 @@ namespace Surface
       match stack with
       | names' :: stack'  =>
         if names'.length == n then do
-          let ty1' <- (denormalize (names' ++ names) stack' ty1)   
-          let ty2' <- (denormalize (names' ++ names) stack' ty2)   
-          let ty3' <- (denormalize (names' ++ names) stack' ty3)   
+          let ty1' <- (denormalize free_names (names' ++ names) stack' ty1)   
+          let ty2' <- (denormalize free_names (names' ++ names) stack' ty2)   
+          let ty3' <- (denormalize free_names (names' ++ names) stack' ty3)   
           some (.univ names' ty1' ty2' ty3') 
         else
           none
@@ -373,10 +405,90 @@ namespace Surface
       | names' :: stack'  =>
         match names' with
         | .cons name [] => do
-          let ty' <- (denormalize (name :: names) stack' ty)   
+          let ty' <- (denormalize free_names (name :: names) stack' ty)   
           some (.recur name ty') 
         | _ => none
       | [] => none
+
+    def extract_bound_stack (i : Nat): Nameless.Ty -> Nat × List (List String)  
+    | .bvar _ => (i, []) 
+    | .fvar _ => (i, []) 
+    | .unit => (i, []) 
+    | .bot => (i, []) 
+    | .top => (i, []) 
+    | .tag _ content => 
+      extract_bound_stack i content 
+    | .field _ content => 
+      extract_bound_stack i content 
+    | .union ty1 ty2  => 
+      let (i, stack1) := extract_bound_stack i ty1 
+      let (i, stack2) := extract_bound_stack i ty2 
+      (i, stack1 ++ stack2)
+    | .inter ty1 ty2  =>
+      let (i, stack1) := extract_bound_stack i ty1 
+      let (i, stack2) := extract_bound_stack i ty2 
+      (i, stack1 ++ stack2)
+    | .case ty1 ty2  =>
+      let (i, stack1) := extract_bound_stack i ty1 
+      let (i, stack2) := extract_bound_stack i ty2 
+      (i, stack1 ++ stack2)
+    | .univ n tyc1 tyc2 ty_pl =>
+      let (i, stack1) := extract_bound_stack i tyc1 
+      let (i, stack2) := extract_bound_stack i tyc2 
+      let (i, stack_pl) := extract_bound_stack i ty_pl
+      let (i, names) := (i + n, (List.range n).map (fun j => s!"T{i + j}"))
+      (i, names :: stack1 ++ stack2 ++ stack_pl)
+    | .exis n tyc1 tyc2 ty_pl =>
+      let (i, stack1) := extract_bound_stack i tyc1 
+      let (i, stack2) := extract_bound_stack i tyc2 
+      let (i, stack_pl) := extract_bound_stack i ty_pl
+      let (i, names) := (i + n, (List.range n).map (fun j => s!"T{i + j}"))
+      (i, names :: stack1 ++ stack2 ++ stack_pl)
+    | .recur ty =>
+      let (i, stack) := extract_bound_stack i ty 
+      let (i, names) := (i + 1, [s!"T{i}"])
+      (i, names :: stack)
+
+    partial def unify_reduce (ty1 ty2 ty_result : Surface.Ty) : Option Surface.Ty := do
+      let free_vars := to_list (extract_free_vars [surftype: ⟨ty1⟩ * ⟨ty2⟩])
+      let (_, ty1') <- normalize free_vars [] ty1
+      let (_, ty2') <- normalize free_vars [] ty2
+      let (_, ty_result') <- normalize free_vars [] ty_result
+      let nameless_ty := Nameless.Ty.unify_reduce free_vars.length ty1' ty2' ty_result' 
+      let (_, bound_stack) := extract_bound_stack 0 nameless_ty
+      Surface.Ty.denormalize free_vars [] bound_stack nameless_ty 
+
+    -- partial def unify_reduce (ty1 ty2 ty_result : Surface.Ty) : Option Nameless.Ty := do
+    --   let free_vars := to_list (extract_free_vars [surftype: ⟨ty1⟩ * ⟨ty2⟩])
+    --   let (stack1, ty1') <- normalize free_vars [] ty1
+    --   let (stack2, ty2') <- normalize free_vars [] ty2
+    --   let (stack_result, ty_result') <- normalize free_vars [] ty_result
+    --   let nameless_ty := Nameless.Ty.unify_reduce free_vars.length ty1' ty2' ty_result' 
+    --   nameless_ty
+
+    -------------------------------------------------
+    def nat_ := [surftype:
+      induct [self] zero@unit | succ@self
+    ]
+
+    #eval nat_
+
+    #eval extract_free_vars [surftype: (succ@succ@succ@something) * (zero@unit | succ@⟨nat_⟩) ] 
+    def fvs := extract_free_vars [surftype: (succ@succ@succ@something) * (zero@unit | succ@⟨nat_⟩) ] 
+    
+    #eval normalize (to_list fvs) [] [surftype: (succ@something) ] 
+    
+
+    def result_pair := normalize [] [] nat_
+    #eval result_pair
+    #eval match result_pair with 
+      | some (stack, ty) => denormalize [] [] stack ty 
+      | none => none 
+
+    #eval unify_reduce
+    [surftype: (succ@succ@succ@something) ] 
+    [surftype: zero@unit | succ@⟨nat_⟩ ] 
+    [surftype: something ]
 
   end Ty
 
@@ -597,7 +709,7 @@ namespace Surface
     | .letb name ty_op arg body =>
       let names_ty_op' := (do
         let ty <- ty_op 
-        Ty.normalize [] ty
+        Ty.normalize [] [] ty
       )
       let ty_op' := (do 
         let (_, ty') <- names_ty_op'
@@ -658,7 +770,7 @@ namespace Surface
         let ty_op' := (do
           let ty <- ty_op
           let ty_stack <- abstraction.type_map.find? name
-          let ty' <- Ty.denormalize [] ty_stack ty 
+          let ty' <- Ty.denormalize [] [] ty_stack ty 
           some ty' 
         )
         do

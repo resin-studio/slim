@@ -51,6 +51,7 @@ namespace PHashMap
   partial def intersect (m1 : PHashMap Nat Unit) (m2 : PHashMap Nat Unit) :=
     PHashMap.from_list (m1.toList.filter (fun (id, _) => m2.contains id))
 
+
 end PHashMap
 
 
@@ -68,4 +69,3 @@ namespace List
       bind (index f xs) (fun n => some (1 + n))
 
 end List
-
