@@ -236,7 +236,7 @@ namespace Surface
     ]
 
     #eval [surftype: 
-      induct nat_list @ (
+      induct [nat_list] (
         (zero*unit × nil*unit) ∨ 
         {succ*nat × cons*list | nat × list <: nat_list}
       )
