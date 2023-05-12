@@ -171,8 +171,8 @@ namespace Nameless
 
   syntax:30 slm:30 "." slm:100 : slm 
   syntax:30 "(" slm:30 slm:30 ")" : slm 
-  syntax:30 "let y[0]" ":" slm:30 "=" slm:30 "=>" slm:30 : slm 
-  syntax:30 "let y[0]" "=" slm:30 "=>" slm:30 : slm 
+  syntax:30 "let y[0]" ":" slm:30 "=" slm:30 "in" slm:30 : slm 
+  syntax:30 "let y[0]" "=" slm:30 "in" slm:30 : slm 
   syntax:30 "fix " slm:30 : slm 
 
   syntax:50 slm:50 "⊆" slm:51 : slm
@@ -226,7 +226,7 @@ namespace Nameless
     `(Ty.univ (Ty.infer_abstraction 0 [norm: $b :]) Ty.unit Ty.unit [norm: $b :] )
 
 
-  | `([norm: forall [$n] $b <: $c have $d   :]) => `(Ty.univ [norm: $n :] [norm: $b :] [norm: $c :] [norm: $d :])
+  | `([norm: forall [$n] $b <: $c have $d  :]) => `(Ty.univ [norm: $n :] [norm: $b :] [norm: $c :] [norm: $d :])
   | `([norm: forall [$n] $b:slm  :]) => `(Ty.univ [norm: $n :] Ty.unit Ty.unit [norm: $b :] )
 
 
@@ -249,8 +249,8 @@ namespace Nameless
 
   | `([norm: $a . $b :]) => `(Tm.proj [norm: $a :] [norm: $b :])
   | `([norm: ($a $b) :]) => `(Tm.app [norm: $a :] [norm: $b :])
-  | `([norm: let y[0] : $a = $b => $c :]) => `(Tm.letb (Option.some [norm: $a :]) [norm: $b :] [norm: $c :])
-  | `([norm: let y[0] = $b => $c :]) => `(Tm.letb Option.none [norm: $b :] [norm: $c :])
+  | `([norm: let y[0] : $a = $b in $c :]) => `(Tm.letb (Option.some [norm: $a :]) [norm: $b :] [norm: $c :])
+  | `([norm: let y[0] = $b in $c :]) => `(Tm.letb Option.none [norm: $b :] [norm: $c :])
   | `([norm: fix $a :]) => `(Tm.fix [norm: $a :])
 
   -- generic
@@ -353,10 +353,10 @@ namespace Nameless
   | .letb op_ty1 t1 t2 =>
     match op_ty1 with
     | some ty1 =>
-      "let y[0] : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " =>" ++
+      "let y[0] : " ++ (Ty.repr ty1 n) ++ " = " ++  (Tm.repr t1 n) ++ " in" ++
       Format.line  ++ (Tm.repr t2 n) 
     | none =>
-      "let y[0] = " ++  (Tm.repr t1 n) ++ " =>" ++
+      "let y[0] = " ++  (Tm.repr t1 n) ++ " in" ++
       Format.line  ++ (Tm.repr t2 n) 
   | .fix t1 =>
     Format.bracket "(" ("fix " ++ (Tm.repr t1 n)) ")"
@@ -1750,14 +1750,14 @@ namespace Nameless
     tags ++
     records ++
     functions ++
-    [ [norm: let y[0] = _ => _ :] ] ++
+    [ [norm: let y[0] = _ in _ :] ] ++
     [ [norm: fix _ :] ] ++
     List.bind env_tm.toList (fun (x, ty) =>
       let (_, ls) := extract_labels ty
       let var := (Tm.fvar x)
-      let application := [norm: let y[0] = (⟨Tm.fvar x⟩ _) => _ :] 
+      let application := [norm: let y[0] = (⟨Tm.fvar x⟩ _) in _ :] 
       let projections := ls.map (fun l =>
-        [norm: let y[0] = (⟨Tm.fvar x⟩.⟨l⟩) => _ :] 
+        [norm: let y[0] = (⟨Tm.fvar x⟩.⟨l⟩) in _ :] 
       )
       var :: application :: projections
     )
@@ -2057,7 +2057,7 @@ namespace Nameless
 
   -- expected: cons@nil@unit
   #eval infer_reduce 0 [norm:
-    let y[0] : forall β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ =>
+    let y[0] : forall β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
     (y[0] (succ;zero;()))
   :]
 
@@ -2086,9 +2086,9 @@ namespace Nameless
 
   #eval infer_reduce 0 [norm:
     let y[0] = fix(\ y[0] => 
-    \ zero;() => nil;(),
-    \ succ;y[0] => cons;(y[1] y[0])
-    ) =>
+      \ zero;() => nil;(),
+      \ succ;y[0] => cons;(y[1] y[0])
+    ) in 
     y[0]
   :]
 
@@ -2097,14 +2097,14 @@ namespace Nameless
     let y[0] = fix(\ y[0] => ( 
       \ zero;() => nil;(),
       \ succ;y[0] => cons;(y[1] y[0])
-    )) =>
+    )) in 
     (y[0] (succ;zero;()))
   :]
 
 
   -- expected: cons@nil@unit
   #eval infer_reduce 0 [norm:
-    let y[0] : (zero@unit -> nil@unit) & (succ@zero@unit -> cons@nil@unit) = _ =>
+    let y[0] : (zero@unit -> nil@unit) & (succ@zero@unit -> cons@nil@unit) = _ in 
     (y[0] (succ;zero;()))
   :]
 
@@ -2116,17 +2116,17 @@ namespace Nameless
   :]
 
   #eval infer_reduce 10 [norm:
-    let y[0] = (\ cons;(y[0], y[1]) => y[0]) =>
+    let y[0] = (\ cons;(y[0], y[1]) => y[0]) in
     (y[0] (cons;(ooga;(), booga;())))  
   :]
 
   #eval infer_reduce 10 [norm:
-    let y[0] = (\ cons;(y[0], y[1]) => y[0]) =>
+    let y[0] = (\ cons;(y[0], y[1]) => y[0]) in 
     y[0]  
   :]
 
   #eval infer_reduce 10 [norm:
-    let y[0] : forall cons @ (β[0] * β[1]) -> β[0] = _ =>
+    let y[0] : forall cons @ (β[0] * β[1]) -> β[0] = _ in
     (y[0] (cons;(ooga;(), booga;())))  
   :]
 
@@ -2134,35 +2134,35 @@ namespace Nameless
 
   -- widening
   #eval infer_reduce 0 [norm:
-    let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ => 
+    let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
     ((y[0] hello;()) world;())
   :]
 
   #eval infer_reduce 0 [norm:
-    let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ => 
+    let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
     (y[0] hello;())
   :]
 
   #eval infer_reduce 0 [norm:
-    let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ => 
-    let y[0] = (y[0] hello;()) => 
+    let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
+    let y[0] = (y[0] hello;()) in
     (y[0] world;())
   :]
 
   -- narrowing
   #eval infer_reduce 0 [norm:
-  let y[0] : uno@unit -> unit = _ => 
-  let y[0] : dos@unit -> unit = _ =>
+  let y[0] : uno@unit -> unit = _ in 
+  let y[0] : dos@unit -> unit = _ in 
   (\ y[0] =>
     ((y[2] y[0]), (y[1] y[0])))
   :]
 
   #eval infer_reduce 0 [norm:
-  let y[0] : uno@unit -> unit = _ => 
-  let y[0] : dos@unit -> unit = _ =>
+  let y[0] : uno@unit -> unit = _ in 
+  let y[0] : dos@unit -> unit = _ in 
   (\ y[0] =>
-    let y[0] = (y[2] y[0]) => 
-    let y[0] = (y[2] y[1]) =>
+    let y[0] = (y[2] y[0]) in 
+    let y[0] = (y[2] y[1]) in 
     (y[0], y[1]))
   :]
 
@@ -2255,7 +2255,7 @@ namespace Nameless
     \ (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1]))
     \ (zero;(), y[0]) => y[0]
     \ (y[0], zero;()) => y[0] 
-  )) =>
+  )) in 
   y[0]
   :]
 
@@ -2265,7 +2265,7 @@ namespace Nameless
     \ (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1]))
     \ (zero;(), y[0]) => y[0]
     \ (y[0], zero;()) => y[0] 
-  )) =>
+  )) in 
   y[0]
   :]
 
@@ -2275,7 +2275,7 @@ namespace Nameless
     \ (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1]))
     \ (zero;(), y[0]) => y[0]
     \ (y[0], zero;()) => y[0] 
-  )) =>
+  )) in 
   (y[0] (succ;succ;zero;(), succ;zero;()))
   :]
 
@@ -2324,7 +2324,7 @@ namespace Nameless
   let y[0] : (
     (forall (hello@β[0] -> world@unit)) & 
     (forall one@β[0] -> two@unit)
-  ) = _ =>
+  ) = _ in 
   (y[0] one;())
   :]
 
@@ -2335,7 +2335,7 @@ namespace Nameless
       (hello@β[0] -> world@unit) & 
       (one@β[0] -> two@unit)
     )
-  ) = _ =>
+  ) = _ in 
   (y[0] one;())
   :]
 
