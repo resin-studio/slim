@@ -271,21 +271,19 @@ namespace Nameless
   | .top => "⊤" 
   | .bot => "⊥" 
   | .tag l ty1 => 
-    (l ++ "*" ++ (Ty.repr ty1 n))
+    (l ++ "@" ++ (Ty.repr ty1 n))
   | .field l ty1 => 
     Format.bracket "(" (l ++ " : " ++ (Ty.repr ty1 n)) ")"
 
-  | .union (Ty.tag "inl" inl) (Ty.tag "inr" inr) =>
-    Format.bracket "(" ((Ty.repr inl n) ++ " +" ++ Format.line ++ (Ty.repr inr n)) ")"
   | .union ty1 ty2 =>
     let _ : ToFormat Ty := ⟨fun ty' => Ty.repr ty' n ⟩
     let tys := [ty1, ty2] 
     Format.bracket "("
-      (Format.joinSep tys (" ∨" ++ Format.line))
+      (Format.joinSep tys (" |" ++ Format.line))
     ")"
  
   | .inter (Ty.field "l" l) (Ty.field "r" r) =>
-    Format.bracket "(" ((Ty.repr l n) ++ " × " ++ (Ty.repr r n)) ")"
+    Format.bracket "(" ((Ty.repr l n) ++ " * " ++ (Ty.repr r n)) ")"
   | .inter ty1 ty2 =>
     Format.bracket "(" ((Ty.repr ty1 n) ++ " & " ++ (Ty.repr ty2 n)) ")"
   | .case ty1 ty2 =>
@@ -293,22 +291,22 @@ namespace Nameless
   | .exis n ty_c1 ty_c2 ty_pl =>
     if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
       Format.bracket "{" (
-        (Nat.repr n) ++ " @ " ++
+        "[" ++ (Nat.repr n) ++ "] " ++
         Ty.repr ty_pl n
       ) "}"
     else
       Format.bracket "{" (
-        (Nat.repr n) ++ " @ " ++
-        (Ty.repr ty_pl n) ++ " | " ++
+        "[" ++ (Nat.repr n) ++ "] " ++
+        (Ty.repr ty_pl n) ++ " with " ++
         (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
       ) "}"
   | .univ n ty_c1 ty_c2 ty_pl =>
     if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
-      Format.bracket "(" ("forall " ++ (Nat.repr n) ++ " @ " ++ (Ty.repr ty_pl n)) ")"
+      Format.bracket "(" ("forall [" ++ (Nat.repr n) ++ "] " ++ (Ty.repr ty_pl n)) ")"
     else
       Format.bracket "(" (
-        "forall " ++ (Nat.repr n) ++ " @ " ++
-        (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n) ++ " . " ++
+        "forall [" ++ (Nat.repr n) ++ "] " ++
+        (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n) ++ " have " ++
         (Ty.repr ty_pl n)
       ) ")"
   | .recur ty1 =>
