@@ -48,6 +48,9 @@ namespace PHashMap
   instance [Repr (α × β)] [BEq α] [Hashable α] : Repr (PHashMap α β) where
     reprPrec := repr
 
+  partial def intersect (m1 : PHashMap Nat Unit) (m2 : PHashMap Nat Unit) :=
+    PHashMap.from_list (m1.toList.filter (fun (id, _) => m2.contains id))
+
 end PHashMap
 
 
