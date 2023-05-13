@@ -167,7 +167,7 @@ namespace Surface
     syntax:40 "induct" "[" ident "]" surftype : surftype 
 
 
-    syntax "[surftype: " surftype "]" : term
+    syntax "[surftype| " surftype "]" : term
 
     def idname v := match v with 
     | (Ty.id x) => x 
@@ -175,64 +175,64 @@ namespace Surface
 
     macro_rules
     --generic
-    | `([surftype: ($a:surftype) ]) => `([surftype: $a ])
+    | `([surftype| ($a:surftype) ]) => `([surftype| $a ])
     --escape 
-    | `([surftype: ⟨ $e ⟩ ]) => pure e
+    | `([surftype| ⟨ $e ⟩ ]) => pure e
     -- terminals
-    | `([surftype: $n:num ]) => `($n)
-    | `([surftype: $a:ident]) => `(Ty.id $(Lean.quote (toString a.getId)))
+    | `([surftype| $n:num ]) => `($n)
+    | `([surftype| $a:ident]) => `(Ty.id $(Lean.quote (toString a.getId)))
     -- context 
-    | `([surftype: [ $x:ident ] ]) => `([ $(Lean.quote (toString x.getId)) ])
-    | `([surftype: [ $x,$xs:ident,* ] ]) => `([surftype: [ $x ] ] ++ [surftype: [$xs,*] ])
+    | `([surftype| [ $x:ident ] ]) => `([ $(Lean.quote (toString x.getId)) ])
+    | `([surftype| [ $x,$xs:ident,* ] ]) => `([surftype| [ $x ] ] ++ [surftype| [$xs,*] ])
     -- Ty 
-    | `([surftype: unit ]) => `(Ty.unit)
-    | `([surftype: ⊥ ]) => `(Ty.bot)
-    | `([surftype: ⊤ ]) => `(Ty.top)
-    | `([surftype: $a @ $b:surftype ]) => `(Ty.tag (idname [surftype: $a ]) [surftype: $b ])
-    | `([surftype: $a : $b:surftype ]) => `(Ty.field (idname [surftype: $a ]) [surftype: $b ])
-    | `([surftype: $a -> $b ]) => `(Ty.case [surftype: $a ] [surftype: $b ])
-    | `([surftype: $a | $b ]) => `(Ty.union [surftype: $a ] [surftype: $b ])
-    | `([surftype: $a & $b ]) => `(Ty.inter [surftype: $a ] [surftype: $b ])
-    | `([surftype: $a * $b ]) => `(Ty.inter (Ty.field "l" [surftype: $a ]) (Ty.field "r" [surftype: $b ]))
+    | `([surftype| unit ]) => `(Ty.unit)
+    | `([surftype| ⊥ ]) => `(Ty.bot)
+    | `([surftype| ⊤ ]) => `(Ty.top)
+    | `([surftype| $a @ $b:surftype ]) => `(Ty.tag (idname [surftype| $a ]) [surftype| $b ])
+    | `([surftype| $a : $b:surftype ]) => `(Ty.field (idname [surftype| $a ]) [surftype| $b ])
+    | `([surftype| $a -> $b ]) => `(Ty.case [surftype| $a ] [surftype| $b ])
+    | `([surftype| $a | $b ]) => `(Ty.union [surftype| $a ] [surftype| $b ])
+    | `([surftype| $a & $b ]) => `(Ty.inter [surftype| $a ] [surftype| $b ])
+    | `([surftype| $a * $b ]) => `(Ty.inter (Ty.field "l" [surftype| $a ]) (Ty.field "r" [surftype| $b ]))
 
-    | `([surftype: { $n $d with $b <: $c }  ]) => `(Ty.exis [surftype: $n ] [surftype: $b ] [surftype: $c ] [surftype: $d ])
-    | `([surftype: { $n $b:surftype } ]) => `(Ty.exis [surftype: $n ] Ty.unit Ty.unit [surftype: $b ] )
+    | `([surftype| { $n $d with $b <: $c }  ]) => `(Ty.exis [surftype| $n ] [surftype| $b ] [surftype| $c ] [surftype| $d ])
+    | `([surftype| { $n $b:surftype } ]) => `(Ty.exis [surftype| $n ] Ty.unit Ty.unit [surftype| $b ] )
 
-    | `([surftype: { $d with $b <: $c }  ]) => 
-      `(Ty.exis (to_list (Ty.infer_abstraction {} [surftype: $d ])) [surftype: $b ] [surftype: $c ] [surftype: $d ])
-    | `([surftype: { $b:surftype } ]) => 
-      `(Ty.exis (to_list (Ty.infer_abstraction {} [surftype: $b ])) Ty.unit Ty.unit [surftype: $b ] )
+    | `([surftype| { $d with $b <: $c }  ]) => 
+      `(Ty.exis (to_list (Ty.infer_abstraction {} [surftype| $d ])) [surftype| $b ] [surftype| $c ] [surftype| $d ])
+    | `([surftype| { $b:surftype } ]) => 
+      `(Ty.exis (to_list (Ty.infer_abstraction {} [surftype| $b ])) Ty.unit Ty.unit [surftype| $b ] )
 
-    | `([surftype: forall $b <: $c have $d  ]) => 
-      `(Ty.univ (to_list (Ty.infer_abstraction {} [surftype: $d ])) [surftype: $b ] [surftype: $c ] [surftype: $d ])
-    | `([surftype: forall $b:surftype  ]) => 
-      `(Ty.univ (to_list (Ty.infer_abstraction {} [surftype: $b ])) Ty.unit Ty.unit [surftype: $b ] )
+    | `([surftype| forall $b <: $c have $d  ]) => 
+      `(Ty.univ (to_list (Ty.infer_abstraction {} [surftype| $d ])) [surftype| $b ] [surftype| $c ] [surftype| $d ])
+    | `([surftype| forall $b:surftype  ]) => 
+      `(Ty.univ (to_list (Ty.infer_abstraction {} [surftype| $b ])) Ty.unit Ty.unit [surftype| $b ] )
 
-    | `([surftype: forall $n $b <: $c have $d ]) => `(Ty.univ [surftype: $n ] [surftype: $b ] [surftype: $c ] [surftype: $d ])
-    | `([surftype: forall $n $b:surftype ]) => `(Ty.univ [surftype: $n ] Ty.unit Ty.unit [surftype: $b ] )
+    | `([surftype| forall $n $b <: $c have $d ]) => `(Ty.univ [surftype| $n ] [surftype| $b ] [surftype| $c ] [surftype| $d ])
+    | `([surftype| forall $n $b:surftype ]) => `(Ty.univ [surftype| $n ] Ty.unit Ty.unit [surftype| $b ] )
 
-    | `([surftype: induct [ $name ] $a ]) => `(Ty.recur $(Lean.quote (toString name.getId)) [surftype: $a ])
+    | `([surftype| induct [ $name ] $a ]) => `(Ty.recur $(Lean.quote (toString name.getId)) [surftype| $a ])
 
-    #check [surftype: (x) ]
-    #check [surftype: [x] ]
-    #eval Ty.infer_abstraction {} [surftype: thing ]
-    #eval [surftype: {thing | unit with thing <: unit }]
+    #check [surftype| (x) ]
+    #check [surftype| [x] ]
+    #eval Ty.infer_abstraction {} [surftype| thing ]
+    #eval [surftype| {thing | unit with thing <: unit }]
 
 
-    #eval [surftype: forall bob -> {thing | unit with thing <: bob }]
-    #eval [surftype: forall thing -> {thing | bob | unit with thing <: unit }]
+    #eval [surftype| forall bob -> {thing | unit with thing <: bob }]
+    #eval [surftype| forall thing -> {thing | bob | unit with thing <: unit }]
     -- #eval [normam: forall β[0] -> {β[1] ∨ β[0] ∨ unit | β[1] <: unit }]
 
-    #eval [surftype: {[thing, or] thing | unit with thing <: unit }]
-    #eval [surftype: {thing | unit with thing <: unit }]
-    -- #eval Ty.infer_abstraction 0 [surftype: $d ]) [surftype: $b ] [surftype: $c ] [surftype: $d ]
-    #eval [surftype: succ*x ]
-    #eval [surftype: 
+    #eval [surftype| {[thing, or] thing | unit with thing <: unit }]
+    #eval [surftype| {thing | unit with thing <: unit }]
+    -- #eval Ty.infer_abstraction 0 [surftype| $d ]) [surftype| $b ] [surftype| $c ] [surftype| $d ]
+    #eval [surftype| succ*x ]
+    #eval [surftype| 
         (zero@unit * nil@unit) |
         {succ@nat * cons@list with nat * list <: nat_list}
     ]
 
-    #eval [surftype: 
+    #eval [surftype| 
       induct [nat_list] (
         (zero@unit * nil@unit) | 
         {succ@nat * cons@list with nat * list <: nat_list}
@@ -240,7 +240,7 @@ namespace Surface
     ]
 
 
-    -- #eval [surftype: 
+    -- #eval [surftype| 
     --   nat -> (list | nat × list ≤ nat_list) 
     -- ]
     -- TODO: simplify language by using implication to encode universal and greatest fixedpoint.  
@@ -450,7 +450,7 @@ namespace Surface
       (i, names :: stack)
 
     partial def unify_reduce (ty1 ty2 ty_result : Surface.Ty) : Option Surface.Ty := do
-      let free_vars := to_list (extract_free_vars [surftype: ⟨ty1⟩ * ⟨ty2⟩])
+      let free_vars := to_list (extract_free_vars [surftype| ⟨ty1⟩ * ⟨ty2⟩])
       let (_, ty1') <- normalize free_vars [] ty1
       let (_, ty2') <- normalize free_vars [] ty2
       let (_, ty_result') <- normalize free_vars [] ty_result
@@ -459,7 +459,7 @@ namespace Surface
       Surface.Ty.denormalize free_vars [] bound_stack nameless_ty 
 
     -- partial def unify_reduce (ty1 ty2 ty_result : Surface.Ty) : Option Nameless.Ty := do
-    --   let free_vars := to_list (extract_free_vars [surftype: ⟨ty1⟩ * ⟨ty2⟩])
+    --   let free_vars := to_list (extract_free_vars [surftype| ⟨ty1⟩ * ⟨ty2⟩])
     --   let (stack1, ty1') <- normalize free_vars [] ty1
     --   let (stack2, ty2') <- normalize free_vars [] ty2
     --   let (stack_result, ty_result') <- normalize free_vars [] ty_result
@@ -467,16 +467,16 @@ namespace Surface
     --   nameless_ty
 
     -------------------------------------------------
-    def nat_ := [surftype:
+    def nat_ := [surftype|
       induct [self] zero@unit | succ@self
     ]
 
     #eval nat_
 
-    #eval extract_free_vars [surftype: (succ@succ@succ@something) * (zero@unit | succ@⟨nat_⟩) ] 
-    def fvs := extract_free_vars [surftype: (succ@succ@succ@something) * (zero@unit | succ@⟨nat_⟩) ] 
+    #eval extract_free_vars [surftype| (succ@succ@succ@something) * (zero@unit | succ@⟨nat_⟩) ] 
+    def fvs := extract_free_vars [surftype| (succ@succ@succ@something) * (zero@unit | succ@⟨nat_⟩) ] 
     
-    #eval normalize (to_list fvs) [] [surftype: (succ@something) ] 
+    #eval normalize (to_list fvs) [] [surftype| (succ@something) ] 
     
 
     def result_pair := normalize [] [] nat_
@@ -486,9 +486,9 @@ namespace Surface
       | none => none 
 
     #eval unify_reduce
-    [surftype: (succ@succ@succ@something) ] 
-    [surftype: zero@unit | succ@⟨nat_⟩ ] 
-    [surftype: something ]
+    [surftype| (succ@succ@succ@something) ] 
+    [surftype| zero@unit | succ@⟨nat_⟩ ] 
+    [surftype| something ]
 
   end Ty
 
@@ -549,8 +549,6 @@ namespace Surface
       reprPrec := Tm.repr
 
 
-
-
     declare_syntax_cat surfterm
     syntax:90 num : surfterm 
     syntax:90 ident : surfterm
@@ -580,7 +578,7 @@ namespace Surface
     syntax:70 "let" ident "=" surfterm:70 "in" surfterm:70 : surfterm 
     syntax:70 "fix " surfterm:70 : surfterm 
 
-    syntax "[surfterm: " surfterm "]" : term
+    syntax "[surfterm| " surfterm "]" : term
 
     def idname v := match v with 
     | (Tm.id x) => x 
@@ -597,27 +595,27 @@ namespace Surface
 
     macro_rules
     --generic
-    | `([surfterm: ($a:surfterm) ]) => `([surfterm: $a ])
+    | `([surfterm| ($a:surfterm) ]) => `([surfterm| $a ])
     --escape 
-    | `([surfterm: ⟨ $e ⟩ ]) => pure e
+    | `([surfterm| ⟨ $e ⟩ ]) => pure e
     -- terminals
-    | `([surfterm: $n:num ]) => `($n)
-    | `([surfterm: $a:ident]) => `(Tm.id $(Lean.quote (toString a.getId)))
+    | `([surfterm| $n:num ]) => `($n)
+    | `([surfterm| $a:ident]) => `(Tm.id $(Lean.quote (toString a.getId)))
     --Tm
-    | `([surfterm: _ ]) => `(Tm.hole)
-    | `([surfterm: () ]) => `(Tm.unit)
-    | `([surfterm: $a ; $b ]) => `(Tm.tag (idname [surfterm: $a ]) [surfterm: $b ])
-    | `([surfterm: ( $a , $b ) ]) => `(Tm.record [("l", [surfterm: $a ]), ("r", [surfterm:$b ])])
+    | `([surfterm| _ ]) => `(Tm.hole)
+    | `([surfterm| () ]) => `(Tm.unit)
+    | `([surfterm| $a ; $b ]) => `(Tm.tag (idname [surfterm| $a ]) [surfterm| $b ])
+    | `([surfterm| ( $a , $b ) ]) => `(Tm.record [("l", [surfterm| $a ]), ("r", [surfterm|$b ])])
 
-    | `([surfterm: # $a = $b ]) => `( Tm.record [ ($(Lean.quote (toString a.getId)), [surfterm: $b ]) ]  )
-    | `([surfterm: # $a = $b $xs ]) => `( Tm.record (($(Lean.quote (toString a.getId)), [surfterm: $b ]) :: (Tm.record_fields [surfterm: $xs ])))
+    | `([surfterm| # $a = $b ]) => `( Tm.record [ ($(Lean.quote (toString a.getId)), [surfterm| $b ]) ]  )
+    | `([surfterm| # $a = $b $xs ]) => `( Tm.record (($(Lean.quote (toString a.getId)), [surfterm| $b ]) :: (Tm.record_fields [surfterm| $xs ])))
 
-    | `([surfterm: \ $b => $d ]) => `(Tm.func [([surfterm: $b ], [surfterm: $d ])])
-    | `([surfterm: \ $b => $d $xs ]) => `( Tm.func (([surfterm: $b ], [surfterm: $d ]) :: (Tm.function_cases [surfterm: $xs ])))
+    | `([surfterm| \ $b => $d ]) => `(Tm.func [([surfterm| $b ], [surfterm| $d ])])
+    | `([surfterm| \ $b => $d $xs ]) => `( Tm.func (([surfterm| $b ], [surfterm| $d ]) :: (Tm.function_cases [surfterm| $xs ])))
 
 
-    | `([surfterm: if $test then $t else $f ]) => `( 
-      [surfterm: 
+    | `([surfterm| if $test then $t else $f ]) => `( 
+      [surfterm| 
         $test |> (
           \ ⟨Tm.id "true"⟩;() => $t
           \ ⟨Tm.id "false"⟩;() => $f
@@ -625,23 +623,23 @@ namespace Surface
       ]
     )
 
-    | `([surfterm: $a . $b ]) => `(Tm.proj [surfterm: $a ] [surfterm: $b ])
-    | `([surfterm: ($a $b) ]) => `(Tm.app [surfterm: $a ] [surfterm: $b ])
-    | `([surfterm: $b |> $a ]) => `(Tm.app [surfterm: $a ] [surfterm: $b ])
-    | `([surfterm: let $name : $a = $b in $c ]) => `(Tm.letb $(Lean.quote (toString name.getId)) (Option.some [surftype: $a ]) [surfterm: $b ] [surfterm: $c ])
-    | `([surfterm: let $name = $b in $c ]) => `(Tm.letb $(Lean.quote (toString name.getId)) Option.none [surfterm: $b ] [surfterm: $c ])
-    | `([surfterm: fix $a ]) => `(Tm.fix [surfterm: $a ])
+    | `([surfterm| $a . $b ]) => `(Tm.proj [surfterm| $a ] [surfterm| $b ])
+    | `([surfterm| ($a $b) ]) => `(Tm.app [surfterm| $a ] [surfterm| $b ])
+    | `([surfterm| $b |> $a ]) => `(Tm.app [surfterm| $a ] [surfterm| $b ])
+    | `([surfterm| let $name : $a = $b in $c ]) => `(Tm.letb $(Lean.quote (toString name.getId)) (Option.some [surftype| $a ]) [surfterm| $b ] [surfterm| $c ])
+    | `([surfterm| let $name = $b in $c ]) => `(Tm.letb $(Lean.quote (toString name.getId)) Option.none [surfterm| $b ] [surfterm| $c ])
+    | `([surfterm| fix $a ]) => `(Tm.fix [surfterm| $a ])
 
 
-    #eval [surfterm:
+    #eval [surfterm|
         ⟨Tm.id "succ"⟩;x
     ]
 
-    #eval [surfterm:
+    #eval [surfterm|
         succ;x
     ]
 
-    #eval [surfterm:
+    #eval [surfterm|
       fix(\ self => (
         \ (succ;x, succ;y) => (self (x, y))
         \ (zero;(), y) => y
@@ -649,29 +647,29 @@ namespace Surface
       ))
     ]
 
-    #eval [surfterm:
+    #eval [surfterm|
       \ x => x
     ]
 
-    #eval [surfterm:
+    #eval [surfterm|
       \ x => ⟨Tm.id "x"⟩
     ]
 
-    #eval [surfterm:
+    #eval [surfterm|
       true;() |> (
         \ true;() => hello;()
         \ false;() => world;()
       )
     ]
 
-    #eval [surfterm:
+    #eval [surfterm|
       if (f ()) then
         hello;()
       else
         world;()
     ]
 
-    #eval [surfterm:
+    #eval [surfterm|
       if (f ()) then
         hello;()
       else if (g ()) then
@@ -679,7 +677,7 @@ namespace Surface
       else
         world;()
     ]
-    #eval [surfterm:
+    #eval [surfterm|
       if (f ()) then
         hello;()
       else (if (g ()) then
@@ -688,8 +686,6 @@ namespace Surface
         world;())
     ]
 
-
-    end Tm
 
     structure Abstraction where 
       names : List String
@@ -741,9 +737,9 @@ namespace Surface
         some (absstraction :: stack' ++ stack'' ++ result_stack, (pattern', content') :: result_cases) 
       ) none cases
       some (result_stack, .func result_cases)
-    | .proj record label => do
-      let (stack', record') <- normalize bound_vars record 
-      some (stack', .proj record' label)
+    | proj target label => do
+      let (stack', target') <- normalize bound_vars target 
+      some (stack', .proj target' label)
     | .app f arg => do
       let (stack', f') <- normalize bound_vars f 
       let (stack'', arg') <- normalize bound_vars arg 
@@ -799,9 +795,9 @@ namespace Surface
         some ((pattern', body') :: cases')
       ) none cases
       some (.func cases')
-    | .proj record label => do
-      let record' <- denormalize abstraction stack record 
-      some (.proj record' label)
+    | .proj target label => do
+      let target' <- denormalize abstraction stack target 
+      some (.proj target' label)
     | .app f arg => do 
       let f' ← denormalize abstraction stack f 
       let arg' ← denormalize abstraction stack arg
@@ -824,44 +820,105 @@ namespace Surface
       let content' <- denormalize abstraction stack content 
       some (.fix content')
 
+    #check Nameless.Tm.infer_reduce
+    partial def infer_reduce (t : Surface.Tm) : Option Surface.Ty := do
+      let (_, nameless_t) <- normalize [] t 
+      let nameless_ty := Nameless.Tm.infer_reduce 0 nameless_t
+      Surface.Ty.denormalize [] [] [] nameless_ty 
+
+    partial def infer_reduce_nameless (t : Surface.Tm) : Option Nameless.Ty := do
+      let (_, nameless_t) <- normalize [] t 
+      Nameless.Tm.infer_reduce 0 nameless_t
 
 
---------------------------------------
+    --------------------------------------
+    #eval infer_reduce [surfterm|
+      succ;zero;()
 
-  def nat_list := [surftype: 
-    induct [nat_list] (
-      (zero@unit * nil@unit) | 
-      {succ@nat * cons@list with nat * list <: nat_list}
-    )
-  ]
-  #eval nat_list
+    ]
 
-  def nat_to_list := [surftype:
-    forall nat -> {list with nat * list <: nat_list}
-  ] 
+    def nat_list := [surftype| 
+      induct [nat_list]
+        (zero@unit * nil@unit) | 
+        {succ@nat * cons@list with (nat * list) <: nat_list}
+    ]
+    #eval nat_list
 
-  #eval nat_to_list
+    #eval infer_reduce [surfterm|
+      let f : forall A -> {B with A * B <: ⟨nat_list⟩} = _ in 
+      (f (succ;zero;()))
+    ]
 
-  #eval  [surfterm:
-    fix(\ self => ( 
-      \ (succ;x, succ;y) => (self (x, y))
-      \ (zero;(), y) => y
-      \ (x zero;()) => x 
-    )) 
-  ]
-
-  
-  #eval  [surfterm:
-    let f = fix(\ self => ( 
-      \ (succ;x, succ;y) => (self (x, y))
-      \ (zero;(), y) => y
-      \ (x zero;()) => x 
-    )) in 
-    (f (succ;succ;zero;(), succ;zero;()))
-  ]
-
-  ----------------------------------
-  #eval [surfterm: #x = hello;() #y = world;()]
   --------------------------------------
+
+
+    def nat_to_list := [surftype|
+      forall nat -> {list with nat * list <: nat_list}
+    ] 
+
+    #eval nat_to_list
+
+    #eval  [surfterm|
+      fix(\ self => ( 
+        \ (succ;x, succ;y) => (self (x, y))
+        \ (zero;(), y) => y
+        \ (x zero;()) => x 
+      )) 
+    ]
+
+    -- TODO: debug normalize on function case
+    #eval match normalize [] [surfterm|
+      \ self => self 
+    ] with | some (_, x) => some x | none => none 
+
+    #eval match normalize [] [surfterm|
+      fix(\ self => ( 
+        \ (succ;x, succ;y) => (self (x, y))
+        \ (zero;(), y) => y
+        \ (x zero;()) => x 
+      )) 
+    ] with | some (_, x) => some x | none => none 
+
+    #eval infer_reduce_nameless [surfterm|
+      fix(\ self => ( 
+        \ (succ;x, succ;y) => (self (x, y))
+        \ (zero;(), y) => y
+        \ (x zero;()) => x 
+      )) 
+    ]
+
+    #eval infer_reduce [surfterm|
+      fix(\ self => ( 
+        \ (succ;x, succ;y) => (self (x, y))
+        \ (zero;(), y) => y
+        \ (x zero;()) => x 
+      )) 
+    ]
+
+    
+    #eval  [surfterm|
+      let f = fix(\ self => ( 
+        \ (succ;x, succ;y) => (self (x, y))
+        \ (zero;(), y) => y
+        \ (x zero;()) => x 
+      )) in 
+      (f (succ;succ;zero;(), succ;zero;()))
+    ]
+
+    #eval infer_reduce [surfterm|
+      let f = fix(\ self => ( 
+        \ (succ;x, succ;y) => (self (x, y))
+        \ (zero;(), y) => y
+        \ (x zero;()) => x 
+      )) in 
+      (f (succ;succ;zero;(), succ;zero;()))
+    ]
+
+
+    ----------------------------------
+    #eval [surfterm| #x = hello;() #y = world;()]
+    --------------------------------------
+  end Tm
+
 
 end Surface

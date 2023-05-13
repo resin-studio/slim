@@ -1865,7 +1865,7 @@ namespace Nameless
   ))
   ]
 
-  -- TODO
+  -- expected: succ@zero@unit
   #eval infer_reduce 10 [lessterm|
   (fix(\ y[0] => ( 
     \ (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1]))
