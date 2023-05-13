@@ -552,32 +552,33 @@ namespace Surface
 
 
     declare_syntax_cat surfterm
-    syntax "(" surfterm ")" : surfterm
-    syntax "⟨" term "⟩" : surfterm 
-    syntax:100 num : surfterm 
-    syntax:100 ident : surfterm
-    syntax "[" surfterm,+ "]" : surfterm 
-    --term
-    syntax:30 "_" : surfterm
-    syntax:30 "()" : surfterm
-    syntax:30 surfterm:100 ";" surfterm:30 : surfterm
-    syntax:30 "(" surfterm "," surfterm ")" : surfterm
+    syntax:90 num : surfterm 
+    syntax:90 ident : surfterm
 
-    -- syntax:20 surfterm:30 "=>" surfterm:20 : surfterm 
-    -- syntax:20 "λ" surfterm:30 "=>" surfterm:20 : surfterm 
-    -- syntax:30 "λ" surfterm : surfterm 
+    syntax:90 "(" surfterm ")" : surfterm
+    syntax:90 "⟨" term "⟩" : surfterm 
+    syntax:90 "_" : surfterm
+    syntax:90 "()" : surfterm
+    syntax:90 "(" surfterm "," surfterm ")" : surfterm
+    syntax:90 "(" surfterm:80 surfterm:80 ")" : surfterm 
 
-    syntax:30 "#" ident "=" surfterm:30 : surfterm
-    syntax:30 "#" ident "=" surfterm:30 surfterm: surfterm
+    syntax:80 surfterm:90 ";" surfterm:80 : surfterm
+    syntax:80 surfterm:90 "." surfterm:80 : surfterm 
 
-    syntax:20 "\\" surfterm:30 "=>" surfterm:20 : surfterm
-    syntax:20 "\\" surfterm:30 "=>" surfterm:20 surfterm: surfterm
+    syntax:75 surfterm:75 "|>" surfterm:76 : surfterm 
 
-    syntax:30 surfterm:30 "." surfterm:100 : surfterm 
-    syntax:30 "(" surfterm:30 surfterm:30 ")" : surfterm 
-    syntax:30 "let" ident ":" surfterm:30 "=" surfterm:30 "in" surfterm:30 : surfterm 
-    syntax:30 "let" ident "=" surfterm:30 "in" surfterm:30 : surfterm 
-    syntax:30 "fix " surfterm:30 : surfterm 
+
+    syntax:70 "#" ident "=" surfterm:71 : surfterm
+    syntax:70 "#" ident "=" surfterm:71 surfterm:70: surfterm
+
+    syntax:70 "\\" surfterm:71 "=>" surfterm:71 : surfterm
+    syntax:70 "\\" surfterm:71 "=>" surfterm:71 surfterm:70: surfterm
+
+    syntax:70 "if" surfterm:71 "then" surfterm:71 "else" surfterm:70: surfterm
+
+    syntax:70 "let" ident ":" surftype "=" surfterm:70 "in" surfterm:70 : surfterm 
+    syntax:70 "let" ident "=" surfterm:70 "in" surfterm:70 : surfterm 
+    syntax:70 "fix " surfterm:70 : surfterm 
 
     syntax "[surfterm: " surfterm "]" : term
 
@@ -602,9 +603,6 @@ namespace Surface
     -- terminals
     | `([surfterm: $n:num ]) => `($n)
     | `([surfterm: $a:ident]) => `(Tm.id $(Lean.quote (toString a.getId)))
-    -- context 
-    | `([surfterm: [ $x:surfterm ] ]) => `([ [surfterm: $x ] ])
-    | `([surfterm: [ $x,$xs:surfterm,* ] ]) => `([surfterm: [ $x ] ] ++ [surfterm: [$xs,*] ])
     --Tm
     | `([surfterm: _ ]) => `(Tm.hole)
     | `([surfterm: () ]) => `(Tm.unit)
@@ -617,9 +615,20 @@ namespace Surface
     | `([surfterm: \ $b => $d ]) => `(Tm.func [([surfterm: $b ], [surfterm: $d ])])
     | `([surfterm: \ $b => $d $xs ]) => `( Tm.func (([surfterm: $b ], [surfterm: $d ]) :: (Tm.function_cases [surfterm: $xs ])))
 
+
+    | `([surfterm: if $test then $t else $f ]) => `( 
+      [surfterm: 
+        $test |> (
+          \ ⟨Tm.id "true"⟩;() => $t
+          \ ⟨Tm.id "false"⟩;() => $f
+        )
+      ]
+    )
+
     | `([surfterm: $a . $b ]) => `(Tm.proj [surfterm: $a ] [surfterm: $b ])
     | `([surfterm: ($a $b) ]) => `(Tm.app [surfterm: $a ] [surfterm: $b ])
-    | `([surfterm: let $name : $a = $b in $c ]) => `(Tm.letb $(Lean.quote (toString name.getId)) (Option.some [surfterm: $a ]) [surfterm: $b ] [surfterm: $c ])
+    | `([surfterm: $b |> $a ]) => `(Tm.app [surfterm: $a ] [surfterm: $b ])
+    | `([surfterm: let $name : $a = $b in $c ]) => `(Tm.letb $(Lean.quote (toString name.getId)) (Option.some [surftype: $a ]) [surfterm: $b ] [surfterm: $c ])
     | `([surfterm: let $name = $b in $c ]) => `(Tm.letb $(Lean.quote (toString name.getId)) Option.none [surfterm: $b ] [surfterm: $c ])
     | `([surfterm: fix $a ]) => `(Tm.fix [surfterm: $a ])
 
@@ -647,6 +656,39 @@ namespace Surface
     #eval [surfterm:
       \ x => ⟨Tm.id "x"⟩
     ]
+
+    #eval [surfterm:
+      true;() |> (
+        \ true;() => hello;()
+        \ false;() => world;()
+      )
+    ]
+
+    #eval [surfterm:
+      if (f ()) then
+        hello;()
+      else
+        world;()
+    ]
+
+    #eval [surfterm:
+      if (f ()) then
+        hello;()
+      else if (g ()) then
+        middle;()
+      else
+        world;()
+    ]
+    #eval [surfterm:
+      if (f ()) then
+        hello;()
+      else (if (g ()) then
+        middle;()
+      else
+        world;())
+    ]
+
+
     end Tm
 
     structure Abstraction where 
