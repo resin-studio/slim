@@ -84,7 +84,7 @@ namespace Surface
     | .bot => "⊥" 
     | .top => "⊤" 
     | .tag l ty1 => 
-      ("@" ++ l ++ " " ++ (Ty.repr ty1 n))
+      ("?" ++ l ++ " " ++ (Ty.repr ty1 n))
     | .field l ty1 => 
       Format.bracket "(" (l ++ " : " ++ (Ty.repr ty1 n)) ")"
 
@@ -143,7 +143,7 @@ namespace Surface
     syntax:90 "unit" : surftype
     syntax:90 "⊥" : surftype
     syntax:90 "⊤" : surftype
-    syntax:90 "@" surftype:100 surftype:90 : surftype
+    syntax:90 "?" surftype:100 surftype:90 : surftype
     syntax:90 surftype:100 ":" surftype:90 : surftype
     syntax:50 surftype:51 "->" surftype:50 : surftype
     syntax:60 surftype:61 "|" surftype:60 : surftype
@@ -188,7 +188,7 @@ namespace Surface
     | `([surftype| unit ]) => `(Ty.unit)
     | `([surftype| ⊥ ]) => `(Ty.bot)
     | `([surftype| ⊤ ]) => `(Ty.top)
-    | `([surftype| @ $a $b:surftype ]) => `(Ty.tag (idname [surftype| $a ]) [surftype| $b ])
+    | `([surftype| ? $a $b:surftype ]) => `(Ty.tag (idname [surftype| $a ]) [surftype| $b ])
     | `([surftype| $a : $b:surftype ]) => `(Ty.field (idname [surftype| $a ]) [surftype| $b ])
     | `([surftype| $a -> $b ]) => `(Ty.case [surftype| $a ] [surftype| $b ])
     | `([surftype| $a | $b ]) => `(Ty.union [surftype| $a ] [surftype| $b ])
@@ -228,14 +228,14 @@ namespace Surface
     -- #eval Ty.infer_abstraction 0 [surftype| $d ]) [surftype| $b ] [surftype| $c ] [surftype| $d ]
     #eval [surftype| succ*x ]
     #eval [surftype| 
-        (@zero unit * @nil unit) |
-        {@succ nat * @cons list with nat * list <: nat_list}
+        (?zero unit * ?nil unit) |
+        {?succ nat * ?cons list with nat * list <: nat_list}
     ]
 
     #eval [surftype| 
       induct [nat_list] (
-        (@zero unit * @nil unit) | 
-        {@succ nat * @cons list with nat * list <: nat_list}
+        (?zero unit * ?nil unit) | 
+        {?succ nat * ?cons list with nat * list <: nat_list}
       )
     ]
 
@@ -245,7 +245,7 @@ namespace Surface
     -- ]
     -- TODO: simplify language by using implication to encode universal and greatest fixedpoint.  
     /-
-    nat_list @ (
+    nat_list ? (
       (zero*unit × nil*unit) ∨ 
       (succ*nat × cons*list | nat × list ≤ nat_list)
     )
@@ -474,15 +474,15 @@ namespace Surface
 
     -------------------------------------------------
     def nat_ := [surftype|
-      induct [self] @zero unit | @succ self
+      induct [self] ?zero unit | ?succ self
     ]
 
     #eval nat_
 
-    #eval extract_free_vars [surftype| (@succ @succ @succ something) * (@zero unit | @succ ⟨nat_⟩) ] 
-    def fvs := extract_free_vars [surftype| (@succ @succ @succ something) * (@zero unit | @succ ⟨nat_⟩) ] 
+    #eval extract_free_vars [surftype| (?succ ?succ ?succ something) * (?zero unit | ?succ ⟨nat_⟩) ] 
+    def fvs := extract_free_vars [surftype| (?succ ?succ ?succ something) * (?zero unit | ?succ ⟨nat_⟩) ] 
     
-    #eval to_nameless (to_list fvs) [] [surftype| (@succ something) ] 
+    #eval to_nameless (to_list fvs) [] [surftype| (?succ something) ] 
     
 
     def result_pair := to_nameless [] [] nat_
@@ -492,8 +492,8 @@ namespace Surface
       | none => none 
 
     #eval unify_reduce
-    [surftype| (@succ @succ @succ something) ] 
-    [surftype| @zero unit | @succ ⟨nat_⟩ ] 
+    [surftype| (?succ ?succ ?succ something) ] 
+    [surftype| ?zero unit | ?succ ⟨nat_⟩ ] 
     [surftype| something ]
 
   end Ty
@@ -523,7 +523,7 @@ namespace Surface
       "()"
     | .id name => name 
     | .tag l t1 =>
-      ";" ++ l ++ " " ++ (Tm.repr t1 n)
+      "@" ++ l ++ " " ++ (Tm.repr t1 n)
     | record [("l", l), ("r", r)] =>
       let _ : ToFormat Tm := ⟨fun t1 => Tm.repr t1 n ⟩
       Format.bracket "(" (Format.joinSep [l, r] ("," ++ Format.line)) ")"
@@ -566,7 +566,7 @@ namespace Surface
     syntax:90 "(" surfterm "," surfterm ")" : surfterm
     syntax:90 "(" surfterm:80 surfterm:80 ")" : surfterm 
 
-    syntax:80 ";" surfterm:90 surfterm:80 : surfterm
+    syntax:80 "@" surfterm:90 surfterm:80 : surfterm
     syntax:80 surfterm:90 "." surfterm:80 : surfterm 
 
     syntax:75 surfterm:75 "|>" surfterm:76 : surfterm 
@@ -610,7 +610,7 @@ namespace Surface
     --Tm
     | `([surfterm| _ ]) => `(Tm.hole)
     | `([surfterm| () ]) => `(Tm.unit)
-    | `([surfterm| ;$a $b ]) => `(Tm.tag (idname [surfterm| $a ]) [surfterm| $b ])
+    | `([surfterm| @$a $b ]) => `(Tm.tag (idname [surfterm| $a ]) [surfterm| $b ])
     | `([surfterm| ( $a , $b ) ]) => `(Tm.record [("l", [surfterm| $a ]), ("r", [surfterm|$b ])])
 
     | `([surfterm| # $a = $b ]) => `( Tm.record [ ($(Lean.quote (toString a.getId)), [surfterm| $b ]) ]  )
@@ -623,8 +623,8 @@ namespace Surface
     | `([surfterm| if $test then $t else $f ]) => `( 
       [surfterm| 
         $test |> (
-          \ ;⟨Tm.id "true"⟩ () => $t
-          \ ;⟨Tm.id "false"⟩ () => $f
+          \ @⟨Tm.id "true"⟩ () => $t
+          \ @⟨Tm.id "false"⟩ () => $f
         )
       ]
     )
@@ -638,18 +638,18 @@ namespace Surface
 
 
     #eval [surfterm|
-        ;⟨Tm.id "succ"⟩ x
+        @⟨Tm.id "succ"⟩ x
     ]
 
     #eval [surfterm|
-        ;succ x
+        @succ x
     ]
 
     #eval [surfterm|
       fix(\ self => (
-        \ (;succ x, ;succ y) => (self (x, y))
-        \ (;zero (), y) => y
-        \ (x, ;zero ()) => x 
+        \ (@succ x, @succ y) => (self (x, y))
+        \ (@zero (), y) => y
+        \ (x, @zero ()) => x 
       ))
     ]
 
@@ -662,34 +662,34 @@ namespace Surface
     ]
 
     #eval [surfterm|
-      ;true () |> (
-        \ ;true () => ;hello ()
-        \ ;false () => ;world ()
+      @true () |> (
+        \ @true () => @hello ()
+        \ @false () => @world ()
       )
     ]
 
     #eval [surfterm|
       if (f ()) then
-        ;hello ()
+        @hello ()
       else
-        ;world ()
+        @world ()
     ]
 
     #eval [surfterm|
       if (f ()) then
-        ;hello ()
+        @hello ()
       else if (g ()) then
-        ;middle ()
+        @middle ()
       else
-        ;world ()
+        @world ()
     ]
     #eval [surfterm|
       if (f ()) then
-        ;hello ()
+        @hello ()
       else (if (g ()) then
-        ;middle ()
+        @middle ()
       else
-        ;world ())
+        @world ())
     ]
 
 
@@ -846,20 +846,20 @@ namespace Surface
 
     --------------------------------------
   #eval Tm.infer_reduce [surfterm|
-    ;succ ;zero ()
+    @succ @zero ()
 
   ]
 
   def nat_list := [surftype| 
     induct [nat_list]
-      (@zero unit * @nil unit) | 
-      {@succ nat * @cons list with (nat * list) <: nat_list}
+      (?zero unit * ?nil unit) | 
+      {?succ nat * ?cons list with (nat * list) <: nat_list}
   ]
   #eval nat_list
 
   #eval Tm.infer_reduce [surfterm|
     let f : forall A -> {B with A * B <: ⟨nat_list⟩} = _ in 
-    (f (;succ;zero()))
+    (f (@succ@zero()))
   ]
 
 --------------------------------------
@@ -873,50 +873,50 @@ namespace Surface
 
   #eval  [surfterm|
     fix(\ self => ( 
-      \ (;succ x, ;succ y) => (self (x, y))
-      \ (;zero(), y) => y
-      \ (x, ;zero()) => x 
+      \ (@succ x, @succ y) => (self (x, y))
+      \ (@zero(), y) => y
+      \ (x, @zero()) => x 
     )) 
   ]
 
   #eval Tm.infer_reduce [surfterm|
     fix(\ self => ( 
-      \ (;succ x, ;succ y) => (self (x, y))
-      \ (;zero(), y) => y
-      \ (x, ;zero()) => x 
+      \ (@succ x, @succ y) => (self (x, y))
+      \ (@zero(), y) => y
+      \ (x, @zero()) => x 
     )) 
   ]
 
   
   #eval  [surfterm|
     let f = fix(\ self => ( 
-      \ (;succ x, ;succ y) => (self (x, y))
-      \ (;zero(), y) => y
-      \ (x, ;zero ()) => x 
+      \ (@succ x, @succ y) => (self (x, y))
+      \ (@zero(), y) => y
+      \ (x, @zero ()) => x 
     )) in 
-    (f (;succ;succ;zero(), ;succ;zero()))
+    (f (@succ@succ@zero(), @succ@zero()))
   ]
 
   #eval Tm.infer_reduce [surfterm|
     let f = fix(\ self => ( 
-      \ (;succ x, ;succ y) => (self (x, y))
-      \ (;zero(), y) => y
-      \ (x, ;zero()) => x 
+      \ (@succ x, @succ y) => (self (x, y))
+      \ (@zero(), y) => y
+      \ (x, @zero()) => x 
     )) in 
-    (f (;succ;succ;zero(), ;succ;zero()))
+    (f (@succ@succ@zero(), @succ@zero()))
   ]
 
 
   ----------------------------------
-  #eval [surfterm| #x = ;hello() #y = ;world()]
+  #eval [surfterm| #x = @hello() #y = @world()]
   --------------------------------------
 
 
 
   def plus := [surftype| 
     induct [plus] 
-      {x : @zero unit & y : n & z : n} | 
-      {x : @succ X & y : Y & z : @succ Z with 
+      {x : ?zero unit & y : n & z : n} | 
+      {x : ?succ X & y : Y & z : ?succ Z with 
         (x : X & y : Y & z : Z) <: plus 
       }
   ]
@@ -925,7 +925,7 @@ namespace Surface
     (
       x : X &
       y : Y &
-      z : (@succ @succ @zero unit)
+      z : (?succ ?succ ?zero unit)
     )
   ] plus
   [surftype| X * Y ]
@@ -935,44 +935,43 @@ namespace Surface
 
   --------------- examples from liquid types paper -----------------------------
   def NAT := [surftype| 
-    induct [NAT] @zero unit | @succ NAT
+    induct [NAT] ?zero unit | ?succ NAT
   ]
 
   def BOOL := [surftype| 
-    @true unit | @false unit
+    ?true unit | ?false unit
   ]
 
 
   -- TODO
   #eval Tm.infer_reduce [surfterm| 
     let lt : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
-      \ (;zero(), ;succ y) => ;true()  
-      \ (;succ x, ;succ y) => (self (x, y)) 
-      \ (;succ x, ;zero()) => ;false() 
+      \ (@zero(), @succ y) => @true()  
+      \ (@succ x, @succ y) => (self (x, y)) 
+      \ (@succ x, @zero()) => @false() 
     in
     let max = \ (x, y) => if (lt (x, y)) then x else y in
     max
   ] 
   ---- debugging
   #eval Tm.infer_reduce [surfterm| 
-    let max = (\ (x, y) => if ;true() then x else y) in
-    max
+    if @false() then @ooga() else @booga()
   ] 
 
   #eval Tm.infer_reduce [surfterm| 
     let lt : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
-      \ (;zero(), ;succ y) => ;true()  
-      \ (;succ x, ;succ y) => (self (x, y)) 
-      \ (;succ x, ;zero()) => ;false() 
+      \ (@zero(), @succ y) => @true()  
+      \ (@succ x, @succ y) => (self (x, y)) 
+      \ (@succ x, @zero()) => @false() 
     in
     lt
   ] 
 
   #eval Tm.infer_reduce [surfterm| 
     let lt = fix \ self =>
-      \ (;zero(), ;succ y) => ;true()  
-      \ (;succ x, ;succ y) => (self (x, y)) 
-      \ (;succ x, ;zero()) => ;false() 
+      \ (@zero(), @succ y) => @true()  
+      \ (@succ x, @succ y) => (self (x, y)) 
+      \ (@succ x, @zero()) => @false() 
     in
     lt
   ] 
