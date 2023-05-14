@@ -1572,15 +1572,6 @@ namespace Nameless
         (x : β[0] & y : β[1] & z : β[2]) <: β[3] 
       }
   ]
-  /-
-  def plus := [lesstype| 
-    induct 
-      {x : zero@unit & y : β[0] & z : β[0]} union 
-      {x : succ@β[0] & y : β[1] & z : succ@β[2] | 
-        (x : β[0] & y : β[1] & z : β[2]) <: β[3] 
-      }
-  ]
-  -/
 
   #eval plus
 

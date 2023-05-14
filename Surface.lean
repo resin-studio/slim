@@ -834,8 +834,6 @@ namespace Surface
       let (stack, content') <- from_nameless abstraction stack content 
       some (stack, .fix content')
 
-    #check Nameless.Tm.infer_reduce
-    #check Surface.Ty.from_nameless
     partial def infer_reduce (t : Surface.Tm) : Option Surface.Ty := do
       let (_, t_nl) <- to_nameless [] t 
       let ty_nl := Nameless.Tm.infer_reduce 0 t_nl
@@ -843,78 +841,96 @@ namespace Surface
       let (_, ty_surf) <- Surface.Ty.from_nameless [] [] stack_nl ty_nl 
       ty_surf
 
-    partial def infer_reduce_nameless (t : Surface.Tm) : Option Nameless.Ty := do
-      let (_, nameless_t) <- to_nameless [] t 
-      Nameless.Tm.infer_reduce 0 nameless_t
+  end Tm
 
 
     --------------------------------------
-    #eval infer_reduce [surfterm|
-      succ;zero;()
+  #eval Tm.infer_reduce [surfterm|
+    succ;zero;()
 
-    ]
+  ]
 
-    def nat_list := [surftype| 
-      induct [nat_list]
-        (zero@unit * nil@unit) | 
-        {succ@nat * cons@list with (nat * list) <: nat_list}
-    ]
-    #eval nat_list
+  def nat_list := [surftype| 
+    induct [nat_list]
+      (zero@unit * nil@unit) | 
+      {succ@nat * cons@list with (nat * list) <: nat_list}
+  ]
+  #eval nat_list
 
-    #eval infer_reduce [surfterm|
-      let f : forall A -> {B with A * B <: ⟨nat_list⟩} = _ in 
-      (f (succ;zero;()))
-    ]
+  #eval Tm.infer_reduce [surfterm|
+    let f : forall A -> {B with A * B <: ⟨nat_list⟩} = _ in 
+    (f (succ;zero;()))
+  ]
 
+--------------------------------------
+
+
+  def nat_to_list := [surftype|
+    forall nat -> {list with nat * list <: nat_list}
+  ] 
+
+  #eval nat_to_list
+
+  #eval  [surfterm|
+    fix(\ self => ( 
+      \ (succ;x, succ;y) => (self (x, y))
+      \ (zero;(), y) => y
+      \ (x, zero;()) => x 
+    )) 
+  ]
+
+  #eval Tm.infer_reduce [surfterm|
+    fix(\ self => ( 
+      \ (succ;x, succ;y) => (self (x, y))
+      \ (zero;(), y) => y
+      \ (x, zero;()) => x 
+    )) 
+  ]
+
+  
+  #eval  [surfterm|
+    let f = fix(\ self => ( 
+      \ (succ;x, succ;y) => (self (x, y))
+      \ (zero;(), y) => y
+      \ (x zero;()) => x 
+    )) in 
+    (f (succ;succ;zero;(), succ;zero;()))
+  ]
+
+  #eval Tm.infer_reduce [surfterm|
+    let f = fix(\ self => ( 
+      \ (succ;x, succ;y) => (self (x, y))
+      \ (zero;(), y) => y
+      \ (x, zero;()) => x 
+    )) in 
+    (f (succ;succ;zero;(), succ;zero;()))
+  ]
+
+
+  ----------------------------------
+  #eval [surfterm| #x = hello;() #y = world;()]
   --------------------------------------
 
 
-    def nat_to_list := [surftype|
-      forall nat -> {list with nat * list <: nat_list}
-    ] 
 
-    #eval nat_to_list
+  def plus := [surftype| 
+    induct [plus] 
+      {x : zero@unit & y : n & z : n} | 
+      {x : succ@X & y : Y & z : succ@Z with 
+        (x : X & y : Y & z : Z) <: plus 
+      }
+  ]
 
-    #eval  [surfterm|
-      fix(\ self => ( 
-        \ (succ;x, succ;y) => (self (x, y))
-        \ (zero;(), y) => y
-        \ (x, zero;()) => x 
-      )) 
-    ]
+  #eval Ty.unify_reduce [surftype|
+    (
+      x : X &
+      y : Y &
+      z : (succ@succ@zero@unit)
+    )
+  ] plus
+  [surftype| X * Y ]
 
-    #eval infer_reduce [surfterm|
-      fix(\ self => ( 
-        \ (succ;x, succ;y) => (self (x, y))
-        \ (zero;(), y) => y
-        \ (x, zero;()) => x 
-      )) 
-    ]
-
-    
-    #eval  [surfterm|
-      let f = fix(\ self => ( 
-        \ (succ;x, succ;y) => (self (x, y))
-        \ (zero;(), y) => y
-        \ (x zero;()) => x 
-      )) in 
-      (f (succ;succ;zero;(), succ;zero;()))
-    ]
-
-    #eval infer_reduce [surfterm|
-      let f = fix(\ self => ( 
-        \ (succ;x, succ;y) => (self (x, y))
-        \ (zero;(), y) => y
-        \ (x, zero;()) => x 
-      )) in 
-      (f (succ;succ;zero;(), succ;zero;()))
-    ]
-
-
-    ----------------------------------
-    #eval [surfterm| #x = hello;() #y = world;()]
-    --------------------------------------
-  end Tm
+  #eval plus
 
 
 end Surface
