@@ -695,7 +695,10 @@ namespace Surface
 
     structure Abstraction where 
       names : List String
-      type_map : PHashMap String (List (List String))
+      map_type : PHashMap String (List (List String))
+
+    def Abstraction.concat (abs1 abs2 : Abstraction) : Abstraction :=
+      ⟨abs1.names ++ abs2.names, abs2.map_type ; abs1.map_type⟩ 
 
     partial def extract_pattern_vars : Tm -> Option (List String)
     | .hole => some []
@@ -770,59 +773,66 @@ namespace Surface
       let (stack', content') <- normalize bound_vars content
       some (stack', .fix content')
 
-    partial def denormalize (abstraction : Abstraction) (stack : List Abstraction) : Nameless.Tm ->  Option Surface.Tm
-    | .hole => some .hole 
-    | .unit => some .unit 
+    partial def denormalize (abstraction : Abstraction) (stack : List Abstraction) : 
+    Nameless.Tm ->  Option (List Abstraction × Surface.Tm)
+    | .hole => some (stack, .hole) 
+    | .unit => some (stack, .unit) 
     | .bvar idx =>
       let names := abstraction.names
       if h : names.length > idx then
         let name := names.get ⟨idx, h⟩
-        some (.id name)
+        some (stack, .id name)
       else
         none
-    | .fvar index => some (.id s!"_x_{index}")
+    | .fvar index => none
     | .tag label content => do
-      let content' <- denormalize abstraction stack content
-      some (.tag label content')
+      let (stack, content') <- denormalize abstraction stack content
+      some (stack, .tag label content')
     | .record fields => do
-      let fields' <- List.foldr (fun (label, content) result => do
-        let fields' <- result
-        let content' <- denormalize abstraction stack content 
-        some ((label, content') :: fields')
-      ) none fields
-      some (.record fields')
+      let (stack', fields') <- List.foldrM (fun (label, content) (stack', fields') => do
+        let (stack', content') <- denormalize abstraction stack' content 
+        some (stack', (label, content') :: fields')
+      ) (stack, []) fields
+      some (stack', .record fields')
     | .func cases => do 
-      let cases' <- List.foldr (fun (pattern, body) result => do
-        let cases' <- result
-        let pattern' <- denormalize abstraction (abstraction :: stack) pattern 
-        let body' <- denormalize abstraction (abstraction :: stack) body 
-        some ((pattern', body') :: cases')
-      ) none cases
-      some (.func cases')
+      let (stack', cases') <- List.foldrM (fun (pattern, body) (stack', cases') => do
+        match stack' with
+        | abstraction' :: stack' => do
+          let n <- Nameless.Tm.pattern_wellformed 0 pattern
+          if abstraction.names.length == n then
+            let abstraction := Abstraction.concat abstraction' abstraction
+            let (stack', pattern') <- denormalize abstraction stack' pattern 
+            let (stack', body') <- denormalize abstraction stack' body 
+            some (stack', (pattern', body') :: cases')
+          else
+            none
+        | [] => none 
+      ) (stack, []) cases
+      some (stack', .func cases')
     | .proj target label => do
-      let target' <- denormalize abstraction stack target 
-      some (.proj target' label)
+      let (stack, target') <- denormalize abstraction stack target 
+      some (stack, .proj target' label)
     | .app f arg => do 
-      let f' ← denormalize abstraction stack f 
-      let arg' ← denormalize abstraction stack arg
-      some (.app f' arg') 
+      let (stack, f') <- denormalize abstraction stack f 
+      let (stack, arg') <- denormalize abstraction stack arg
+      some (stack, .app f' arg') 
     | .letb ty_op arg body => 
       match abstraction.names with
       | [name] => 
         let ty_op' := (do
           let ty <- ty_op
-          let ty_stack <- abstraction.type_map.find? name
+          let ty_stack <- abstraction.map_type.find? name
           let (_, ty') <- Ty.denormalize [] [] ty_stack ty 
           some ty' 
         )
         do
-        let arg' ← denormalize abstraction stack arg
-        let body' ← denormalize abstraction stack body
-        some (.letb name ty_op' arg' body') 
+        let (stack, arg') <- denormalize abstraction stack arg
+        let (stack, body') <- denormalize abstraction stack body
+        some (stack, .letb name ty_op' arg' body') 
       | _ => none
     | .fix content => do
-      let content' <- denormalize abstraction stack content 
-      some (.fix content')
+      let (stack, content') <- denormalize abstraction stack content 
+      some (stack, .fix content')
 
     #check Nameless.Tm.infer_reduce
     #check Surface.Ty.denormalize
