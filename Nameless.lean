@@ -885,10 +885,10 @@ namespace Nameless
     syntax:30 "()" : lessterm
     syntax:30 "y[" lessterm:90 "]": lessterm
     syntax:30 "x[" lessterm:90 "]" : lessterm
-    syntax:30 "@" lessterm:100 lessterm:30 : lessterm
+    syntax:30 "#" lessterm:100 lessterm:30 : lessterm
 
-    syntax:30 "#" lessterm:100 "=" lessterm:30 : lessterm
-    syntax:30 "#" lessterm:100 "=" lessterm:30 lessterm: lessterm
+    syntax:30 "@" lessterm:100 "=" lessterm:30 : lessterm
+    syntax:30 "@" lessterm:100 "=" lessterm:30 lessterm: lessterm
 
     syntax "{" lessterm,+ "}" : lessterm 
     syntax:30 "(" lessterm "," lessterm ")" : lessterm
@@ -923,10 +923,10 @@ namespace Nameless
     | `([lessterm| () ]) => `(Tm.unit)
     | `([lessterm| y[$n] ]) => `(Tm.bvar [lessterm| $n ])
     | `([lessterm| x[$n] ]) => `(Tm.fvar [lessterm| $n ])
-    | `([lessterm| @ $a $b ]) => `(Tm.tag [lessterm| $a ] [lessterm| $b ])
+    | `([lessterm| # $a $b ]) => `(Tm.tag [lessterm| $a ] [lessterm| $b ])
 
-    | `([lessterm| # $a = $b ]) => `( Tm.record [ ([lessterm| $a ], [lessterm| $b ]) ]  )
-    | `([lessterm| # $a = $b $xs ]) => `( Tm.record (([lessterm| $a ], [lessterm| $b ]) :: (Tm.record_fields [lessterm| $xs ])))
+    | `([lessterm| @ $a = $b ]) => `( Tm.record [ ([lessterm| $a ], [lessterm| $b ]) ]  )
+    | `([lessterm| @ $a = $b $xs ]) => `( Tm.record (([lessterm| $a ], [lessterm| $b ]) :: (Tm.record_fields [lessterm| $xs ])))
 
     | `([lessterm| ( $a , $b ) ]) => `(Tm.record [("l", [lessterm| $a ]), ("r", [lessterm|$b ])])
 
@@ -963,12 +963,12 @@ namespace Nameless
     | .fvar id => 
       "x[" ++ (Nat.repr id) ++ "]"
     | .tag l t1 =>
-      "@" ++ l ++ " " ++ (repr t1 n)
+      "#" ++ l ++ " " ++ (repr t1 n)
     | record [("l", l), ("r", r)] =>
       let _ : ToFormat Tm := ⟨fun t1 => repr t1 n ⟩
       Format.bracket "(" (Format.joinSep [l, r] ("," ++ Format.line)) ")"
     | record fds =>
-      let _ : ToFormat (String × Tm) := ⟨fun (l, t1) => "#" ++ l ++ " = " ++ repr t1 n⟩
+      let _ : ToFormat (String × Tm) := ⟨fun (l, t1) => "@" ++ l ++ " = " ++ repr t1 n⟩
       Format.bracket "(" (Format.joinSep fds (" " ++ Format.line)) ")"
     | func fs =>
       let _ : ToFormat (Tm × Tm) := ⟨fun (pat, tb) =>
@@ -1369,7 +1369,7 @@ namespace Nameless
     partial def enumerate_cases : List String -> List (List (Tm × Tm))
     | [] => []
     | l :: ls =>
-      (enumerate_cases ls).map (fun cases => ([lessterm| @⟨l⟩ y[0] ], [lessterm| _ ]) :: cases)
+      (enumerate_cases ls).map (fun cases => ([lessterm| #⟨l⟩ y[0] ], [lessterm| _ ]) :: cases)
 
     partial def join_functions (t1 : Tm) (t2 : Tm) : List Tm := match t1, t2 with
     | func cases1, func cases2 => [func (cases1 ++ cases2)]
@@ -1692,42 +1692,42 @@ namespace Nameless
 
   ------ type inference --------
   #eval infer_reduce 0 [lessterm|
-    @succ @zero ()
+    #succ #zero ()
   ]
 
   -- expected: ?cons ?nil unit
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
-    (y[0] (@succ @zero ()))
+    (y[0] (#succ #zero ()))
   ]
 
 
 
   #eval[lessterm|
     \ y[0] => 
-      \ @zero () => @nil ()
-      \ @succ y[0] => @cons (y[1] y[0])
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[1] y[0])
   ]
 
   #eval[lessterm|
     \ y[0] => (
-      \ @zero () => @nil ()
-      \ @succ y[0] => @cons (y[1] y[0])
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[1] y[0])
     )
   ]
 
   #eval infer_reduce 0 [lessterm|
     fix(\ y[0] => (
-    \ @zero () => @nil ()
-    \ @succ y[0] => @cons (y[1] y[0])
+    \ #zero () => #nil ()
+    \ #succ y[0] => #cons (y[1] y[0])
     )
     )
   ]
 
   #eval infer_reduce 0 [lessterm|
     let y[0] = fix(\ y[0] => 
-      \ @zero () => @nil (),
-      \ @succ y[0] => @cons (y[1] y[0])
+      \ #zero () => #nil (),
+      \ #succ y[0] => #cons (y[1] y[0])
     ) in 
     y[0]
   ]
@@ -1735,39 +1735,39 @@ namespace Nameless
   -- expected: ?cons ?nil unit
   #eval infer_reduce 10 [lessterm|
     let y[0] = fix(\ y[0] => ( 
-      \ @zero () => @nil (),
-      \ @succ y[0] => @cons (y[1] y[0])
+      \ #zero () => #nil (),
+      \ #succ y[0] => #cons (y[1] y[0])
     )) in 
-    (y[0] (@succ @zero ()))
+    (y[0] (#succ #zero ()))
   ]
 
 
   -- expected: ?cons ?nil unit
   #eval infer_reduce 0 [lessterm|
     let y[0] : (?zero unit -> ?nil unit) & (?succ ?zero unit -> ?cons ?nil unit) = _ in 
-    (y[0] (@succ @zero ()))
+    (y[0] (#succ #zero ()))
   ]
 
 
   ---------- generics ----------------
 
   #eval infer_reduce 10 [lessterm|
-    ((\ @cons (y[0], y[1]) => y[0]) (@cons (@ooga (), @booga ())))
+    ((\ #cons (y[0], y[1]) => y[0]) (#cons (#ooga (), #booga ())))
   ]
 
   #eval infer_reduce 10 [lessterm|
-    let y[0] = (\ @cons (y[0], y[1]) => y[0]) in
-    (y[0] (@cons (@ooga (), @booga ())))  
+    let y[0] = (\ #cons (y[0], y[1]) => y[0]) in
+    (y[0] (#cons (#ooga (), #booga ())))  
   ]
 
   #eval infer_reduce 10 [lessterm|
-    let y[0] = (\ @cons (y[0], y[1]) => y[0]) in 
+    let y[0] = (\ #cons (y[0], y[1]) => y[0]) in 
     y[0]  
   ]
 
   #eval infer_reduce 10 [lessterm|
     let y[0] : forall ?cons (β[0] * β[1]) -> β[0] = _ in
-    (y[0] (@cons (@ooga (), @booga ())))  
+    (y[0] (#cons (#ooga (), #booga ())))  
   ]
 
   ---------- adjustment ----------------
@@ -1775,18 +1775,18 @@ namespace Nameless
   -- widening
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
-    ((y[0] @hello ()) @world ())
+    ((y[0] #hello ()) #world ())
   ]
 
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
-    (y[0] @hello ())
+    (y[0] #hello ())
   ]
 
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
-    let y[0] = (y[0] @hello ()) in
-    (y[0] @world ())
+    let y[0] = (y[0] #hello ()) in
+    (y[0] #world ())
   ]
 
   -- narrowing
@@ -1807,7 +1807,7 @@ namespace Nameless
   ]
 
   ----------------------------------
-  #eval [lessterm| #x = @hello () #y = @world ()]
+  #eval [lessterm| @x = #hello () @y = #world ()]
   --------------------------------------
 
   #eval unify_decide 0 
@@ -1844,27 +1844,27 @@ namespace Nameless
 
   #eval [lessterm|
   (\ y[0] => ( 
-    \ (@succ y[0], @succ y[1]) => (y[2] (y[0], y[1]))
-    \ (@zero (), y[0]) => y[0]
-    \ (y[0], @zero ()) => y[0] 
+    \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1]))
+    \ (#zero (), y[0]) => y[0]
+    \ (y[0], #zero ()) => y[0] 
   ))
   ]
 
   #eval infer_reduce 10 [lessterm|
   fix(\ y[0] => ( 
-    \ (@succ y[0], @succ y[1]) => (y[2] (y[0], y[1]))
-    \ (@zero (), y[0]) => y[0]
-    \ (y[0], @zero ()) => y[0] 
+    \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1]))
+    \ (#zero (), y[0]) => y[0]
+    \ (y[0], #zero ()) => y[0] 
   ))
   ]
 
   -- expected: ?succ ?zero unit
   #eval infer_reduce 10 [lessterm|
   (fix(\ y[0] => ( 
-    \ (@succ y[0], @succ y[1]) => (y[2] (y[0], y[1]))
-    \ (@zero (), y[0]) => y[0]
-    \ (y[0], @zero ()) => y[0] 
-  )) (@succ @succ @zero (), @succ @succ @succ @zero ()))
+    \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1]))
+    \ (#zero (), y[0]) => y[0]
+    \ (y[0], #zero ()) => y[0] 
+  )) (#succ #succ #zero (), #succ #succ #succ #zero ()))
   ]
 
   ----------------------------------
@@ -1892,9 +1892,9 @@ namespace Nameless
   #eval infer_reduce 10 
   [lessterm|
   let y[0] : ⟨spec⟩ = fix(\ y[0] => ( 
-    \ (@succ y[0], @succ y[1]) => (y[2] (y[0], y[1]))
-    \ (@zero (), y[0]) => y[0]
-    \ (y[0], @zero ()) => y[0] 
+    \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1]))
+    \ (#zero (), y[0]) => y[0]
+    \ (y[0], #zero ()) => y[0] 
   )) in 
   y[0]
   ]
@@ -1902,9 +1902,9 @@ namespace Nameless
   #eval infer_reduce 10 
   [lessterm|
   let y[0] = fix(\ y[0] => ( 
-    \ (@succ y[0], @succ y[1]) => (y[2] (y[0], y[1]))
-    \ (@zero (), y[0]) => y[0]
-    \ (y[0], @zero ()) => y[0] 
+    \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1]))
+    \ (#zero (), y[0]) => y[0]
+    \ (y[0], #zero ()) => y[0] 
   )) in 
   y[0]
   ]
@@ -1912,11 +1912,11 @@ namespace Nameless
   #eval infer_reduce 10 
   [lessterm|
   let y[0] = fix(\ y[0] => ( 
-    \ (@succ y[0], @succ y[1]) => (y[2] (y[0], y[1]))
-    \ (@zero (), y[0]) => y[0]
-    \ (y[0], @zero ()) => y[0] 
+    \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1]))
+    \ (#zero (), y[0]) => y[0]
+    \ (y[0], #zero ()) => y[0] 
   )) in 
-  (y[0] (@succ @succ @zero (), @succ @zero ()))
+  (y[0] (#succ #succ #zero (), #succ #zero ()))
   ]
 
   def diff_rel :=
@@ -1965,7 +1965,7 @@ namespace Nameless
     (forall (?hello β[0] -> ?world unit)) & 
     (forall ?one β[0] -> ?two unit)
   ) = _ in 
-  (y[0] @one ())
+  (y[0] #one ())
   ]
 
   #eval infer_reduce 10 
@@ -1976,7 +1976,7 @@ namespace Nameless
       (?one β[0] -> ?two unit)
     )
   ) = _ in 
-  (y[0] @one ())
+  (y[0] #one ())
   ]
 
   -- def even_to_list := [lesstype| 
