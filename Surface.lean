@@ -346,46 +346,51 @@ namespace Surface
       PHashMap.from_list (names.toList.filter (fun (n, _) => n != bound_name))
 
 
-    def denormalize (free_names : List String) (names : List String) (stack : List (List String)) : Nameless.Ty ->  Option Surface.Ty
+    def denormalize (free_names : List String) (names : List String) (stack : List (List String)) : 
+      Nameless.Ty ->  Option (List (List String) × Surface.Ty)
     | .bvar index =>  
       if names_proof : names.length > index then
         let name := names.get ⟨index, names_proof⟩
-        some (.id name)
+        some (stack, .id name)
       else if free_names_proof : free_names.length > index then
         let free_name := free_names.get ⟨index, free_names_proof⟩
-        some (.id free_name)
+        some (stack, .id free_name)
       else
         none
-    | .fvar index => some (.id s!"_α_{index}")
-    | .unit => some .unit 
-    | .bot => some .bot 
-    | .top => some .top 
+    | .fvar index => 
+      if h : index < free_names.length then  
+        some (stack, .id (free_names.get ⟨index, h⟩))
+      else
+        none
+    | .unit => some (stack, .unit)
+    | .bot => some (stack, .bot)
+    | .top => some (stack, .top)
     | .tag label content => do
-      let content' <- (denormalize free_names names stack content)   
-      some (.tag label content') 
+      let (stack, content') <- (denormalize free_names names stack content)   
+      some (stack, .tag label content') 
     | .field label content => do
-      let content' <- (denormalize free_names names stack content)   
-      some (.field label content') 
+      let (stack, content') <- (denormalize free_names names stack content)   
+      some (stack, .field label content') 
     | .union ty1 ty2 => do
-      let ty1' <- (denormalize free_names names stack ty1)   
-      let ty2' <- (denormalize free_names names stack ty2)   
-      some (.union ty1' ty2') 
+      let (stack, ty1') <- (denormalize free_names names stack ty1)   
+      let (stack, ty2') <- (denormalize free_names names stack ty2)   
+      some (stack, .union ty1' ty2') 
     | .inter ty1 ty2 => do
-      let ty1' <- (denormalize free_names names stack ty1)   
-      let ty2' <- (denormalize free_names names stack ty2)   
-      some (.inter ty1' ty2') 
+      let (stack, ty1') <- (denormalize free_names names stack ty1)   
+      let (stack, ty2') <- (denormalize free_names names stack ty2)   
+      some (stack, .inter ty1' ty2') 
     | .case ty1 ty2 => do
-      let ty1' <- (denormalize free_names names stack ty1)   
-      let ty2' <- (denormalize free_names names stack ty2)   
-      some (.case ty1' ty2') 
+      let (stack, ty1') <- (denormalize free_names names stack ty1)   
+      let (stack, ty2') <- (denormalize free_names names stack ty2)   
+      some (stack, .case ty1' ty2') 
     | .exis n ty1 ty2 ty3 => 
       match stack with
       | names' :: stack'  =>
         if names'.length == n then do
-          let ty1' <- (denormalize free_names (names' ++ names) stack' ty1)   
-          let ty2' <- (denormalize free_names (names' ++ names) stack' ty2)   
-          let ty3' <- (denormalize free_names (names' ++ names) stack' ty3)   
-          some (.exis names' ty1' ty2' ty3') 
+          let (stack', ty1') <- (denormalize free_names (names' ++ names) stack' ty1)   
+          let (stack', ty2') <- (denormalize free_names (names' ++ names) stack' ty2)   
+          let (stack', ty3') <- (denormalize free_names (names' ++ names) stack' ty3)   
+          some (stack', .exis names' ty1' ty2' ty3') 
         else
           none
       | [] => none
@@ -393,10 +398,10 @@ namespace Surface
       match stack with
       | names' :: stack'  =>
         if names'.length == n then do
-          let ty1' <- (denormalize free_names (names' ++ names) stack' ty1)   
-          let ty2' <- (denormalize free_names (names' ++ names) stack' ty2)   
-          let ty3' <- (denormalize free_names (names' ++ names) stack' ty3)   
-          some (.univ names' ty1' ty2' ty3') 
+          let (stack', ty1') <- (denormalize free_names (names' ++ names) stack' ty1)   
+          let (stack', ty2') <- (denormalize free_names (names' ++ names) stack' ty2)   
+          let (stack', ty3') <- (denormalize free_names (names' ++ names) stack' ty3)   
+          some (stack', .univ names' ty1' ty2' ty3') 
         else
           none
       | [] => none
@@ -404,9 +409,9 @@ namespace Surface
       match stack with
       | names' :: stack'  =>
         match names' with
-        | .cons name [] => do
-          let ty' <- (denormalize free_names (name :: names) stack' ty)   
-          some (.recur name ty') 
+        | [name] => do
+          let (stack', ty') <- (denormalize free_names (name :: names) stack' ty)   
+          some (stack', .recur name ty') 
         | _ => none
       | [] => none
 
@@ -456,7 +461,8 @@ namespace Surface
       let (_, ty_result') <- normalize free_vars [] ty_result
       let nameless_ty := Nameless.Ty.unify_reduce free_vars.length ty1' ty2' ty_result' 
       let (_, bound_stack) := extract_bound_stack 0 nameless_ty
-      Surface.Ty.denormalize free_vars [] bound_stack nameless_ty 
+      let (_, ty_surf) <- Surface.Ty.denormalize free_vars [] bound_stack nameless_ty 
+      ty_surf
 
     -- partial def unify_reduce (ty1 ty2 ty_result : Surface.Ty) : Option Nameless.Ty := do
     --   let free_vars := to_list (extract_free_vars [surftype| ⟨ty1⟩ * ⟨ty2⟩])
@@ -691,26 +697,26 @@ namespace Surface
       names : List String
       type_map : PHashMap String (List (List String))
 
-    partial def pattern_abstraction : Tm -> Option (List String)
+    partial def extract_pattern_vars : Tm -> Option (List String)
     | .hole => some []
     | .unit => some []
     | .id name => some [name]
     | .tag _ content => do
-      let names <- pattern_abstraction content
+      let names <- extract_pattern_vars content
       some names
     | .record fields => do 
-      List.foldr (fun (_, content) result => do
-        let result_names <- result
-        let names <- pattern_abstraction content
-        if List.any names (List.contains result_names) then
+      List.foldrM (fun (_, content) names_acc => do
+        let names <- extract_pattern_vars content
+        if List.any names (List.contains names_acc) then
           none
         else
-          some (names ++ result_names) 
-      ) none fields
+          some (names ++ names_acc) 
+      ) [] fields
     | _ => none
 
 
 
+    #check List.foldrM
     partial def normalize (bound_vars : List String) : Tm -> Option (List Abstraction × Nameless.Tm)
     | .hole => some ([], .hole) 
     | .unit => some ([], .unit)
@@ -721,21 +727,19 @@ namespace Surface
       let (stack', content') <- normalize bound_vars content
       some (stack', .tag label content')
     | .record fields => do 
-      let (result_stack, result_fields) <- List.foldr (fun (label, content) result => do
-        let (result_stack, result_fields) <- result
+      let (result_stack, result_fields) <- List.foldrM (fun (label, content) (stack_acc, fields_acc) => do
         let (stack', content') <- normalize bound_vars content
-        some (stack' ++ result_stack, (label, content') :: result_fields) 
-      ) none fields
+        some (stack' ++ stack_acc, (label, content') :: fields_acc) 
+      ) ([], []) fields
       some (result_stack, .record result_fields)
-    | .func cases => do 
-      let (result_stack, result_cases) <- List.foldr (fun (pattern, content) result => do
-        let (result_stack, result_cases) <- result
-        let pattern_names <- pattern_abstraction pattern
+    | .func cases => do
+      let (result_stack, result_cases) <- List.foldrM (fun (pattern, content) (stack_acc, cases_acc) => do
+        let pattern_names <- extract_pattern_vars pattern
         let (stack', pattern') <- normalize (pattern_names ++ bound_vars) pattern 
         let (stack'', content') <- normalize (pattern_names ++ bound_vars) content
         let absstraction : Abstraction := ⟨pattern_names, {}⟩ 
-        some (absstraction :: stack' ++ stack'' ++ result_stack, (pattern', content') :: result_cases) 
-      ) none cases
+        some (absstraction :: stack' ++ stack'' ++ stack_acc, (pattern', content') :: cases_acc) 
+      ) ([], []) cases
       some (result_stack, .func result_cases)
     | proj target label => do
       let (stack', target') <- normalize bound_vars target 
@@ -808,7 +812,7 @@ namespace Surface
         let ty_op' := (do
           let ty <- ty_op
           let ty_stack <- abstraction.type_map.find? name
-          let ty' <- Ty.denormalize [] [] ty_stack ty 
+          let (_, ty') <- Ty.denormalize [] [] ty_stack ty 
           some ty' 
         )
         do
@@ -821,10 +825,13 @@ namespace Surface
       some (.fix content')
 
     #check Nameless.Tm.infer_reduce
+    #check Surface.Ty.denormalize
     partial def infer_reduce (t : Surface.Tm) : Option Surface.Ty := do
-      let (_, nameless_t) <- normalize [] t 
-      let nameless_ty := Nameless.Tm.infer_reduce 0 nameless_t
-      Surface.Ty.denormalize [] [] [] nameless_ty 
+      let (_, t_nl) <- normalize [] t 
+      let ty_nl := Nameless.Tm.infer_reduce 0 t_nl
+      let (_, stack_nl) := Ty.extract_bound_stack 0 ty_nl
+      let (_, ty_surf) <- Surface.Ty.denormalize [] [] stack_nl ty_nl 
+      ty_surf
 
     partial def infer_reduce_nameless (t : Surface.Tm) : Option Nameless.Ty := do
       let (_, nameless_t) <- normalize [] t 
@@ -862,28 +869,7 @@ namespace Surface
       fix(\ self => ( 
         \ (succ;x, succ;y) => (self (x, y))
         \ (zero;(), y) => y
-        \ (x zero;()) => x 
-      )) 
-    ]
-
-    -- TODO: debug normalize on function case
-    #eval match normalize [] [surfterm|
-      \ self => self 
-    ] with | some (_, x) => some x | none => none 
-
-    #eval match normalize [] [surfterm|
-      fix(\ self => ( 
-        \ (succ;x, succ;y) => (self (x, y))
-        \ (zero;(), y) => y
-        \ (x zero;()) => x 
-      )) 
-    ] with | some (_, x) => some x | none => none 
-
-    #eval infer_reduce_nameless [surfterm|
-      fix(\ self => ( 
-        \ (succ;x, succ;y) => (self (x, y))
-        \ (zero;(), y) => y
-        \ (x zero;()) => x 
+        \ (x, zero;()) => x 
       )) 
     ]
 
@@ -891,7 +877,7 @@ namespace Surface
       fix(\ self => ( 
         \ (succ;x, succ;y) => (self (x, y))
         \ (zero;(), y) => y
-        \ (x zero;()) => x 
+        \ (x, zero;()) => x 
       )) 
     ]
 

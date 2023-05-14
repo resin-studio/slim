@@ -1260,10 +1260,12 @@ namespace Nameless
       (infer (i + 1) {} {} t (Ty.fvar i))
 
     partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
+      let boundary := i
       let (_, u_env) := (infer i {} {} t ty)
       List.foldr (fun (env_ty, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
-        ty'
+        Ty.generalize boundary env_ty ty'
+        -- ty'
       ) Ty.bot u_env
 
 
