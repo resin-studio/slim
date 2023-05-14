@@ -679,20 +679,21 @@ namespace Nameless
       let ((i, contexts), env_complex) := ( 
           (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
       )
+      (i, contexts)
 
-      -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
-      -- Option.bind op_context (fun (i, env_ty1) =>
-      assume_env (i, contexts) (fun i env_ty => 
-      let locally_constrained := (fun key => env_ty.contains key)
-      assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
-        let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-          not (is_bound_var key) || (locally_constrained key)
-        )
-        if is_result_safe then
-          (i, [env_ty])
-        else
-          (i, [])
-      ))
+      -- -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
+      -- -- Option.bind op_context (fun (i, env_ty1) =>
+      -- assume_env (i, contexts) (fun i env_ty => 
+      -- let locally_constrained := (fun key => env_ty.contains key)
+      -- assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
+      --   let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+      --     not (is_bound_var key) || (locally_constrained key)
+      --   )
+      --   if is_result_safe then
+      --     (i, [env_ty])
+      --   else
+      --     (i, [])
+      -- ))
 
     -- free variables
     ---------------------------------------------------------------
@@ -2342,3 +2343,69 @@ end Nameless
       -- else
       --   Ty.simplify (Ty.subst_default true (Ty.abstract fvs 0 ty'))
 -/
+
+
+-----------------------------------------------
+  ---- debugging
+  -- TODO: fix subtype unification
+
+  def nat_ := [lesstype|
+    induct 
+      ?zero unit |
+      ?succ β[0]
+  ]
+
+  def list_ := [lesstype|
+    induct 
+      ?nil unit |
+      ?cons β[0]
+  ]
+
+  def nat_list := [lesstype|
+    induct 
+      (?zero unit * ?nil unit) |
+      {?succ β[0] * ?cons β[1] with β[0] * β[1] <: β[2]}
+  ]
+
+  #eval [lessterm| 
+    let y[0] : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
+      \ #zero() => #nil()  
+      \ #succ y[0] => #cons (y[1] y[0]) 
+    )
+    in
+    y[0]
+  ] 
+
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    fix(\ y[0] =>
+      \ #zero() => #nil()  
+      \ #succ y[0] => #cons (y[1] y[0]) 
+    )
+  ] 
+
+
+----------------debugging
+  -- TODO
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| forall [1] β[0] -> {[1] β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+  -- TODO: split relational type into weakest pair of types, e.g. nat_list <: (nat * list)
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0] with α[0] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩ ]
+
+
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    let y[0] : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
+      \ #zero() => #nil()  
+      \ #succ y[0] => #cons (y[1] y[0]) 
+    )
+    in
+    y[0]
+  ] 
+  --------------------------------

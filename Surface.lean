@@ -954,9 +954,7 @@ namespace Surface
     max
   ] 
   ---- debugging
-  #eval Tm.infer_reduce [surfterm| 
-    if #false() then #ooga() else #booga()
-  ] 
+  -- TODO: fix subtype unification
 
   #eval Tm.infer_reduce [surfterm| 
     let lt : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
