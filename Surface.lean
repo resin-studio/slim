@@ -575,8 +575,8 @@ namespace Surface
     syntax:70 "#" ident "=" surfterm:71 : surfterm
     syntax:70 "#" ident "=" surfterm:71 surfterm:70: surfterm
 
-    syntax:70 "\\" surfterm:71 "=>" surfterm:71 : surfterm
-    syntax:70 "\\" surfterm:71 "=>" surfterm:71 surfterm:70: surfterm
+    syntax:70 "\\" surfterm:71 "=>" surfterm:70 : surfterm
+    syntax:70 "\\" surfterm:71 "=>" surfterm:70 surfterm:70: surfterm
 
     syntax:70 "if" surfterm:71 "then" surfterm:71 "else" surfterm:70: surfterm
 
@@ -931,6 +931,53 @@ namespace Surface
   [surftype| X * Y ]
 
   #eval plus
+
+
+  --------------- examples from liquid types paper -----------------------------
+  def NAT := [surftype| 
+    induct [NAT] zero@unit | succ@NAT
+  ]
+
+  def BOOL := [surftype| 
+    true@unit | false@unit
+  ]
+
+
+  -- TODO
+  #eval Tm.infer_reduce [surfterm| 
+    let lt : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+      \ (zero;(), succ;y) => true;()  
+      \ (succ;x, succ;y) => (self (x, y)) 
+      \ (succ;x, zero;()) => false;() 
+    in
+    let max = \ (x, y) => if (lt (x, y)) then x else y in
+    max
+  ] 
+  ---- debugging
+  #eval Tm.infer_reduce [surfterm| 
+    let max = (\ (x, y) => if true;() then x else y) in
+    max
+  ] 
+
+  #eval Tm.infer_reduce [surfterm| 
+    let lt : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+      \ (zero;(), succ;y) => true;()  
+      \ (succ;x, succ;y) => (self (x, y)) 
+      \ (succ;x, zero;()) => false;() 
+    in
+    lt
+  ] 
+
+  #eval Tm.infer_reduce [surfterm| 
+    let lt = fix \ self =>
+      \ (zero;(), succ;y) => true;()  
+      \ (succ;x, succ;y) => (self (x, y)) 
+      \ (succ;x, zero;()) => false;() 
+    in
+    lt
+  ] 
+  --------------------------------
+
 
 
 end Surface
