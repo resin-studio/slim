@@ -905,7 +905,7 @@ namespace Surface
       let f = fix(\ self => ( 
         \ (succ;x, succ;y) => (self (x, y))
         \ (zero;(), y) => y
-        \ (x zero;()) => x 
+        \ (x, zero;()) => x 
       )) in 
       (f (succ;succ;zero;(), succ;zero;()))
     ]
