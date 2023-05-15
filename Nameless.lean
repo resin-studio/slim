@@ -868,6 +868,13 @@ namespace Nameless
         let ty2' := Ty.instantiate 0 [Ty.recur ty2] ty2
         unify i env_ty env_complex frozen ty1' ty2'
 
+    | .recur ty1, ty2 =>
+        -- safely weaken lhs with transpose 
+        -- (i, [{}])
+        let labels := extract_label_list (.recur ty1)
+        let ty1_inter := (transpose_relation labels (.recur ty1))
+        unify i env_ty env_complex frozen ty1_inter ty2
+
     | ty', .recur ty =>
       let ty' := (Ty.simplify (Ty.subst env_ty ty'))
       match (extract_nested_fields ty') with
@@ -2483,8 +2490,21 @@ end Nameless
 
   ------------ transpose_relation ----------------
 
+
   def nat_list_trans := Nameless.Ty.transpose_relation ["l", "r"] nat_list
   #eval nat_list_trans
+
+  -- TODO: need to find the most general place to weaken nat_list via transpose
+  -- could weaken at two spots: within an existential and also when recursion is on lhs.
+  #eval Nameless.Ty.extract_record_labels nat_list
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| ⟨nat_list⟩ ]
+  [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| ⟨nat_list_trans⟩ ]
+  [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+
 
   #eval Nameless.Ty.unify_decide 0
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list_trans⟩} ]
