@@ -846,17 +846,10 @@ namespace Nameless
         (i, [])
 
 
-    | .recur ty1, .recur ty2 =>
-      if Ty.equal env_ty ty1 ty2 then
+    | .recur ty1, ty2 =>
+      if Ty.equal env_ty (.recur ty1) ty2 then
         (i, [env_ty])
       else
-        -- unroll using rhs ty
-        -- by induction hypothesis, ty1 ≤ ty2
-        let ty1' := Ty.instantiate 0 [Ty.recur ty2] ty1
-        let ty2' := Ty.instantiate 0 [Ty.recur ty2] ty2
-        unify i env_ty env_complex frozen ty1' ty2'
-
-    | .recur ty1, ty2 =>
         -- using induction hypothesis, ty1 ≤ ty2; safely unroll
         let ty1' := Ty.instantiate 0 [ty2] ty1
         unify i env_ty env_complex frozen ty1' ty2
