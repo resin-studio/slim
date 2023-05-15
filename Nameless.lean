@@ -506,9 +506,9 @@ namespace Nameless
       let ty2 := simplify (Ty.subst env_ty ty2)
       ty1 == ty2
 
-    def split_conjunctions : Ty -> List Ty 
+    def split_intersectionss : Ty -> List Ty 
     | Ty.inter ty1 ty2 =>
-      (split_conjunctions ty1) ++ (split_conjunctions ty2)
+      (split_intersectionss ty1) ++ (split_intersectionss ty2)
     | ty => [ty]
 
     def linearize_fields : Ty -> Option (List (String × Ty))
@@ -578,6 +578,88 @@ namespace Nameless
         | _ => false
       )  
 
+    def split_unions : Ty -> List Ty 
+    | Ty.union ty1 ty2 =>
+      (split_unions ty1) ++ (split_unions ty2)
+    | ty => [ty]
+
+    def extract_field (label : String) (ty : Ty) : Option Ty := do
+      let fields <- (linearize_fields ty)
+      let fields_filt := fields.filter (fun (l, _) => l == label)
+      if h : fields_filt.length > 0 then
+        let (_, ty_fd) := (fields_filt.get ⟨0, h⟩)
+        some ty_fd
+      else
+        none
+
+    def extract_field_induct (label : String): Ty -> Option Ty 
+    | .exis n ty (.bvar id) ty_pl => 
+      -- assume β[n] is the inductive fixed point 
+      if id == n then
+        Option.bind (extract_field label ty) (fun ty => 
+        Option.bind (extract_field label ty_pl) (fun ty_pl =>
+          (Ty.exis n  ty (.bvar id) ty_pl)
+        ))
+      else 
+        none
+    | ty => extract_field label ty 
+
+    -- from induction over union of intersections to intersection of induction over union
+    partial def transpose_relation (labels : List String) : Ty -> Ty
+    | Ty.recur ty =>
+      let unions := split_unions ty
+      labels.foldr (fun label ty_acc =>
+        let ty_col := unions.foldr (fun ty_row ty_col =>
+          match extract_field_induct label ty_row with
+          | some ty_field => Ty.union ty_field ty_col 
+          | none => Ty.top
+        ) Ty.bot 
+        Ty.inter (Ty.field label (Ty.recur ty_col)) ty_acc 
+      ) Ty.top
+    | ty => 
+      Ty.top
+      -- let unions := split_unions ty
+      -- labels.foldr (fun label ty_acc =>
+      --   let ty_col := unions.foldr (fun ty_row ty_col =>
+      --     match extract_field label ty_row with
+      --     | some ty_field => Ty.union ty_field ty_col 
+      --     | none => Ty.top
+      --   ) Ty.bot 
+      --   Ty.inter (Ty.field label ty_col) ty_acc 
+      -- ) Ty.top
+
+
+
+
+    -- def extract_field (start : Nat) (label : String): Ty -> Option Ty 
+    -- | .univ n [lesstype| unit ] [lesstype| unit ] ty3 => 
+    --   Option.bind (extract_field (start + n) ty3) (fun ty3_prem =>
+    --     (Ty.exis n [lesstype| unit ] [lesstype| unit ] ty3_prem)
+    --   )
+    -- | .univ n (.bvar id) ty0  ty3 => 
+    --   if id == start + n then
+    --     Option.bind (extract_field (start + n) ty0) (fun ty0_prem => 
+    --     Option.bind (extract_field (start + n) ty3) (fun ty3_prem =>
+    --       (Ty.exis n ty0_prem (.bvar (start + n)) ty3_prem)
+    --     ))
+    --   else 
+    --     none
+    -- | Ty.inter ty1 Ty.top => 
+    --   (extract_field start ty1)
+    -- | Ty.inter ty1 (Ty.fvar _) => 
+    --   (extract_field start ty1)
+    -- | Ty.inter Ty.top ty2 => 
+    --   (extract_field start ty2)
+    -- | Ty.inter (Ty.fvar _) ty2 => 
+    --   (extract_field start ty2)
+    -- | Ty.inter ty1 ty2 => 
+    --   Option.bind (extract_field start ty1) (fun ty1_prem =>
+    --   Option.bind (extract_field start ty2) (fun ty2_prem =>
+    --     Ty.union ty1_prem ty2_prem
+    --   ))
+    -- | Ty.case ty1 _ => some ty1 
+    -- | _ => none
+
     partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_complex : PHashMap (Dir × Ty) Ty)
     (frozen : PHashMap Nat Unit):
     Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
@@ -599,53 +681,63 @@ namespace Nameless
 
     -- opaquely quantified 
     | .exis n ty_c1 ty_c2 ty1, ty2 =>
-      let bound_start := i
-      let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
-      let bound_end := i
-      let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
+      match (
+        let bound_start := i
+        let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
+        let bound_end := i
+        let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
 
-      let args := ids.map (fun id => Ty.fvar id)
-      let ty_c1 := Ty.instantiate 0 args ty_c1
-      let ty_c2 := Ty.instantiate 0 args ty_c2
-      let ty1 := Ty.instantiate 0 args ty1
+        let args := ids.map (fun id => Ty.fvar id)
+        let ty_c1 := Ty.instantiate 0 args ty_c1
+        let ty_c2 := Ty.instantiate 0 args ty_c2
+        let ty1 := Ty.instantiate 0 args ty1
 
-      let op_fields := linearize_fields ty_c1
+        let op_fields := linearize_fields ty_c1
 
-      let ((i, contexts), env_complex) := ( 
-        match op_fields with 
-        | .none => (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
-        | .some fields =>
-          let is_recur_type := match ty_c2 with 
-          | Ty.recur _ => true
-          | _ => false
-          let is_consistent_variable_record := List.all fields (fun (l, _) =>
-            let rlabels := extract_record_labels (ty_c2) 
-            rlabels.contains l 
-          )
-          let unmatchable := !(matchable (extract_nested_fields (Ty.simplify (Ty.subst env_ty ty_c1))))
-          if is_recur_type && unmatchable  then 
-            if is_consistent_variable_record then
-              let ty_norm := ty_c1 
-              ((i, [env_ty]), env_complex.insert (.dn, ty_norm) ty_c2)
-            else 
-              ((i, []), env_complex) 
-          else
-            (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
-      )
-
-      -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
-      -- Option.bind op_context (fun (i, env_ty1) =>
-      assume_env (i, contexts) (fun i env_ty => 
-      let locally_constrained := (fun key => env_ty.contains key)
-      assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
-        let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-          not (is_bound_var key) || (locally_constrained key)
+        let ((i, contexts), env_complex) := ( 
+          match op_fields with 
+          | .none => (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
+          | .some fields =>
+            let is_recur_type := match ty_c2 with 
+            | Ty.recur _ => true
+            | _ => false
+            let is_consistent_variable_record := List.all fields (fun (l, _) =>
+              let rlabels := extract_record_labels (ty_c2) 
+              rlabels.contains l 
+            )
+            let unmatchable := !(matchable (extract_nested_fields (Ty.simplify (Ty.subst env_ty ty_c1))))
+            if is_recur_type && unmatchable  then 
+              if is_consistent_variable_record then
+                let ty_norm := ty_c1 
+                ((i, [env_ty]), env_complex.insert (.dn, ty_norm) ty_c2)
+              else 
+                ((i, []), env_complex) 
+            else
+              (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
         )
-        if is_result_safe then
-          (i, [env_ty])
-        else
-          (i, [])
-      ))
+
+        -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
+        -- Option.bind op_context (fun (i, env_ty1) =>
+        assume_env (i, contexts) (fun i env_ty => 
+        let locally_constrained := (fun key => env_ty.contains key)
+        assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
+          let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+            not (is_bound_var key) || (locally_constrained key)
+          )
+          if is_result_safe then
+            (i, [env_ty])
+          else
+            (i, [])
+        ))
+      ) with
+      | (i, []) =>
+        match ty_c2 with
+        | Ty.recur ty =>
+          let labels := (extract_record_labels ty_c1).toList.map fun (l, _) => l
+          let ty_c2 := (transpose_relation labels ty_c2)
+          unify i env_ty env_complex frozen (.exis n ty_c1 ty_c2 ty1) ty2
+        | _ => (i, [])
+      | result => result
 
     -- liberally quantified universal 
     | .univ n ty_c1 ty_c2 ty1, ty2 =>
@@ -792,8 +884,10 @@ namespace Nameless
         else
           let ty_norm := ty'
           match env_complex.find? (.dn, ty_norm) with
-          | .some ty_cache => unify i env_ty env_complex frozen ty_cache (Ty.recur ty)
-          | .none => (i, []) 
+          | .some ty_cache => 
+            unify i env_ty env_complex frozen ty_cache (Ty.recur ty)
+          | .none =>  
+            (i, []) 
 
     | Ty.union ty1 ty2, ty => 
       assume_env (unify i env_ty env_complex frozen ty1 ty) (fun i env_ty =>
@@ -1241,7 +1335,7 @@ namespace Nameless
           )
 
           (Ty.union ty_choice ty_acc) 
-        ) [lesstype| ⊥ ] (Ty.split_conjunctions ty_conc)
+        ) [lesstype| ⊥ ] (Ty.split_intersectionss ty_conc)
 
         -- constraint that ty' <= ty_prem is built into inductive type
         let relational_type := [lesstype| induct ⟨ty_content⟩ ]
@@ -1773,6 +1867,7 @@ namespace Nameless
 
   ---------- adjustment ----------------
 
+  -- TODO: when did this break?
   -- widening
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
@@ -1839,6 +1934,7 @@ namespace Nameless
     induct {(?succ β[0] * ?cons β[1]) with β[0] * β[1] <: β[2]}
   ]
 
+  -- expected: false; base case is missing
   #eval unify_decide 0 
     [lesstype| ?succ ?zero unit * ?cons ?nil unit ] 
     other_nat_list
@@ -2381,24 +2477,27 @@ end Nameless
       \ #zero() => #nil()  
       \ #succ y[0] => #cons (y[1] y[0]) 
     )
-  ] 
+  ]
 
 
-----------------debugging
-  -- TODO
+  ------------ transpose_relation ----------------
+
+  def nat_list_trans := Nameless.Ty.transpose_relation ["l", "r"] nat_list
+  #eval nat_list_trans
+
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list_trans⟩} ]
+  [lesstype| ⟨nat_⟩ ]
+
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩ ]
+
   #eval Nameless.Ty.unify_decide 0
   [lesstype| forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
 
-  #eval Nameless.Ty.unify_decide 0
-  [lesstype| forall [1] β[0] -> {[1] β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
-
-  -- TODO: split relational type into weakest pair of types, e.g. nat_list <: (nat * list)
-  #eval Nameless.Ty.unify_decide 0
-  [lesstype| {β[0] with α[0] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| ⟨nat_⟩ ]
-
+---------------- debugging
 
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     let y[0] : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
