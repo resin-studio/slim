@@ -691,7 +691,7 @@ namespace Nameless
         let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
         let bound_indicies := PHashMap.from_list (List.map (fun pos =>
           (pos + bound_start, Unit.unit)
-        ) (List.range (bound_end - bound_start)))
+        ) (List.range n))
 
         let args := ids.map (fun id => Ty.fvar id)
         let ty_c1 := Ty.instantiate 0 args ty_c1
@@ -724,19 +724,22 @@ namespace Nameless
 
         -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
         -- Option.bind op_context (fun (i, env_ty1) =>
-        assume_env (i, contexts) (fun i env_ty => 
+
+        let ty1_unioned := List.foldr (fun env_ty ty_acc => 
+          -- Ty.generalize bound_end env_ty (simplify (subst env_ty (union ty1 ty_acc)))
+          (simplify (subst env_ty (union ty1 ty_acc)))
+        ) bot contexts 
+
         let locally_constrained := (fun key => env_ty.contains key)
-        -- freeze the bound variables so they aren't adjusted
-        assume_env (unify i env_ty env_complex (frozen;bound_indicies) ty1 ty2) (fun i env_ty =>
+        assume_env (unify i env_ty env_complex frozen ty1_unioned ty2) (fun i env_ty =>
           let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
             not (is_bound_var key) || (locally_constrained key)
           )
           if is_result_safe then
-            -- (i, [])
             (i, [env_ty])
           else
             (i, [])
-        ))
+        )
       ) with
       | (i, []) =>
         -- safely weaken lhs with transpose 
@@ -937,6 +940,14 @@ namespace Nameless
 
     partial def unify_reduce_env (i : Nat) (env_ty : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
       let (_, u_env_ty) := (unify i env_ty {} {} ty1 ty2)
+      List.foldr (fun env_ty ty_acc => 
+        simplify (subst env_ty (union ty_result ty_acc))
+      ) bot u_env_ty
+
+      
+    partial def unify_reduce_env_frozen (i : Nat) (env_ty : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
+      let frozen := env_ty.map (fun _ => Unit.unit)
+      let (_, u_env_ty) := (unify i env_ty {} frozen ty1 ty2)
       List.foldr (fun env_ty ty_acc => 
         simplify (subst env_ty (union ty_result ty_acc))
       ) bot u_env_ty
@@ -2515,10 +2526,56 @@ end Nameless
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ ]
 
+  -- TODO
   -- expected: true 
   #eval Nameless.Ty.unify_decide 0
-  [lesstype| forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list_trans⟩} ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+  -- expected: true 
+  #eval Nameless.Ty.unify_decide 10
+  [lesstype| α[0] -> {β[0] with α[0] * β[0] <: ⟨nat_list_trans⟩} ]
+  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+  -------------- debugging ------------------ 
+  #eval Nameless.Ty.unify_decide 10
+  [lesstype|
+      {[2] ?cons β[1] with β[1] <: ⟨list_⟩}
+  ]
+  [lesstype|
+      ?cons ⟨list_⟩
+  ]
+  -------------- debugging ------------------ 
+
+  ------------------------------
+
+  #eval Nameless.Ty.unify_decide 10
+  [lesstype| α[0] -> {β[0] with α[0] * β[0] <: ⟨nat_list_trans⟩} ]
+  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+
+  -- expected: true 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| ⟨nat_⟩ ]
+  [lesstype|
+    induct
+      ?zero unit |
+      {[2] ?succ β[0] with β[0] <: β[2]}
+  ]
+
+
+
+
+  #eval Nameless.Ty.unify_simple 2 
+  [lesstype| α[0] * α[1] ]
+  [lesstype| ⟨nat_list_trans⟩ ]
+
+  #eval Nameless.Ty.unify_simple 0
+  [lesstype| forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list_trans⟩} ]
+  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+
+  #eval nat_list_trans
 
 ---------------- debugging
 
@@ -2562,35 +2619,29 @@ end Nameless
   [lesstype| {β[0]  with β[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit * ?two unit ]
 
-  -- TODO: existential with pair is unsound. why?
   -- expected: false 
   #eval Nameless.Ty.unify_decide 0
-  [lesstype| {β[0] * β[1]  with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| {[2] β[0] * β[1]  with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit * ?two unit ]
+
+  #eval Nameless.Ty.unify_simple 0
+  [lesstype| {[2] β[0] * β[1]  with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| ⊤ * ⊤  ]
 
   -- expected: false 
   #eval Nameless.Ty.unify_decide 0
   [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit  ]
 
-
-  -- TODO
   -- expected: false 
   #eval Nameless.Ty.unify_decide 0
   [lesstype| {[2] β[0] with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
-  [lesstype| ?one unit  ]
+  [lesstype| ?one unit ]
 
-
-  -- expected : (?one unit | ?three unit)
-  #eval Nameless.Ty.unify_reduce 3
-  [lesstype| {[2] β[0] * β[1] with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
-  [lesstype| α[0] * α[1]  ]
-  [lesstype| α[0] ]
-
-  #eval Nameless.Ty.unify_reduce 3
-  [lesstype| {[1] β[0] with β[0] * α[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
-  [lesstype| α[0] ]
-  [lesstype| α[0] ]
+  -- expected: true 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {[2] β[0] with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| ?one unit | ?three unit ]
 
   -- expected: false 
   #eval Nameless.Ty.unify_decide 0
