@@ -767,21 +767,20 @@ namespace Nameless
       let ((i, contexts), env_complex) := ( 
           (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
       )
-      (i, contexts)
 
-      -- -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
-      -- -- Option.bind op_context (fun (i, env_ty1) =>
-      -- assume_env (i, contexts) (fun i env_ty => 
-      -- let locally_constrained := (fun key => env_ty.contains key)
-      -- assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
-      --   let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-      --     not (is_bound_var key) || (locally_constrained key)
-      --   )
-      --   if is_result_safe then
-      --     (i, [env_ty])
-      --   else
-      --     (i, [])
-      -- ))
+      -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
+      -- Option.bind op_context (fun (i, env_ty1) =>
+      assume_env (i, contexts) (fun i env_ty => 
+      let locally_constrained := (fun key => env_ty.contains key)
+      assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
+        let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+          not (is_bound_var key) || (locally_constrained key)
+        )
+        if is_result_safe then
+          (i, [env_ty])
+        else
+          (i, [])
+      ))
 
     -- free variables
     ---------------------------------------------------------------
@@ -1863,7 +1862,6 @@ namespace Nameless
 
   ---------- adjustment ----------------
 
-  -- TODO: when did this break?
   -- widening
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
