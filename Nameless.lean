@@ -721,9 +721,7 @@ namespace Nameless
           not (is_bound_var key) || (locally_constrained key)
         )
         if is_result_safe then
-          -- Ty.generalize bound_end env_ty (simplify (subst env_ty (union ty1 ty_acc)))
           (simplify (subst env_ty (union ty1 ty_acc)))
-          -- (simplify (subst env_ty (ty1)))
         else
           Ty.top
       ) Ty.bot contexts 
@@ -734,7 +732,7 @@ namespace Nameless
 
 
     -- liberally quantified universal 
-    | .univ n ty_c1 ty_c2 ty1, ty2 =>
+    | .univ n ty_c1 ty_c2 ty1, ty2 => 
       let (i, args) := (
         i + n, 
         (List.range n).map (fun j => .fvar (i + j))
@@ -748,7 +746,7 @@ namespace Nameless
       )
 
     -- opaquely quantified universal 
-    | ty1, .univ n ty_c1 ty_c2 ty2  =>
+    | ty1, .univ n ty_c1 ty_c2 ty2  => (
       let bound_start := i
       let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
       let bound_end := i
@@ -764,18 +762,20 @@ namespace Nameless
       )
 
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
-      -- TODO: intersect context; test on example that should pass but fails
-      assume_env (i, contexts) (fun i env_ty => 
-      let locally_constrained := (fun key => env_ty.contains key)
-      assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
+
+      let ty2_inter := List.foldr (fun env_ty ty_acc => 
+        let locally_constrained := (fun key => env_ty.contains key)
         let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
           not (is_bound_var key) || (locally_constrained key)
         )
         if is_result_safe then
-          (i, [env_ty])
+          (simplify (subst env_ty (inter ty2 ty_acc)))
         else
-          (i, [])
-      ))
+          Ty.bot
+      ) Ty.top contexts 
+
+      (unify i env_ty env_complex frozen ty1 ty2_inter)
+    )
 
     -- free variables
     ---------------------------------------------------------------
@@ -2562,13 +2562,13 @@ end Nameless
 
   -- expected: false 
   #eval Nameless.Ty.unify_decide 0
-  [lesstype| {β[0]  with β[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| {β[0] with β[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit * ?two unit ]
 
   -- expected: false 
   #eval Nameless.Ty.unify_decide 0
-  [lesstype| {[2] β[0] * β[1]  with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
-  [lesstype| ?one unit * ?two unit ]
+  [lesstype| {[2] β[0]  with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| ?one unit ]
 
   #eval Nameless.Ty.unify_simple 0
   [lesstype| {[2] β[0] * β[1]  with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
@@ -2598,3 +2598,35 @@ end Nameless
   #eval Nameless.Ty.unify_decide 0
   [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit | ?three unit  ]
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| ?one unit  ]
+
+
+--------------------- opaque universal subtyping ----------------
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| ?one unit  ]
+  [lesstype| forall (β[0] | α[0]) <: (?one unit | ?two unit) & (?three unit | ?four unit)
+    have β[0]
+  ]
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| ?one unit  ]
+  [lesstype| (?one unit | ?two unit) & (?three unit | ?four unit) ]
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| ?one unit  ]
+  [lesstype| forall (β[0] | α[0]) <: (?one unit | ?two unit) * (?three unit | ?four unit)
+   have β[0]
+   ]
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| ?one unit  ]
+  [lesstype| (?one unit | ?two unit) * (?three unit | ?four unit) ]
