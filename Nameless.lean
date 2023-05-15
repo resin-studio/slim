@@ -689,6 +689,9 @@ namespace Nameless
         let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
         let bound_end := i
         let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
+        let bound_indicies := PHashMap.from_list (List.map (fun pos =>
+          (pos + bound_start, Unit.unit)
+        ) (List.range (bound_end - bound_start)))
 
         let args := ids.map (fun id => Ty.fvar id)
         let ty_c1 := Ty.instantiate 0 args ty_c1
@@ -723,11 +726,13 @@ namespace Nameless
         -- Option.bind op_context (fun (i, env_ty1) =>
         assume_env (i, contexts) (fun i env_ty => 
         let locally_constrained := (fun key => env_ty.contains key)
-        assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
+        -- freeze the bound variables so they aren't adjusted
+        assume_env (unify i env_ty env_complex (frozen;bound_indicies) ty1 ty2) (fun i env_ty =>
           let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
             not (is_bound_var key) || (locally_constrained key)
           )
           if is_result_safe then
+            -- (i, [])
             (i, [env_ty])
           else
             (i, [])
@@ -869,11 +874,9 @@ namespace Nameless
         unify i env_ty env_complex frozen ty1' ty2'
 
     | .recur ty1, ty2 =>
-        -- safely weaken lhs with transpose 
-        -- (i, [{}])
-        let labels := extract_label_list (.recur ty1)
-        let ty1_inter := (transpose_relation labels (.recur ty1))
-        unify i env_ty env_complex frozen ty1_inter ty2
+        -- using induction hypothesis, ty1 ≤ ty2; safely unroll
+        let ty1' := Ty.instantiate 0 [ty2] ty1
+        unify i env_ty env_complex frozen ty1' ty2
 
     | ty', .recur ty =>
       let ty' := (Ty.simplify (Ty.subst env_ty ty'))
@@ -2497,23 +2500,22 @@ end Nameless
   -- TODO: need to find the most general place to weaken nat_list via transpose
   -- could weaken at two spots: within an existential and also when recursion is on lhs.
   #eval Nameless.Ty.extract_record_labels nat_list
+  -- expected: true 
   #eval Nameless.Ty.unify_decide 0
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
 
+  -- expected: false
   #eval Nameless.Ty.unify_decide 0
-  [lesstype| ⟨nat_list_trans⟩ ]
   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+  [lesstype| ⟨nat_list⟩ ]
 
-
-  #eval Nameless.Ty.unify_decide 0
-  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list_trans⟩} ]
-  [lesstype| ⟨nat_⟩ ]
-
+  -- expected: true 
   #eval Nameless.Ty.unify_decide 0
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ ]
 
+  -- expected: true 
   #eval Nameless.Ty.unify_decide 0
   [lesstype| forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
@@ -2529,3 +2531,73 @@ end Nameless
     y[0]
   ] 
   --------------------------------
+
+
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0] with β[0] <: ?ooga unit} ]
+  [lesstype|  ?ooga unit | ?booga unit]
+
+  -- expected: false
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0] with β[0] <: (?three unit)} ]
+  [lesstype| ?one unit ]
+
+  -- expected: false
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| (?one unit | ?three unit) ]
+  [lesstype| ?one unit ]
+
+  -- expected: false
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0] with β[0] <: (?one unit | ?three unit)} ]
+  [lesstype| ?one unit ]
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| (?one unit * ?two unit) | (?three unit * ?four unit) ]
+  [lesstype| (?three unit * ?four unit)  ]
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0]  with β[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| ?one unit * ?two unit ]
+
+  -- TODO: existential with pair is unsound. why?
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0] * β[1]  with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| ?one unit * ?two unit ]
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| ?one unit  ]
+
+
+  -- TODO
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {[2] β[0] with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| ?one unit  ]
+
+
+  -- expected : (?one unit | ?three unit)
+  #eval Nameless.Ty.unify_reduce 3
+  [lesstype| {[2] β[0] * β[1] with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| α[0] * α[1]  ]
+  [lesstype| α[0] ]
+
+  #eval Nameless.Ty.unify_reduce 3
+  [lesstype| {[1] β[0] with β[0] * α[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| α[0] ]
+  [lesstype| α[0] ]
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| (?one unit * ?two unit) | (?three unit * ?four unit) ]
+  [lesstype| ?one unit  ]
+
+  -- expected: true 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
+  [lesstype| ?one unit | ?three unit  ]
