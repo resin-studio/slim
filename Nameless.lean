@@ -551,6 +551,9 @@ namespace Nameless
     | .recur ty => extract_record_labels ty
     | _ => {} 
 
+    partial def extract_label_list (ty : Ty) : List String :=
+      (extract_record_labels ty).toList.map fun (l, _) => l
+
     partial def wellfounded (n : Nat) : Ty -> Bool
     | .bvar id => (List.range n).all (fun tar => id != tar)
     | .fvar _ => true 
@@ -681,63 +684,56 @@ namespace Nameless
 
     -- opaquely quantified 
     | .exis n ty_c1 ty_c2 ty1, ty2 =>
-      match (
-        let bound_start := i
-        let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
-        let bound_end := i
-        let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
+      let bound_start := i
+      let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
+      let bound_end := i
+      let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
 
-        let args := ids.map (fun id => Ty.fvar id)
-        let ty_c1 := Ty.instantiate 0 args ty_c1
-        let ty_c2 := Ty.instantiate 0 args ty_c2
-        let ty1 := Ty.instantiate 0 args ty1
+      let args := ids.map (fun id => Ty.fvar id)
+      let ty_c1 := Ty.instantiate 0 args ty_c1
+      let ty_c2 := Ty.instantiate 0 args ty_c2
+      let ty1 := Ty.instantiate 0 args ty1
 
-        let op_fields := linearize_fields ty_c1
+      let op_fields := linearize_fields ty_c1
 
-        let ((i, contexts), env_complex) := ( 
-          match op_fields with 
-          | .none => (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
-          | .some fields =>
-            let is_recur_type := match ty_c2 with 
-            | Ty.recur _ => true
-            | _ => false
-            let is_consistent_variable_record := List.all fields (fun (l, _) =>
-              let rlabels := extract_record_labels (ty_c2) 
-              rlabels.contains l 
-            )
-            let unmatchable := !(matchable (extract_nested_fields (Ty.simplify (Ty.subst env_ty ty_c1))))
-            if is_recur_type && unmatchable  then 
-              if is_consistent_variable_record then
-                let ty_norm := ty_c1 
-                ((i, [env_ty]), env_complex.insert (.dn, ty_norm) ty_c2)
-              else 
-                ((i, []), env_complex) 
-            else
-              (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
-        )
-
-        -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
-        -- Option.bind op_context (fun (i, env_ty1) =>
-        assume_env (i, contexts) (fun i env_ty => 
-        let locally_constrained := (fun key => env_ty.contains key)
-        assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
-          let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-            not (is_bound_var key) || (locally_constrained key)
+      let ((i, contexts), env_complex) := ( 
+        match op_fields with 
+        | .none => (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
+        | .some fields =>
+          let is_recur_type := match ty_c2 with 
+          | Ty.recur _ => true
+          | _ => false
+          let is_consistent_variable_record := List.all fields (fun (l, _) =>
+            let rlabels := extract_record_labels (ty_c2) 
+            rlabels.contains l 
           )
-          if is_result_safe then
-            (i, [env_ty])
+          let unmatchable := !(matchable (extract_nested_fields (Ty.simplify (Ty.subst env_ty ty_c1))))
+          if is_recur_type && unmatchable  then 
+            if is_consistent_variable_record then
+              let labels := extract_label_list ty_c1
+              let ty_c2 := (transpose_relation labels ty_c2)
+
+              let ty_norm := ty_c1 
+              (unify i env_ty env_complex frozen ty_c1 ty_c2, env_complex.insert (.dn, ty_norm) ty_c2)
+            else 
+              ((i, []), env_complex) 
           else
-            (i, [])
-        ))
-      ) with
-      | (i, []) =>
-        match ty_c2 with
-        | Ty.recur ty =>
-          let labels := (extract_record_labels ty_c1).toList.map fun (l, _) => l
-          let ty_c2 := (transpose_relation labels ty_c2)
-          unify i env_ty env_complex frozen (.exis n ty_c1 ty_c2 ty1) ty2
-        | _ => (i, [])
-      | result => result
+            (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
+      )
+
+      -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
+      -- Option.bind op_context (fun (i, env_ty1) =>
+      assume_env (i, contexts) (fun i env_ty => 
+      let locally_constrained := (fun key => env_ty.contains key)
+      assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty =>
+        let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+          not (is_bound_var key) || (locally_constrained key)
+        )
+        if is_result_safe then
+          (i, [env_ty])
+        else
+          (i, [])
+      ))
 
     -- liberally quantified universal 
     | .univ n ty_c1 ty_c2 ty1, ty2 =>
