@@ -427,13 +427,17 @@ namespace Nameless
       if fids.isEmpty then
         ty
       else
-        [lesstype|
-          forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
-          ⟨abstract fids 0 ty⟩
-        ]
-        -- -- debugging
-        -- let ty_exists := [lesstype| {[⟨fids.length⟩] ⟨abstract fids 0 ty⟩ with  ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ }]
-        -- [lesstype| forall [1] ⟨ty_exists⟩ <: β[0] have β[0] ]
+
+        if ty_lhs == Ty.unit && ty_rhs == Ty.unit then 
+          let env_sub := PHashMap.from_list (
+            fids.map (fun fid => (fid, Ty.bot))
+          )
+          Ty.simplify (Ty.subst env_sub ty)
+        else
+          [lesstype|
+            forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
+            ⟨abstract fids 0 ty⟩
+          ]
 
 
     def instantiate (start : Nat) (args : List Ty) : Ty -> Ty
@@ -662,7 +666,7 @@ namespace Nameless
 
     -- liberally quantified 
     | ty', .exis n ty_c1 ty_c2 ty =>
-      -- TODO: consider using substitution of constraints as in the universal version
+      -- frozen prevents recording observed types
       let (i, args, frozen) := (
         i + n, 
         (List.range n).map (fun j => .fvar (i + j)),
@@ -743,7 +747,9 @@ namespace Nameless
       let ty_c1 := Ty.instantiate 0 args ty_c1
       let ty_c2 := Ty.instantiate 0 args ty_c2
       let ty1 := Ty.instantiate 0 args ty1
-      assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty => 
+
+      assume_env (unify i env_ty env_complex frozen ty_c1 ty_c2) (fun i env_ty => 
+        -- prevent narrowing by substituting away variable 
         let env_sub := PHashMap.from_list (
           bound_indicies.bind (fun bid => 
           match env_ty.find? bid with
@@ -751,10 +757,9 @@ namespace Nameless
           | none => []
           )
         ) 
-        let ty_c1 := (Ty.simplify (Ty.subst env_sub ty_c1))
-        let ty_c2 := (Ty.simplify (Ty.subst env_sub ty_c2))
-
-        (unify i env_ty env_complex frozen ty_c1 ty_c2)
+        let ty1 := (Ty.simplify (Ty.subst env_sub ty1))
+        let ty2 := (Ty.simplify (Ty.subst env_sub ty2))
+        (unify i env_ty env_complex frozen ty1 ty2)
       )
 
     -- opaquely quantified universal 
@@ -805,6 +810,7 @@ namespace Nameless
       | (.some ty', _) => unify i env_ty env_complex frozen ty' (.fvar id2) 
 
     | .fvar id, ty  => 
+      -- adjustment updates the variable assignment to lower the upper bound 
       match env_ty.find? id with 
       | none => 
         (i, [env_ty.insert id (occurs_not id env_ty ty)])
@@ -817,16 +823,20 @@ namespace Nameless
           (i, u_env_ty)
 
     | ty', .fvar id => 
+      -- adjustment here records observed types; based on unioning fresh variable
+      -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
       match env_ty.find? id with 
       | none => 
-        (i, [env_ty.insert id (roll_recur id env_ty ty')])
-      | some ty => 
         let adjustable := frozen.find? id == .none
-        let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty) 
-        if adjustable && u_env_ty.isEmpty then
-          (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty' ty))])
-        else
-          (i, u_env_ty)
+        let (i, ty_assign) := (
+          if adjustable then
+            (i + 1, Ty.union (Ty.fvar i) ty') 
+          else
+            (i, ty')
+        )
+        (i, [env_ty.insert id (roll_recur id env_ty ty_assign)])
+      | some ty => 
+        (unify i env_ty env_complex frozen ty' ty) 
 
 
     | .case ty1 ty2, .case ty3 ty4 =>
@@ -1909,7 +1919,6 @@ namespace Nameless
     (y[0] #world ())
   ]
 
-  -- TODO: when did narrowing break?
   -- narrowing
   #eval infer_reduce 0 [lessterm|
   let y[0] : ?uno unit -> unit = _ in 
