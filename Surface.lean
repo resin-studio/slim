@@ -943,35 +943,67 @@ namespace Surface
   ]
 
 
-  -- TODO
-  #eval Tm.infer_reduce [surfterm| 
-    let lt : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
-      \ (#zero(), #succ y) => #true()  
-      \ (#succ x, #succ y) => (self (x, y)) 
-      \ (#succ x, #zero()) => #false() 
-    in
-    let max = \ (x, y) => if (lt (x, y)) then x else y in
-    max
-  ] 
+  def LE := [surftype| 
+    induct [LE]
+      {?zero unit * Y} |
+      {?succ X * ?succ Y with X * Y <: LE}
+  ]
+
+
+  -------------------------------------------------------
   ---- debugging
-  -- TODO: fix subtype unification
+  -------------------------------------------------------
+  -- TODO: add type declaration to allow free type variables to be used across terms
+  -- expected: (?succ ?succ ?zero unit | ?succ ?zero unit)
 
   #eval Tm.infer_reduce [surfterm| 
-    let lt : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
-      \ (#zero(), #succ y) => #true()  
+    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+      \ (#zero(), y) => #true()  
       \ (#succ x, #succ y) => (self (x, y)) 
       \ (#succ x, #zero()) => #false() 
     in
-    lt
+    let max = \ (x, y) => if (le (x, y)) then y else x in
+    (max (#succ #zero(), (#succ #succ #zero()))) 
   ] 
 
+  -- expected: fail 
   #eval Tm.infer_reduce [surfterm| 
-    let lt = fix \ self =>
-      \ (#zero(), #succ y) => #true()  
+    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+      \ (#zero(), y) => #true()  
       \ (#succ x, #succ y) => (self (x, y)) 
       \ (#succ x, #zero()) => #false() 
     in
-    lt
+    let max = \ (x, y) => if (le (x, y)) then y else x in
+    let x : {[X, Y] X with (X * ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
+    x
+  ] 
+
+  -- TODO
+  -- expected: fail 
+  -- actual: (forall [T0] (T0 * unit) <: (?succ ?zero unit * unit) have T0)
+  -- reduces to: (?succ ?zero unit)
+  -- however: NOT((?succ ?succ ?zero unit | ?succ ?zero unit) <: (?succ ?zero unit)) 
+  #eval Tm.infer_reduce [surfterm| 
+    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+      \ (#zero(), y) => #true()  
+      \ (#succ x, #succ y) => (self (x, y)) 
+      \ (#succ x, #zero()) => #false() 
+    in
+    let max = \ (x, y) => if (le (x, y)) then y else x in
+    let x : {[X, Y] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
+    x
+  ] 
+
+  -- expected: pass 
+  #eval Tm.infer_reduce [surfterm| 
+    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+      \ (#zero(), y) => #true()  
+      \ (#succ x, #succ y) => (self (x, y)) 
+      \ (#succ x, #zero()) => #false() 
+    in
+    let max = \ (x, y) => if (le (x, y)) then y else x in
+    let x : {[X, Y] X with (X * ?succ ?succ ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
+    x
   ] 
   --------------------------------
 
