@@ -240,20 +240,6 @@ namespace Surface
     ]
 
 
-    -- #eval [surftype| 
-    --   nat -> (list | nat × list ≤ nat_list) 
-    -- ]
-    -- TODO: simplify language by using implication to encode universal and greatest fixedpoint.  
-    /-
-    nat_list ? (
-      (zero*unit × nil*unit) ∨ 
-      (succ*nat × cons*list | nat × list ≤ nat_list)
-    )
-    -/
-    -- ∀ X . X -> (∃ Y . Y | X × Y ≤ T)
-    -- ∀ X . X -> (∃ Y . Y | X × Y ≤ T)
-    -- n -> (l | n × l ≤ nat_list)
-
     partial def pattern_abstraction : Ty -> Option (List String)
     | .id name => some [name]
     | .unit => some [] 
@@ -1006,7 +992,8 @@ namespace Surface
   -------------------------------------------------------
   ---- debugging currrently
   -------------------------------------------------------
-  -- TODO: figure out when narrowing broke
+
+
   ---------------- debugged already:
   -- expected: fail 
   #eval Ty.unify_reduce
