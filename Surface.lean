@@ -841,6 +841,14 @@ namespace Surface
       let (_, ty_surf) <- Surface.Ty.from_nameless [] [] stack_nl ty_nl 
       ty_surf
 
+    partial def infer_reduce_wt (t : Surface.Tm) (ty : Surface.Ty) : Option Surface.Ty := do
+      let (_, t_nl) <- to_nameless [] t 
+      let (_, ty_nl) <- Ty.to_nameless [] [] ty 
+      let ty_nl := Nameless.Tm.infer_reduce_wt 0 t_nl ty_nl
+      let (_, stack_nl) := Ty.extract_bound_stack 0 ty_nl
+      let (_, ty_surf) <- Surface.Ty.from_nameless [] [] stack_nl ty_nl 
+      ty_surf
+
   end Tm
 
 
@@ -950,12 +958,13 @@ namespace Surface
   ]
 
 
-  -------------------------------------------------------
-  ---- debugging
-  -------------------------------------------------------
   -- TODO: add type declaration to allow free type variables to be used across terms
-  -- expected: (?succ ?succ ?zero unit | ?succ ?zero unit)
+    -- requires adding type variable declaration in nameless language
+    -- e.g. let T <: ⊤ 
+    -- it is a particular type that can be specialized over time 
+    -- no notion of type constructor, so no kinds
 
+  -- expected: (?succ ?succ ?zero unit | ?succ ?zero unit)
   #eval Tm.infer_reduce [surfterm| 
     let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
       \ (#zero(), y) => #true()  
@@ -963,7 +972,8 @@ namespace Surface
       \ (#succ x, #zero()) => #false() 
     in
     let max = \ (x, y) => if (le (x, y)) then y else x in
-    (max (#succ #zero(), (#succ #succ #zero()))) 
+    let x = (max (#succ #zero(), (#succ #succ #zero())))  in
+    x
   ] 
 
   -- expected: fail 
@@ -990,9 +1000,35 @@ namespace Surface
       \ (#succ x, #zero()) => #false() 
     in
     let max = \ (x, y) => if (le (x, y)) then y else x in
-    let x : {[X, Y] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
+    let x : {[X] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
     x
   ] 
+  -------------------------------------------------------
+  ---- debugging currrently
+  -------------------------------------------------------
+  -- TODO: how can this fail without breaking widening?
+  -- expected: fail 
+  #eval Ty.unify_reduce
+  [surftype| 
+    (forall [T0] (T0 * unit) <: (?succ ?succ ?zero unit * unit) have T0)
+  ]
+  [surftype| ?succ ?zero unit ]
+  [surftype| ?hmm unit ]
+
+  ---------------- debugged already:
+
+  -- expected: fail 
+  #eval Ty.unify_reduce
+  [surftype| ?succ ?succ ?zero unit | ?succ ?zero unit ]
+  [surftype| {[X] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } ]
+  [surftype| ?whoops unit ]
+
+  -- expected: ⊥
+  #eval Tm.infer_reduce_wt
+  [surfterm| #succ #succ #zero () ] 
+  [surftype| {[X] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } ] 
+
+  ------------------------------
 
   -- expected: pass 
   #eval Tm.infer_reduce [surfterm| 
@@ -1002,7 +1038,7 @@ namespace Surface
       \ (#succ x, #zero()) => #false() 
     in
     let max = \ (x, y) => if (le (x, y)) then y else x in
-    let x : {[X, Y] X with (X * ?succ ?succ ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
+    let x : {[X] X with (X * ?succ ?succ ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
     x
   ] 
   --------------------------------
