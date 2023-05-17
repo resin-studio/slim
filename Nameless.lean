@@ -815,9 +815,8 @@ namespace Nameless
       | none => 
         (i, [env_ty.insert id (occurs_not id env_ty ty)])
       | some ty' => 
-        let adjustable := frozen.find? id == .none
         let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
-        if adjustable && u_env_ty.isEmpty then
+        if u_env_ty.isEmpty then
           (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
         else
           (i, u_env_ty)
