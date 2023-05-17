@@ -662,6 +662,7 @@ namespace Nameless
 
     -- liberally quantified 
     | ty', .exis n ty_c1 ty_c2 ty =>
+      -- TODO: consider using substitution of constraints as in the universal version
       let (i, args, frozen) := (
         i + n, 
         (List.range n).map (fun j => .fvar (i + j)),
@@ -681,10 +682,6 @@ namespace Nameless
       let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
       let bound_end := i
       let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
-      -- TODO: see if frozen an be removed
-      -- let bound_indicies := PHashMap.from_list (List.map (fun pos =>
-      --   (pos + bound_start, Unit.unit)
-      -- ) (List.range n))
 
       let args := ids.map (fun id => Ty.fvar id)
       let ty_c1 := Ty.instantiate 0 args ty_c1
@@ -735,22 +732,28 @@ namespace Nameless
 
     -- liberally quantified universal 
     | .univ n ty_c1 ty_c2 ty1, ty2 => 
+      let bound_start := i
       let (i, args) := (
         i + n, 
         (List.range n).map (fun j => .fvar (i + j))
       )
 
-      ---- This breaks widening
-      -- let (i, args, frozen) := (
-      --   i + n, 
-      --   (List.range n).map (fun j => .fvar (i + j)),
-      --   PHashMap.insert_all frozen (PHashMap.from_list ((List.range n).map (fun j => (i + j, .unit))))
-      -- )
+      let bound_indicies := (List.range n).map (fun j => bound_start + j)
 
       let ty_c1 := Ty.instantiate 0 args ty_c1
       let ty_c2 := Ty.instantiate 0 args ty_c2
       let ty1 := Ty.instantiate 0 args ty1
       assume_env (unify i env_ty env_complex frozen ty1 ty2) (fun i env_ty => 
+        let env_sub := PHashMap.from_list (
+          bound_indicies.bind (fun bid => 
+          match env_ty.find? bid with
+          | some ty_b => [(bid, ty_b)]
+          | none => []
+          )
+        ) 
+        let ty_c1 := (Ty.simplify (Ty.subst env_sub ty_c1))
+        let ty_c2 := (Ty.simplify (Ty.subst env_sub ty_c2))
+
         (unify i env_ty env_complex frozen ty_c1 ty_c2)
       )
 
@@ -1906,6 +1909,7 @@ namespace Nameless
     (y[0] #world ())
   ]
 
+  -- TODO: when did narrowing break?
   -- narrowing
   #eval infer_reduce 0 [lessterm|
   let y[0] : ?uno unit -> unit = _ in 

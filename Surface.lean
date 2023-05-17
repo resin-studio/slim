@@ -1006,7 +1006,8 @@ namespace Surface
   -------------------------------------------------------
   ---- debugging currrently
   -------------------------------------------------------
-  -- TODO: how can this fail without breaking widening?
+  -- TODO: figure out when narrowing broke
+  ---------------- debugged already:
   -- expected: fail 
   #eval Ty.unify_reduce
   [surftype| 
@@ -1015,7 +1016,6 @@ namespace Surface
   [surftype| ?succ ?zero unit ]
   [surftype| ?hmm unit ]
 
-  ---------------- debugged already:
 
   -- expected: fail 
   #eval Ty.unify_reduce
