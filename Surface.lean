@@ -347,7 +347,7 @@ namespace Surface
       if h : index < free_names.length then  
         some (stack, .id (free_names.get ⟨index, h⟩))
       else
-        none
+        some (stack, .id (s!"α_{index}_")) 
     | .unit => some (stack, .unit)
     | .bot => some (stack, .bot)
     | .top => some (stack, .top)
@@ -608,9 +608,9 @@ namespace Surface
 
     | `([surfterm| if $test then $t else $f ]) => `( 
       [surfterm| 
-        $test |> (
-          \ #⟨Tm.id "true"⟩ () => $t
-          \ #⟨Tm.id "false"⟩ () => $f
+        ($test) |> (
+          \ #⟨Tm.id "true"⟩ () => ($t)
+          \ #⟨Tm.id "false"⟩ () => ($f)
         )
       ]
     )
@@ -827,6 +827,14 @@ namespace Surface
       let (_, ty_surf) <- Surface.Ty.from_nameless [] [] stack_nl ty_nl 
       ty_surf
 
+    -- debugging
+    partial def infer_reduce_debug (t : Surface.Tm) : Option (Nameless.Ty) :=  do
+      let (_, t_nl) <- to_nameless [] t 
+      let ty_nl := Nameless.Tm.infer_reduce 0 t_nl
+      ty_nl
+      -- let (_, ty_surf) <- Surface.Ty.from_nameless [] [] stack_nl ty_nl 
+      -- ty_surf
+
     partial def infer_reduce_wt (t : Surface.Tm) (ty : Surface.Ty) : Option Surface.Ty := do
       let (_, t_nl) <- to_nameless [] t 
       let (_, ty_nl) <- Ty.to_nameless [] [] ty 
@@ -944,92 +952,106 @@ namespace Surface
   ]
 
 
-  -- TODO: add type declaration to allow free type variables to be used across terms
-    -- requires adding type variable declaration in nameless language
-    -- e.g. let T <: ⊤ 
-    -- it is a particular type that can be specialized over time 
-    -- no notion of type constructor, so no kinds
+  -- -- TODO: add type declaration to allow free type variables to be used across terms
+  --   -- requires adding type variable declaration in nameless language
+  --   -- e.g. let T <: ⊤ 
+  --   -- it is a particular type that can be specialized over time 
+  --   -- no notion of type constructor, so no kinds
 
-  -- expected: (?succ ?succ ?zero unit | ?succ ?zero unit)
-  #eval Tm.infer_reduce [surfterm| 
-    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
-      \ (#zero(), y) => #true()  
-      \ (#succ x, #succ y) => (self (x, y)) 
-      \ (#succ x, #zero()) => #false() 
-    in
-    let max = \ (x, y) => if (le (x, y)) then y else x in
-    let x = (max (#succ #zero(), (#succ #succ #zero())))  in
-    x
-  ] 
+  -- -- expected: (?succ ?succ ?zero unit | ?succ ?zero unit)
+  -- #eval Tm.infer_reduce [surfterm| 
+  --   let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+  --     \ (#zero(), y) => #true()  
+  --     \ (#succ x, #succ y) => (self (x, y)) 
+  --     \ (#succ x, #zero()) => #false() 
+  --   in
+  --   let max = \ (x, y) => if (le (x, y)) then y else x in
+  --   let x = (max (#succ #zero(), (#succ #succ #zero())))  in
+  --   x
+  -- ] 
 
-  -- expected: fail 
-  #eval Tm.infer_reduce [surfterm| 
-    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
-      \ (#zero(), y) => #true()  
-      \ (#succ x, #succ y) => (self (x, y)) 
-      \ (#succ x, #zero()) => #false() 
-    in
-    let max = \ (x, y) => if (le (x, y)) then y else x in
-    let x : {[X, Y] X with (X * ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
-    x
-  ] 
+  -- -- expected: fail 
+  -- #eval Tm.infer_reduce [surfterm| 
+  --   let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+  --     \ (#zero(), y) => #true()  
+  --     \ (#succ x, #succ y) => (self (x, y)) 
+  --     \ (#succ x, #zero()) => #false() 
+  --   in
+  --   let max = \ (x, y) => if (le (x, y)) then y else x in
+  --   let x : {[X, Y] X with (X * ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
+  --   x
+  -- ] 
 
-  -- TODO
-  -- expected: fail 
-  -- actual: (forall [T0] (T0 * unit) <: (?succ ?zero unit * unit) have T0)
-  -- reduces to: (?succ ?zero unit)
-  -- however: NOT((?succ ?succ ?zero unit | ?succ ?zero unit) <: (?succ ?zero unit)) 
-  #eval Tm.infer_reduce [surfterm| 
-    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
-      \ (#zero(), y) => #true()  
-      \ (#succ x, #succ y) => (self (x, y)) 
-      \ (#succ x, #zero()) => #false() 
-    in
-    let max = \ (x, y) => if (le (x, y)) then y else x in
-    let x : {[X] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
-    x
-  ] 
+  -- -- TODO
+  -- -- expected: fail 
+  -- -- actual: (forall [T0] (T0 * unit) <: (?succ ?zero unit * unit) have T0)
+  -- -- reduces to: (?succ ?zero unit)
+  -- -- however: NOT((?succ ?succ ?zero unit | ?succ ?zero unit) <: (?succ ?zero unit)) 
+  -- #eval Tm.infer_reduce [surfterm| 
+  --   let le = (fix \ self => (
+  --     \ (#zero(), y) => #true()  
+  --     \ (#succ x, #succ y) => (self (x, y)) 
+  --     \ (#succ x, #zero()) => #false() 
+  --   )) in
+  --   let max = (\ (x, y) => if (le (x, y)) then y else x) in
+  --   -- let x : {[X] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
+  --   let x : ?succ ?zero unit = (max (#succ #zero(), (#succ #succ #zero()))) in
+  --   x
+  -- ] 
+
   -------------------------------------------------------
   ---- debugging currrently
   -------------------------------------------------------
 
+--   ---------------- debugged already:
 
-  ---------------- debugged already:
-  -- expected: fail 
-  #eval Ty.unify_reduce
-  [surftype| 
-    (forall [T0] (T0 * unit) <: (?succ ?succ ?zero unit * unit) have T0)
-  ]
-  [surftype| ?succ ?zero unit ]
-  [surftype| ?hmm unit ]
+--   -- expected: fail 
+--   #eval Ty.unify_reduce
+--   [surftype| (?succ ?succ ?zero unit | ?succ ?zero unit)
+--   ]
+--   [surftype| ?succ ?zero unit ]
+--   [surftype| ?hmm unit ]
 
-
-  -- expected: fail 
-  #eval Ty.unify_reduce
-  [surftype| ?succ ?succ ?zero unit | ?succ ?zero unit ]
-  [surftype| {[X] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } ]
-  [surftype| ?whoops unit ]
-
-  -- expected: ⊥
-  #eval Tm.infer_reduce_wt
-  [surfterm| #succ #succ #zero () ] 
-  [surftype| {[X] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } ] 
-
-  ------------------------------
-
-  -- expected: pass 
-  #eval Tm.infer_reduce [surfterm| 
-    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
-      \ (#zero(), y) => #true()  
-      \ (#succ x, #succ y) => (self (x, y)) 
-      \ (#succ x, #zero()) => #false() 
-    in
-    let max = \ (x, y) => if (le (x, y)) then y else x in
-    let x : {[X] X with (X * ?succ ?succ ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
-    x
-  ] 
-  --------------------------------
+ 
+--   -- expected: fail 
+--   #eval Ty.unify_reduce
+--   [surftype| 
+--     (forall [T0] (T0 * unit) <: (?succ ?succ ?zero unit * unit) have T0)
+--   ]
+--   [surftype| ?succ ?zero unit ]
+--   [surftype| ?hmm unit ]
 
 
+--   -- expected: fail 
+--   #eval Ty.unify_reduce
+--   [surftype| ?succ ?succ ?zero unit | ?succ ?zero unit ]
+--   [surftype| {[X] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } ]
+--   [surftype| ?whoops unit ]
 
-end Surface
+--   -- expected: ⊥
+--   #eval Tm.infer_reduce_wt
+--   [surfterm| #succ #succ #zero () ] 
+--   [surftype| {[X] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } ] 
+
+--   #eval Tm.infer_reduce_wt
+--   [surfterm| #succ #succ #zero () ] 
+--   [surftype| ?succ ?zero unit ] 
+
+--   ------------------------------
+
+--   -- expected: pass 
+--   #eval Tm.infer_reduce [surfterm| 
+--     let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+--       \ (#zero(), y) => #true()  
+--       \ (#succ x, #succ y) => (self (x, y)) 
+--       \ (#succ x, #zero()) => #false() 
+--     in
+--     let max = \ (x, y) => if (le (x, y)) then y else x in
+--     let x : {[X] X with (X * ?succ ?succ ?zero unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
+--     x
+--   ] 
+--   --------------------------------
+
+
+
+-- end Surface

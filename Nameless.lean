@@ -269,8 +269,25 @@ namespace Nameless
     | ty1, ty2 => ty1 == ty2
 
     -- make assoc right
-    def intersect : Ty -> Ty -> Ty
+    partial def intersect : Ty -> Ty -> Ty
     | [lesstype| ⊤ ], ty2 => ty2 
+    | .unit, .tag _ _ => Ty.bot 
+    | .tag _ _, .unit  => Ty.bot 
+    | .tag l1 ty1, .tag l2 ty2  => 
+      if l1 != l2 then
+        Ty.bot 
+      else
+        .tag l1 (intersect ty1 ty2)
+    | .tag l1 ty1, Ty.union ty21 ty22  => 
+      Ty.union 
+        (intersect (.tag l1 ty1) ty21) 
+        (intersect (.tag l1 ty1) ty22)
+
+    | Ty.union ty21 ty22, .tag l1 ty1 => 
+      Ty.union 
+        (intersect (.tag l1 ty1) ty21) 
+        (intersect (.tag l1 ty1) ty22)
+
     | bot, ty2 => bot 
     | inter ty11 ty12, ty2 => intersect ty11 (intersect ty12 ty2) 
     | ty1, [lesstype| ⊤ ] => ty1 
@@ -426,19 +443,16 @@ namespace Nameless
       )
       if fids.isEmpty then
         ty
+      else if ty_lhs == Ty.unit && ty_rhs == Ty.unit then 
+        let env_sub := PHashMap.from_list (
+          fids.map (fun fid => (fid, Ty.bot))
+        )
+        Ty.simplify (Ty.subst env_sub ty)
       else
-
-        if ty_lhs == Ty.unit && ty_rhs == Ty.unit then 
-          let env_sub := PHashMap.from_list (
-            fids.map (fun fid => (fid, Ty.bot))
-          )
-          Ty.simplify (Ty.subst env_sub ty)
-        else
-          [lesstype|
-            forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
-            ⟨abstract fids 0 ty⟩
-          ]
-
+        [lesstype|
+          forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
+          ⟨abstract fids 0 ty⟩
+        ]
 
     def instantiate (start : Nat) (args : List Ty) : Ty -> Ty
     | .bvar id => 
@@ -474,7 +488,8 @@ namespace Nameless
 
     partial def roll_recur (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
       if (free_vars_env m ty).contains key then
-        subst (PHashMap.from_list [(key, [lesstype| β[0] ])]) [lesstype| (induct ⟨ty⟩) ] 
+        Ty.recur (instantiate 0 [(Ty.fvar key)] ty)
+        -- subst (PHashMap.from_list [(key, [lesstype| β[0] ])]) [lesstype| (induct ⟨ty⟩) ] 
       else
         ty 
 
@@ -664,6 +679,53 @@ namespace Nameless
     (frozen : PHashMap Nat Unit):
     Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
+    ---------------------------------------------------------------
+    -- free variables
+    ---------------------------------------------------------------
+    -- TODO: VERY IMPORTANT: find the source of circular assigments!
+    | (.fvar id1), (.fvar id2) => 
+      match (env_ty.find? id1, env_ty.find? id2) with 
+      | (.none, .none) => 
+        -- ensure older unassigned free variables appear in simplified form
+        if id1 < id2 then
+          (i, [env_ty.insert id2 (Ty.fvar id1)])
+        else if id1 > id2 then
+          (i, [env_ty.insert id1 (Ty.fvar id2)])
+        else
+          (i, [env_ty])
+      | (_, .some ty) => unify i env_ty env_complex frozen (.fvar id1) ty 
+      | (.some ty', _) => unify i env_ty env_complex frozen ty' (.fvar id2) 
+
+    | .fvar id, ty  => 
+      -- adjustment updates the variable assignment to lower the upper bound 
+      match env_ty.find? id with 
+      | none => 
+        (i, [env_ty.insert id (occurs_not id env_ty ty)])
+      | some ty' => 
+        let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
+        if u_env_ty.isEmpty then
+          (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
+        else
+          (i, u_env_ty)
+
+    | ty', .fvar id => 
+      -- adjustment here records observed types; based on unioning fresh variable
+      -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
+      match env_ty.find? id with 
+      | none => 
+        let adjustable := frozen.find? id == .none
+        let (i, ty_assign) := (
+          if adjustable then
+            (i + 1, Ty.union (Ty.fvar i) ty') 
+          else
+            (i, ty')
+        )
+        (i, [env_ty.insert id (roll_recur id env_ty ty_assign)])
+      | some ty => 
+        (unify i env_ty env_complex frozen ty' ty) 
+    ----------------------------------------------------------------
+
+
     -- liberally quantified 
     | ty', .exis n ty_c1 ty_c2 ty =>
       -- frozen prevents recording observed types
@@ -793,49 +855,6 @@ namespace Nameless
 
       (unify i env_ty env_complex frozen ty1 ty2_inter)
     )
-
-    -- free variables
-    ---------------------------------------------------------------
-    | (.fvar id1), (.fvar id2) => 
-      match (env_ty.find? id1, env_ty.find? id2) with 
-      | (.none, .none) => 
-        -- ensure older unassigned free variables appear in simplified form
-        if id1 < id2 then
-          (i, [env_ty.insert id2 (Ty.fvar id1)])
-        else if id1 > id2 then
-          (i, [env_ty.insert id1 (Ty.fvar id2)])
-        else
-          (i, [env_ty])
-      | (_, .some ty) => unify i env_ty env_complex frozen (.fvar id1) ty 
-      | (.some ty', _) => unify i env_ty env_complex frozen ty' (.fvar id2) 
-
-    | .fvar id, ty  => 
-      -- adjustment updates the variable assignment to lower the upper bound 
-      match env_ty.find? id with 
-      | none => 
-        (i, [env_ty.insert id (occurs_not id env_ty ty)])
-      | some ty' => 
-        let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
-        if u_env_ty.isEmpty then
-          (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
-        else
-          (i, u_env_ty)
-
-    | ty', .fvar id => 
-      -- adjustment here records observed types; based on unioning fresh variable
-      -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
-      match env_ty.find? id with 
-      | none => 
-        let adjustable := frozen.find? id == .none
-        let (i, ty_assign) := (
-          if adjustable then
-            (i + 1, Ty.union (Ty.fvar i) ty') 
-          else
-            (i, ty')
-        )
-        (i, [env_ty.insert id (roll_recur id env_ty ty_assign)])
-      | some ty => 
-        (unify i env_ty env_complex frozen ty' ty) 
 
 
     | .case ty1 ty2, .case ty3 ty4 =>
@@ -1218,8 +1237,9 @@ namespace Nameless
     (Nat × List (PHashMap Nat Ty × Ty)) :=
     match t with
     | hole => 
+      let frozen := PHashMap.as_set [i]
       let (i, ty') := (i + 1, Ty.fvar i)
-      let (i, u_env_ty) := (Ty.unify i env_ty {} {} ty' ty) 
+      let (i, u_env_ty) := (Ty.unify i env_ty {} frozen ty' ty) 
       (i, u_env_ty.map fun env_ty => (env_ty, ty'))
     | .unit => 
       let (i, u_env_ty) := (Ty.unify i env_ty {} {} Ty.unit ty) 
@@ -1232,13 +1252,16 @@ namespace Nameless
       | none => (i, [])
 
     | .tag l t1 =>   
-      let (i, ty1) := (i + 1, Ty.fvar i)
-      assume_env (Ty.unify i env_ty {} {} (Ty.tag l ty1) ty) (fun i env_ty =>
+      let (i, ty1, frozen) := (i + 1, Ty.fvar i, PHashMap.as_set [i])
+      -- let (i, ty1, frozen) := (i + 1, Ty.fvar i, {})
+      assume_env (Ty.unify i env_ty {} frozen (Ty.tag l ty1) ty) (fun i env_ty =>
       assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
         (i, [(env_ty, Ty.tag l ty1')])
       ))
 
     | .record fds =>
+      let frozen := PHashMap.as_set ((List.range (fds.length)).map (fun j => i + j))
+      -- let frozen := {}
       let (i, trips) := List.foldr (fun (l, t1) (i, ty_acc) =>
         (i + 1, (l, t1, (Ty.fvar i)) :: ty_acc)
       ) (i, []) fds
@@ -1256,10 +1279,11 @@ namespace Nameless
         ))
       )
 
-      let init := Ty.combine (Ty.unify i env_ty {} {} ty' ty) [lesstype| ⊤ ]
+      let init := Ty.combine (Ty.unify i env_ty {} frozen ty' ty) [lesstype| ⊤ ]
       List.foldr f_step init trips
 
     | .func fs =>
+      let frozen := PHashMap.as_set ((List.range (fs.length)).map (fun j => i + j))
       let (i, fs_typed) := List.foldr (fun (p, b) (i, ty_acc) =>
         (i + 2, (p, Ty.fvar i, b, Ty.fvar (i + 1)) :: ty_acc)
       ) (i, []) fs
@@ -1292,23 +1316,51 @@ namespace Nameless
           )))
         )
 
-      let init := Ty.combine (Ty.unify i env_ty {} {} ty' ty) [lesstype| ⊤ ]
+      let init := Ty.combine (Ty.unify i env_ty {} frozen ty' ty) [lesstype| ⊤ ]
       List.foldr f_step init fs_typed
 
     | .proj t1 l =>
       assume_env (infer i env_ty env_tm t1 (Ty.field l ty)) (fun i (env_ty, ty1') =>
+      let frozen := PHashMap.as_set [i]
       let (i, ty') := (i + 1, Ty.fvar i)
-      assume_env (Ty.unify i env_ty {} {} ty1' (Ty.field l ty')) (fun i env_ty =>
+      assume_env (Ty.unify i env_ty {} frozen ty1' (Ty.field l ty')) (fun i env_ty =>
         (i, [(env_ty, ty')])
       ))
 
     | .app t1 t2 =>
       assume_env (infer i env_ty env_tm t2 [lesstype| ⊤ ]) (fun i (env_ty, ty2') =>
       assume_env (infer i env_ty env_tm t1 (Ty.case ty2' ty)) (fun i (env_ty, ty1) =>
+      let frozen := PHashMap.as_set [i] -- ((List.range 1).map (fun j => i + j))
       let (i, ty') := (i + 1, Ty.fvar i)
-      assume_env (Ty.unify i env_ty {} {} ty1 (Ty.case ty2' ty')) (fun i env_ty =>
+      assume_env (Ty.unify i env_ty {} frozen ty1 (Ty.case ty2' ty')) (fun i env_ty =>
         (i, [(env_ty, ty')])
       )))
+      ---- debugging
+      -- assume_env (infer i env_ty env_tm t2 [lesstype| ⊤ ]) (fun i (env_ty, ty2') =>
+      -- assume_env (infer i env_ty env_tm t1 (Ty.case ty2' ty)) (fun i (env_ty, ty1) =>
+      --   let (i, ty') := (i + 1, Ty.fvar i)
+      --   assume_env (Ty.unify i env_ty {} {} ty1 (Ty.case ty2' ty')) (fun i env_ty =>
+      --     -- strange, the expected type looks like the actual type; 
+      --     -- the expected type should not! be adjusted
+      --     -- (i, [(env_ty, ty)])
+      --     assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
+      --       (i, [(env_ty, ty')])
+      --     )
+      --     -- (i, [(env_ty, ty')])
+      --   ))
+      -- )
+      -- ---- debugging
+      -- ---- this causes non-termination somewhere; 
+      -- --- circular assigment leads to non-termination in generalization
+      -- let start := i
+      -- let (i, ty2) := (i + 1, Ty.fvar i)
+      -- let (i, ty') := (i + 1, Ty.fvar i)
+      -- -- let frozen := PHashMap.as_set ((List.range 2).map (fun j => start + j))
+      -- assume_env (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun i (env_ty, ty1) =>
+      -- assume_env (infer i env_ty env_tm t2 ty2) (fun i (env_ty, ty2') =>
+      -- assume_env (Ty.unify i env_ty {} {} ty1 (Ty.case ty2' ty')) (fun i env_ty =>
+      --   (i, [(env_ty, ty')])
+      -- )))
 
     | .letb op_ty1 t1 t => 
 
@@ -1317,33 +1369,66 @@ namespace Nameless
       | none => (i + 1, Ty.fvar i)
 
       let free_var_boundary := i
+
+      --------------------------------
+      -- TODO: infer is fundamentally flawed; need to collapse type after each call to unify!!
+      --------------------------------
       assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
         let ty1_schema := Ty.generalize free_var_boundary env_ty ty1'
+        -- let ty1_schema := ty1'
 
         let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
         let t := instantiate 0 [x] t 
 
         (infer i env_ty (env_tm ; env_tmx) t ty) 
-      )
 
-      ------------------------
-      -- debugging
-      -- assume_env (infer i env_ty env_tm t1 Ty.top) (fun i (env_ty, ty1') =>
-      -- -- test with add unify check
-      -- assume_env (Ty.unify i env_ty {} {} ty1' ty1 ) (fun i env_ty =>
+      )
+      -- -- debugging
+      -- assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
       --   let ty1_schema := Ty.generalize free_var_boundary env_ty ty1'
 
       --   let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
       --   let t := instantiate 0 [x] t 
 
-      --   (infer i env_ty (env_tm ; env_tmx) t ty) 
-      -- ))
+      --   assume_env (infer i env_ty (env_tm ; env_tmx) t Ty.top) (fun i (env_ty, ty') =>
+      --   -- kludge; because downward propagation didn't seem to work
+      --   -- this doesn't work either
+      --   -- assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty => 
+      --   --   (i, [(env_ty, ty')])
+      --   -- ))
+      --   assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty => 
+      --     (i + 1, [(env_ty, Ty.tag s!"ooga_{i}" Ty.unit)])
+      --   ))
+
+      -- )
+      -- -- debugging
+
+      -- let (i, contexts) := (infer i env_ty env_tm t1 ty1)
+      -- let ty1_schema := List.foldr (fun (env_ty, ty1') ty_acc => 
+      --     let ty1' := Ty.generalize free_var_boundary env_ty ty1'
+      --     (Ty.simplify (Ty.subst env_ty (Ty.union ty1' ty_acc)))
+      -- ) Ty.bot contexts 
+      -- --   let locally_constrained := (fun key => env_ty.contains key)
+      -- --   let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+      -- --     not (is_bound_var key) || (locally_constrained key)
+      -- --   )
+      -- --   if is_result_safe then
+      -- --     (simplify (subst env_ty (union ty1' ty_acc)))
+      -- --   else
+      -- --     Ty.top
+
+      -- let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
+      -- let t := instantiate 0 [x] t 
+      -- (infer i env_ty (env_tm ; env_tmx) t ty) 
+
 
     | .fix t1 =>
+
+      let frozen := PHashMap.as_set [i, i + 1] -- ((List.range 1).map (fun j => i + j))
       let (i, ty_prem) := (i + 1, Ty.fvar i) 
       let (i, ty_conc) := (i + 1, Ty.fvar i) 
-      assume_env (infer i env_ty env_tm t1 (Ty.case ty_prem ty_conc)) (fun i (env_ty, _) =>
-      -- assume_env (Ty.unify i env_ty {} ty1' (.case ty_prem ty)) (fun i env_ty =>
+      assume_env (infer i env_ty env_tm t1 (Ty.case ty_prem ty_conc)) (fun i (env_ty, ty1') =>
+      -- assume_env (Ty.unify i env_ty {} {} ty1' (.case ty_prem ty)) (fun i env_ty =>
         let ty_prem := Ty.reduce env_ty ty_prem 
         let ty_conc := Ty.reduce env_ty ty_conc
 
@@ -1373,10 +1458,9 @@ namespace Nameless
           -- i.e. premise accepts anything and conclusion becomes false.
           -- Actually, lack of annotation means weakest precondition
         let ty' := [lesstype| forall [1] β[0] -> {[1] β[0] with β[1] * β[0] <: ⟨relational_type⟩} ] 
-        assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
+        assume_env (Ty.unify i env_ty {} frozen ty' ty) (fun i env_ty =>
           (i, [(env_ty, ty')])
         )
-        -- (i, [(env_ty, ty')])
       )
       -- )
 
@@ -1385,12 +1469,13 @@ namespace Nameless
       (infer (i + 1) {} {} t (Ty.fvar i))
 
     partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
-      let boundary := i
+      let boundary := i 
       let (_, u_env) := (infer i {} {} t ty)
       List.foldr (fun (env_ty, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
         Ty.generalize boundary env_ty ty'
-        -- ty'
+        -- debugging
+        -- (Ty.union ty' ty_acc)
       ) Ty.bot u_env
 
 
@@ -1896,6 +1981,12 @@ namespace Nameless
   ]
 
   ---------- adjustment ----------------
+
+  -- debugging 
+  #eval infer_reduce 0 [lessterm|
+    let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
+    ((y[0] #hello ()) #world ())
+  ]
 
   -- widening
   #eval infer_reduce 0 [lessterm|
@@ -2657,3 +2748,54 @@ end Nameless
   #eval Nameless.Ty.unify_decide 0
   [lesstype| ?one unit  ]
   [lesstype| (?one unit | ?two unit) * (?three unit | ?four unit) ]
+
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+      (fix (\ y[0] => (
+        \ (#zero(), y[0]) => #true()  
+        \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+        \ (#succ y[0], #zero()) => #false() 
+      )))
+  ] 
+--------------------------------------------
+-- currently debugging
+--------------------------------------------
+-- TODO: infer is fundamentally unsound; need to collapse type environment after each call to unification
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    let y[0] : ?succ ?zero unit = 
+    (
+      (\ (y[0], y[1]) => (
+        (
+          (\ #true() => y[1] \ #false() => y[0]))
+          ((
+            \ (#zero(), y[0]) => #true()  
+            \ (#succ y[0], #succ y[1]) => #false()
+            \ (#succ y[0], #zero()) => #false() 
+          )
+          (y[0], y[1])) 
+        )
+      )
+      ((#succ #succ #zero()), #succ #zero())
+    ) 
+    in
+    y[0] 
+  ] 
+
+  #eval Nameless.Tm.infer_simple 0 [lessterm| 
+    let y[0] : ?succ ?zero unit = 
+    (
+      (\ (y[0], y[1]) => (
+        (
+          (\ #true() => y[1] \ #false() => y[0]))
+          ((
+            \ (#zero(), y[0]) => #true()  
+            \ (#succ y[0], #succ y[1]) => #false()
+            \ (#succ y[0], #zero()) => #false() 
+          )
+          (y[0], y[1])) 
+        )
+      )
+      ((#succ #succ #zero()), #succ #zero())
+    ) 
+    in
+    y[0] 
+  ] 

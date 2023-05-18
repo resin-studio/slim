@@ -41,6 +41,10 @@ namespace PHashMap
   (source : List (α × β)) : PHashMap α β :=
     source.foldl (init := {}) fun m (k, v) => m.insert k v
 
+  def as_set [BEq α] [Hashable α] 
+  (source : List α) : PHashMap α Unit :=
+    source.foldl (init := {}) fun m k => m.insert k Unit.unit
+
   def repr [Repr (α × β)] [BEq α] [Hashable α] 
   (m : PHashMap α β) (n : Nat) : Format :=
     Format.bracket "<" (List.repr (toList m) n) ">"
