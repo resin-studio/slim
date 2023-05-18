@@ -1232,13 +1232,9 @@ namespace Nameless
       | none => (i, [])
 
     | .tag l t1 =>   
-      -- let (i, ty1) := (i + 1, Ty.fvar i)
-      -- assume_env (Ty.unify i env_ty {} {} (Ty.tag l ty1) ty) (fun i env_ty =>
-      -- assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
-      --   (i, [(env_ty, Ty.tag l ty1')])
-      -- ))
-      assume_env (infer i env_ty env_tm t1 Ty.top) (fun i (env_ty, ty1') =>
-      assume_env (Ty.unify i env_ty {} {} (Ty.tag l ty1') ty) (fun i env_ty =>
+      let (i, ty1) := (i + 1, Ty.fvar i)
+      assume_env (Ty.unify i env_ty {} {} (Ty.tag l ty1) ty) (fun i env_ty =>
+      assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
         (i, [(env_ty, Ty.tag l ty1')])
       ))
 
