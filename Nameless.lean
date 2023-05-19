@@ -1335,21 +1335,7 @@ namespace Nameless
       assume_env (Ty.unify i env_ty {} frozen ty1 (Ty.case ty2' ty')) (fun i env_ty =>
         (i, [(env_ty, ty')])
       )))
-      ---- debugging
-      -- assume_env (infer i env_ty env_tm t2 [lesstype| ⊤ ]) (fun i (env_ty, ty2') =>
-      -- assume_env (infer i env_ty env_tm t1 (Ty.case ty2' ty)) (fun i (env_ty, ty1) =>
-      --   let (i, ty') := (i + 1, Ty.fvar i)
-      --   assume_env (Ty.unify i env_ty {} {} ty1 (Ty.case ty2' ty')) (fun i env_ty =>
-      --     -- strange, the expected type looks like the actual type; 
-      --     -- the expected type should not! be adjusted
-      --     -- (i, [(env_ty, ty)])
-      --     assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
-      --       (i, [(env_ty, ty')])
-      --     )
-      --     -- (i, [(env_ty, ty')])
-      --   ))
-      -- )
-      -- ---- debugging
+      -- ---- alternative 
       -- ---- this causes non-termination somewhere; 
       -- --- circular assigment leads to non-termination in generalization
       -- let start := i
@@ -1370,56 +1356,34 @@ namespace Nameless
 
       let free_var_boundary := i
 
-      --------------------------------
-      -- TODO: infer is fundamentally flawed; need to collapse type after each call to unify!!
-      --------------------------------
-      assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
+      -- collapsing
+      let (i, u_env_ty) := (infer i env_ty env_tm t1 ty1) 
+      let ty1_schema := List.foldr (fun (env_ty, ty1') ty_acc => 
         let ty1_schema := Ty.generalize free_var_boundary env_ty ty1'
-        -- let ty1_schema := ty1'
+        (Ty.union ty1_schema ty_acc)
+      ) Ty.bot u_env_ty
+      let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
+      let t := instantiate 0 [x] t 
 
-        let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
-        let t := instantiate 0 [x] t 
-
+      -- unification check, since downward propagation cannot check against a full union 
+      assume_env (Ty.unify i env_ty {} {} ty1_schema ty1) (fun i env_ty => 
         (infer i env_ty (env_tm ; env_tmx) t ty) 
-
       )
-      -- -- debugging
+
+      --------------------------------------------------------------------------------
+      -- old version without collapsing 
+      --------------------------------------------------------------------------------
       -- assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
       --   let ty1_schema := Ty.generalize free_var_boundary env_ty ty1'
+      --   -- let ty1_schema := ty1'
 
       --   let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
       --   let t := instantiate 0 [x] t 
 
-      --   assume_env (infer i env_ty (env_tm ; env_tmx) t Ty.top) (fun i (env_ty, ty') =>
-      --   -- kludge; because downward propagation didn't seem to work
-      --   -- this doesn't work either
-      --   -- assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty => 
-      --   --   (i, [(env_ty, ty')])
-      --   -- ))
-      --   assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty => 
-      --     (i + 1, [(env_ty, Ty.tag s!"ooga_{i}" Ty.unit)])
-      --   ))
+      --   (infer i env_ty (env_tm ; env_tmx) t ty) 
 
       -- )
-      -- -- debugging
-
-      -- let (i, contexts) := (infer i env_ty env_tm t1 ty1)
-      -- let ty1_schema := List.foldr (fun (env_ty, ty1') ty_acc => 
-      --     let ty1' := Ty.generalize free_var_boundary env_ty ty1'
-      --     (Ty.simplify (Ty.subst env_ty (Ty.union ty1' ty_acc)))
-      -- ) Ty.bot contexts 
-      -- --   let locally_constrained := (fun key => env_ty.contains key)
-      -- --   let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-      -- --     not (is_bound_var key) || (locally_constrained key)
-      -- --   )
-      -- --   if is_result_safe then
-      -- --     (simplify (subst env_ty (union ty1' ty_acc)))
-      -- --   else
-      -- --     Ty.top
-
-      -- let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
-      -- let t := instantiate 0 [x] t 
-      -- (infer i env_ty (env_tm ; env_tmx) t ty) 
+      --------------------------------------------------------------------------------
 
 
     | .fix t1 =>
@@ -2006,6 +1970,13 @@ namespace Nameless
   ]
 
   -- narrowing
+  #eval infer_reduce 0 [lessterm|
+  let y[0] : ?uno unit -> unit = _ in 
+  let y[0] : ?dos unit -> unit = _ in 
+  (\ y[0] =>
+    (y[2] y[0]))
+  ]
+
   #eval infer_reduce 0 [lessterm|
   let y[0] : ?uno unit -> unit = _ in 
   let y[0] : ?dos unit -> unit = _ in 
@@ -2761,26 +2732,6 @@ end Nameless
 --------------------------------------------
 -- TODO: infer is fundamentally unsound; need to collapse type environment after each call to unification
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
-    let y[0] : ?succ ?zero unit = 
-    (
-      (\ (y[0], y[1]) => (
-        (
-          (\ #true() => y[1] \ #false() => y[0]))
-          ((
-            \ (#zero(), y[0]) => #true()  
-            \ (#succ y[0], #succ y[1]) => #false()
-            \ (#succ y[0], #zero()) => #false() 
-          )
-          (y[0], y[1])) 
-        )
-      )
-      ((#succ #succ #zero()), #succ #zero())
-    ) 
-    in
-    y[0] 
-  ] 
-
-  #eval Nameless.Tm.infer_simple 0 [lessterm| 
     let y[0] : ?succ ?zero unit = 
     (
       (\ (y[0], y[1]) => (
