@@ -1239,10 +1239,7 @@ namespace Nameless
     (Nat × List (PHashMap Nat Ty × Ty)) :=
     match t with
     | hole => 
-      let frozen := PHashMap.as_set [i]
-      let (i, ty') := (i + 1, Ty.fvar i)
-      let (i, u_env_ty) := (Ty.unify i env_ty {} frozen ty' ty) 
-      (i, u_env_ty.map fun env_ty => (env_ty, ty'))
+      (i, [(env_ty, Ty.top)])
     | .unit => 
       let (i, u_env_ty) := (Ty.unify i env_ty {} {} Ty.unit ty) 
       (i, u_env_ty.map fun env_ty => (env_ty, Ty.unit))
@@ -1358,19 +1355,24 @@ namespace Nameless
 
       let free_var_boundary := i
 
-      -- collapsing
-      let (i, u_env_ty) := (infer i env_ty env_tm t1 ty1) 
-      let ty1_schema := List.foldr (fun (env_ty, ty1') ty_acc => 
-        let ty1_schema := Ty.generalize free_var_boundary env_ty ty1'
-        (Ty.union ty1_schema ty_acc)
-      ) Ty.bot u_env_ty
-      let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
-      let t := instantiate 0 [x] t 
-
-      -- unification check, since downward propagation cannot check against a full union 
-      assume_env (Ty.unify i env_ty {} {} ty1_schema ty1) (fun i env_ty => 
+      if t1 == Tm.hole then
+        let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1)]) 
+        let t := instantiate 0 [x] t 
         (infer i env_ty (env_tm ; env_tmx) t ty) 
-      )
+      else
+        -- collapsing
+        let (i, u_env_ty) := (infer i env_ty env_tm t1 ty1) 
+        let ty1_schema := List.foldr (fun (env_ty, ty1') ty_acc => 
+          let ty1_schema := Ty.generalize free_var_boundary env_ty ty1'
+          (Ty.union ty1_schema ty_acc)
+        ) Ty.bot u_env_ty
+        let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
+        let t := instantiate 0 [x] t 
+
+        -- unification check, since downward propagation cannot check against a full union 
+        assume_env (Ty.unify i env_ty {} {} ty1_schema ty1) (fun i env_ty => 
+          (infer i env_ty (env_tm ; env_tmx) t ty) 
+        )
 
       --------------------------------------------------------------------------------
       -- old version without collapsing 
@@ -1440,8 +1442,6 @@ namespace Nameless
       List.foldr (fun (env_ty, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
         Ty.generalize boundary env_ty ty'
-        -- debugging
-        -- (Ty.union ty' ty_acc)
       ) Ty.bot u_env
 
 
@@ -1908,6 +1908,7 @@ namespace Nameless
     y[0]
   ]
 
+  -- path discrimination
   -- expected: ?cons ?nil unit
   #eval infer_reduce 10 [lessterm|
     let y[0] = fix(\ y[0] => ( 
@@ -1917,11 +1918,41 @@ namespace Nameless
     (y[0] (#succ #zero ()))
   ]
 
+  #eval infer_reduce 10 [lessterm|
+    (fix(\ y[0] => ( 
+      \ #zero () => #nil (),
+      \ #succ y[0] => #cons (y[1] y[0])
+    )) 
+    (#succ #zero ())
+    )
+  ]
+
 
   -- expected: ?cons ?nil unit
   #eval infer_reduce 0 [lessterm|
     let y[0] : (?zero unit -> ?nil unit) & (?succ ?zero unit -> ?cons ?nil unit) = _ in 
     (y[0] (#succ #zero ()))
+  ]
+
+
+  #eval infer_reduce 10 
+  [lessterm|
+  let y[0] : (
+    (forall (?hello β[0] -> ?world unit)) & 
+    (forall ?one β[0] -> ?two unit)
+  ) = _ in 
+  (y[0] #one ())
+  ]
+
+  #eval infer_reduce 10 
+  [lessterm|
+  let y[0] : (
+    (forall 
+      (?hello β[0] -> ?world unit) & 
+      (?one β[0] -> ?two unit)
+    )
+  ) = _ in 
+  (y[0] #one ())
   ]
 
 
@@ -2144,30 +2175,6 @@ namespace Nameless
   spec
   [lesstype| α[0] * α[1] ]
   --------------------------------------
-
-
-  -- #eval rewrite_function_type diff
-
-
-  #eval infer_reduce 10 
-  [lessterm|
-  let y[0] : (
-    (forall (?hello β[0] -> ?world unit)) & 
-    (forall ?one β[0] -> ?two unit)
-  ) = _ in 
-  (y[0] #one ())
-  ]
-
-  #eval infer_reduce 10 
-  [lessterm|
-  let y[0] : (
-    (forall 
-      (?hello β[0] -> ?world unit) & 
-      (?one β[0] -> ?two unit)
-    )
-  ) = _ in 
-  (y[0] #one ())
-  ]
 
   -- def even_to_list := [lesstype| 
   --   ν 1 . (
@@ -2596,6 +2603,11 @@ end Nameless
   [lesstype| forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
 
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+  [lesstype| forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
   -- expected: true 
   #eval Nameless.Ty.unify_decide 10
   [lesstype| {β[0] with β[0] <: ⟨list_⟩} ]
@@ -2752,3 +2764,20 @@ end Nameless
     in
     y[0] 
   ] 
+
+---------------------------------
+  #eval Nameless.Tm.infer_reduce 1 [lessterm| 
+    let y[0] : α[0] = _ in
+    y[0] 
+  ] 
+
+  def ooga := [lesstype| 
+    induct
+      {?zero unit * β[0]} |
+      {?succ β[0] * ?succ β[1] with β[0] * β[1] <: β[2]}
+  ]
+
+  #eval Nameless.Ty.unify_reduce 10
+  [lesstype| α[0] * α[1] -> α[1] ]
+  [lesstype| α[2] * α[3] -> {β[0] with (α[2] * β[0]) * (α[3] * β[0]) <: ⟨ooga⟩ * ⟨ooga⟩} ]
+  [lesstype| ?hmm unit ]

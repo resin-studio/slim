@@ -706,41 +706,41 @@ namespace Surface
 
 
     #check List.foldrM
-    partial def to_nameless (bound_vars : List String) : Tm -> Option (List Abstraction × Nameless.Tm)
+    partial def to_nameless (type_names : List String) (bound_vars : List String) : Tm -> Option (List Abstraction × Nameless.Tm)
     | .hole => some ([], .hole) 
     | .unit => some ([], .unit)
     | .id name => do
       let idx <- bound_vars.index fun bv => name == bv 
       some ([], .bvar idx) 
     | .tag label content => do
-      let (stack', content') <- to_nameless bound_vars content
+      let (stack', content') <- to_nameless type_names bound_vars content
       some (stack', .tag label content')
     | .record fields => do 
       let (result_stack, result_fields) <- List.foldrM (fun (label, content) (stack_acc, fields_acc) => do
-        let (stack', content') <- to_nameless bound_vars content
+        let (stack', content') <- to_nameless type_names bound_vars content
         some (stack' ++ stack_acc, (label, content') :: fields_acc) 
       ) ([], []) fields
       some (result_stack, .record result_fields)
     | .func cases => do
       let (result_stack, result_cases) <- List.foldrM (fun (pattern, content) (stack_acc, cases_acc) => do
         let pattern_names <- extract_pattern_vars pattern
-        let (stack', pattern') <- to_nameless (pattern_names ++ bound_vars) pattern 
-        let (stack'', content') <- to_nameless (pattern_names ++ bound_vars) content
+        let (stack', pattern') <- to_nameless type_names (pattern_names ++ bound_vars) pattern 
+        let (stack'', content') <- to_nameless type_names (pattern_names ++ bound_vars) content
         let absstraction : Abstraction := ⟨pattern_names, {}⟩ 
         some (absstraction :: stack' ++ stack'' ++ stack_acc, (pattern', content') :: cases_acc) 
       ) ([], []) cases
       some (result_stack, .func result_cases)
     | proj target label => do
-      let (stack', target') <- to_nameless bound_vars target 
+      let (stack', target') <- to_nameless type_names bound_vars target 
       some (stack', .proj target' label)
     | .app f arg => do
-      let (stack', f') <- to_nameless bound_vars f 
-      let (stack'', arg') <- to_nameless bound_vars arg 
+      let (stack', f') <- to_nameless type_names bound_vars f 
+      let (stack'', arg') <- to_nameless type_names bound_vars arg 
       .some (stack' ++ stack'', .app f' arg')
     | .letb name ty_op arg body =>
       let names_ty_op' := (do
         let ty <- ty_op 
-        Ty.to_nameless [] [] ty
+        Ty.to_nameless type_names [] ty
       )
       let ty_op' := (do 
         let (_, ty') <- names_ty_op'
@@ -752,11 +752,11 @@ namespace Surface
       )
       let abstraction : Abstraction := ⟨[name], ty_map⟩
       do
-      let (stack', arg') <- to_nameless bound_vars arg 
-      let (stack'', body') <- to_nameless (name :: bound_vars) body 
+      let (stack', arg') <- to_nameless type_names bound_vars arg 
+      let (stack'', body') <- to_nameless type_names (name :: bound_vars) body 
       some (abstraction :: stack' ++ stack'', .letb ty_op' arg' body')
     | .fix content => do
-      let (stack', content') <- to_nameless bound_vars content
+      let (stack', content') <- to_nameless type_names bound_vars content
       some (stack', .fix content')
 
     partial def from_nameless (abstraction : Abstraction) (stack : List Abstraction) : 
@@ -820,34 +820,34 @@ namespace Surface
       let (stack, content') <- from_nameless abstraction stack content 
       some (stack, .fix content')
 
-    partial def infer_reduce (t : Surface.Tm) : Option Surface.Ty := do
-      let (_, t_nl) <- to_nameless [] t 
-      let ty_nl := Nameless.Tm.infer_reduce 0 t_nl
+    partial def infer_reduce (type_names : List String) (t : Surface.Tm) : Option Surface.Ty := do
+      let (_, t_nl) <- to_nameless type_names [] t 
+      let ty_nl := Nameless.Tm.infer_reduce (type_names.length) t_nl
       let (_, stack_nl) := Ty.extract_bound_stack 0 ty_nl
-      let (_, ty_surf) <- Surface.Ty.from_nameless [] [] stack_nl ty_nl 
+      let (_, ty_surf) <- Surface.Ty.from_nameless type_names [] stack_nl ty_nl 
       ty_surf
 
     -- debugging
-    partial def infer_reduce_debug (t : Surface.Tm) : Option (Nameless.Ty) :=  do
-      let (_, t_nl) <- to_nameless [] t 
-      let ty_nl := Nameless.Tm.infer_reduce 0 t_nl
+    partial def infer_reduce_debug (type_names : List String) (t : Surface.Tm) : Option (Nameless.Ty) :=  do
+      let (_, t_nl) <- to_nameless type_names [] t 
+      let ty_nl := Nameless.Tm.infer_reduce (type_names.length) t_nl
       ty_nl
       -- let (_, ty_surf) <- Surface.Ty.from_nameless [] [] stack_nl ty_nl 
       -- ty_surf
 
-    partial def infer_reduce_wt (t : Surface.Tm) (ty : Surface.Ty) : Option Surface.Ty := do
-      let (_, t_nl) <- to_nameless [] t 
-      let (_, ty_nl) <- Ty.to_nameless [] [] ty 
-      let ty_nl := Nameless.Tm.infer_reduce_wt 0 t_nl ty_nl
+    partial def infer_reduce_wt (type_names : List String) (t : Surface.Tm) (ty : Surface.Ty) : Option Surface.Ty := do
+      let (_, t_nl) <- to_nameless type_names [] t 
+      let (_, ty_nl) <- Ty.to_nameless type_names [] ty 
+      let ty_nl := Nameless.Tm.infer_reduce_wt type_names.length t_nl ty_nl
       let (_, stack_nl) := Ty.extract_bound_stack 0 ty_nl
-      let (_, ty_surf) <- Surface.Ty.from_nameless [] [] stack_nl ty_nl 
+      let (_, ty_surf) <- Surface.Ty.from_nameless type_names [] stack_nl ty_nl 
       ty_surf
 
   end Tm
 
 
     --------------------------------------
-  #eval Tm.infer_reduce [surfterm|
+  #eval Tm.infer_reduce [] [surfterm|
     #succ #zero ()
 
   ]
@@ -859,7 +859,7 @@ namespace Surface
   ]
   #eval nat_list
 
-  #eval Tm.infer_reduce [surfterm|
+  #eval Tm.infer_reduce [] [surfterm|
     let f : forall A -> {B with A * B <: ⟨nat_list⟩} = _ in 
     (f (#succ#zero()))
   ]
@@ -881,7 +881,7 @@ namespace Surface
     )) 
   ]
 
-  #eval Tm.infer_reduce [surfterm|
+  #eval Tm.infer_reduce [] [surfterm|
     fix(\ self => ( 
       \ (#succ x, #succ y) => (self (x, y))
       \ (#zero(), y) => y
@@ -899,13 +899,21 @@ namespace Surface
     (f (#succ#succ#zero(), #succ#zero()))
   ]
 
-  #eval Tm.infer_reduce [surfterm|
+  #eval Tm.infer_reduce [] [surfterm|
     let f = fix(\ self => ( 
       \ (#succ x, #succ y) => (self (x, y))
       \ (#zero(), y) => y
       \ (x, #zero()) => x 
     )) in 
     (f (#succ#succ#zero(), #succ#zero()))
+  ]
+
+  #eval Tm.infer_reduce [] [surfterm|
+    ((fix(\ self => ( 
+      \ (#succ x, #succ y) => (self (x, y))
+      \ (#zero(), y) => y
+      \ (x, #zero()) => x 
+    ))) (#succ#succ#zero(), #succ#zero()))
   ]
 
 
@@ -915,6 +923,7 @@ namespace Surface
 
 
 
+  -- relational unification
   def plus := [surftype| 
     induct [plus] 
       {x : ?zero unit & y : n & z : n} | 
@@ -923,6 +932,12 @@ namespace Surface
       }
   ]
 
+  -- expected:
+  /-
+  (?zero unit * ?succ ?succ ?zero unit) |
+  (?succ ?zero unit * ?succ ?zero unit) | 
+  (?succ ?succ ?zero unit * ?zero unit)
+  -/
   #eval Ty.unify_reduce [surftype|
     (
       x : X &
@@ -947,19 +962,60 @@ namespace Surface
 
   def LE := [surftype| 
     induct [LE]
-      {?zero unit * Y} |
+      {?zero unit * ⟨NAT⟩} |
       {?succ X * ?succ Y with X * Y <: LE}
   ]
 
+  #eval Tm.infer_reduce ["X", "Y"] [surfterm| 
+    let x : X = _ in
+    let y : Y = _ in
+    (x, y)
+  ] 
 
-  -- TODO: add type declaration to allow free type variables to be used across terms
-    -- requires adding type variable declaration in nameless language
-    -- e.g. let T <: ⊤ 
-    -- it is a particular type that can be specialized over time 
-    -- no notion of type constructor, so no kinds
+  -- TODO
+  -- diverges
+  -- #eval Tm.infer_reduce [] [surfterm| 
+  --   let max : (forall X * Y -> {Z with (X * Z) * (Y * Z) <: ⟨LE⟩ * ⟨LE⟩}) = 
+  --   (\ (x, y) => if #true() then y else x) in
+  --   max
+  -- ] 
+
+  ------ debugging --------------
+  -- #eval Tm.infer_reduce [] [surfterm| 
+  --   -- TODO: subtyping constraint over pair is causing divergence
+  --   -- TODO: try removing adjustments 
+  --   -- TODO: try adding restriction that RHS is not abstract; has no type variables 
+  --   let max : (forall [X, Y] X * Y -> {[Z] Z with (Z * X) <: ⟨NAT⟩ * ⟨NAT⟩}) = 
+  --   (\ (x, y) => x) in
+  --   max
+  -- ] 
+  ------------------------------- 
+
+  -- TODO: this probably passes because of adjustment
+  -- expected: fail
+  #eval Ty.unify_reduce
+  [surftype| forall X * Y -> Y ]
+  [surftype| (forall X * Y -> {Z with (X * Z) * (Y * Z) <: ⟨LE⟩ * ⟨LE⟩}) ]
+  [surftype| ?hmm unit ]
+
+  -- TODO: reproduce liquid types result saying that max(x,y) :{Z with (X * Z) : LE, (Y, Z) : LE}
+  -- diverges
+  -- #eval Tm.infer_reduce [] [surfterm| 
+  --   let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+  --     \ (#zero(), y) => #true()  
+  --     \ (#succ x, #succ y) => (self (x, y)) 
+  --     \ (#succ x, #zero()) => #false() 
+  --   in
+  --   let max : (forall X * Y -> {Z with (X * Z) * (Y * Z) <: ⟨LE⟩ * ⟨LE⟩}) = 
+  --   \ (x, y) => if (le (x, y)) then y else x in
+  --   max
+  -- ] 
+
+
+  --------------------
 
   -- expected: (?succ ?succ ?zero unit | ?succ ?zero unit)
-  #eval Tm.infer_reduce [surfterm| 
+  #eval Tm.infer_reduce [] [surfterm| 
     let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
       \ (#zero(), y) => #true()  
       \ (#succ x, #succ y) => (self (x, y)) 
@@ -971,7 +1027,7 @@ namespace Surface
   ] 
 
   -- expected: pass 
-  #eval Tm.infer_reduce [surfterm| 
+  #eval Tm.infer_reduce [] [surfterm| 
     let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
       \ (#zero(), y) => #true()  
       \ (#succ x, #succ y) => (self (x, y)) 
@@ -985,7 +1041,7 @@ namespace Surface
   --------------------------------
 
   -- expected: fail 
-  #eval Tm.infer_reduce [surfterm| 
+  #eval Tm.infer_reduce [] [surfterm| 
     let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
       \ (#zero(), y) => #true()  
       \ (#succ x, #succ y) => (self (x, y)) 
@@ -997,7 +1053,7 @@ namespace Surface
   ] 
 
   -- expected: fail 
-  #eval Tm.infer_reduce [surfterm| 
+  #eval Tm.infer_reduce [] [surfterm| 
     let le = (fix \ self => (
       \ (#zero(), y) => #true()  
       \ (#succ x, #succ y) => (self (x, y)) 
@@ -1009,7 +1065,7 @@ namespace Surface
   ] 
 
   -- expected: fail 
-  #eval Tm.infer_reduce [surfterm| 
+  #eval Tm.infer_reduce [] [surfterm| 
     let le = (fix \ self => (
       \ (#zero(), y) => #true()  
       \ (#succ x, #succ y) => (self (x, y)) 
@@ -1044,14 +1100,102 @@ namespace Surface
   [surftype| ?whoops unit ]
 
   -- expected: ⊥
-  #eval Tm.infer_reduce_wt
+  #eval Tm.infer_reduce_wt []
   [surfterm| #succ #succ #zero () ] 
   [surftype| {[X] X with (X * ?succ ?zero unit) <: ⟨LE⟩ } ] 
 
-  #eval Tm.infer_reduce_wt
+  #eval Tm.infer_reduce_wt []
   [surfterm| #succ #succ #zero () ] 
   [surftype| ?succ ?zero unit ] 
 
   ------------------------------
+
+
+
+
+
+  ---------- generics ----------------
+
+  #eval Tm.infer_reduce [] [surfterm|
+    ((\ #cons (x, y) => x) (#cons (#one (), #two ())))
+  ]
+  -- expected: ?one unit
+
+
+  #eval Tm.infer_reduce [] [surfterm|
+    let f = (\ #cons (x, y) => x) in 
+    f  
+  ]
+  -- expected: (forall (?cons (T0 * T1) -> T0))
+
+  #eval Tm.infer_reduce [] [surfterm|
+    let f : forall ?cons (X * Y) -> X = _ in
+    (f (#cons (#ooga (), #booga ())))  
+  ]
+
+  ---------- path discriminatin ----------------
+  #eval Tm.infer_reduce [] [surfterm|
+    let f = fix(\ loop => ( 
+      \ #zero () => #nil (),
+      \ #succ x => #cons (loop x)
+    )) in 
+    (f (#succ #zero ()))
+  ]
+  -- expected: ?cons ?nil unit
+
+
+  #eval Tm.infer_reduce [] [surfterm|
+    let f : (?zero unit -> ?nil unit) & (?succ ?zero unit -> ?cons ?nil unit) = _ in 
+    (f (#succ #zero ()))
+  ]
+  -- expected: ?cons ?nil unit
+
+  -- expected: some ?two unit
+  #eval Tm.infer_reduce [] 
+  [surfterm|
+  let f : (
+    (forall (?hello X -> ?world unit)) & 
+    (forall ?one X -> ?two unit)
+  ) = _ in 
+  (f #one ())
+  ]
+
+
+  ---------- adjustment ----------------
+
+  -- inferring unions (widening)
+  #eval Tm.infer_reduce [] [surfterm|
+    let f : forall X -> (X -> (X * X)) = _ in 
+    ((f #hello ()) #world ())
+  ]
+  -- expected: ((?world unit | ?hello unit) * (?world unit | ?hello unit))
+
+  -- inferring intersections (narrowing)
+  #eval Tm.infer_reduce [] [surfterm|
+  let from_uno : ?uno unit -> unit = _ in 
+  let from_dos: ?dos unit -> unit = _ in 
+  (\ x =>
+    ((from_uno x), (from_dos x)))
+  ]
+  -- expected: (?uno unit & ?dos unit -> (unit * unit))
+  -- reduces to: (⊥ -> (unit * unit))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 end Surface
