@@ -714,8 +714,8 @@ namespace Nameless
     -- | _ => none
 
     partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_complex : PHashMap (Dir × Ty) Ty)
-    (frozen : PHashMap Nat Unit):
-    Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
+    (frozen : PHashMap Nat Unit)
+    : Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
     ---------------------------------------------------------------
     -- free variables
@@ -759,6 +759,7 @@ namespace Nameless
       | some ty => 
         (unify i env_ty env_complex frozen ty' ty) 
     ----------------------------------------------------------------
+
 
     -- liberally quantified 
     | ty', .exis n ty_c1 ty_c2 ty =>
@@ -888,6 +889,7 @@ namespace Nameless
 
       (unify i env_ty env_complex frozen ty1 ty2_inter)
     )
+
 
     | .case ty1 ty2, .case ty3 ty4 =>
 
@@ -1424,7 +1426,8 @@ namespace Nameless
 
     | .fix t1 =>
 
-      let frozen := PHashMap.as_set [i, i + 1] -- ((List.range 1).map (fun j => i + j))
+      -- let frozen := PHashMap.as_set [i, i + 1] -- ((List.range 1).map (fun j => i + j))
+      let frozen := {}
       let (i, ty_prem) := (i + 1, Ty.fvar i) 
       let (i, ty_conc) := (i + 1, Ty.fvar i) 
       assume_env (infer i env_ty env_tm t1 (Ty.case ty_prem ty_conc)) (fun i (env_ty, ty1') =>
@@ -1934,7 +1937,7 @@ namespace Nameless
 
   #eval infer_reduce 0 [lessterm|
     let y[0] = fix(\ y[0] => 
-      \ #zero () => #nil (),
+      \ #zero () => #nil ()
       \ #succ y[0] => #cons (y[1] y[0])
     ) in 
     y[0]
@@ -1944,7 +1947,7 @@ namespace Nameless
   -- expected: ?cons ?nil unit
   #eval infer_reduce 10 [lessterm|
     let y[0] = fix(\ y[0] => ( 
-      \ #zero () => #nil (),
+      \ #zero () => #nil ()
       \ #succ y[0] => #cons (y[1] y[0])
     )) in 
     (y[0] (#succ #zero ()))
@@ -1952,12 +1955,23 @@ namespace Nameless
 
   #eval infer_reduce 10 [lessterm|
     (fix(\ y[0] => ( 
-      \ #zero () => #nil (),
+      \ #zero () => #nil ()
       \ #succ y[0] => #cons (y[1] y[0])
     )) 
     (#succ #zero ())
     )
   ]
+  -------------------------------
+  -- TODO: debugging
+  -------------------------------
+  #eval infer_reduce 10 [lessterm|
+    fix(\ y[0] => ( 
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[1] y[0])
+    )) 
+  ]
+  -------------------------------
+
 
 
   -- expected: ?cons ?nil unit
