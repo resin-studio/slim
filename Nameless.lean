@@ -720,46 +720,13 @@ namespace Nameless
     ---------------------------------------------------------------
     -- free variables
     ---------------------------------------------------------------
-    -- TODO: VERY IMPORTANT: find the source of circular assigments!
     | (.fvar id1), (.fvar id2) => 
       match (env_ty.find? id1, env_ty.find? id2) with 
       | (.none, .none) => 
-        ----------- non-circular --------------
-        -- this seems to prevent non-termination
-        -- overly strict
-        ------------------------------------
         if id1 == id2 then
           (i, [env_ty])
         else
-          (i, [])
-          -- let (i, ty_fresh) := (i + 1, Ty.fvar i)
-
-          -- let adjustable := frozen.find? id2 == .none
-          -- let (i, ty_union) := (
-          --   if adjustable then
-          --     (i + 1, Ty.union (Ty.fvar i) ty_fresh) 
-          --   else
-          --     (i, ty_fresh)
-          --   -------debugging
-          --   -- (i, Ty.top)
-          -- )
-          -- (i, [env_ty.insert id1 ty_fresh, env_ty.insert id2 ty_union])
-
-
-          -- (i, [env_ty.insert id1 ty_fresh, env_ty.insert id2 Ty.top])
-          -- (i, [])
-          -- (i, [env_ty.insert id1 Ty.bot, env_ty.insert id2 Ty.top])
-          -- (i, [env_ty.insert id2 Ty.top, env_ty.insert id1 (Ty.fvar id2)])
-        -------------- circular -------------------
-        -- ensure older unassigned free variables appear in simplified form
-        -------------------------------
-        -- if id1 < id2 then
-        --   (i, [env_ty.insert id2 (Ty.fvar id1)])
-        -- else if id1 > id2 then
-        --   (i, [env_ty.insert id1 (Ty.fvar id2)])
-        -- else
-        --   (i, [env_ty])
-        ----------------------------------------------
+          (i, [env_ty.insert id2 (Ty.fvar id1)])
       | (_, .some ty) => unify i env_ty env_complex frozen (.fvar id1) ty 
       | (.some ty', _) => unify i env_ty env_complex frozen ty' (.fvar id2) 
 
@@ -774,19 +741,6 @@ namespace Nameless
           (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
         else
           (i, u_env_ty)
-      -------------- alternative ---------------
-      -- match env_ty.find? id with 
-      -- | none => 
-      --   let adjustable := frozen.find? id == .none
-      --   let (i, ty_assign) := (
-      --     if adjustable then
-      --       (i + 1, Ty.inter (Ty.fvar i) ty) 
-      --     else
-      --       (i, ty)
-      --   )
-      --   (i, [env_ty.insert id (occurs_not id env_ty ty_assign)])
-      -- | some ty' => 
-      --   (unify i env_ty env_complex frozen ty' ty) 
 
     | ty', .fvar id => 
       -- adjustment here records observed types; based on unioning fresh variable
@@ -800,25 +754,10 @@ namespace Nameless
             (i + 1, Ty.union (Ty.fvar i) ty') 
           else
             (i, ty')
-          -------debugging
-          -- (i, Ty.top)
         )
         (i, [env_ty.insert id (roll_recur id env_ty ty_assign)])
       | some ty => 
         (unify i env_ty env_complex frozen ty' ty) 
-      -------- alternative ---------------------------
-      -- this also causes divergence 
-      -- adjustment updates the variable assignment to lower the upper bound 
-      ---------------------
-      -- match env_ty.find? id with 
-      -- | none => 
-      --   (i, [env_ty.insert id (roll_recur id env_ty ty')])
-      -- | some ty => 
-      --   let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
-      --   if u_env_ty.isEmpty then
-      --     (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty ty'))])
-      --   else
-      --     (i, u_env_ty)
     ----------------------------------------------------------------
 
     -- liberally quantified 
@@ -2083,10 +2022,6 @@ namespace Nameless
     (y[0] #hello ())
   ]
 
-  -- TODO:
-  -- generalzation is broken from putting subtyping problem into constraint.
-  -- restriction of wellformedness on constraints breaks the widening
-  -- widening by adding variables might be less sound than widening by substituting in union
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
     let y[0] = (y[0] #hello ()) in
@@ -2887,12 +2822,11 @@ end Nameless
 
 --------------------------------------------------------
 
-  ------ debugging --------------
+  -- expected: terminates
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
-    -- TODO: subtyping constraint over pair is causing divergence
-    -- TODO: try removing adjustments 
-    -- TODO: try adding restriction that RHS is not abstract; i.e. has no type variables 
     let y[0] : (forall [2] β[0] * β[1] -> {[1] β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩}) = 
     (\ (y[0], y[1]) => y[0]) in
     y[0]
   ] 
+
+--------------------------------------
