@@ -717,50 +717,6 @@ namespace Nameless
     (frozen : PHashMap Nat Unit)
     : Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
-    ---------------------------------------------------------------
-    -- free variables
-    ---------------------------------------------------------------
-    | (.fvar id1), (.fvar id2) => 
-      match (env_ty.find? id1, env_ty.find? id2) with 
-      | (.none, .none) => 
-        if id1 == id2 then
-          (i, [env_ty])
-        else
-          (i, [env_ty.insert id2 (Ty.fvar id1)])
-      | (_, .some ty) => unify i env_ty env_complex frozen (.fvar id1) ty 
-      | (.some ty', _) => unify i env_ty env_complex frozen ty' (.fvar id2) 
-
-    | .fvar id, ty  => 
-      -- adjustment updates the variable assignment to lower the upper bound 
-      match env_ty.find? id with 
-      | none => 
-        (i, [env_ty.insert id (occurs_not id env_ty ty)])
-      | some ty' => 
-        let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
-        if u_env_ty.isEmpty then
-          (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
-        else
-          (i, u_env_ty)
-
-    | ty', .fvar id => 
-      -- adjustment here records observed types; based on unioning fresh variable
-      -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
-      --------------------
-      match env_ty.find? id with 
-      | none => 
-        let adjustable := frozen.find? id == .none
-        let (i, ty_assign) := (
-          if adjustable then
-            (i + 1, Ty.union (Ty.fvar i) ty') 
-          else
-            (i, ty')
-        )
-        (i, [env_ty.insert id (roll_recur id env_ty ty_assign)])
-      | some ty => 
-        (unify i env_ty env_complex frozen ty' ty) 
-    ----------------------------------------------------------------
-
-
     -- liberally quantified 
     | ty', .exis n ty_c1 ty_c2 ty =>
       -- frozen prevents recording observed types
@@ -889,6 +845,51 @@ namespace Nameless
 
       (unify i env_ty env_complex frozen ty1 ty2_inter)
     )
+
+    ---------------------------------------------------------------
+    -- free variables
+    ---------------------------------------------------------------
+    | (.fvar id1), (.fvar id2) => 
+      match (env_ty.find? id1, env_ty.find? id2) with 
+      | (.none, .none) => 
+        if id1 == id2 then
+          (i, [env_ty])
+        else
+          (i, [env_ty.insert id2 (Ty.fvar id1)])
+      | (_, .some ty) => unify i env_ty env_complex frozen (.fvar id1) ty 
+      | (.some ty', _) => unify i env_ty env_complex frozen ty' (.fvar id2) 
+
+    | .fvar id, ty  => 
+      -- adjustment updates the variable assignment to lower the upper bound 
+      match env_ty.find? id with 
+      | none => 
+        (i, [env_ty.insert id (occurs_not id env_ty ty)])
+      | some ty' => 
+        let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
+        if u_env_ty.isEmpty then
+          (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
+        else
+          (i, u_env_ty)
+
+    | ty', .fvar id => 
+      -- adjustment here records observed types; based on unioning fresh variable
+      -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
+      --------------------
+      match env_ty.find? id with 
+      | none => 
+        let adjustable := frozen.find? id == .none
+        let (i, ty_assign) := (
+          if adjustable then
+            (i + 1, Ty.union (Ty.fvar i) ty') 
+          else
+            (i, ty')
+        )
+        (i, [env_ty.insert id (roll_recur id env_ty ty_assign)])
+      | some ty => 
+        (unify i env_ty env_complex frozen ty' ty) 
+    ----------------------------------------------------------------
+
+
 
 
     | .case ty1 ty2, .case ty3 ty4 =>
