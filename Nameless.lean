@@ -967,9 +967,11 @@ namespace Nameless
 
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
       let (_, u_env_ty) := (unify i {} {} {} ty1 ty2)
-      List.foldr (fun env_ty ty_acc => 
-        simplify (subst env_ty (union ty_result ty_acc))
-      ) bot u_env_ty
+      Ty.generalize i {} (
+        List.foldr (fun env_ty ty_acc => 
+          simplify (subst env_ty (union ty_result ty_acc))
+        ) bot u_env_ty
+      )
 
 
     partial def unify_simple (i : Nat) (ty1) (ty2) :=
@@ -2730,7 +2732,7 @@ end Nameless
 --------------------------------------------
 -- currently debugging
 --------------------------------------------
--- TODO: infer is fundamentally unsound; need to collapse type environment after each call to unification
+  -- expected: false
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     let y[0] : ?succ ?zero unit = 
     (
