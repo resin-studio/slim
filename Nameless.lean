@@ -51,21 +51,63 @@ namespace Nameless
   -- #check List.repr
 
   namespace Ty
-    -- TODO: use Combo to construct generic traversal/type tree walker
-    inductive Combo (α : Type)
-    | bvar : Nat -> Combo α  
-    | fvar : Nat -> Combo α
-    | unit : Combo α
-    | bot : Combo α
-    | tag : String -> α -> Combo α
-    | field : String -> α -> Combo α
-    | union : α -> α -> Combo α
-    | inter : α -> α -> Combo α
-    | case : α -> α -> Combo α
-    | exis : α -> α -> α -> Combo α
-    | univ : α -> α -> α -> Combo α
-    | recur : α -> Combo α
-    deriving Repr, Inhabited, Hashable, BEq
+
+  --   inductive Combo (α : Type)
+  --   | bvar : Nat -> Combo α  
+  --   | fvar : Nat -> Combo α
+  --   | unit : Combo α
+  --   | top : Combo α 
+  --   | bot : Combo α
+  --   | tag : String -> α -> Combo α
+  --   | field : String -> α -> Combo α
+  --   | union : α -> α -> Combo α
+  --   | inter : α -> α -> Combo α
+  --   | case : α -> α -> Combo α
+  --   | exis : Nat -> α -> α -> α -> Combo α
+  --   | univ : Nat -> α -> α -> α -> Combo α
+  --   | recur : α -> Combo α
+  --   deriving Repr, Inhabited, Hashable, BEq
+
+
+  --   def traverse (f : Combo α -> α): Ty ->  α
+  --   | bvar id => f (.bvar id)  
+  --   | fvar id => f (.fvar id)
+  --   | unit => f .unit 
+  --   | top => f .top 
+  --   | bot => f .bot 
+  --   | tag label content => f (.tag label (traverse f content))
+  --   | field label content => f (.field label (traverse f content))
+  --   | union ty1 ty2 => f (.union (traverse f ty1) (traverse f ty2))
+  --   | inter ty1 ty2 => f (.inter (traverse f ty1) (traverse f ty2))
+  --   | case ty1 ty2 => f (.case (traverse f ty1) (traverse f ty2))
+  --   | exis n ty_c1 ty_c2 ty_pl => f (.exis n (traverse f ty_c1) (traverse f ty_c2) (traverse f ty_pl))
+  --   | univ n ty_c1 ty_c2 ty_pl => f (.univ n (traverse f ty_c1) (traverse f ty_c2) (traverse f ty_pl))
+  --   | recur ty => f (.recur (traverse f ty))
+
+
+    -- def wellformed (upper : Nat):  Ty -> Bool
+    -- | .bvar id => (id < upper)
+    -- | .fvar _ => true 
+    -- | .unit => true 
+    -- | .top => true 
+    -- | .bot => true 
+    -- | .tag _ content => wellformed upper content 
+    -- | .field _ content => wellformed upper content 
+    -- | .union ty1 ty2 => 
+    --   wellformed upper ty1 && wellformed upper ty2 
+    -- | .inter ty1 ty2 => 
+    --   wellformed upper ty1 && wellformed upper ty2 
+    -- | .case ty1 ty2 => 
+    --   wellformed upper ty1 && wellformed upper ty2 
+    -- | .exis n ty_c1 ty_c2 ty_pl => 
+    --   wellformed (upper + n) ty_c1 && 
+    --   wellformed (upper + n) ty_c2 &&
+    --   wellformed (upper + n) ty_pl 
+    -- | .univ n ty_c1 ty_c2 ty_pl => 
+    --   wellformed (upper + n) ty_c1 && 
+    --   wellformed (upper + n) ty_c2 &&
+    --   wellformed (upper + n) ty_pl 
+    -- | .recur ty => wellformed (upper + 1) ty 
 
     def infer_abstraction (start : Nat) : Ty -> Nat
     | .bvar idx => (idx + 1) - start
@@ -89,17 +131,17 @@ namespace Nameless
       let n1 := infer_abstraction start ty1 
       let n2 := infer_abstraction start ty2
       if n1 > n2 then n1 else n2 
-    | exis n ty_c1 ty_c2 ty_pl =>
+    | .exis n ty_c1 ty_c2 ty_pl =>
       let n_c1 := infer_abstraction (start + n) ty_c1 
       let n_c2 := infer_abstraction (start + n) ty_c2
       let n_pl := infer_abstraction (start + n) ty_pl  
       Nat.max (Nat.max n_c1 n_c2) n_pl
-    | univ n ty_c1 ty_c2 ty_pl =>
+    | .univ n ty_c1 ty_c2 ty_pl =>
       let n_c1 := infer_abstraction (start + n) ty_c1 
       let n_c2 := infer_abstraction (start + n) ty_c2
       let n_pl := infer_abstraction (start + n) ty_pl  
       Nat.max (Nat.max n_c1 n_c2) n_pl
-    | recur content =>
+    | .recur content =>
       infer_abstraction (start + 1) content 
 
 
@@ -202,7 +244,7 @@ namespace Nameless
         (Format.joinSep tys (" |" ++ Format.line))
       ")"
   
-    | .inter (field "l" l) (field "r" r) =>
+    | .inter (.field "l" l) (.field "r" r) =>
       Format.bracket "(" ((repr l n) ++ " * " ++ (repr r n)) ")"
     | .inter ty1 ty2 =>
       Format.bracket "(" ((repr ty1 n) ++ " & " ++ (repr ty2 n)) ")"
@@ -263,14 +305,14 @@ namespace Nameless
 
     -- assume assoc right
     def inter_contains : Ty -> Ty -> Bool 
-    | ty1, inter ty21 ty22 => 
+    | ty1, .inter ty21 ty22 => 
       inter_contains ty1 ty21 ||
       inter_contains ty1 ty22
     | ty1, ty2 => ty1 == ty2
 
     -- make assoc right
     partial def intersect : Ty -> Ty -> Ty
-    | [lesstype| ⊤ ], ty2 => ty2 
+    | .top, ty2 => ty2 
     | .unit, .tag _ _ => Ty.bot 
     | .tag _ _, .unit  => Ty.bot 
     | .tag l1 ty1, .tag l2 ty2  => 
@@ -288,57 +330,53 @@ namespace Nameless
         (intersect (.tag l1 ty1) ty21) 
         (intersect (.tag l1 ty1) ty22)
 
-    | bot, ty2 => bot 
-    | inter ty11 ty12, ty2 => intersect ty11 (intersect ty12 ty2) 
-    | ty1, [lesstype| ⊤ ] => ty1 
-    | ty1, bot => bot 
+    | .bot, _ => .bot 
+    | .inter ty11 ty12, ty2 => intersect ty11 (intersect ty12 ty2) 
+    | ty1, .top => ty1 
+    | _, .bot => .bot 
     | ty1, ty2 => 
         if inter_contains ty1 ty2 then
           ty2
         else
-          inter ty1 ty2
+          .inter ty1 ty2
 
 
     -- assume assoc right
     def union_contains : Ty -> Ty -> Bool 
-    | ty1, union ty21 ty22 => 
+    | ty1, .union ty21 ty22 => 
       union_contains ty1 ty21 ||
       union_contains ty1 ty22
     | ty1, ty2 => ty1 == ty2
 
     -- make assoc right
     def unionize : Ty -> Ty -> Ty
-    | top, ty2 => top
-    | bot, ty2 => ty2
-    | union ty11 ty12, ty2 => unionize ty11 (unionize ty12 ty2) 
-    | ty1, top => top 
-    | ty1, bot => ty1
+    | .top, _ => .top
+    | .bot, ty2 => ty2
+    | .union ty11 ty12, ty2 => unionize ty11 (unionize ty12 ty2) 
+    | _, .top => .top 
+    | ty1, .bot => ty1
     | ty1, ty2 => 
         if union_contains ty1 ty2 then
           ty2
         else
-          union ty1 ty2
+          .union ty1 ty2
 
     partial def simplify : Ty -> Ty
-    | .bvar id => bvar id  
-    | .fvar id => fvar id
+    | .bvar id => .bvar id  
+    | .fvar id => .fvar id
     | .unit => .unit 
     | .top => .top
     | .bot => .bot 
-    | .tag l ty => tag l (simplify ty) 
-    | .field l ty => field l (simplify ty) 
+    | .tag l ty => .tag l (simplify ty) 
+    | .field l ty => .field l (simplify ty) 
     | .union ty1 ty2 => unionize (simplify ty1) (simplify ty2)
     | .inter ty1 ty2 => intersect (simplify ty1) (simplify ty2)
-    | .case ty1 ty2 => case (simplify ty1) (simplify ty2)
+    | .case ty1 ty2 => .case (simplify ty1) (simplify ty2)
     | .exis n cty1 cty2 ty => 
-        exis n 
-          (simplify cty1) (simplify cty2)
-          (simplify ty)
+      .exis n (simplify cty1) (simplify cty2) (simplify ty)
     | .univ n cty1 cty2 ty => 
-        univ n 
-          (simplify cty1) (simplify cty2)
-          (simplify ty)
-    | .recur ty => recur (simplify ty)
+      .univ n (simplify cty1) (simplify cty2) (simplify ty)
+    | .recur ty => .recur (simplify ty)
 
 
     def reduce (env_ty : PHashMap Nat Ty) (ty : Ty) :=
@@ -422,7 +460,7 @@ namespace Nameless
       let fvs := (free_vars ty).toList
       List.bind fvs (fun (key, _) =>
         match env_ty.find? (key) with
-        | some ty' => (fvar key, ty') :: (reachable_constraints env_ty ty')
+        | some ty' => (.fvar key, ty') :: (reachable_constraints env_ty ty')
         | none => [] -- TODO: what if the key is inside a record?
       )
 
@@ -447,7 +485,7 @@ namespace Nameless
         let env_sub := PHashMap.from_list (
           fids.map (fun fid => (fid, Ty.bot))
         )
-        Ty.simplify (Ty.subst env_sub ty)
+        simplify (subst env_sub ty)
       else
         [lesstype|
           forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
@@ -495,36 +533,36 @@ namespace Nameless
 
     partial def occurs_not (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
       if (free_vars_env m ty).contains key then
-        bot
+        .bot
       else
         ty
 
 
     partial def subst_default (sign : Bool) : Ty -> Ty
-    | .bvar id => bvar id  
-    | .fvar id => if sign then bot else [lesstype| ⊤ ] 
+    | .bvar id => .bvar id  
+    | .fvar id => if sign then .bot else [lesstype| ⊤ ] 
     | .unit => .unit 
     | .top => .top
     | .bot => .bot 
-    | .tag l ty => tag l (subst_default sign ty) 
-    | .field l ty => field l (subst_default sign ty) 
+    | .tag l ty => .tag l (subst_default sign ty) 
+    | .field l ty => .field l (subst_default sign ty) 
     | .union ty1 ty2 =>
-      union (subst_default sign ty1) (subst_default sign ty2)
+      .union (subst_default sign ty1) (subst_default sign ty2)
     | .inter ty1 ty2 =>
-      inter (subst_default sign ty1) (subst_default sign ty2)
-    | .case ty1 ty2 => case (subst_default (!sign) ty1) (subst_default sign ty2)
+      .inter (subst_default sign ty1) (subst_default sign ty2)
+    | .case ty1 ty2 => .case (subst_default (!sign) ty1) (subst_default sign ty2)
     | .exis n cty1 cty2 ty => 
-        -- can't sub away if constrained
-        exis n cty1 cty2 ty
+      -- can't sub away if constrained
+      .exis n cty1 cty2 ty
     | .univ n cty1 cty2 ty => 
-        -- can't sub away if constrained
-        univ n cty1 cty2 ty
-    | .recur ty => recur (subst_default sign ty)
+      -- can't sub away if constrained
+      .univ n cty1 cty2 ty
+    | .recur ty => .recur (subst_default sign ty)
 
 
     partial def equal (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
-      let ty1 := simplify (Ty.subst env_ty ty1)
-      let ty2 := simplify (Ty.subst env_ty ty2)
+      let ty1 := simplify (subst env_ty ty1)
+      let ty2 := simplify (subst env_ty ty2)
       ty1 == ty2
 
     def split_intersectionss : Ty -> List Ty 
@@ -582,16 +620,16 @@ namespace Nameless
     | .top => true 
     | .bot => true 
     | .tag _ _ => true 
-    | .field _ ty => Ty.wellfounded n ty
+    | .field _ ty => wellfounded n ty
     | .union ty1 ty2 =>
-      Ty.wellfounded n ty1 && Ty.wellfounded n ty2
+      wellfounded n ty1 && wellfounded n ty2
     | .inter ty1 ty2 =>
-      match (extract_nested_fields (inter ty1 ty2)) with
+      match (extract_nested_fields (.inter ty1 ty2)) with
       | [] => false
-      | fields => fields.any (fun ty' => Ty.wellfounded n ty')
+      | fields => fields.any (fun ty' => wellfounded n ty')
     | .case _ _ => false
     | .exis n' ty_c1 ty_c2 ty' => 
-      Ty.wellfounded (n + n') ty'
+      wellfounded (n + n') ty'
     | .univ _ _ _ _ => false 
     | .recur _ => false 
 
@@ -686,13 +724,42 @@ namespace Nameless
     | (.fvar id1), (.fvar id2) => 
       match (env_ty.find? id1, env_ty.find? id2) with 
       | (.none, .none) => 
-        -- ensure older unassigned free variables appear in simplified form
-        if id1 < id2 then
-          (i, [env_ty.insert id2 (Ty.fvar id1)])
-        else if id1 > id2 then
-          (i, [env_ty.insert id1 (Ty.fvar id2)])
-        else
+        ----------- non-circular --------------
+        -- this seems to prevent non-termination
+        -- overly strict
+        ------------------------------------
+        if id1 == id2 then
           (i, [env_ty])
+        else
+          (i, [])
+          -- let (i, ty_fresh) := (i + 1, Ty.fvar i)
+
+          -- let adjustable := frozen.find? id2 == .none
+          -- let (i, ty_union) := (
+          --   if adjustable then
+          --     (i + 1, Ty.union (Ty.fvar i) ty_fresh) 
+          --   else
+          --     (i, ty_fresh)
+          --   -------debugging
+          --   -- (i, Ty.top)
+          -- )
+          -- (i, [env_ty.insert id1 ty_fresh, env_ty.insert id2 ty_union])
+
+
+          -- (i, [env_ty.insert id1 ty_fresh, env_ty.insert id2 Ty.top])
+          -- (i, [])
+          -- (i, [env_ty.insert id1 Ty.bot, env_ty.insert id2 Ty.top])
+          -- (i, [env_ty.insert id2 Ty.top, env_ty.insert id1 (Ty.fvar id2)])
+        -------------- circular -------------------
+        -- ensure older unassigned free variables appear in simplified form
+        -------------------------------
+        -- if id1 < id2 then
+        --   (i, [env_ty.insert id2 (Ty.fvar id1)])
+        -- else if id1 > id2 then
+        --   (i, [env_ty.insert id1 (Ty.fvar id2)])
+        -- else
+        --   (i, [env_ty])
+        ----------------------------------------------
       | (_, .some ty) => unify i env_ty env_complex frozen (.fvar id1) ty 
       | (.some ty', _) => unify i env_ty env_complex frozen ty' (.fvar id2) 
 
@@ -707,10 +774,24 @@ namespace Nameless
           (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
         else
           (i, u_env_ty)
+      -------------- alternative ---------------
+      -- match env_ty.find? id with 
+      -- | none => 
+      --   let adjustable := frozen.find? id == .none
+      --   let (i, ty_assign) := (
+      --     if adjustable then
+      --       (i + 1, Ty.inter (Ty.fvar i) ty) 
+      --     else
+      --       (i, ty)
+      --   )
+      --   (i, [env_ty.insert id (occurs_not id env_ty ty_assign)])
+      -- | some ty' => 
+      --   (unify i env_ty env_complex frozen ty' ty) 
 
     | ty', .fvar id => 
       -- adjustment here records observed types; based on unioning fresh variable
       -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
+      --------------------
       match env_ty.find? id with 
       | none => 
         let adjustable := frozen.find? id == .none
@@ -719,25 +800,39 @@ namespace Nameless
             (i + 1, Ty.union (Ty.fvar i) ty') 
           else
             (i, ty')
+          -------debugging
+          -- (i, Ty.top)
         )
         (i, [env_ty.insert id (roll_recur id env_ty ty_assign)])
       | some ty => 
         (unify i env_ty env_complex frozen ty' ty) 
+      -------- alternative ---------------------------
+      -- this also causes divergence 
+      -- adjustment updates the variable assignment to lower the upper bound 
+      ---------------------
+      -- match env_ty.find? id with 
+      -- | none => 
+      --   (i, [env_ty.insert id (roll_recur id env_ty ty')])
+      -- | some ty => 
+      --   let (i, u_env_ty) := (unify i env_ty env_complex frozen ty' ty)
+      --   if u_env_ty.isEmpty then
+      --     (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty ty'))])
+      --   else
+      --     (i, u_env_ty)
     ----------------------------------------------------------------
-
 
     -- liberally quantified 
     | ty', .exis n ty_c1 ty_c2 ty =>
       -- frozen prevents recording observed types
       let (i, args, frozen) := (
         i + n, 
-        (List.range n).map (fun j => .fvar (i + j)),
+        (List.range n).map (fun j => Ty.fvar (i + j)),
         PHashMap.insert_all frozen (PHashMap.from_list ((List.range n).map (fun j => (i + j, .unit))))
       )
 
-      let ty_c1 := Ty.instantiate 0 args ty_c1
-      let ty_c2 := Ty.instantiate 0 args ty_c2
-      let ty := Ty.instantiate 0 args ty
+      let ty_c1 := instantiate 0 args ty_c1
+      let ty_c2 := instantiate 0 args ty_c2
+      let ty := instantiate 0 args ty
       assume_env (unify i env_ty env_complex frozen ty' ty) (fun i env_ty => 
         unify i env_ty env_complex frozen ty_c1 ty_c2
       )
@@ -750,9 +845,9 @@ namespace Nameless
       let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
 
       let args := ids.map (fun id => Ty.fvar id)
-      let ty_c1 := Ty.instantiate 0 args ty_c1
-      let ty_c2 := Ty.instantiate 0 args ty_c2
-      let ty1 := Ty.instantiate 0 args ty1
+      let ty_c1 := instantiate 0 args ty_c1
+      let ty_c2 := instantiate 0 args ty_c2
+      let ty1 := instantiate 0 args ty1
 
       let op_fields := linearize_fields ty_c1
 
@@ -767,7 +862,7 @@ namespace Nameless
             let rlabels := extract_record_labels (ty_c2) 
             rlabels.contains l 
           )
-          let unmatchable := !(matchable (extract_nested_fields (Ty.simplify (Ty.subst env_ty ty_c1))))
+          let unmatchable := !(matchable (extract_nested_fields (simplify (subst env_ty ty_c1))))
           if is_recur_type && unmatchable  then 
             if is_consistent_variable_record then
               let ty_norm := ty_c1 
@@ -786,29 +881,28 @@ namespace Nameless
           not (is_bound_var key) || (locally_constrained key)
         )
         if is_result_safe then
-          (simplify (subst env_ty (union ty1 ty_acc)))
+          (simplify (subst env_ty (.union ty1 ty_acc)))
         else
           Ty.top
       ) Ty.bot contexts 
 
       (unify i env_ty env_complex frozen ty1_unioned ty2) 
-    )
-
+    ) 
 
 
     -- liberally quantified universal 
-    | .univ n ty_c1 ty_c2 ty1, ty2 => 
+    | .univ n ty_c1 ty_c2 ty1, ty2 =>
       let bound_start := i
       let (i, args) := (
         i + n, 
-        (List.range n).map (fun j => .fvar (i + j))
+        (List.range n).map (fun j => Ty.fvar (i + j))
       )
 
       let bound_indicies := (List.range n).map (fun j => bound_start + j)
 
-      let ty_c1 := Ty.instantiate 0 args ty_c1
-      let ty_c2 := Ty.instantiate 0 args ty_c2
-      let ty1 := Ty.instantiate 0 args ty1
+      let ty_c1 := instantiate 0 args ty_c1
+      let ty_c2 := instantiate 0 args ty_c2
+      let ty1 := instantiate 0 args ty1
 
       assume_env (unify i env_ty env_complex frozen ty_c1 ty_c2) (fun i env_ty => 
         -- prevent narrowing by substituting away variable 
@@ -819,8 +913,8 @@ namespace Nameless
           | none => []
           )
         ) 
-        let ty1 := (Ty.simplify (Ty.subst env_sub ty1))
-        let ty2 := (Ty.simplify (Ty.subst env_sub ty2))
+        let ty1 := (simplify (subst env_sub ty1))
+        let ty2 := (simplify (subst env_sub ty2))
         (unify i env_ty env_complex frozen ty1 ty2)
       )
 
@@ -832,9 +926,9 @@ namespace Nameless
       let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
 
       let args := ids.map (fun id => Ty.fvar id)
-      let ty_c1 := Ty.instantiate 0 args ty_c1
-      let ty_c2 := Ty.instantiate 0 args ty_c2
-      let ty2 := Ty.instantiate 0 args ty2
+      let ty_c1 := instantiate 0 args ty_c1
+      let ty_c2 := instantiate 0 args ty_c2
+      let ty2 := instantiate 0 args ty2
 
       let ((i, contexts), env_complex) := ( 
           (unify i (env_ty) env_complex frozen ty_c1 ty_c2, env_complex)
@@ -848,14 +942,13 @@ namespace Nameless
           not (is_bound_var key) || (locally_constrained key)
         )
         if is_result_safe then
-          (simplify (subst env_ty (inter ty2 ty_acc)))
+          (simplify (subst env_ty (.inter ty2 ty_acc)))
         else
           Ty.bot
       ) Ty.top contexts 
 
       (unify i env_ty env_complex frozen ty1 ty2_inter)
     )
-
 
     | .case ty1 ty2, .case ty3 ty4 =>
 
@@ -887,26 +980,26 @@ namespace Nameless
 
 
     | .recur ty1, ty2 =>
-      if Ty.equal env_ty (.recur ty1) ty2 then
+      if equal env_ty (.recur ty1) ty2 then
         (i, [env_ty])
       else
         -- using induction hypothesis, ty1 ≤ ty2; safely unroll
-        let ty1' := Ty.instantiate 0 [ty2] ty1
+        let ty1' := instantiate 0 [ty2] ty1
         unify i env_ty env_complex frozen ty1' ty2
 
     | ty', .recur ty =>
-      let ty' := (Ty.simplify (Ty.subst env_ty ty'))
+      let ty' := (simplify (subst env_ty ty'))
       match (extract_nested_fields ty') with
       | [] => 
-        if Ty.wellfounded 1 ty then
-          unify i env_ty env_complex frozen ty' (Ty.instantiate 0 [Ty.recur ty] ty) 
+        if wellfounded 1 ty then
+          unify i env_ty env_complex frozen ty' (instantiate 0 [Ty.recur ty] ty) 
 
         else
           (i, []) 
       | fields =>
         if matchable fields then 
-          if Ty.wellfounded 1 ty then
-            unify i env_ty env_complex frozen ty' (Ty.instantiate 0 [Ty.recur ty] ty)
+          if wellfounded 1 ty then
+            unify i env_ty env_complex frozen ty' (instantiate 0 [Ty.recur ty] ty)
           else
             (i, []) 
         else
@@ -948,29 +1041,29 @@ namespace Nameless
           ts
         match union_all ts with
           | .none => .some t
-          | .some t' => union t t'
+          | .some t' => Ty.union t t'
 
 
     partial def unify_reduce_env (i : Nat) (env_ty : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
       let (_, u_env_ty) := (unify i env_ty {} {} ty1 ty2)
       List.foldr (fun env_ty ty_acc => 
-        simplify (subst env_ty (union ty_result ty_acc))
-      ) bot u_env_ty
+        simplify (subst env_ty (Ty.union ty_result ty_acc))
+      ) Ty.bot u_env_ty
 
       
     partial def unify_reduce_env_frozen (i : Nat) (env_ty : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
       let frozen := env_ty.map (fun _ => Unit.unit)
       let (_, u_env_ty) := (unify i env_ty {} frozen ty1 ty2)
       List.foldr (fun env_ty ty_acc => 
-        simplify (subst env_ty (union ty_result ty_acc))
-      ) bot u_env_ty
+        simplify (subst env_ty (Ty.union ty_result ty_acc))
+      ) Ty.bot u_env_ty
 
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
       let (_, u_env_ty) := (unify i {} {} {} ty1 ty2)
-      Ty.generalize i {} (
+      generalize i {} (
         List.foldr (fun env_ty ty_acc => 
-          simplify (subst env_ty (union ty_result ty_acc))
-        ) bot u_env_ty
+          simplify (subst env_ty (Ty.union ty_result ty_acc))
+        ) Ty.bot u_env_ty
       )
 
 
@@ -986,7 +1079,7 @@ namespace Nameless
       (i, u_env_ty.map fun env_ty => (env_ty, ty))
 
     def to_pair_type : Ty -> Ty 
-    | case ty1 ty2 => 
+    | .case ty1 ty2 => 
       [lesstype| ⟨ty1⟩ * ⟨ty2⟩ ] 
     | [lesstype| ⊤ ] =>  [lesstype| ⊥ ]
     | _ =>  [lesstype| ⊤ ]
@@ -1979,12 +2072,6 @@ namespace Nameless
 
   ---------- adjustment ----------------
 
-  -- debugging 
-  #eval infer_reduce 0 [lessterm|
-    let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
-    ((y[0] #hello ()) #world ())
-  ]
-
   -- widening
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
@@ -1996,6 +2083,10 @@ namespace Nameless
     (y[0] #hello ())
   ]
 
+  -- TODO:
+  -- generalzation is broken from putting subtyping problem into constraint.
+  -- restriction of wellformedness on constraints breaks the widening
+  -- widening by adding variables might be less sound than widening by substituting in union
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
     let y[0] = (y[0] #hello ()) in
@@ -2008,6 +2099,17 @@ namespace Nameless
   let y[0] : ?dos unit -> unit = _ in 
   (\ y[0] =>
     (y[2] y[0]))
+  ]
+
+  #eval infer_reduce 0 [lessterm|
+  let y[0] : ?uno unit -> unit = _ in 
+  let y[0] : ?dos unit -> unit = _ in 
+  ((\ y[0] => (y[2] y[0])) #uno())
+  ]
+
+  #eval infer_reduce 0 [lessterm|
+  let y[0] : ?uno unit -> unit = _ in 
+  (y[0] #uno())
   ]
 
   #eval infer_reduce 0 [lessterm|
@@ -2778,6 +2880,19 @@ end Nameless
   ]
 
   #eval Nameless.Ty.unify_reduce 10
-  [lesstype| α[0] * α[1] -> α[1] ]
   [lesstype| α[2] * α[3] -> {β[0] with (α[2] * β[0]) * (α[3] * β[0]) <: ⟨ooga⟩ * ⟨ooga⟩} ]
+  [lesstype| α[0] * α[1] -> α[1] ]
   [lesstype| ?hmm unit ]
+
+
+--------------------------------------------------------
+
+  ------ debugging --------------
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    -- TODO: subtyping constraint over pair is causing divergence
+    -- TODO: try removing adjustments 
+    -- TODO: try adding restriction that RHS is not abstract; i.e. has no type variables 
+    let y[0] : (forall [2] β[0] * β[1] -> {[1] β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩}) = 
+    (\ (y[0], y[1]) => y[0]) in
+    y[0]
+  ] 
