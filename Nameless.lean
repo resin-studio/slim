@@ -1907,80 +1907,14 @@ namespace Nameless
     #succ #zero ()
   ]
 
-  -- expected: ?cons ?nil unit
-  #eval infer_reduce 0 [lessterm|
-    let y[0] : forall β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
-    (y[0] (#succ #zero ()))
-  ]
-
-
-
-  #eval[lessterm|
-    \ y[0] => 
-      \ #zero () => #nil ()
-      \ #succ y[0] => #cons (y[1] y[0])
-  ]
-
-  #eval[lessterm|
-    \ y[0] => (
-      \ #zero () => #nil ()
-      \ #succ y[0] => #cons (y[1] y[0])
-    )
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-    fix(\ y[0] => (
-    \ #zero () => #nil ()
-    \ #succ y[0] => #cons (y[1] y[0])
-    )
-    )
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-    let y[0] = fix(\ y[0] => 
-      \ #zero () => #nil ()
-      \ #succ y[0] => #cons (y[1] y[0])
-    ) in 
-    y[0]
-  ]
 
   -- path discrimination
-  -- expected: ?cons ?nil unit
-  #eval infer_reduce 10 [lessterm|
-    let y[0] = fix(\ y[0] => ( 
-      \ #zero () => #nil ()
-      \ #succ y[0] => #cons (y[1] y[0])
-    )) in 
-    (y[0] (#succ #zero ()))
-  ]
-
-  #eval infer_reduce 10 [lessterm|
-    (fix(\ y[0] => ( 
-      \ #zero () => #nil ()
-      \ #succ y[0] => #cons (y[1] y[0])
-    )) 
-    (#succ #zero ())
-    )
-  ]
-  -------------------------------
-  -- TODO: debugging
-  -------------------------------
-  #eval infer_reduce 10 [lessterm|
-    fix(\ y[0] => ( 
-      \ #zero () => #nil ()
-      \ #succ y[0] => #cons (y[1] y[0])
-    )) 
-  ]
-  -------------------------------
-
-
 
   -- expected: ?cons ?nil unit
   #eval infer_reduce 0 [lessterm|
     let y[0] : (?zero unit -> ?nil unit) & (?succ ?zero unit -> ?cons ?nil unit) = _ in 
     (y[0] (#succ #zero ()))
   ]
-
 
   #eval infer_reduce 10 
   [lessterm|
@@ -2001,6 +1935,87 @@ namespace Nameless
   ) = _ in 
   (y[0] #one ())
   ]
+
+  -- TODO
+  -- expected: ?cons ?nil unit
+  #eval infer_reduce 0 [lessterm|
+    let y[0] : forall β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
+    (y[0] (#succ #zero ()))
+  ]
+
+---------------------------------------------------------------
+  --------- fix type inference -----------
+
+  ------------------
+  -- debugging
+  -- TODO
+  -- reconsider how to break conclusion type into separate arrow cases 
+  -------------
+  #eval infer_reduce 0 [lessterm|
+    fix(\ y[0] => (
+    \ #zero () => #nil ()
+    \ #succ y[0] => #cons (y[1] y[0])
+    ))
+  ]
+
+  #eval infer_reduce 0 [lessterm|
+    let y[0] = fix(\ y[0] => 
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[1] y[0])
+    ) in 
+    y[0]
+  ]
+
+  -- expected: ?cons ?nil unit
+  #eval infer_reduce 10 [lessterm|
+    let y[0] = fix(\ y[0] => ( 
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[1] y[0])
+    )) in 
+    (y[0] (#succ #zero ()))
+  ]
+
+  #eval infer_reduce 10 [lessterm|
+    (fix(\ y[0] => ( 
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[1] y[0])
+    )) 
+    (#succ #zero ())
+    )
+  ]
+
+  -------------------------------
+
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+      (fix (\ y[0] => (
+        \ (#zero(), y[0]) => #true()  
+        \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+        \ (#succ y[0], #zero()) => #false() 
+      )))
+  ] 
+--------------------------------------------
+-- currently debugging
+--------------------------------------------
+  -- expected: false
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    let y[0] : ?succ ?zero unit = 
+    (
+      (\ (y[0], y[1]) => (
+        (
+          (\ #true() => y[1] \ #false() => y[0]))
+          ((
+            \ (#zero(), y[0]) => #true()  
+            \ (#succ y[0], #succ y[1]) => #false()
+            \ (#succ y[0], #zero()) => #false() 
+          )
+          (y[0], y[1])) 
+        )
+      )
+      ((#succ #succ #zero()), #succ #zero())
+    ) 
+    in
+    y[0] 
+  ] 
 
 
   ---------- generics ----------------
@@ -2786,36 +2801,6 @@ end Nameless
   [lesstype| ?one unit  ]
   [lesstype| (?one unit | ?two unit) * (?three unit | ?four unit) ]
 
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
-      (fix (\ y[0] => (
-        \ (#zero(), y[0]) => #true()  
-        \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-        \ (#succ y[0], #zero()) => #false() 
-      )))
-  ] 
---------------------------------------------
--- currently debugging
---------------------------------------------
-  -- expected: false
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
-    let y[0] : ?succ ?zero unit = 
-    (
-      (\ (y[0], y[1]) => (
-        (
-          (\ #true() => y[1] \ #false() => y[0]))
-          ((
-            \ (#zero(), y[0]) => #true()  
-            \ (#succ y[0], #succ y[1]) => #false()
-            \ (#succ y[0], #zero()) => #false() 
-          )
-          (y[0], y[1])) 
-        )
-      )
-      ((#succ #succ #zero()), #succ #zero())
-    ) 
-    in
-    y[0] 
-  ] 
 
 ---------------------------------
   #eval Nameless.Tm.infer_reduce 1 [lessterm| 
