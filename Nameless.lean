@@ -468,6 +468,31 @@ namespace Nameless
     | [] => .unit 
     | ty :: tys => [lesstype| ⟨ty⟩ * ⟨nested_pairs tys⟩ ]
 
+    def no_function_types: Ty -> Bool
+    | .bvar _ => true  
+    | .fvar _ => true  
+    | .unit => true 
+    | .top => true 
+    | .bot => true 
+    | .tag _ content => no_function_types content
+    | .field _ content => no_function_types content
+    | .union ty1 ty2 => 
+      no_function_types ty1 && 
+      no_function_types ty2
+    | .inter ty1 ty2 => 
+      no_function_types ty1 && 
+      no_function_types ty2
+    | .case _ _ => false
+    | .exis n ty_c1 ty_c2 ty_pl =>
+      no_function_types ty_c1 && 
+      no_function_types ty_c2 && 
+      no_function_types ty_pl
+    | .univ n ty_c1 ty_c2 ty_pl =>
+      no_function_types ty_c1 && 
+      no_function_types ty_c2 && 
+      no_function_types ty_pl
+    | .recur content => no_function_types content 
+
     def generalize (boundary : Nat) (env_ty : PHashMap Nat Ty) (ty : Ty) : Ty := 
       -- avoids substitution, as type variable determines type adjustment
       -- boundary prevents overgeneralizing
@@ -479,39 +504,16 @@ namespace Nameless
       let fids := List.filter (fun id => id >= boundary) (
           (free_vars ty; free_vars ty_lhs ; free_vars ty_rhs).toList.bind (fun (k , _) => [k])
       )
-      if fids.isEmpty then
-        ty
-      ------------------------------------------------------
-      -- this case is too restrictive; defeats the point of generalizaiton
-      ------------------------------------------------------
-      -- else if ty_lhs == Ty.unit && ty_rhs == Ty.unit then 
-      --     let env_sub := PHashMap.from_list (
-      --       fids.map (fun fid => (fid, Ty.bot))
-      --     )
-      --     simplify (subst env_sub ty)
-      ------------------------------------------------------
-      -- non-termination caused by generalization
-      ------------------------------------------------------
-      -- else if ty_lhs == Ty.unit && ty_rhs == Ty.unit then 
-      --   let neg_set := (Ty.signed_free_vars false ty)
-      --   if neg_set.isEmpty then
-      --     let env_sub := PHashMap.from_list (
-      --       fids.map (fun fid => (fid, Ty.bot))
-      --     )
-      --     simplify (subst env_sub ty)
-      --   else
-      --     let env_sub := PHashMap.from_list (
-      --       List.bind fids (fun fid =>
-      --         match neg_set.find? fid with 
-      --         | some _ => []
-      --         | none => [(fid, Ty.bot)]
-      --       )
-      --     )
-      --     let neg_list := neg_set.toList.map (fun (k, _) => k)
-      --     [lesstype|
-      --       forall [⟨neg_set.size⟩] ⟨abstract neg_list 0 (simplify (subst env_sub ty))⟩
-      --     ]
-      ------------------------------------------------------
+
+      let ty_subbed := simplify (subst env_ty ty)
+
+      if no_function_types ty_subbed then
+        let env_sub := PHashMap.from_list (
+          fids.map (fun fid => (fid, Ty.bot))
+        )
+        simplify (subst env_sub ty_subbed)
+      else if fids.isEmpty then
+          ty
       else
         [lesstype|
           forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
