@@ -745,7 +745,7 @@ namespace Nameless
     (expandable : PHashMap Nat Unit)
     : Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
-    -- liberally quantified 
+    -- existential quantifier elimination 
     | ty', .exis n ty_c1 ty_c2 ty =>
       let (i, args) := (
         i + n, 
@@ -755,11 +755,14 @@ namespace Nameless
       let ty_c1 := instantiate 0 args ty_c1
       let ty_c2 := instantiate 0 args ty_c2
       let ty := instantiate 0 args ty
+
+      -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       assume_env (unify i env_ty env_complex expandable ty' ty) (fun i env_ty => 
         unify i env_ty env_complex expandable ty_c1 ty_c2
       )
 
-    -- opaquely quantified 
+
+    -- existential quantifier introduction 
     | .exis n ty_c1 ty_c2 ty1, ty2 => (
       let bound_start := i
       let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
@@ -812,9 +815,8 @@ namespace Nameless
     ) 
 
 
-    -- liberally quantified universal 
+    -- universal quantifier elimination 
     | .univ n ty_c1 ty_c2 ty1, ty2 =>
-      let bound_start := i
       let (i, args, expandable) := (
         i + n, 
         (List.range n).map (fun j => Ty.fvar (i + j)),
@@ -824,27 +826,16 @@ namespace Nameless
           expandable
       )
 
-      let bound_indicies := (List.range n).map (fun j => bound_start + j)
-
       let ty_c1 := instantiate 0 args ty_c1
       let ty_c2 := instantiate 0 args ty_c2
       let ty1 := instantiate 0 args ty1
 
-      assume_env (unify i env_ty env_complex expandable ty_c1 ty_c2) (fun i env_ty => 
-        -- prevent narrowing by substituting away variable 
-        let env_sub := PHashMap.from_list (
-          bound_indicies.bind (fun bid => 
-          match env_ty.find? bid with
-          | some ty_b => [(bid, ty_b)]
-          | none => []
-          )
-        ) 
-        let ty1 := (simplify (subst env_sub ty1))
-        let ty2 := (simplify (subst env_sub ty2))
-        (unify i env_ty env_complex expandable ty1 ty2)
+      -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
+      assume_env (unify i env_ty env_complex expandable ty1 ty2) (fun i env_ty => 
+        (unify i env_ty env_complex expandable ty_c1 ty_c2)
       )
 
-    -- opaquely quantified universal 
+    -- universal quantifier introduction 
     | ty1, .univ n ty_c1 ty_c2 ty2  => (
       let bound_start := i
       let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
@@ -1473,27 +1464,29 @@ namespace Nameless
         let ty_conc := (Ty.reduce env_ty ty_conc)
 
         ------------------------------------------------------
-        -- TODO: this constraint on param causes subtyping to fail
-        ---------------------------------------------------------
-        -- let ty_param_content := List.foldr (fun ty_case ty_acc =>
-        --   let fvs := (Ty.free_vars ty_case).toList.bind (fun (k , _) => [k])
-        --   let fvs_prem :=  (Ty.free_vars ty_prem)
-        --   let ty_choice := (
-        --     if List.any fvs (fun id => fvs_prem.find? id != none) then
-        --       let fixed_point := fvs.length
-        --       [lesstype|
-        --         {[⟨fvs.length⟩] ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩ with 
-        --           ⟨Ty.abstract fvs 0 (Ty.get_prem ty_prem)⟩ <: β[⟨fixed_point⟩] 
-        --         } 
-        --       ]
-        --     else if fvs.length > 0 then
-        --       [lesstype| {[⟨fvs.length⟩] ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩} ]
-        --     else
-        --       (Ty.get_prem ty_case)
-        --   )
+        -- TODO: factor out this rewriting with higher order function 
+        -------------------------------------------------------
+        let ty_param_content := List.foldr (fun ty_case ty_acc =>
+          let fvs := (Ty.free_vars ty_case).toList.bind (fun (k , _) => [k])
+          let fvs_prem :=  (Ty.free_vars ty_prem)
+          let ty_choice := (
+            if List.any fvs (fun id => fvs_prem.find? id != none) then
+              let fixed_point := fvs.length
+              [lesstype|
+                {[⟨fvs.length⟩] ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩ with 
+                  ⟨Ty.abstract fvs 0 (Ty.get_prem ty_prem)⟩ <: β[⟨fixed_point⟩] 
+                } 
+              ]
+            else if fvs.length > 0 then
+              [lesstype| {[⟨fvs.length⟩] ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩} ]
+            else
+              (Ty.get_prem ty_case)
+          )
 
-        --   (Ty.union ty_choice ty_acc) 
-        -- ) [lesstype| ⊥ ] (Ty.split_intersectionss ty_conc)
+          (Ty.union ty_choice ty_acc) 
+        ) [lesstype| ⊥ ] (Ty.split_intersectionss ty_conc)
+
+        let ty_param := [lesstype| induct ⟨ty_param_content⟩ ]
 
         let ty_content := List.foldr (fun ty_case ty_acc =>
           let fvs := (Ty.free_vars ty_case).toList.bind (fun (k , _) => [k])
@@ -1515,15 +1508,8 @@ namespace Nameless
           (Ty.union ty_choice ty_acc) 
         ) [lesstype| ⊥ ] (Ty.split_intersectionss ty_conc)
 
-        -- let ty_param := [lesstype| induct ⟨ty_param_content⟩ ]
-        let (i, ty_param) := (i + 1, Ty.fvar i)
-        -- constraint that ty' <= ty_prem is built into inductive type
+        -- NOTE: constraint that ty' <= ty_prem is built into inductive type
         let relational_type := [lesstype| induct ⟨ty_content⟩ ]
-        -- TODO: need to add constraint to premise to avoid being too strong: 
-          -- i.e. premise accepts anything and conclusion becomes false.
-          -- Actually, lack of annotation means weakest precondition
-         
-        -- let ty' := [lesstype| forall [1] β[0] <: ⟨ty_param⟩ have β[0] -> {[1] β[0] with β[1] * β[0] <: ⟨relational_type⟩} ] 
         let ty' := [lesstype| forall [1] β[0] <: ⟨ty_param⟩ have β[0] -> {[1] β[0] with β[1] * β[0] <: ⟨relational_type⟩} ] 
         assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
           (i, [(env_ty, ty')])
@@ -2058,26 +2044,6 @@ namespace Nameless
   [lesstype| ?succ ?zero unit -> α[0] ]
   [lesstype| α[0] ]
 
-
-  -- TODO: can't pass type checking with constraint on parameter  
-  #eval unify_reduce 10 
-  [lesstype|
-  (forall [1]  β[0] <: ⟨nat_⟩ have (β[0] -> {[1] β[0] with (β[1] * β[0]) <: 
-    (induct (
-        (?zero unit * ?nil unit) | 
-        {[2] (?succ β[1] * ?cons β[0]) with (β[1] * β[0]) <: β[2]}))
-  }))
-  ]
-  [lesstype| ?succ ?zero unit -> α[0] ]
-  [lesstype| α[0] ]
-
-
-  #eval [lesstype|
-  (forall [1] β[0] <: (induct (?zero unit | {[2] ?succ β[1] with β[1] <: β[2]})) have (β[0] ->
-    {[1] β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
-      {[2] (?succ β[1] * ?cons β[0]) with (β[1] * β[0]) <: β[2]}))}))
-  ]
-
   -------------------------------
 
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
@@ -2087,9 +2053,7 @@ namespace Nameless
         \ (#succ y[0], #zero()) => #false() 
       )))
   ] 
---------------------------------------------
--- currently debugging
---------------------------------------------
+
   -- expected: false
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     let y[0] : ?succ ?zero unit = 
@@ -2478,14 +2442,14 @@ end Nameless
     --     let ty2' := Ty.instantiate 0 args1 ty2
 
     --     let (i, ids3) := (i + n3, (List.range n3).map (fun j => i + j))
-    --     let is_opaque := fun key => ids3.contains key 
+    --     let is_introduction := fun key => ids3.contains key 
     --     let args3 := ids3.map (fun id => Ty.fvar id)
     --     let ty3' := Ty.instantiate 0 args3 ty3
     --     let ty4' := Ty.instantiate 0 args3 ty4
 
     --     assume_env (unify i env_ty env_complex {} ty3' ty1') (fun i env_ty =>
     --       let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
-    --         not (is_opaque key)
+    --         not (is_introduction key)
     --       )
     --       if is_result_safe then
     --         (unify i env_ty env_complex {} ty2' ty4')
@@ -2808,7 +2772,9 @@ end Nameless
   ] 
   --------------------------------
 
+  ------- soundness ---------
 
+  -- expected: true 
   #eval Nameless.Ty.unify_decide 0
   [lesstype| {β[0] with β[0] <: ?ooga unit} ]
   [lesstype|  ?ooga unit | ?booga unit]
@@ -2848,7 +2814,7 @@ end Nameless
   [lesstype| ⊤ * ⊤  ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval Nameless.Ty.unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit  ]
 
@@ -2868,17 +2834,18 @@ end Nameless
   [lesstype| ?one unit  ]
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 0
+  #eval Nameless.Ty.unify_decide 10 
   [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit | ?three unit  ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval Nameless.Ty.unify_decide 10 
   [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit  ]
 
 
---------------------- opaque universal subtyping ----------------
+
+--------------------- universal introduction subtyping ----------------
 
   -- expected: false 
   #eval Nameless.Ty.unify_decide 0
@@ -2926,10 +2893,10 @@ end Nameless
 --------------------------------------------------------
 
   -- expected: terminates
-  -- #eval Nameless.Tm.infer_reduce 0 [lessterm| 
-  --   let y[0] : (forall [2] β[0] * β[1] -> {[1] β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩}) = 
-  --   (\ (y[0], y[1]) => y[0]) in
-  --   y[0]
-  -- ] 
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    let y[0] : (forall [2] β[0] * β[1] -> {[1] β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩}) = 
+    (\ (y[0], y[1]) => y[0]) in
+    y[0]
+  ] 
 
 --------------------------------------
