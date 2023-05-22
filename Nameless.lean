@@ -198,7 +198,11 @@ namespace Nameless
     | ty1, .top => ty1 
     | _, .bot => .bot 
     | ty1, ty2 => 
-        if inter_contains ty1 ty2 then
+        if ty1 == ty2 then
+          ty1
+        else if inter_contains ty1 ty2 then
+          ty1
+        else if inter_contains ty2 ty1 then
           ty2
         else
           .inter ty1 ty2
@@ -219,7 +223,11 @@ namespace Nameless
     | _, .top => .top 
     | ty1, .bot => ty1
     | ty1, ty2 => 
-        if union_contains ty1 ty2 then
+        if ty1 == ty2 then
+          ty1
+        else if union_contains ty1 ty2 then
+          ty1
+        else if union_contains ty2 ty1 then
           ty2
         else
           .union ty1 ty2
@@ -858,14 +866,17 @@ namespace Nameless
 
     -- universal quantifier elimination 
     | .univ n ty_c1 ty_c2 ty1, ty2 =>
+      let bound_start := i
       let (i, args, expandable) := (
         i + n, 
         (List.range n).map (fun j => Ty.fvar (i + j)),
         if ty_c1 == Ty.unit && ty_c2 == Ty.unit then
+          -- widening/exapnding is caused from the outside in 
           PHashMap.insert_all expandable (PHashMap.from_list ((List.range n).map (fun j => (i + j, .unit))))
         else
           expandable
       )
+      let bound_indicies := (List.range n).map (fun j => bound_start + j)
 
       let ty_c1 := instantiate 0 args ty_c1
       let ty_c2 := instantiate 0 args ty_c2
@@ -873,6 +884,19 @@ namespace Nameless
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       assume_env (unify i env_ty env_complex expandable ty1 ty2) (fun i env_ty => 
+        -- ensure failure instead of narrowing 
+        -- this unification is from the outside in
+        -- whereas, narrowing should only be used from the inside out
+        let env_sub := PHashMap.from_list (
+          bound_indicies.bind (fun bid => 
+          match env_ty.find? bid with
+          | some ty_b => [(bid, ty_b)]
+          | none => []
+          )
+        ) 
+        let ty_c1 := (simplify (subst env_sub ty_c1))
+        let ty_c2 := (simplify (subst env_sub ty_c2))
+
         (unify i env_ty env_complex expandable ty_c1 ty_c2)
       )
 
@@ -922,7 +946,9 @@ namespace Nameless
       | (.some ty', _) => unify i env_ty env_complex expandable ty' (.fvar id2) 
 
     | .fvar id, ty  => 
+      ----------------------------
       -- adjustment updates the variable assignment to lower the upper bound 
+      ---------------------------
       match env_ty.find? id with 
       | none => 
         (i, [env_ty.insert id (occurs_not id env_ty ty)])
@@ -932,8 +958,16 @@ namespace Nameless
           (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
         else
           (i, u_env_ty)
+      ---------------------------------------
+      -- match env_ty.find? id with 
+      -- | none => 
+      --   (i, [env_ty.insert id (occurs_not id env_ty ty)])
+      -- | some ty' => 
+      --   (unify i env_ty env_complex expandable ty' ty)
+      ---------------------------------------
 
     | ty', .fvar id => 
+      ----------------------
       -- adjustment here records observed types; based on unioning fresh variable
       -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
       -- when the environment is packed as a constraint; it becomes id <: ty', so we need union to make id <: ty' | Top
@@ -1440,10 +1474,8 @@ namespace Nameless
       assume_env (Ty.unify i env_ty {} {} ty1 (Ty.case ty2' ty')) (fun i env_ty =>
         (i, [(env_ty, ty')])
       )))
-      ----------------------------------------
+      ------------------------------------------
       ---- alternative 
-      ---- this might cause non-termination somewhere; 
-      --- circular assigment leads to non-termination in generalization
       -------------------------------------------------------
       -- let (i, ty2) := (i + 1, Ty.fvar i)
       -- let (i, ty') := (i + 1, Ty.fvar i)
@@ -1452,6 +1484,7 @@ namespace Nameless
       -- assume_env (Ty.unify i env_ty {} {} ty1 (Ty.case ty2' ty')) (fun i env_ty =>
       --   (i, [(env_ty, ty')])
       -- )))
+      ----------------------------------------------
 
     | .letb op_ty1 t1 t => 
 
@@ -1571,7 +1604,6 @@ namespace Nameless
       List.foldr (fun (env_ty, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
         Ty.generalize boundary env_ty ty'
-        -- Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
       ) Ty.bot u_env
 
 
@@ -2942,8 +2974,16 @@ end Nameless
 
 --------------------------------------
 
+  def nat_pair := [lesstype|
+    induct
+      {(?zero unit * ⟨nat_⟩)} 
+      | 
+      {(?succ β[0] * ?succ β[1]) with (β[0] * β[1]) <: β[2] } 
+      | 
+      {(?succ ⟨nat_⟩ * ?zero unit)}
+  ]
+
   -- TODO: why doesn't infer_reduce show ?succ or ?zero
-  -- TODO: it simply returns whatever is on the right
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
@@ -2960,6 +3000,67 @@ end Nameless
         (y[2] (y[0], y[1]))
       )
     ) in
-    -- y[0]
-    (y[0] (#succc #zero(), #succ #succ #succc #zero()))
+    y[0]
+    -- (y[0] (#succc #zero(), #succ #succ #succc #zero()))
+    -- (y[0] (#succc #zero(), #zero()))
   ] 
+
+  --------------- debugging ---------------
+
+  -- FINALLY, this works! 
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    (
+      (fix (\ y[0] =>
+        \ (#zero(), y[0]) => #true()  
+        \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+        \ (#succ y[0], #zero()) => #false() 
+      ))
+      (#succ #succ #zero(), #succ #zero())
+    )
+  ] 
+
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    (fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ))
+  ] 
+
+
+
+  #eval Nameless.Ty.unify_decide 10 
+  [lesstype| ?succ ?zero unit * ?zero unit]
+  nat_pair
+
+
+  def le_ := [lesstype|
+    induct
+      {(?zero unit * β[0]) * ?true unit} 
+      | 
+      {(?succ β[0] * ?succ β[1]) * β[2] with (β[0] * β[1]) * β[2] <: β[3] } 
+      | 
+      {(?succ β[0] * ?zero unit) * ?false unit}
+  ]
+
+  -- expected: fail 
+  #eval Nameless.Ty.unify_reduce 10 
+  [lesstype|
+    (forall [1] β[0] <: ?ooga unit 
+       have (β[0] ->
+    {[1] β[0] with (β[1] * β[0]) <: ⟨le_⟩}))
+  ]
+  [lesstype| ?succ ?succ ?zero unit * ?succ ?zero unit -> α[0]]
+  [lesstype| α[0] ]
+
+  -- expected: ?false unit 
+  #eval Nameless.Ty.unify_reduce 10 
+  [lesstype|
+    (forall [1] β[0] <: ⟨nat_pair⟩ 
+       have (β[0] ->
+    {[1] β[0] with (β[1] * β[0]) <: ⟨le_⟩}))
+  ]
+  [lesstype| ?succ ?succ ?zero unit * ?succ ?zero unit -> α[0]]
+  [lesstype| α[0] ]
+
+  ----------------------------
