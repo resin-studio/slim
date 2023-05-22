@@ -31,8 +31,6 @@ namespace Nameless
       (i, u_acc ++ u_env_ty)
     ) (i, []) u_env_ty 
 
-
-
   inductive Ty : Type
   | bvar : Nat -> Ty  
   | fvar : Nat -> Ty
@@ -144,141 +142,6 @@ namespace Nameless
     | .recur content =>
       infer_abstraction (start + 1) content 
 
-
-
-    declare_syntax_cat lesstype
-    syntax:100 num : lesstype 
-    syntax:100 ident : lesstype
-    syntax:90 "β["lesstype:100"]" : lesstype
-    syntax:90 "α["lesstype:100"]" : lesstype
-    syntax:90 "unit" : lesstype
-    syntax:90 "⊤" : lesstype
-    syntax:90 "⊥" : lesstype
-    syntax:90 "?" lesstype:100 lesstype:90 : lesstype
-    syntax:90 lesstype:100 ":" lesstype:90 : lesstype
-    syntax:50 lesstype:51 "->" lesstype:50 : lesstype
-    syntax:60 lesstype:61 "|" lesstype:60 : lesstype
-    syntax:70 lesstype:71 "&" lesstype:70 : lesstype
-    syntax:70 lesstype:71 "*" lesstype:70 : lesstype
-
-    syntax "{" "[" lesstype "]" lesstype:41 "with" lesstype:41 "<:" lesstype:41 "}": lesstype 
-    syntax "{" "[" lesstype "]" lesstype:41 "}" : lesstype 
-
-    syntax "{" lesstype:41 "with" lesstype:41 "<:" lesstype:41 "}": lesstype 
-    syntax "{" lesstype:41 "}" : lesstype 
-
-    syntax "forall" "[" lesstype "]" lesstype:41 "<:" lesstype:41 "have" lesstype:41 : lesstype 
-    syntax "forall" "[" lesstype "]" lesstype:41 : lesstype 
-
-    syntax "forall" lesstype:41 "<:" lesstype:41 "have" lesstype:41 : lesstype 
-    syntax "forall" lesstype:41 : lesstype 
-
-    syntax "induct" lesstype:40 : lesstype 
-
-    syntax "(" lesstype ")" : lesstype
-
-    syntax "⟨" term "⟩" : lesstype 
-
-    syntax "[lesstype| " lesstype "]" : term
-
-    macro_rules
-    -- terminals
-    | `([lesstype| $n:num ]) => `($n)
-    | `([lesstype| $a:ident]) => `($(Lean.quote (toString a.getId)))
-    -- Ty 
-    | `([lesstype| β[$n] ]) => `(Ty.bvar [lesstype| $n ])
-    | `([lesstype| α[$n:lesstype] ]) => `(Ty.fvar [lesstype| $n ])
-    | `([lesstype| unit ]) => `(Ty.unit)
-    | `([lesstype| ⊤ ]) => `(Ty.top)
-    | `([lesstype| ⊥ ]) => `(Ty.bot)
-    | `([lesstype| ? $a $b:lesstype ]) => `(Ty.tag [lesstype| $a ] [lesstype| $b ])
-    | `([lesstype| $a : $b:lesstype ]) => `(Ty.field [lesstype| $a ] [lesstype| $b ])
-    | `([lesstype| $a -> $b ]) => `(Ty.case [lesstype| $a ] [lesstype| $b ])
-    | `([lesstype| $a | $b ]) => `(Ty.union [lesstype| $a ] [lesstype| $b ])
-    | `([lesstype| $a & $b ]) => `(Ty.inter [lesstype| $a ] [lesstype| $b ])
-    | `([lesstype| $a * $b ]) => `(Ty.inter (Ty.field "l" [lesstype| $a ]) (Ty.field "r" [lesstype| $b ]))
-
-    | `([lesstype| { [$n] $d with $b <: $c }  ]) => `(Ty.exis [lesstype| $n ] [lesstype| $b ] [lesstype| $c ] [lesstype| $d ])
-    | `([lesstype| { [$n] $b:lesstype } ]) => `(Ty.exis [lesstype| $n ] Ty.unit Ty.unit [lesstype| $b ] )
-
-    | `([lesstype| { $d with $b <: $c }  ]) => 
-      `(Ty.exis (Ty.infer_abstraction 0 [lesstype| $d ]) [lesstype| $b ] [lesstype| $c ] [lesstype| $d ])
-    | `([lesstype| { $b:lesstype } ]) => 
-      `(Ty.exis (Ty.infer_abstraction 0 [lesstype| $b ]) Ty.unit Ty.unit [lesstype| $b ] )
-
-    | `([lesstype| forall $b <: $c have $d  ]) => 
-      `(Ty.univ (Ty.infer_abstraction 0 [lesstype| $d ]) [lesstype| $b ] [lesstype| $c ] [lesstype| $d ])
-    | `([lesstype| forall $b:lesstype  ]) => 
-      `(Ty.univ (Ty.infer_abstraction 0 [lesstype| $b ]) Ty.unit Ty.unit [lesstype| $b ] )
-
-
-    | `([lesstype| forall [$n] $b <: $c have $d  ]) => `(Ty.univ [lesstype| $n ] [lesstype| $b ] [lesstype| $c ] [lesstype| $d ])
-    | `([lesstype| forall [$n] $b:lesstype  ]) => `(Ty.univ [lesstype| $n ] Ty.unit Ty.unit [lesstype| $b ] )
-
-
-    | `([lesstype| induct $a ]) => `(Ty.recur [lesstype| $a ])
-
-    | `([lesstype| ($a) ]) => `([lesstype| $a ])
-
-    | `([lesstype| ⟨ $e ⟩ ]) => pure e
-
-
-    partial def repr (ty : Ty) (n : Nat) : Format :=
-    match ty with
-    | .bvar id => 
-      "β[" ++ Nat.repr id ++ "]"
-    | .fvar id =>
-      "α[" ++ Nat.repr id ++ "]"
-    | .unit => "unit" 
-    | .top => "⊤" 
-    | .bot => "⊥" 
-    | .tag l ty1 => 
-      ("?" ++ l ++ " " ++ (repr ty1 n))
-    | .field l ty1 => 
-      Format.bracket "(" (l ++ " : " ++ (repr ty1 n)) ")"
-
-    | .union ty1 ty2 =>
-      let _ : ToFormat Ty := ⟨fun ty' => repr ty' n ⟩
-      let tys := [ty1, ty2] 
-      Format.bracket "("
-        (Format.joinSep tys (" |" ++ Format.line))
-      ")"
-  
-    | .inter (.field "l" l) (.field "r" r) =>
-      Format.bracket "(" ((repr l n) ++ " * " ++ (repr r n)) ")"
-    | .inter ty1 ty2 =>
-      Format.bracket "(" ((repr ty1 n) ++ " & " ++ (repr ty2 n)) ")"
-    | .case ty1 ty2 =>
-      Format.bracket "(" ((repr ty1 n) ++ " ->" ++ Format.line ++ (repr ty2 n)) ")"
-    | .exis n ty_c1 ty_c2 ty_pl =>
-      if (ty_c1, ty_c2) == (.unit, .unit) then
-        Format.bracket "{" (
-          "[" ++ (Nat.repr n) ++ "] " ++
-          repr ty_pl n
-        ) "}"
-      else
-        Format.bracket "{" (
-          "[" ++ (Nat.repr n) ++ "] " ++
-          (repr ty_pl n) ++ " with " ++
-          (repr ty_c1 n) ++ " <: " ++ (repr ty_c2 n)
-        ) "}"
-    | .univ n ty_c1 ty_c2 ty_pl =>
-      if (ty_c1, ty_c2) == (.unit, .unit) then
-        Format.bracket "(" ("forall [" ++ (Nat.repr n) ++ "] " ++ (repr ty_pl n)) ")"
-      else
-        Format.bracket "(" (
-          "forall [" ++ (Nat.repr n) ++ "] " ++
-          (repr ty_c1 n) ++ " <: " ++ (repr ty_c2 n) ++ " have " ++
-          (repr ty_pl n)
-        ) ")"
-    | .recur ty1 =>
-      Format.bracket "(" (
-        "induct " ++ (repr ty1 n)
-      ) ")"
-
-    instance : Repr Ty where
-      reprPrec := repr
-
     partial def subst (m : PHashMap Nat Ty) : Ty -> Ty
     | .bvar id => .bvar id 
     | .fvar id => (match m.find? id with
@@ -379,8 +242,186 @@ namespace Nameless
     | .recur ty => .recur (simplify ty)
 
 
+    def intersect_over (f : (Ty × Ty) -> Ty) (constraints : List (Ty × Ty)) : Ty :=
+      Ty.simplify (constraints.foldr (fun (lhs, rhs) ty_acc =>
+        Ty.inter (f (lhs, rhs)) ty_acc 
+      ) Ty.top)
+
+    declare_syntax_cat lesstype
+    syntax:100 num : lesstype 
+    syntax:100 ident : lesstype
+    syntax:90 "β["lesstype:100"]" : lesstype
+    syntax:90 "α["lesstype:100"]" : lesstype
+    syntax:90 "unit" : lesstype
+    syntax:90 "⊤" : lesstype
+    syntax:90 "⊥" : lesstype
+    syntax:90 "?" lesstype:100 lesstype:90 : lesstype
+    syntax:90 lesstype:100 ":" lesstype:90 : lesstype
+    syntax:50 lesstype:51 "->" lesstype:50 : lesstype
+    syntax:60 lesstype:61 "|" lesstype:60 : lesstype
+    syntax:70 lesstype:71 "&" lesstype:70 : lesstype
+    syntax:70 lesstype:71 "*" lesstype:70 : lesstype
+
+
+    -- constraints
+    syntax:40 lesstype "<:" lesstype : lesstype
+    syntax:40 lesstype "<:" lesstype "," lesstype: lesstype
+    ------------
+
+
+    syntax "{" "[" lesstype "]" lesstype:41 "with" lesstype "}": lesstype 
+    syntax "{" "[" lesstype "]" lesstype:41 "}" : lesstype 
+
+    syntax "{" lesstype:41 "with" lesstype "}": lesstype 
+    syntax "{" lesstype:41 "}" : lesstype 
+
+    syntax "forall" "[" lesstype "]" lesstype "have" lesstype:41 : lesstype 
+    syntax "forall" "[" lesstype "]" lesstype:41 : lesstype 
+
+    syntax "forall" lesstype "have" lesstype:41 : lesstype 
+    syntax "forall" lesstype:41 : lesstype 
+
+    syntax "induct" lesstype:40 : lesstype 
+
+    syntax "(" lesstype ")" : lesstype
+
+    syntax "⟨" term "⟩" : lesstype 
+
+    syntax "[lesstype| " lesstype "]" : term
+
+    macro_rules
+    -- terminals
+    | `([lesstype| $n:num ]) => `($n)
+    | `([lesstype| $a:ident]) => `($(Lean.quote (toString a.getId)))
+    -- Ty 
+    | `([lesstype| β[$n] ]) => `(Ty.bvar [lesstype| $n ])
+    | `([lesstype| α[$n:lesstype] ]) => `(Ty.fvar [lesstype| $n ])
+    | `([lesstype| unit ]) => `(Ty.unit)
+    | `([lesstype| ⊤ ]) => `(Ty.top)
+    | `([lesstype| ⊥ ]) => `(Ty.bot)
+    | `([lesstype| ? $a $b:lesstype ]) => `(Ty.tag [lesstype| $a ] [lesstype| $b ])
+    | `([lesstype| $a : $b:lesstype ]) => `(Ty.field [lesstype| $a ] [lesstype| $b ])
+    | `([lesstype| $a -> $b ]) => `(Ty.case [lesstype| $a ] [lesstype| $b ])
+    | `([lesstype| $a | $b ]) => `(Ty.union [lesstype| $a ] [lesstype| $b ])
+    | `([lesstype| $a & $b ]) => `(Ty.inter [lesstype| $a ] [lesstype| $b ])
+    | `([lesstype| $a * $b ]) => `(Ty.inter (Ty.field "l" [lesstype| $a ]) (Ty.field "r" [lesstype| $b ]))
+
+
+    -- constraints
+    | `([lesstype| $b <: $c  ]) => `([([lesstype| $b ],[lesstype| $c ])])
+    | `([lesstype| $b <: $c , $xs ]) => `(([lesstype| $b ],[lesstype| $c ]) :: [lesstype| $xs])
+    --------------
+
+    | `([lesstype| { [$n] $d with $xs }  ]) => 
+      `(intersect_over (fun (lhs, rhs) => Ty.exis [lesstype| $n ] lhs rhs [lesstype| $d ]) [lesstype| $xs ])
+
+    | `([lesstype| { [$n] $b:lesstype } ]) => `(Ty.exis [lesstype| $n ] Ty.unit Ty.unit [lesstype| $b ] )
+
+    | `([lesstype| { $d with $xs}  ]) => 
+      `(intersect_over 
+        (fun (lhs, rhs) => Ty.exis (Ty.infer_abstraction 0 [lesstype| $d ]) lhs rhs [lesstype| $d ])
+        [lesstype| $xs]
+      )
+
+    | `([lesstype| { $b:lesstype } ]) => 
+      `(Ty.exis (Ty.infer_abstraction 0 [lesstype| $b ]) Ty.unit Ty.unit [lesstype| $b ] )
+
+    | `([lesstype| forall $xs have $d  ]) => 
+      `(intersect_over 
+        (fun (lhs, rhs) => Ty.univ (Ty.infer_abstraction 0 [lesstype| $d ]) lhs rhs [lesstype| $d ])
+        [lesstype| $xs]
+      )
+
+    | `([lesstype| forall $b:lesstype  ]) => 
+      `(Ty.univ (Ty.infer_abstraction 0 [lesstype| $b ]) Ty.unit Ty.unit [lesstype| $b ] )
+
+    | `([lesstype| forall [$n] $xs have $d  ]) => 
+      `(intersect_over
+        (fun (lhs, rhs) => Ty.univ [lesstype| $n ] lhs rhs [lesstype| $d ])
+        [lesstype| $xs ]
+      )
+
+    | `([lesstype| forall [$n] $b:lesstype  ]) => `(Ty.univ [lesstype| $n ] Ty.unit Ty.unit [lesstype| $b ] )
+
+
+    | `([lesstype| induct $a ]) => `(Ty.recur [lesstype| $a ])
+
+    | `([lesstype| ($a) ]) => `([lesstype| $a ])
+
+    | `([lesstype| ⟨ $e ⟩ ]) => pure e
+
+
+    partial def repr (ty : Ty) (n : Nat) : Format :=
+    match ty with
+    | .bvar id => 
+      "β[" ++ Nat.repr id ++ "]"
+    | .fvar id =>
+      "α[" ++ Nat.repr id ++ "]"
+    | .unit => "unit" 
+    | .top => "⊤" 
+    | .bot => "⊥" 
+    | .tag l ty1 => 
+      ("?" ++ l ++ " " ++ (repr ty1 n))
+    | .field l ty1 => 
+      Format.bracket "(" (l ++ " : " ++ (repr ty1 n)) ")"
+
+    | .union ty1 ty2 =>
+      let _ : ToFormat Ty := ⟨fun ty' => repr ty' n ⟩
+      let tys := [ty1, ty2] 
+      Format.bracket "("
+        (Format.joinSep tys (" |" ++ Format.line))
+      ")"
+  
+    | .inter (.field "l" l) (.field "r" r) =>
+      Format.bracket "(" ((repr l n) ++ " * " ++ (repr r n)) ")"
+    | .inter ty1 ty2 =>
+      Format.bracket "(" ((repr ty1 n) ++ " & " ++ (repr ty2 n)) ")"
+    | .case ty1 ty2 =>
+      Format.bracket "(" ((repr ty1 n) ++ " ->" ++ Format.line ++ (repr ty2 n)) ")"
+    | .exis n ty_c1 ty_c2 ty_pl =>
+      if (ty_c1, ty_c2) == (.unit, .unit) then
+        Format.bracket "{" (
+          "[" ++ (Nat.repr n) ++ "] " ++
+          repr ty_pl n
+        ) "}"
+      else
+        Format.bracket "{" (
+          "[" ++ (Nat.repr n) ++ "] " ++
+          (repr ty_pl n) ++ " with " ++
+          (repr ty_c1 n) ++ " <: " ++ (repr ty_c2 n)
+        ) "}"
+    | .univ n ty_c1 ty_c2 ty_pl =>
+      if (ty_c1, ty_c2) == (.unit, .unit) then
+        Format.bracket "(" ("forall [" ++ (Nat.repr n) ++ "] " ++ (repr ty_pl n)) ")"
+      else
+        Format.bracket "(" (
+          "forall [" ++ (Nat.repr n) ++ "] " ++
+          (repr ty_c1 n) ++ " <: " ++ (repr ty_c2 n) ++ " have " ++
+          (repr ty_pl n)
+        ) ")"
+    | .recur ty1 =>
+      Format.bracket "(" (
+        "induct " ++ (repr ty1 n)
+      ) ")"
+
+    instance : Repr Ty where
+      reprPrec := repr
+
+
     def reduce (env_ty : PHashMap Nat Ty) (ty : Ty) :=
       (simplify (subst (env_ty) ty))
+
+
+    #eval [lesstype|
+    {β[0] with β[0] <: ?ooga unit, β[0] <: ?booga unit}
+    ]
+    #eval [lesstype|
+    {β[0] with β[0] <: ?ooga unit}
+    ]
+
+    #eval [lesstype| {[1] β[0] with (β[1] * β[0]) <: ?booga unit} ] 
+    #eval [lesstype| {[1] β[0] with β[1] * β[0] <: ?booga unit} ] 
+    -- #eval [lesstype| forall [1] β[0] <: ?ooga unit have β[0] -> {[1] β[0] with β[1] * β[0] <: ?booga unit} ] 
 
 
 
