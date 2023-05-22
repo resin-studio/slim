@@ -77,6 +77,16 @@ namespace Surface
     | recur name content =>
       Ty.infer_abstraction (exclude ; to_set [name]) content 
 
+    def intersect : Ty -> Ty -> Ty
+    | .top, ty => ty
+    | ty, .top => ty
+    | ty1, ty2 => inter ty1 ty2
+
+    def intersect_over (f : (Ty × Ty) -> Ty) (constraints : List (Ty × Ty)) : Ty :=
+      (constraints.foldr (fun (lhs, rhs) ty_acc =>
+        Ty.intersect (f (lhs, rhs)) ty_acc 
+      ) Ty.top)
+
     protected partial def repr (ty : Ty) (n : Nat) : Format :=
     match ty with
     | .id name => name 
@@ -150,21 +160,27 @@ namespace Surface
     syntax:70 surftype:71 "&" surftype:70 : surftype
     syntax:70 surftype:71 "*" surftype:70 : surftype
 
-    syntax "{" surftype surftype:41 "with" surftype:41 "<:" surftype:41 "}": surftype 
+
+    syntax "{" surftype surftype:41 "with" surftype "}": surftype 
     syntax "{" surftype surftype:41 "}" : surftype 
 
-    syntax "{" surftype:41 "with" surftype:41 "<:" surftype:41 "}": surftype 
+    syntax "{" surftype:41 "with" surftype "}": surftype 
     syntax "{" surftype:41 "}" : surftype 
 
 
-    syntax "forall" surftype surftype:41 "<:" surftype:41 "have" surftype:41 : surftype 
+    syntax "forall" surftype surftype "have" surftype:41 : surftype 
     syntax "forall" surftype surftype:41 : surftype 
 
-    syntax "forall" surftype:41 "<:" surftype:41 "have" surftype:41 : surftype 
+    syntax "forall" surftype "have" surftype:41 : surftype 
     syntax "forall" surftype:41 : surftype 
 
 
-    syntax:40 "induct" "[" ident "]" surftype : surftype 
+    syntax:50 "induct" "[" ident "]" surftype : surftype 
+
+    -- constraints
+    syntax:40 surftype:41 "<:" surftype:41 : surftype
+    syntax:40 surftype:41 "<:" surftype:41 "," surftype: surftype
+    ------------
 
 
     syntax "[surftype| " surftype "]" : term
@@ -195,23 +211,54 @@ namespace Surface
     | `([surftype| $a & $b ]) => `(Ty.inter [surftype| $a ] [surftype| $b ])
     | `([surftype| $a * $b ]) => `(Ty.inter (Ty.field "l" [surftype| $a ]) (Ty.field "r" [surftype| $b ]))
 
-    | `([surftype| { $n $d with $b <: $c }  ]) => `(Ty.exis [surftype| $n ] [surftype| $b ] [surftype| $c ] [surftype| $d ])
+    -- constraints
+    | `([surftype| $b <: $c  ]) => `([([surftype| $b ],[surftype| $c ])])
+    | `([surftype| $b <: $c , $xs ]) => `(([surftype| $b ],[surftype| $c ]) :: [surftype| $xs])
+    --------------
+
+    | `([surftype| { $n $d with $xs }  ]) => `(intersect_over
+        (fun (lhs, rhs) => Ty.exis [surftype| $n ] lhs rhs  [surftype| $d ])
+        [surftype| $xs ]
+      )
     | `([surftype| { $n $b:surftype } ]) => `(Ty.exis [surftype| $n ] Ty.unit Ty.unit [surftype| $b ] )
 
-    | `([surftype| { $d with $b <: $c }  ]) => 
-      `(Ty.exis (to_list (Ty.infer_abstraction {} [surftype| $d ])) [surftype| $b ] [surftype| $c ] [surftype| $d ])
+    | `([surftype| { $d with $xs }  ]) => `(intersect_over
+        (fun (lhs, rhs) => Ty.exis (to_list (Ty.infer_abstraction {} [surftype| $d ])) lhs rhs [surftype| $d ])
+        [surftype| $xs ]
+      )
+
     | `([surftype| { $b:surftype } ]) => 
       `(Ty.exis (to_list (Ty.infer_abstraction {} [surftype| $b ])) Ty.unit Ty.unit [surftype| $b ] )
 
-    | `([surftype| forall $b <: $c have $d  ]) => 
-      `(Ty.univ (to_list (Ty.infer_abstraction {} [surftype| $d ])) [surftype| $b ] [surftype| $c ] [surftype| $d ])
+    | `([surftype| forall $xs have $d  ]) => `(intersect_over
+        (fun (lhs, rhs) => Ty.univ (to_list (Ty.infer_abstraction {} [surftype| $d ])) [surftype| $d ])
+        [surftype| $xs ] 
+      )
+
     | `([surftype| forall $b:surftype  ]) => 
       `(Ty.univ (to_list (Ty.infer_abstraction {} [surftype| $b ])) Ty.unit Ty.unit [surftype| $b ] )
 
-    | `([surftype| forall $n $b <: $c have $d ]) => `(Ty.univ [surftype| $n ] [surftype| $b ] [surftype| $c ] [surftype| $d ])
+    | `([surftype| forall $n $xs have $d ]) => `(intersect_over 
+        (fun (lhs, rhs) => Ty.univ [surftype| $n ] lhs rhs [surftype| $d ])
+        [surftype| $xs ]
+      )
+
     | `([surftype| forall $n $b:surftype ]) => `(Ty.univ [surftype| $n ] Ty.unit Ty.unit [surftype| $b ] )
 
     | `([surftype| induct [ $name ] $a ]) => `(Ty.recur $(Lean.quote (toString name.getId)) [surftype| $a ])
+    
+------------------------------------------------------------
+
+    #eval [surftype| {X} ]
+    #eval [surftype| {X with X <: ?ooga unit, X <: ?booga unit} ]
+    #eval [surftype| {X with X <: ?ooga unit} ]
+
+    #eval [surftype| {[X] X with (X * Y) <: ?booga unit} ] 
+    #eval [surftype| {[X] X with X * Y <: ?booga unit} ] 
+    #eval [surftype| forall [X] X <: ?ooga unit have X -> ?booga unit ] 
+    #eval [surftype| forall [X] X <: ?ooga unit have X -> {[Y] Y with X * Y <: ?booga unit} ] 
+
+------------------------------------------------------------
 
     #check [surftype| (x) ]
     #check [surftype| [x] ]
@@ -991,7 +1038,6 @@ namespace Surface
   -- ] 
   ------------------------------- 
 
-  -- TODO: this probably passes because of adjustment
   -- expected: fail
   #eval Ty.unify_reduce
   [surftype| forall X * Y -> Y ]
@@ -1014,7 +1060,18 @@ namespace Surface
 
   --------------------
 
-  -- expected: (?succ ?succ ?zero unit | ?succ ?zero unit)
+  -- TODO: type is missing mention of ?succ and ?zero
+  #eval Tm.infer_reduce [] [surfterm| 
+    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
+      \ (#zero(), y) => #true()  
+      \ (#succ x, #succ y) => (self (x, y)) 
+      \ (#succ x, #zero()) => #false() 
+    in
+    let max = \ (x, y) => if (le (x, y)) then y else x in
+    max
+  ] 
+
+  -- expected: ?succ ?succ ?zero unit
   #eval Tm.infer_reduce [] [surfterm| 
     let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
       \ (#zero(), y) => #true()  
@@ -1026,7 +1083,7 @@ namespace Surface
     x
   ] 
 
-  -- expected: pass 
+  -- expected: ?succ ?succ ?zero unit
   #eval Tm.infer_reduce [] [surfterm| 
     let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
       \ (#zero(), y) => #true()  

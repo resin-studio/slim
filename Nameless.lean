@@ -243,8 +243,8 @@ namespace Nameless
 
 
     def intersect_over (f : (Ty × Ty) -> Ty) (constraints : List (Ty × Ty)) : Ty :=
-      Ty.simplify (constraints.foldr (fun (lhs, rhs) ty_acc =>
-        Ty.inter (f (lhs, rhs)) ty_acc 
+      (constraints.foldr (fun (lhs, rhs) ty_acc =>
+        intersect (f (lhs, rhs)) ty_acc 
       ) Ty.top)
 
     declare_syntax_cat lesstype
@@ -412,16 +412,16 @@ namespace Nameless
       (simplify (subst (env_ty) ty))
 
 
-    #eval [lesstype|
-    {β[0] with β[0] <: ?ooga unit, β[0] <: ?booga unit}
-    ]
-    #eval [lesstype|
-    {β[0] with β[0] <: ?ooga unit}
-    ]
+------------------------------------------------------------
+
+    #eval [lesstype| {β[0] with β[0] <: ?ooga unit, β[0] <: ?booga unit} ]
+    #eval [lesstype| {β[0] with β[0] <: ?ooga unit} ]
 
     #eval [lesstype| {[1] β[0] with (β[1] * β[0]) <: ?booga unit} ] 
     #eval [lesstype| {[1] β[0] with β[1] * β[0] <: ?booga unit} ] 
-    -- #eval [lesstype| forall [1] β[0] <: ?ooga unit have β[0] -> {[1] β[0] with β[1] * β[0] <: ?booga unit} ] 
+    #eval [lesstype| forall [1] β[0] <: ?ooga unit have β[0] -> {[1] β[0] with β[1] * β[0] <: ?booga unit} ] 
+
+------------------------------------------------------------
 
 
 
