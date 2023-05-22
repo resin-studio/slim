@@ -2941,3 +2941,25 @@ end Nameless
   ] 
 
 --------------------------------------
+
+  -- TODO: why doesn't infer_reduce show ?succ or ?zero
+  -- TODO: it simply returns whatever is on the right
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    )
+    in
+    let y[0] = (\ (y[0], y[1]) => 
+      (
+        (
+        \ #true() => y[1]
+        \ #false() => y[0]
+        )
+        (y[2] (y[0], y[1]))
+      )
+    ) in
+    -- y[0]
+    (y[0] (#succc #zero(), #succ #succ #succc #zero()))
+  ] 

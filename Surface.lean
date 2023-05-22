@@ -1071,6 +1071,7 @@ namespace Surface
     max
   ] 
 
+  -- TODO: it is merely returning the type of the right argument
   -- expected: ?succ ?succ ?zero unit
   #eval Tm.infer_reduce [] [surfterm| 
     let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = fix \ self =>
@@ -1079,7 +1080,7 @@ namespace Surface
       \ (#succ x, #zero()) => #false() 
     in
     let max = \ (x, y) => if (le (x, y)) then y else x in
-    let x = (max (#succ #zero(), (#succ #succ #zero())))  in
+    let x = (max ((#succ #succ #zero()), #zero()))  in
     x
   ] 
 
