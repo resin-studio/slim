@@ -59,6 +59,9 @@ namespace PHashMap
 
 end PHashMap
 
+
+infixl:65   " ; " => PHashMap.insert_all
+
 namespace PHashSet
   def toList  [BEq α] [Hashable α] (base : PHashSet α) : List α :=
     base.fold (fun acc k => k :: acc) []
@@ -84,9 +87,6 @@ namespace PHashSet
 end PHashSet
 
 
-infixl:65   " ; " => PHashMap.insert_all
-
-#check List.toArray
 
 namespace List
   def index (f : α -> Bool) : (xs : List α) -> Option Nat 

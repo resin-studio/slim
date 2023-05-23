@@ -49,6 +49,12 @@ namespace Nameless
 
   namespace Ty
 
+    structure Context where
+      env_simple : PHashMap Nat Ty
+      env_relational : PHashMap Ty Ty
+      set_expandable : PHashSet Nat
+    deriving Repr
+
   --   inductive Combo (α : Type)
   --   | bvar : Nat -> Combo α  
   --   | fvar : Nat -> Combo α
@@ -504,13 +510,22 @@ namespace Nameless
       )
     | .recur ty => .recur (abstract fids (start + 1) ty)
 
-    partial def reachable_constraints (env_ty : PHashMap Nat Ty) (ty : Ty) : List (Ty × Ty) :=
-      let fvs := PHashSet.toList (free_vars ty)
-      List.bind fvs (fun key =>
-        match env_ty.find? (key) with
-        | some ty' => (.fvar key, ty') :: (reachable_constraints env_ty ty')
-        | none => [] -- TODO: what if the key is inside a record?
+
+    partial def map_keys_to_constraints (context : Context) : PHashMap Nat (PHashSet (Ty × Ty)) :=
+      let constraints := (
+          context.env_simple.toList.map (fun (k,rhs) => (Ty.fvar k, rhs)) ++
+          context.env_relational.toList
       )
+      constraints.foldl (fun acc constraint => 
+        let (lhs, _) := constraint
+        let fids := toList (free_vars lhs)
+        fids.foldl (fun acc fid =>
+          match acc.find? fid with
+          | some constraints => acc.insert fid (constraints.insert constraint)
+          | none => acc.insert fid (empty.insert constraint)
+        ) acc
+      ) {}
+
 
     def nested_pairs : (List Ty) -> Ty 
     | [] => .unit 
@@ -541,11 +556,27 @@ namespace Nameless
       no_function_types ty_pl
     | .recur content => no_function_types content 
 
-    def generalize (boundary : Nat) (env_ty : PHashMap Nat Ty) (ty : Ty) : Ty := 
+    partial def reachable_constraints (map_kcs : PHashMap Nat (PHashSet (Ty × Ty))) (ty : Ty) : List (Ty × Ty) :=
+      let fvs := PHashSet.toList (free_vars ty)
+      List.bind fvs (fun key =>
+        match map_kcs.find? (key) with
+        | some constraints => 
+          let cs := toList constraints
+          cs ++ (cs.bind (fun (_, rhs) =>
+            reachable_constraints map_kcs rhs
+          ))
+        | none => []
+      )
+
+    def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
+      --------------------------------------
       -- avoids substitution, as type variable determines type adjustment
       -- boundary prevents overgeneralizing
-      let constraints := reachable_constraints env_ty ty
-      let (lhs, rhs) := List.unzip constraints
+      --------------------------------------
+      --------------------------------------
+      let map_kcs := map_keys_to_constraints context
+      let (lhs, rhs) := List.unzip (reachable_constraints map_kcs ty)
+
       let ty_lhs := nested_pairs lhs
       let ty_rhs := nested_pairs rhs
       
@@ -554,7 +585,7 @@ namespace Nameless
         toList ((free_vars ty) + (free_vars ty_lhs) + (free_vars ty_rhs))
       )
 
-      let ty_subbed := simplify (subst env_ty ty)
+      let ty_subbed := simplify (subst context.env_simple ty)
 
       if no_function_types ty_subbed then
         let env_sub := PHashMap.from_list (
@@ -792,11 +823,6 @@ namespace Nameless
 
     -- TODO: return relational environment too
     -- TODO: need to return relational environment too
-    structure Context where
-      env_simple : PHashMap Nat Ty
-      env_relational : PHashMap Ty Ty
-      set_expandable : PHashSet Nat
-    deriving Repr
 
     partial def unify (i : Nat) (context : Context)
     : Ty -> Ty -> (Nat × List Context)
@@ -1099,7 +1125,7 @@ namespace Nameless
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
       let context : Context := ⟨empty, empty, empty⟩
       let (_, contexts) := (unify i context ty1 ty2)
-      generalize i {} (
+      generalize i context (
         List.foldr (fun context ty_acc => 
           let env_simple := Context.env_simple context
           simplify (subst env_simple (Ty.union ty_result ty_acc))
@@ -1501,7 +1527,7 @@ namespace Nameless
         -- collapsing
         let (i, contexts) := (infer i context env_tm t1 ty1) 
         let ty1_schema := List.foldr (fun (context, ty1') ty_acc => 
-          let ty1_schema := Ty.generalize free_var_boundary context.env_simple ty1'
+          let ty1_schema := Ty.generalize free_var_boundary context ty1'
           (Ty.union ty1_schema ty_acc)
         ) Ty.bot contexts 
         let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
@@ -1608,7 +1634,7 @@ namespace Nameless
       let (_, contexts) := (infer i context {} t ty)
       List.foldr (fun (context, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst context.env_simple (Ty.union ty' ty_acc)))
-        Ty.generalize boundary context.env_simple ty'
+        Ty.generalize boundary context ty'
       ) Ty.bot contexts
 
 
