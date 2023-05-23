@@ -1,21 +1,17 @@
 import Std.Data.BinomialHeap
 import Init.Data.Hashable
 import Lean.Data.PersistentHashMap
+import Lean.Data.PersistentHashSet
 
 import Util 
 import Nameless
 
-open Lean PersistentHashMap
+open Lean PersistentHashMap PersistentHashSet
+open PHashSet
 
 open Std
 
 namespace Surface
-
-  def to_set [BEq α] [Hashable α] (xs : List α) : PHashMap α Unit :=
-    PHashMap.from_list (xs.map fun x => (x, Unit.unit))
-
-  def to_list [BEq α] [Hashable α] (xs : PHashMap α Unit) : List α :=
-    xs.toList.map fun (x, _) => x
 
 
   inductive Ty : Type
@@ -37,12 +33,12 @@ namespace Surface
 
   namespace Ty
 
-    def Ty.infer_abstraction (exclude : PHashMap String Unit) : Ty -> PHashMap String Unit 
+    def infer_abstraction (exclude : PHashSet String) : Ty -> PHashSet String 
     | .id name => 
       if exclude.contains name then
         {}
       else
-        PHashMap.from_list [(name, Unit.unit)]
+        from_list [name]
     | .unit => {} 
     | .top => {} 
     | .bot => {} 
@@ -53,29 +49,29 @@ namespace Surface
     | .union ty1 ty2 => 
       let n1 := Ty.infer_abstraction exclude ty1 
       let n2 := Ty.infer_abstraction exclude ty2
-      n1 ; n2 
+      n1 + n2 
     | .inter ty1 ty2 => 
       let n1 := Ty.infer_abstraction exclude ty1 
       let n2 := Ty.infer_abstraction exclude ty2
-      n1 ; n2 
+      n1 + n2 
     | .case ty1 ty2 =>
       let n1 := Ty.infer_abstraction exclude ty1 
       let n2 := Ty.infer_abstraction exclude ty2
-      n1 ; n2 
+      n1 + n2 
     | exis n ty_c1 ty_c2 ty_pl =>
-      let exclude' := exclude ; (to_set n)  
+      let exclude' := exclude + (from_list n)  
       let n_c1 := Ty.infer_abstraction exclude' ty_c1 
       let n_c2 := Ty.infer_abstraction exclude' ty_c2
       let n_pl := Ty.infer_abstraction exclude' ty_pl  
-      n_c1 ; n_c2 ; n_pl
+      n_c1 + n_c2 + n_pl
     | univ n ty_c1 ty_c2 ty_pl =>
-      let exclude' := exclude ; (to_set n)  
+      let exclude' := exclude + (from_list n)  
       let n_c1 := Ty.infer_abstraction exclude' ty_c1 
       let n_c2 := Ty.infer_abstraction exclude' ty_c2
       let n_pl := Ty.infer_abstraction exclude' ty_pl  
-      n_c1 ; n_c2 ; n_pl
+      n_c1 + n_c2 + n_pl
     | recur name content =>
-      Ty.infer_abstraction (exclude ; to_set [name]) content 
+      Ty.infer_abstraction (exclude + from_list [name]) content 
 
     def intersect : Ty -> Ty -> Ty
     | .top, ty => ty
@@ -223,20 +219,20 @@ namespace Surface
     | `([surftype| { $n $b:surftype } ]) => `(Ty.exis [surftype| $n ] Ty.unit Ty.unit [surftype| $b ] )
 
     | `([surftype| { $d with $xs }  ]) => `(intersect_over
-        (fun (lhs, rhs) => Ty.exis (to_list (Ty.infer_abstraction {} [surftype| $d ])) lhs rhs [surftype| $d ])
+        (fun (lhs, rhs) => Ty.exis (toList (Ty.infer_abstraction {} [surftype| $d ])) lhs rhs [surftype| $d ])
         [surftype| $xs ]
       )
 
     | `([surftype| { $b:surftype } ]) => 
-      `(Ty.exis (to_list (Ty.infer_abstraction {} [surftype| $b ])) Ty.unit Ty.unit [surftype| $b ] )
+      `(Ty.exis (toList (Ty.infer_abstraction {} [surftype| $b ])) Ty.unit Ty.unit [surftype| $b ] )
 
     | `([surftype| forall $xs have $d  ]) => `(intersect_over
-        (fun (lhs, rhs) => Ty.univ (to_list (Ty.infer_abstraction {} [surftype| $d ])) [surftype| $d ])
+        (fun (lhs, rhs) => Ty.univ (toList (Ty.infer_abstraction {} [surftype| $d ])) [surftype| $d ])
         [surftype| $xs ] 
       )
 
     | `([surftype| forall $b:surftype  ]) => 
-      `(Ty.univ (to_list (Ty.infer_abstraction {} [surftype| $b ])) Ty.unit Ty.unit [surftype| $b ] )
+      `(Ty.univ (toList (Ty.infer_abstraction {} [surftype| $b ])) Ty.unit Ty.unit [surftype| $b ] )
 
     | `([surftype| forall $n $xs have $d ]) => `(intersect_over 
         (fun (lhs, rhs) => Ty.univ [surftype| $n ] lhs rhs [surftype| $d ])
@@ -262,7 +258,7 @@ namespace Surface
 
     #check [surftype| (x) ]
     #check [surftype| [x] ]
-    #eval Ty.infer_abstraction {} [surftype| thing ]
+    #eval infer_abstraction {} [surftype| thing ]
     #eval [surftype| {thing | unit with thing <: unit }]
 
 
@@ -353,8 +349,8 @@ namespace Surface
       let (stack, ty') <- (to_nameless free_vars (name :: bound_vars) ty) 
       some ([name] :: stack, .recur ty')
 
-    def extract_free_vars : Ty -> PHashMap String Unit
-    | id name => to_set [name] 
+    def extract_free_vars : Ty -> PHashSet String
+    | id name => from_list [name] 
     | .unit => {} 
     | bot => {} 
     | top => {} 
@@ -363,20 +359,20 @@ namespace Surface
     | field _ content => 
       extract_free_vars content
     | union ty1 ty2  => 
-      extract_free_vars ty1 ; extract_free_vars ty2 
+      extract_free_vars ty1 + extract_free_vars ty2 
     | inter ty1 ty2  =>
-      extract_free_vars ty1 ; extract_free_vars ty2 
+      extract_free_vars ty1 + extract_free_vars ty2 
     | case ty1 ty2  =>
-      extract_free_vars ty1 ; extract_free_vars ty2 
+      extract_free_vars ty1 + extract_free_vars ty2 
     | univ bound_names tyc1 tyc2 ty_pl =>
-      let names := (extract_free_vars tyc1) ; (extract_free_vars tyc2) ; (extract_free_vars ty_pl)
-      PHashMap.from_list (names.toList.filter (fun (n, _) => !(bound_names.contains n)))
+      let names := (extract_free_vars tyc1) + (extract_free_vars tyc2) + (extract_free_vars ty_pl)
+      from_list ((toList names).filter (fun n => !(bound_names.contains n)))
     | exis bound_names tyc1 tyc2 ty_pl =>
-      let names := (extract_free_vars tyc1) ; (extract_free_vars tyc2) ; (extract_free_vars ty_pl)
-      PHashMap.from_list (names.toList.filter (fun (n, _) => !(bound_names.contains n)))
+      let names := (extract_free_vars tyc1) + (extract_free_vars tyc2) + (extract_free_vars ty_pl)
+      from_list ((toList names).filter (fun n => !(bound_names.contains n)))
     | recur bound_name ty =>
       let names := (extract_free_vars ty)
-      PHashMap.from_list (names.toList.filter (fun (n, _) => n != bound_name))
+      from_list ((toList names).filter (fun n => n != bound_name))
 
 
     def from_nameless (free_names : List String) (names : List String) (stack : List (List String)) : 
@@ -488,7 +484,7 @@ namespace Surface
       (i, names :: stack)
 
     partial def unify_reduce (ty1 ty2 ty_result : Surface.Ty) : Option Surface.Ty := do
-      let free_vars := to_list (extract_free_vars [surftype| ⟨ty1⟩ * ⟨ty2⟩])
+      let free_vars := toList (extract_free_vars [surftype| ⟨ty1⟩ * ⟨ty2⟩])
       let (_, ty1') <- to_nameless free_vars [] ty1
       let (_, ty2') <- to_nameless free_vars [] ty2
       let (_, ty_result') <- to_nameless free_vars [] ty_result
@@ -515,7 +511,7 @@ namespace Surface
     #eval extract_free_vars [surftype| (?succ ?succ ?succ something) * (?zero unit | ?succ ⟨nat_⟩) ] 
     def fvs := extract_free_vars [surftype| (?succ ?succ ?succ something) * (?zero unit | ?succ ⟨nat_⟩) ] 
     
-    #eval to_nameless (to_list fvs) [] [surftype| (?succ something) ] 
+    #eval to_nameless (toList fvs) [] [surftype| (?succ something) ] 
     
 
     def result_pair := to_nameless [] [] nat_

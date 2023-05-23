@@ -1,8 +1,9 @@
 import Std.Data.BinomialHeap
 import Init.Data.Hashable
 import Lean.Data.PersistentHashMap
+import Lean.Data.PersistentHashSet
 
-open Lean PersistentHashMap
+open Lean PersistentHashMap PersistentHashSet
 open Std
 
 -- import Mathlib.Data.List.Sort
@@ -57,6 +58,30 @@ namespace PHashMap
 
 
 end PHashMap
+
+namespace PHashSet
+  def toList  [BEq α] [Hashable α] (base : PHashSet α) : List α :=
+    base.fold (fun acc k => k :: acc) []
+
+  def insert_all [BEq α] [Hashable α] 
+  (base : PHashSet α) (ext : PHashSet α) : PHashSet α :=
+    ext.fold insert base
+
+  def from_list [BEq α] [Hashable α] 
+  (source : List α) : PHashSet α :=
+    source.foldl (init := {}) fun m k => m.insert k
+
+  def repr [Repr α] [BEq α] [Hashable α] 
+  (m : PHashSet α) (n : Nat) : Format :=
+    Format.bracket "{|" (List.repr (toList m) n) "|}"
+
+  instance [Repr α] [BEq α] [Hashable α] : Repr (PHashSet α) where
+    reprPrec := repr
+
+  instance [BEq α] [Hashable α] : Add (PHashSet α) where
+    add x y := x.fold insert y 
+
+end PHashSet
 
 
 infixl:65   " ; " => PHashMap.insert_all

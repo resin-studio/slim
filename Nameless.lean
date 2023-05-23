@@ -1,11 +1,15 @@
 import Std.Data.BinomialHeap
 import Init.Data.Hashable
 import Lean.Data.PersistentHashMap
+import Lean.Data.PersistentHashSet
 
 import Util
 
-open Lean PersistentHashMap
+open Lean PersistentHashMap PersistentHashSet
 open Std
+-- open Lean PHashMap PHashSet
+
+open PHashSet
 
 
 partial def multi_step {T : Type} [BEq T] (step : T -> T) (source : T): T :=
@@ -428,17 +432,17 @@ namespace Nameless
 
 
 
-    partial def free_vars: Ty -> PHashMap Nat Unit
+    partial def free_vars: Ty -> PHashSet Nat 
     | .bvar id => {} 
-    | .fvar id => PHashMap.from_list [(id, Unit.unit)] 
+    | .fvar id => PersistentHashSet.empty.insert id 
     | .unit => {} 
     | .top => {} 
     | .bot => {} 
     | .tag l ty => (free_vars ty) 
     | .field l ty => (free_vars ty)
-    | .union ty1 ty2 => free_vars ty1 ; free_vars ty2
-    | .inter ty1 ty2 => free_vars ty1 ; free_vars ty2
-    | .case ty1 ty2 => free_vars ty1 ; free_vars ty2
+    | .union ty1 ty2 => (free_vars ty1).fold insert (free_vars ty2)
+    | .inter ty1 ty2 => (free_vars ty1).fold insert (free_vars ty2)
+    | .case ty1 ty2 => (free_vars ty1).fold insert (free_vars ty2)
     | .exis n ty_c1 ty_c2 ty =>
       -- (free_vars ty_c1);(free_vars ty_c2);(free_vars ty)
       (free_vars ty)
@@ -447,31 +451,31 @@ namespace Nameless
       (free_vars ty)
     | .recur ty => (free_vars ty)
 
-    partial def free_vars_env (env_ty : PHashMap Nat Ty) (ty : Ty) : PHashMap Nat Unit :=  
+    partial def free_vars_env (env_ty : PHashMap Nat Ty) (ty : Ty) : PHashSet Nat :=  
       free_vars (reduce env_ty ty)
 
 
-    def signed_free_vars (posi : Bool) : Ty -> PHashMap Nat Unit
-    | .bvar id => {} 
-    | .fvar id => 
-      if posi then
-        let u : Unit := Unit.unit
-        PHashMap.from_list [(id, u)] 
-      else
-        {}
-    | .unit => {} 
-    | .top => {} 
-    | .bot => {} 
-    | .tag l ty => (signed_free_vars posi ty) 
-    | .field l ty => (signed_free_vars posi ty)
-    | .union ty1 ty2 => signed_free_vars posi ty1 ; signed_free_vars posi ty2
-    | .inter ty1 ty2 => signed_free_vars posi ty1 ; signed_free_vars posi ty2
-    | .case ty1 ty2 => (signed_free_vars (!posi) ty1) ; signed_free_vars posi ty2
-    | .exis n ty_c1 ty_c2 ty =>
-      (signed_free_vars posi ty)
-    | .univ n ty_c1 ty_c2 ty =>
-      (signed_free_vars posi ty)
-    | .recur ty => (signed_free_vars posi ty)
+    -- def signed_free_vars (posi : Bool) : Ty -> PHashMap Nat Unit
+    -- | .bvar id => {} 
+    -- | .fvar id => 
+    --   if posi then
+    --     let u : Unit := Unit.unit
+    --     PHashMap.from_list [(id, u)] 
+    --   else
+    --     {}
+    -- | .unit => {} 
+    -- | .top => {} 
+    -- | .bot => {} 
+    -- | .tag l ty => (signed_free_vars posi ty) 
+    -- | .field l ty => (signed_free_vars posi ty)
+    -- | .union ty1 ty2 => signed_free_vars posi ty1 ; signed_free_vars posi ty2
+    -- | .inter ty1 ty2 => signed_free_vars posi ty1 ; signed_free_vars posi ty2
+    -- | .case ty1 ty2 => (signed_free_vars (!posi) ty1) ; signed_free_vars posi ty2
+    -- | .exis n ty_c1 ty_c2 ty =>
+    --   (signed_free_vars posi ty)
+    -- | .univ n ty_c1 ty_c2 ty =>
+    --   (signed_free_vars posi ty)
+    -- | .recur ty => (signed_free_vars posi ty)
 
 
     def abstract (fids : List Nat) (start : Nat) : Ty -> Ty
@@ -501,8 +505,8 @@ namespace Nameless
     | .recur ty => .recur (abstract fids (start + 1) ty)
 
     partial def reachable_constraints (env_ty : PHashMap Nat Ty) (ty : Ty) : List (Ty × Ty) :=
-      let fvs := (free_vars ty).toList
-      List.bind fvs (fun (key, _) =>
+      let fvs := PHashSet.toList (free_vars ty)
+      List.bind fvs (fun key =>
         match env_ty.find? (key) with
         | some ty' => (.fvar key, ty') :: (reachable_constraints env_ty ty')
         | none => [] -- TODO: what if the key is inside a record?
@@ -546,9 +550,8 @@ namespace Nameless
       let ty_rhs := nested_pairs rhs
       
       -- TODO: need to package relational constraints too
-
       let fids := List.filter (fun id => id >= boundary) (
-          (free_vars ty; free_vars ty_lhs ; free_vars ty_rhs).toList.bind (fun (k , _) => [k])
+        toList ((free_vars ty) + (free_vars ty_lhs) + (free_vars ty_rhs))
       )
 
       let ty_subbed := simplify (subst env_ty ty)
@@ -789,8 +792,14 @@ namespace Nameless
 
     -- TODO: return relational environment too
     -- TODO: need to return relational environment too
+    -- structure Context where
+    --   env_ty : PHashMap Nat Ty
+    --   env_relational : PHashMap Ty Ty
+    --   set_expandable : PHashMap Nat Unit
+    -- deriving Repr
+
     partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_relational : PHashMap Ty Ty)
-    (expandable : PHashMap Nat Unit)
+    (expandable : PHashSet Nat)
     : Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
     -- existential quantifier elimination 
@@ -871,7 +880,7 @@ namespace Nameless
         (List.range n).map (fun j => Ty.fvar (i + j)),
         if ty_c1 == Ty.unit && ty_c2 == Ty.unit then
           -- widening/exapnding is caused from the outside in 
-          PHashMap.insert_all expandable (PHashMap.from_list ((List.range n).map (fun j => (i + j, .unit))))
+          expandable + (from_list ((List.range n).map (fun j => (i + j))))
         else
           expandable
       )
@@ -1421,7 +1430,7 @@ namespace Nameless
       List.foldr f_step init trips
 
     | .func fs =>
-      let expandable := PHashMap.as_set ((List.range (fs.length)).map (fun j => i + (2 * j)))
+      let expandable := from_list ((List.range (fs.length)).map (fun j => i + (2 * j)))
       let (i, fs_typed) := List.foldr (fun (p, b) (i, ty_acc) =>
         (i + 2, (p, Ty.fvar i, b, Ty.fvar (i + 1)) :: ty_acc)
       ) (i, []) fs
@@ -1567,7 +1576,7 @@ namespace Nameless
         ------------------------------------------------------
 
         let ty_content := List.foldr (fun ty_case ty_acc =>
-          let fvs := (Ty.free_vars ty_case).toList.bind (fun (k , _) => [k])
+          let fvs := toList (Ty.free_vars ty_case)
           let fvs_prem :=  (Ty.free_vars ty_prem)
           let ty_choice := (
             if List.any fvs (fun id => fvs_prem.find? id != none) then
