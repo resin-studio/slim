@@ -580,7 +580,6 @@ namespace Nameless
       let ty_lhs := nested_pairs lhs
       let ty_rhs := nested_pairs rhs
       
-      -- TODO: need to package relational constraints too
       let fids := List.filter (fun id => id >= boundary) (
         toList ((free_vars ty) + (free_vars ty_lhs) + (free_vars ty_rhs))
       )
@@ -820,9 +819,6 @@ namespace Nameless
     --   ))
     -- | Ty.case ty1 _ => some ty1 
     -- | _ => none
-
-    -- TODO: return relational environment too
-    -- TODO: need to return relational environment too
 
     partial def unify (i : Nat) (context : Context)
     : Ty -> Ty -> (Nat × List Context)
@@ -1917,7 +1913,7 @@ namespace Nameless
   ]
 
 
-  -- TODO: limitation: sound, but incomplete
+  -- broken: limitation: sound, but incomplete
   #eval unify_decide 0
   [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
@@ -2093,7 +2089,7 @@ namespace Nameless
   (y[0] #one ())
   ]
 
-  -- TODO
+  -- broken 
   -- expected: ?cons ?nil unit
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
@@ -2118,7 +2114,7 @@ namespace Nameless
     y[0]
   ]
 
-  -- TODO: why is there a union with base case?
+  -- broken: why is there a union with base case?
   -- expected: ?cons ?nil unit
   #eval infer_reduce 10 [lessterm|
     let y[0] = fix(\ y[0] => ( 
@@ -2128,7 +2124,7 @@ namespace Nameless
     (y[0] (#succ #zero ()))
   ]
 
-  -- TODO: why is there a union with base case?
+  -- broken: why is there a union with base case?
   -- expected: ?cons ?nil unit
   #eval infer_reduce 10 [lessterm|
     (fix(\ y[0] => ( 
@@ -2349,7 +2345,6 @@ namespace Nameless
   -- That is, whatever is learned to strengthen the premise 
   -- is automatically applied to preceding iterations 
   -- due to the wrapping type with the co-inductive nu binder
-  -- TODO
   #eval infer_reduce 10 
   [lessterm|
   let y[0] : ⟨spec⟩ = fix(\ y[0] => ( 
@@ -2370,6 +2365,8 @@ namespace Nameless
   y[0]
   ]
 
+  -- broken 
+  -- expected: ?succ ?zero unit 
   #eval infer_reduce 10 
   [lessterm|
   let y[0] = fix(\ y[0] => ( 
@@ -2429,7 +2426,7 @@ namespace Nameless
   --   nat_to_list
   -- -- == false 
 
-  -- -- TODO
+  -- -- broken 
   -- #eval unify_decide 0 
   --   nat_to_list
   --   even_to_list
@@ -2782,8 +2779,7 @@ end Nameless
 
 
 -----------------------------------------------
-  ---- debugging
-  -- TODO: fix subtype unification
+  ------------ transpose_relation ----------------
 
   def nat_ := [lesstype|
     induct 
@@ -2803,26 +2799,24 @@ end Nameless
       {?succ β[0] * ?cons β[1] with β[0] * β[1] <: β[2]}
   ]
 
-  #eval [lessterm| 
-    let y[0] : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
-      \ #zero() => #nil()  
-      \ #succ y[0] => #cons (y[1] y[0]) 
-    )
-    in
-    y[0]
-  ] 
+  -- #eval [lessterm| 
+  --   let y[0] : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
+  --     \ #zero() => #nil()  
+  --     \ #succ y[0] => #cons (y[1] y[0]) 
+  --   )
+  --   in
+  --   y[0]
+  -- ] 
 
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
-    fix(\ y[0] =>
-      \ #zero() => #nil()  
-      \ #succ y[0] => #cons (y[1] y[0]) 
-    )
-  ]
+  -- #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  --   fix(\ y[0] =>
+  --     \ #zero() => #nil()  
+  --     \ #succ y[0] => #cons (y[1] y[0]) 
+  --   )
+  -- ]
 
 
-  ------------ transpose_relation ----------------
 
-  #eval Nameless.Ty.extract_record_labels nat_list
   -- expected: true 
   #eval Nameless.Ty.unify_decide 0
   [lesstype| ⟨nat_list⟩ ]
@@ -2914,10 +2908,6 @@ end Nameless
   #eval Nameless.Ty.unify_decide 0
   [lesstype| {[2] β[0]  with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit ]
-
-  #eval Nameless.Ty.unify_simple 0
-  [lesstype| {[2] β[0] * β[1]  with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
-  [lesstype| ⊤ * ⊤  ]
 
   -- expected: false 
   #eval Nameless.Ty.unify_decide 10
@@ -3016,7 +3006,7 @@ end Nameless
       {(?succ ⟨nat_⟩ * ?zero unit)}
   ]
 
-  -- TODO: why doesn't infer_reduce show ?succ or ?zero
+  -- broken: why doesn't infer_reduce show ?succ or ?zero
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
@@ -3037,10 +3027,8 @@ end Nameless
     -- (y[0] (#succc #zero(), #zero()))
   ] 
 
-  -- TODO: why are notions of ?zero and ?true missing in inferred type? 
+  -- broken: why are notions of ?zero and ?true missing in inferred type? 
   -- Problem: can't unify pair of variables with inductive type
-  -- TODO: need to package relational constraints in generalize too
-  -- TODO: need to return relational environment too
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     (\ (y[0]) => ((fix (\ y[0] =>
       \ (#zero(), #zero()) => #true()  
@@ -3059,9 +3047,9 @@ end Nameless
     )) 
   ] 
 
-  -- Problem: can't unify pair of variables with inductive type
-  -- TODO: instead of failing, need to package constraint with the same existential
-  -- TODO: don't unroll existential?
+  -- broken: can't unify pair of variables with inductive type
+  -- note: instead of failing, need to package constraint with the same existential
+  -- note: don't unroll existential?
   #eval Nameless.Ty.unify_reduce 10 
   [lesstype| 
   (α[2] ->
@@ -3073,7 +3061,8 @@ end Nameless
 
   --------------- debugging ---------------
 
-  -- FINALLY, this works! 
+  -- broken
+  -- expected: ?false unit 
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     (
       (fix (\ y[0] =>
