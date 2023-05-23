@@ -549,6 +549,8 @@ namespace Nameless
       let (lhs, rhs) := List.unzip constraints
       let ty_lhs := nested_pairs lhs
       let ty_rhs := nested_pairs rhs
+      
+      -- TODO: need to package relational constraints too
 
       let fids := List.filter (fun id => id >= boundary) (
           (free_vars ty; free_vars ty_lhs ; free_vars ty_rhs).toList.bind (fun (k , _) => [k])
@@ -1539,28 +1541,32 @@ namespace Nameless
 
         ------------------------------------------------------
         -- TODO: factor out this rewriting with higher order function 
+        -- TODO: need to avoid relational types in parameter
         -------------------------------------------------------
-        let ty_param_content := List.foldr (fun ty_case ty_acc =>
-          let fvs := (Ty.free_vars ty_case).toList.bind (fun (k , _) => [k])
-          let fvs_prem :=  (Ty.free_vars ty_prem)
-          let ty_choice := (
-            if List.any fvs (fun id => fvs_prem.find? id != none) then
-              let fixed_point := fvs.length
-              [lesstype|
-                {[⟨fvs.length⟩] ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩ with 
-                  ⟨Ty.abstract fvs 0 (Ty.get_prem ty_prem)⟩ <: β[⟨fixed_point⟩] 
-                } 
-              ]
-            else if fvs.length > 0 then
-              [lesstype| {[⟨fvs.length⟩] ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩} ]
-            else
-              (Ty.get_prem ty_case)
-          )
+        -- let ty_param_content := List.foldr (fun ty_case ty_acc =>
+        --   let fvs := (Ty.free_vars ty_case).toList.bind (fun (k , _) => [k])
+        --   let fvs_prem :=  (Ty.free_vars ty_prem)
+        --   let ty_choice := (
+        --     if List.any fvs (fun id => fvs_prem.find? id != none) then
+        --       let fixed_point := fvs.length
+        --       [lesstype|
+        --         {[⟨fvs.length⟩] ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩ with 
+        --           ⟨Ty.abstract fvs 0 (Ty.get_prem ty_prem)⟩ <: β[⟨fixed_point⟩] 
+        --         } 
+        --       ]
+        --     else if fvs.length > 0 then
+        --       [lesstype| {[⟨fvs.length⟩] ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩} ]
+        --     else
+        --       (Ty.get_prem ty_case)
+        --   )
 
-          (Ty.union ty_choice ty_acc) 
-        ) [lesstype| ⊥ ] (Ty.split_intersectionss ty_conc)
+        --   (Ty.union ty_choice ty_acc) 
+        -- ) [lesstype| ⊥ ] (Ty.split_intersectionss ty_conc)
 
-        let ty_param := [lesstype| induct ⟨ty_param_content⟩ ]
+        -- let ty_param := [lesstype| induct ⟨ty_param_content⟩ ]
+        ------------------------------------------------------
+        let (i, ty_param) := (i + 1, Ty.fvar i)
+        ------------------------------------------------------
 
         let ty_content := List.foldr (fun ty_case ty_acc =>
           let fvs := (Ty.free_vars ty_case).toList.bind (fun (k , _) => [k])
@@ -1859,7 +1865,7 @@ namespace Nameless
 
   -- expected: ?cons ?nil unit
   #eval unify_reduce 30
-  [lesstype| forall β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| forall β[0] <: ⊤ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?succ ?zero unit -> ?cons α[0] ] 
   [lesstype| α[0] ]
 
@@ -2989,8 +2995,7 @@ end Nameless
       \ (#zero(), y[0]) => #true()  
       \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
       \ (#succ y[0], #zero()) => #false() 
-    )
-    in
+    ) in
     let y[0] = (\ (y[0], y[1]) => 
       (
         (
@@ -3004,6 +3009,33 @@ end Nameless
     -- (y[0] (#succc #zero(), #succ #succ #succc #zero()))
     -- (y[0] (#succc #zero(), #zero()))
   ] 
+
+  -- TODO: why are notions of ?zero and ?true missing in inferred type? 
+  -- Problem: can't unify pair of variables with inductive type
+  -- TODO: need to package relational constraints in generalize too
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    (\ (y[0]) => ((fix (\ y[0] =>
+      \ (#zero(), #zero()) => #true()  
+    )) (y[0])))
+  ] 
+
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    (fix (\ y[0] =>
+      \ (#zero(), #zero()) => #true()  
+    )) 
+  ] 
+
+  -- Problem: can't unify pair of variables with inductive type
+  -- TODO: instead of failing, need to package constraint with the same existential
+  -- TODO: don't unroll existential?
+  #eval Nameless.Ty.unify_reduce 10 
+  [lesstype| 
+  (α[2] ->
+  {[1] β[0] with (α[2] * β[0]) <: (induct ((?zero unit * ?zero unit) * ?true unit))})
+  ]
+  [lesstype| α[0] -> α[1]]
+  [lesstype| α[0] -> α[1]]
+
 
   --------------- debugging ---------------
 
