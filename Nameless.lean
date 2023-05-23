@@ -17,11 +17,6 @@ partial def multi_step {T : Type} [BEq T] (step : T -> T) (source : T): T :=
 
 namespace Nameless 
 
-  inductive Dir : Type
-  | up | dn
-  deriving Repr, Inhabited, Hashable, BEq
-
-
   def assume_env (i_u_env_ty : Nat × List α) 
   (f : Nat -> α -> (Nat × List β)) :
   (Nat × List β) :=
@@ -792,7 +787,9 @@ namespace Nameless
     -- | Ty.case ty1 _ => some ty1 
     -- | _ => none
 
-    partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_complex : PHashMap (Dir × Ty) Ty)
+    -- TODO: return relational environment too
+    -- TODO: need to return relational environment too
+    partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_relational : PHashMap Ty Ty)
     (expandable : PHashMap Nat Unit)
     : Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
 
@@ -808,8 +805,8 @@ namespace Nameless
       let ty := instantiate 0 args ty
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
-      assume_env (unify i env_ty env_complex expandable ty' ty) (fun i env_ty => 
-        unify i env_ty env_complex expandable ty_c1 ty_c2
+      assume_env (unify i env_ty env_relational expandable ty' ty) (fun i env_ty => 
+        unify i env_ty env_relational expandable ty_c1 ty_c2
       )
 
 
@@ -827,9 +824,9 @@ namespace Nameless
 
       let op_fields := linearize_fields ty_c1
 
-      let ((i, contexts), env_complex) := ( 
+      let ((i, contexts), env_relational) := ( 
         match op_fields with 
-        | .none => (unify i (env_ty) env_complex expandable ty_c1 ty_c2, env_complex)
+        | .none => (unify i (env_ty) env_relational expandable ty_c1 ty_c2, env_relational)
         | .some fields =>
           let is_recur_type := match ty_c2 with 
           | Ty.recur _ => true
@@ -842,11 +839,11 @@ namespace Nameless
           if is_recur_type && unmatchable  then 
             if is_consistent_variable_record then
               let ty_norm := ty_c1 
-              ((i, [env_ty]), env_complex.insert (.dn, ty_norm) ty_c2)
+              ((i, [env_ty]), env_relational.insert ty_norm ty_c2)
             else 
-              ((i, []), env_complex) 
+              ((i, []), env_relational) 
           else
-            (unify i (env_ty) env_complex expandable ty_c1 ty_c2, env_complex)
+            (unify i (env_ty) env_relational expandable ty_c1 ty_c2, env_relational)
       )
 
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
@@ -862,7 +859,7 @@ namespace Nameless
           Ty.top
       ) Ty.bot contexts 
 
-      (unify i env_ty env_complex expandable ty1_unioned ty2) 
+      (unify i env_ty env_relational expandable ty1_unioned ty2) 
     ) 
 
 
@@ -885,7 +882,7 @@ namespace Nameless
       let ty1 := instantiate 0 args ty1
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
-      assume_env (unify i env_ty env_complex expandable ty1 ty2) (fun i env_ty => 
+      assume_env (unify i env_ty env_relational expandable ty1 ty2) (fun i env_ty => 
         -- ensure failure instead of narrowing 
         -- this unification is from the outside in
         -- whereas, narrowing should only be used from the inside out
@@ -899,7 +896,7 @@ namespace Nameless
         let ty_c1 := (simplify (subst env_sub ty_c1))
         let ty_c2 := (simplify (subst env_sub ty_c2))
 
-        (unify i env_ty env_complex expandable ty_c1 ty_c2)
+        (unify i env_ty env_relational expandable ty_c1 ty_c2)
       )
 
     -- universal quantifier introduction 
@@ -914,8 +911,8 @@ namespace Nameless
       let ty_c2 := instantiate 0 args ty_c2
       let ty2 := instantiate 0 args ty2
 
-      let ((i, contexts), env_complex) := ( 
-          (unify i (env_ty) env_complex expandable ty_c1 ty_c2, env_complex)
+      let ((i, contexts), env_relational) := ( 
+          (unify i (env_ty) env_relational expandable ty_c1 ty_c2, env_relational)
       )
 
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
@@ -931,7 +928,7 @@ namespace Nameless
           Ty.bot
       ) Ty.top contexts 
 
-      (unify i env_ty env_complex expandable ty1 ty2_inter)
+      (unify i env_ty env_relational expandable ty1 ty2_inter)
     )
 
     ---------------------------------------------------------------
@@ -944,8 +941,8 @@ namespace Nameless
           (i, [env_ty])
         else
           (i, [env_ty.insert id2 (Ty.fvar id1)])
-      | (_, .some ty) => unify i env_ty env_complex expandable (.fvar id1) ty 
-      | (.some ty', _) => unify i env_ty env_complex expandable ty' (.fvar id2) 
+      | (_, .some ty) => unify i env_ty env_relational expandable (.fvar id1) ty 
+      | (.some ty', _) => unify i env_ty env_relational expandable ty' (.fvar id2) 
 
     | .fvar id, ty  => 
       ----------------------------
@@ -955,7 +952,7 @@ namespace Nameless
       | none => 
         (i, [env_ty.insert id (occurs_not id env_ty ty)])
       | some ty' => 
-        let (i, u_env_ty) := (unify i env_ty env_complex expandable ty' ty)
+        let (i, u_env_ty) := (unify i env_ty env_relational expandable ty' ty)
         if u_env_ty.isEmpty then
           (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
         else
@@ -965,7 +962,7 @@ namespace Nameless
       -- | none => 
       --   (i, [env_ty.insert id (occurs_not id env_ty ty)])
       -- | some ty' => 
-      --   (unify i env_ty env_complex expandable ty' ty)
+      --   (unify i env_ty env_relational expandable ty' ty)
       ---------------------------------------
 
     | ty', .fvar id => 
@@ -985,7 +982,7 @@ namespace Nameless
         )
         (i, [env_ty.insert id (roll_recur id env_ty ty_assign)])
       | some ty => 
-        (unify i env_ty env_complex expandable ty' ty) 
+        (unify i env_ty env_relational expandable ty' ty) 
       ---------------------------------------
       -- -- adjustment updates the variable assignment to lower the upper bound 
       ---------------------------------------
@@ -993,7 +990,7 @@ namespace Nameless
       -- | none => 
       --   (i, [env_ty.insert id (roll_recur id env_ty ty')])
       -- | some ty => 
-      --   let (i, u_env_ty) := (unify i env_ty env_complex {} ty' ty)
+      --   let (i, u_env_ty) := (unify i env_ty env_relational {} ty' ty)
       --   if u_env_ty.isEmpty then
       --     (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty ty'))])
       --   else
@@ -1005,8 +1002,8 @@ namespace Nameless
 
     | .case ty1 ty2, .case ty3 ty4 =>
 
-      assume_env (unify i env_ty env_complex expandable ty3 ty1) (fun i env_ty =>
-        (unify i env_ty env_complex expandable ty2 ty4)
+      assume_env (unify i env_ty env_relational expandable ty3 ty1) (fun i env_ty =>
+        (unify i env_ty env_relational expandable ty2 ty4)
       ) 
 
     | .bvar id1, .bvar id2  =>
@@ -1021,13 +1018,13 @@ namespace Nameless
 
     | .tag l' ty', .tag l ty =>
       if l' = l then
-        unify i env_ty env_complex expandable ty' ty
+        unify i env_ty env_relational expandable ty' ty
       else
         (i, [])
 
     | .field l' ty', .field l ty =>
       if l' == l then
-        unify i env_ty env_complex expandable ty' ty
+        unify i env_ty env_relational expandable ty' ty
       else
         (i, [])
 
@@ -1038,50 +1035,50 @@ namespace Nameless
       else
         -- using induction hypothesis, ty1 ≤ ty2; safely unroll
         let ty1' := instantiate 0 [ty2] ty1
-        unify i env_ty env_complex expandable ty1' ty2
+        unify i env_ty env_relational expandable ty1' ty2
 
     | ty', .recur ty =>
       let ty' := (simplify (subst env_ty ty'))
       match (extract_nested_fields ty') with
       | [] => 
         if wellfounded 1 ty then
-          unify i env_ty env_complex expandable ty' (instantiate 0 [Ty.recur ty] ty) 
+          unify i env_ty env_relational expandable ty' (instantiate 0 [Ty.recur ty] ty) 
 
         else
           (i, []) 
       | fields =>
         if matchable fields then 
           if wellfounded 1 ty then
-            unify i env_ty env_complex expandable ty' (instantiate 0 [Ty.recur ty] ty)
+            unify i env_ty env_relational expandable ty' (instantiate 0 [Ty.recur ty] ty)
           else
             (i, []) 
         else
           let ty_norm := ty'
-          match env_complex.find? (.dn, ty_norm) with
+          match env_relational.find? ty_norm with
           | .some ty_cache => 
-            unify i env_ty env_complex expandable ty_cache (Ty.recur ty)
+            unify i env_ty env_relational expandable ty_cache (Ty.recur ty)
           | .none =>  
             (i, []) 
 
     | Ty.union ty1 ty2, ty => 
-      assume_env (unify i env_ty env_complex expandable ty1 ty) (fun i env_ty =>
-        (unify i env_ty env_complex expandable ty2 ty)
+      assume_env (unify i env_ty env_relational expandable ty1 ty) (fun i env_ty =>
+        (unify i env_ty env_relational expandable ty2 ty)
       )
 
     | ty, .union ty1 ty2 => 
-      let (i, u_env_ty1) := (unify i env_ty env_complex expandable ty ty1)
-      let (i, u_env_ty2) := (unify i env_ty env_complex expandable ty ty2)
+      let (i, u_env_ty1) := (unify i env_ty env_relational expandable ty ty1)
+      let (i, u_env_ty2) := (unify i env_ty env_relational expandable ty ty2)
       (i, u_env_ty1 ++ u_env_ty2)
 
 
     | ty, .inter ty1 ty2 => 
-      assume_env (unify i env_ty env_complex expandable ty ty1) (fun i env_ty =>
-        (unify i env_ty env_complex expandable ty ty2)
+      assume_env (unify i env_ty env_relational expandable ty ty1) (fun i env_ty =>
+        (unify i env_ty env_relational expandable ty ty2)
       )
 
     | .inter ty1 ty2, ty => 
-      let (i, u_env_ty1) := (unify i env_ty env_complex expandable ty1 ty)
-      let (i, u_env_ty2) := (unify i env_ty env_complex expandable ty2 ty)
+      let (i, u_env_ty1) := (unify i env_ty env_relational expandable ty1 ty)
+      let (i, u_env_ty2) := (unify i env_ty env_relational expandable ty2 ty)
       (i, u_env_ty1 ++ u_env_ty2)
 
     | _, _ => (i, []) 
@@ -1377,6 +1374,7 @@ namespace Nameless
       t : Tm
       ty : Ty 
     deriving Repr
+
 
 
     partial def infer (i : Nat) (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
@@ -2475,7 +2473,7 @@ end Nameless
 
     --   let op_fields := linearize_fields ty_c2
 
-    --   let ((i, contexts), env_complex) := ( 
+    --   let ((i, contexts), env_relational) := ( 
     --     match op_fields with 
     --     | some fields =>
     --       let is_corec_type := match ty_c1 with 
@@ -2488,15 +2486,15 @@ end Nameless
     --       )
     --       if is_corec_type && is_consistent_variable_record then
     --         let ty_norm := ty_c2
-    --         ((i, [env_ty]), env_complex.insert (.up, ty_norm) ty_c1)
+    --         ((i, [env_ty]), env_relational.insert (.up, ty_norm) ty_c1)
 
-    --       else ((i, []), env_complex) 
-    --     | none => (unify i (env_ty) env_complex {} ty_c1 ty_c2, env_complex)
+    --       else ((i, []), env_relational) 
+    --     | none => (unify i (env_ty) env_relational {} ty_c1 ty_c2, env_relational)
     --   )
 
     --   -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
     --   assume_env (i, contexts) (fun i env_ty => 
-    --   assume_env (unify i env_ty env_complex {} ty1 ty2) (fun i env_ty => 
+    --   assume_env (unify i env_ty env_relational {} ty1 ty2) (fun i env_ty => 
     --     let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
     --       not (is_bound_var key) 
     --     )
@@ -2511,8 +2509,8 @@ end Nameless
     --   let n1 := infer_abstraction ty1 
     --   let n3 := infer_abstraction ty3 
     --   if n1 == 0 && n3 == 0 then 
-    --     assume_env (unify i env_ty env_complex {} ty3 ty1) (fun i env_ty =>
-    --       (unify i env_ty env_complex {} ty2 ty4)
+    --     assume_env (unify i env_ty env_relational {} ty3 ty1) (fun i env_ty =>
+    --       (unify i env_ty env_relational {} ty2 ty4)
     --     ) 
     --   else if n1 >= n3 then
     --     let (i, ids1) := (i + n1, (List.range n1).map (fun j => i + j))
@@ -2526,12 +2524,12 @@ end Nameless
     --     let ty3' := Ty.instantiate 0 args3 ty3
     --     let ty4' := Ty.instantiate 0 args3 ty4
 
-    --     assume_env (unify i env_ty env_complex {} ty3' ty1') (fun i env_ty =>
+    --     assume_env (unify i env_ty env_relational {} ty3' ty1') (fun i env_ty =>
     --       let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
     --         not (is_introduction key)
     --       )
     --       if is_result_safe then
-    --         (unify i env_ty env_complex {} ty2' ty4')
+    --         (unify i env_ty env_relational {} ty2' ty4')
     --       else
     --         (i, [])
     --     ) 
@@ -3013,7 +3011,14 @@ end Nameless
   -- TODO: why are notions of ?zero and ?true missing in inferred type? 
   -- Problem: can't unify pair of variables with inductive type
   -- TODO: need to package relational constraints in generalize too
+  -- TODO: need to return relational environment too
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    (\ (y[0]) => ((fix (\ y[0] =>
+      \ (#zero(), #zero()) => #true()  
+    )) (y[0])))
+  ] 
+
+  #eval Nameless.Tm.infer_simple 0 [lessterm| 
     (\ (y[0]) => ((fix (\ y[0] =>
       \ (#zero(), #zero()) => #true()  
     )) (y[0])))
