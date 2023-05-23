@@ -21,14 +21,14 @@ partial def multi_step {T : Type} [BEq T] (step : T -> T) (source : T): T :=
 
 namespace Nameless 
 
-  def assume_env (i_u_env_ty : Nat × List α) 
+  def bind_nl (i_xs : Nat × List α) 
   (f : Nat -> α -> (Nat × List β)) :
   (Nat × List β) :=
-    let (i, u_env_ty) := i_u_env_ty
+    let (i, xs) := i_xs
     List.foldl (fun (i, u_acc) env_ty =>
-      let (i, u_env_ty) := (f i env_ty)
-      (i, u_acc ++ u_env_ty)
-    ) (i, []) u_env_ty 
+      let (i, xs) := (f i env_ty)
+      (i, u_acc ++ xs)
+    ) (i, []) xs 
 
   inductive Ty : Type
   | bvar : Nat -> Ty  
@@ -792,15 +792,14 @@ namespace Nameless
 
     -- TODO: return relational environment too
     -- TODO: need to return relational environment too
-    -- structure Context where
-    --   env_ty : PHashMap Nat Ty
-    --   env_relational : PHashMap Ty Ty
-    --   set_expandable : PHashMap Nat Unit
-    -- deriving Repr
+    structure Context where
+      env_simple : PHashMap Nat Ty
+      env_relational : PHashMap Ty Ty
+      set_expandable : PHashSet Nat
+    deriving Repr
 
-    partial def unify (i : Nat) (env_ty : PHashMap Nat Ty) (env_relational : PHashMap Ty Ty)
-    (expandable : PHashSet Nat)
-    : Ty -> Ty -> (Nat × List (PHashMap Nat Ty))
+    partial def unify (i : Nat) (context : Context)
+    : Ty -> Ty -> (Nat × List Context)
 
     -- existential quantifier elimination 
     | ty', .exis n ty_c1 ty_c2 ty =>
@@ -814,8 +813,8 @@ namespace Nameless
       let ty := instantiate 0 args ty
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
-      assume_env (unify i env_ty env_relational expandable ty' ty) (fun i env_ty => 
-        unify i env_ty env_relational expandable ty_c1 ty_c2
+      bind_nl (unify i context ty' ty) (fun i context => 
+        unify i context ty_c1 ty_c2
       )
 
 
@@ -833,9 +832,9 @@ namespace Nameless
 
       let op_fields := linearize_fields ty_c1
 
-      let ((i, contexts), env_relational) := ( 
+      let (i, contexts) := ( 
         match op_fields with 
-        | .none => (unify i (env_ty) env_relational expandable ty_c1 ty_c2, env_relational)
+        | .none => (unify i context ty_c1 ty_c2)
         | .some fields =>
           let is_recur_type := match ty_c2 with 
           | Ty.recur _ => true
@@ -844,46 +843,51 @@ namespace Nameless
             let rlabels := extract_record_labels (ty_c2) 
             rlabels.contains l 
           )
-          let unmatchable := !(matchable (extract_nested_fields (simplify (subst env_ty ty_c1))))
+          let unmatchable := !(matchable (extract_nested_fields (simplify (subst context.env_simple ty_c1))))
           if is_recur_type && unmatchable  then 
             if is_consistent_variable_record then
-              let ty_norm := ty_c1 
-              ((i, [env_ty]), env_relational.insert ty_norm ty_c2)
+
+              let context := {context with env_relational := context.env_relational.insert ty_c1 ty_c2}
+              (i, [context])
             else 
-              ((i, []), env_relational) 
+              (i, []) 
           else
-            (unify i (env_ty) env_relational expandable ty_c1 ty_c2, env_relational)
+            (unify i context ty_c1 ty_c2)
       )
 
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
 
-      let ty1_unioned := List.foldr (fun env_ty ty_acc => 
-        let locally_constrained := (fun key => env_ty.contains key)
-        let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+      let ty1_unioned := List.foldr (fun context ty_acc => 
+        let locally_constrained := (fun key => context.env_simple.contains key)
+        let is_result_safe := List.all context.env_simple.toList (fun (key, ty_value) =>
           not (is_bound_var key) || (locally_constrained key)
         )
         if is_result_safe then
-          (simplify (subst env_ty (.union ty1 ty_acc)))
+          (simplify (subst context.env_simple (.union ty1 ty_acc)))
         else
           Ty.top
       ) Ty.bot contexts 
 
-      (unify i env_ty env_relational expandable ty1_unioned ty2) 
+      (unify i context ty1_unioned ty2) 
     ) 
 
 
     -- universal quantifier elimination 
     | .univ n ty_c1 ty_c2 ty1, ty2 =>
       let bound_start := i
-      let (i, args, expandable) := (
+      let (i, args, set_expandable) := (
         i + n, 
         (List.range n).map (fun j => Ty.fvar (i + j)),
         if ty_c1 == Ty.unit && ty_c2 == Ty.unit then
           -- widening/exapnding is caused from the outside in 
-          expandable + (from_list ((List.range n).map (fun j => (i + j))))
+          context.set_expandable + (from_list ((List.range n).map (fun j => (i + j))))
         else
-          expandable
+          context.set_expandable
       )
+      let context := {context with set_expandable := set_expandable}
+
+
+
       let bound_indicies := (List.range n).map (fun j => bound_start + j)
 
       let ty_c1 := instantiate 0 args ty_c1
@@ -891,13 +895,13 @@ namespace Nameless
       let ty1 := instantiate 0 args ty1
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
-      assume_env (unify i env_ty env_relational expandable ty1 ty2) (fun i env_ty => 
+      bind_nl (unify i context ty1 ty2) (fun i context => 
         -- ensure failure instead of narrowing 
         -- this unification is from the outside in
         -- whereas, narrowing should only be used from the inside out
         let env_sub := PHashMap.from_list (
           bound_indicies.bind (fun bid => 
-          match env_ty.find? bid with
+          match context.env_simple.find? bid with
           | some ty_b => [(bid, ty_b)]
           | none => []
           )
@@ -905,7 +909,7 @@ namespace Nameless
         let ty_c1 := (simplify (subst env_sub ty_c1))
         let ty_c2 := (simplify (subst env_sub ty_c2))
 
-        (unify i env_ty env_relational expandable ty_c1 ty_c2)
+        (unify i context ty_c1 ty_c2)
       )
 
     -- universal quantifier introduction 
@@ -920,58 +924,50 @@ namespace Nameless
       let ty_c2 := instantiate 0 args ty_c2
       let ty2 := instantiate 0 args ty2
 
-      let ((i, contexts), env_relational) := ( 
-          (unify i (env_ty) env_relational expandable ty_c1 ty_c2, env_relational)
-      )
+      let (i, contexts) := (unify i context ty_c1 ty_c2)
 
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
 
-      let ty2_inter := List.foldr (fun env_ty ty_acc => 
-        let locally_constrained := (fun key => env_ty.contains key)
-        let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
+      let ty2_inter := List.foldr (fun context ty_acc => 
+        let locally_constrained := (fun key => context.env_simple.contains key)
+        let is_result_safe := List.all context.env_simple.toList (fun (key, ty_value) =>
           not (is_bound_var key) || (locally_constrained key)
         )
         if is_result_safe then
-          (simplify (subst env_ty (.inter ty2 ty_acc)))
+          (simplify (subst context.env_simple (.inter ty2 ty_acc)))
         else
           Ty.bot
       ) Ty.top contexts 
 
-      (unify i env_ty env_relational expandable ty1 ty2_inter)
+      (unify i context ty1 ty2_inter)
     )
 
     ---------------------------------------------------------------
     -- free variables
     ---------------------------------------------------------------
     | (.fvar id1), (.fvar id2) => 
-      match (env_ty.find? id1, env_ty.find? id2) with 
+      match (context.env_simple.find? id1, context.env_simple.find? id2) with 
       | (.none, .none) => 
         if id1 == id2 then
-          (i, [env_ty])
+          (i, [context])
         else
-          (i, [env_ty.insert id2 (Ty.fvar id1)])
-      | (_, .some ty) => unify i env_ty env_relational expandable (.fvar id1) ty 
-      | (.some ty', _) => unify i env_ty env_relational expandable ty' (.fvar id2) 
+          (i, [{context with env_simple := context.env_simple.insert id2 (Ty.fvar id1)}])
+      | (_, .some ty) => unify i context (.fvar id1) ty 
+      | (.some ty', _) => unify i context ty' (.fvar id2) 
 
     | .fvar id, ty  => 
       ----------------------------
       -- adjustment updates the variable assignment to lower the upper bound 
       ---------------------------
-      match env_ty.find? id with 
+      match context.env_simple.find? id with 
       | none => 
-        (i, [env_ty.insert id (occurs_not id env_ty ty)])
+        (i, [{context with env_simple := context.env_simple.insert id (occurs_not id context.env_simple ty)}])
       | some ty' => 
-        let (i, u_env_ty) := (unify i env_ty env_relational expandable ty' ty)
-        if u_env_ty.isEmpty then
-          (i, [env_ty.insert id (occurs_not id env_ty (Ty.inter ty ty'))])
+        let (i, contexts) := (unify i context ty' ty)
+        if contexts.isEmpty then
+          (i, [{context with env_simple := context.env_simple.insert id (occurs_not id context.env_simple (Ty.inter ty ty'))}])
         else
-          (i, u_env_ty)
-      ---------------------------------------
-      -- match env_ty.find? id with 
-      -- | none => 
-      --   (i, [env_ty.insert id (occurs_not id env_ty ty)])
-      -- | some ty' => 
-      --   (unify i env_ty env_relational expandable ty' ty)
+          (i, contexts)
       ---------------------------------------
 
     | ty', .fvar id => 
@@ -980,115 +976,103 @@ namespace Nameless
       -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
       -- when the environment is packed as a constraint; it becomes id <: ty', so we need union to make id <: ty' | Top
       --------------------
-      match env_ty.find? id with 
+      match context.env_simple.find? id with 
       | none => 
-        let adjustable := expandable.find? id != .none
+        let expandable := context.set_expandable.find? id != .none
         let (i, ty_assign) := (
-          if adjustable then
+          if expandable then
             (i + 1, Ty.union (Ty.fvar i) ty') 
           else
             (i, ty')
         )
-        (i, [env_ty.insert id (roll_recur id env_ty ty_assign)])
+        (i, [{context with env_simple := context.env_simple.insert id (roll_recur id context.env_simple ty_assign)}])
       | some ty => 
-        (unify i env_ty env_relational expandable ty' ty) 
+        (unify i context ty' ty) 
       ---------------------------------------
-      -- -- adjustment updates the variable assignment to lower the upper bound 
-      ---------------------------------------
-      -- match env_ty.find? id with 
-      -- | none => 
-      --   (i, [env_ty.insert id (roll_recur id env_ty ty')])
-      -- | some ty => 
-      --   let (i, u_env_ty) := (unify i env_ty env_relational {} ty' ty)
-      --   if u_env_ty.isEmpty then
-      --     (i, [env_ty.insert id (roll_recur id env_ty (Ty.union ty ty'))])
-      --   else
-      --     (i, u_env_ty)
-    ----------------------------------------------------------------
 
 
 
 
     | .case ty1 ty2, .case ty3 ty4 =>
 
-      assume_env (unify i env_ty env_relational expandable ty3 ty1) (fun i env_ty =>
-        (unify i env_ty env_relational expandable ty2 ty4)
+      bind_nl (unify i context ty3 ty1) (fun i context =>
+        (unify i context ty2 ty4)
       ) 
 
     | .bvar id1, .bvar id2  =>
       if id1 = id2 then 
-        (i, [env_ty])
+        (i, [context])
       else
         (i, [])
 
-    | .bot, _ => (i, [env_ty])
-    | _, .top => (i, [env_ty])
-    | .unit, .unit => (i, [env_ty])
+    | .bot, _ => (i, [context])
+    | _, .top => (i, [context])
+    | .unit, .unit => (i, [context])
 
     | .tag l' ty', .tag l ty =>
       if l' = l then
-        unify i env_ty env_relational expandable ty' ty
+        unify i context ty' ty
       else
         (i, [])
 
     | .field l' ty', .field l ty =>
       if l' == l then
-        unify i env_ty env_relational expandable ty' ty
+        unify i context ty' ty
       else
         (i, [])
 
 
     | .recur ty1, ty2 =>
-      if equal env_ty (.recur ty1) ty2 then
-        (i, [env_ty])
+      if equal context.env_simple (.recur ty1) ty2 then
+        (i, [context])
       else
         -- using induction hypothesis, ty1 ≤ ty2; safely unroll
         let ty1' := instantiate 0 [ty2] ty1
-        unify i env_ty env_relational expandable ty1' ty2
+        unify i context ty1' ty2
 
     | ty', .recur ty =>
-      let ty' := (simplify (subst env_ty ty'))
+      let ty' := (simplify (subst context.env_simple ty'))
       match (extract_nested_fields ty') with
       | [] => 
         if wellfounded 1 ty then
-          unify i env_ty env_relational expandable ty' (instantiate 0 [Ty.recur ty] ty) 
+          unify i context ty' (instantiate 0 [Ty.recur ty] ty) 
 
         else
           (i, []) 
       | fields =>
         if matchable fields then 
           if wellfounded 1 ty then
-            unify i env_ty env_relational expandable ty' (instantiate 0 [Ty.recur ty] ty)
+            unify i context ty' (instantiate 0 [Ty.recur ty] ty)
           else
             (i, []) 
         else
           let ty_norm := ty'
-          match env_relational.find? ty_norm with
+          match context.env_relational.find? ty_norm with
           | .some ty_cache => 
-            unify i env_ty env_relational expandable ty_cache (Ty.recur ty)
+            unify i context ty_cache (Ty.recur ty)
           | .none =>  
             (i, []) 
 
     | Ty.union ty1 ty2, ty => 
-      assume_env (unify i env_ty env_relational expandable ty1 ty) (fun i env_ty =>
-        (unify i env_ty env_relational expandable ty2 ty)
+      bind_nl (unify i context ty1 ty) (fun i context =>
+        (unify i context ty2 ty)
       )
 
     | ty, .union ty1 ty2 => 
-      let (i, u_env_ty1) := (unify i env_ty env_relational expandable ty ty1)
-      let (i, u_env_ty2) := (unify i env_ty env_relational expandable ty ty2)
-      (i, u_env_ty1 ++ u_env_ty2)
+      let (i, contexts_ty1) := (unify i context ty ty1)
+      let (i, contexts_ty2) := (unify i context ty ty2)
+      (i, contexts_ty1 ++ contexts_ty2)
 
 
     | ty, .inter ty1 ty2 => 
-      assume_env (unify i env_ty env_relational expandable ty ty1) (fun i env_ty =>
-        (unify i env_ty env_relational expandable ty ty2)
+      bind_nl (unify i context ty ty1) (fun i context =>
+        (unify i context ty ty2)
       )
 
     | .inter ty1 ty2, ty => 
-      let (i, u_env_ty1) := (unify i env_ty env_relational expandable ty1 ty)
-      let (i, u_env_ty2) := (unify i env_ty env_relational expandable ty2 ty)
-      (i, u_env_ty1 ++ u_env_ty2)
+      let (i, contexts_ty1) := (unify i context ty1 ty)
+      let (i, contexts_ty2) := (unify i context ty2 ty)
+      (i, contexts_ty1 ++ contexts_ty2)
 
     | _, _ => (i, []) 
 
@@ -1103,32 +1087,38 @@ namespace Nameless
           | .some t' => Ty.union t t'
 
 
-    partial def unify_reduce_env (i : Nat) (env_ty : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
-      let (_, u_env_ty) := (unify i env_ty {} {} ty1 ty2)
-      List.foldr (fun env_ty ty_acc => 
-        simplify (subst env_ty (Ty.union ty_result ty_acc))
-      ) Ty.bot u_env_ty
+    partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
+      let context : Context := Context.mk env_simple empty empty
+      let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
+      List.foldr (fun context ty_acc => 
+        let env_simple := Context.env_simple context
+        simplify (subst env_simple (Ty.union ty_result ty_acc))
+      ) Ty.bot contexts 
 
       
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
-      let (_, u_env_ty) := (unify i {} {} {} ty1 ty2)
+      let context : Context := ⟨empty, empty, empty⟩
+      let (_, contexts) := (unify i context ty1 ty2)
       generalize i {} (
-        List.foldr (fun env_ty ty_acc => 
-          simplify (subst env_ty (Ty.union ty_result ty_acc))
-        ) Ty.bot u_env_ty
+        List.foldr (fun context ty_acc => 
+          let env_simple := Context.env_simple context
+          simplify (subst env_simple (Ty.union ty_result ty_acc))
+        ) Ty.bot contexts
       )
 
 
     partial def unify_simple (i : Nat) (ty1) (ty2) :=
-      (unify i {} {} {} ty1 ty2)
+      let context : Context := ⟨empty, empty, empty⟩
+      (unify i context ty1 ty2)
 
     partial def unify_decide (i : Nat) (ty1) (ty2) :=
-      let (_, result) := (unify i {} {} {} ty1 ty2)
+      let context : Context := ⟨empty, empty, empty⟩
+      let (_, result) := (unify i context ty1 ty2)
       !result.isEmpty
 
-    def combine (i_u_env_ty : (Nat × List (PHashMap Nat Ty))) (ty : Ty) :=
-      let (i, u_env_ty) := i_u_env_ty
-      (i, u_env_ty.map fun env_ty => (env_ty, ty))
+    def combine (icontexts : (Nat × List Context)) (ty : Ty) :=
+      let (i, contexts) := icontexts
+      (i, contexts.map fun context => (context, ty))
 
     def to_pair_type : Ty -> Ty 
     | .case ty1 ty2 => 
@@ -1371,41 +1361,41 @@ namespace Nameless
 
 
 
-    structure Guide where
-      env_tm : PHashMap Nat Ty
-      ty_expected : Ty
-    deriving Repr
+    -- structure Guide where
+    --   env_tm : PHashMap Nat Ty
+    --   ty_expected : Ty
+    -- deriving Repr
 
-    structure Contract where
-      i : Nat
-      env_ty : PHashMap Ty Ty 
-      guides : List (Nat × Guide) -- [..., (hole variable, guide), ...]
-      t : Tm
-      ty : Ty 
-    deriving Repr
+    -- structure Contract where
+    --   i : Nat
+    --   env_ty : PHashMap Ty Ty 
+    --   guides : List (Nat × Guide) -- [..., (hole variable, guide), ...]
+    --   t : Tm
+    --   ty : Ty 
+    -- deriving Repr
 
 
 
-    partial def infer (i : Nat) (env_ty : PHashMap Nat Ty) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
-    (Nat × List (PHashMap Nat Ty × Ty)) :=
+    partial def infer (i : Nat) (context : Ty.Context) (env_tm : PHashMap Nat Ty) (t : Tm) (ty : Ty) : 
+    (Nat × List (Ty.Context × Ty)) :=
     match t with
     | hole => 
-      (i, [(env_ty, Ty.top)])
+      (i, [(context, Ty.top)])
     | .unit => 
-      let (i, u_env_ty) := (Ty.unify i env_ty {} {} Ty.unit ty) 
-      (i, u_env_ty.map fun env_ty => (env_ty, Ty.unit))
+      let (i, contexts) := (Ty.unify i context Ty.unit ty) 
+      (i, contexts.map fun context => (context, Ty.unit))
     | bvar _ => (i, []) 
     | fvar id =>
       match (env_tm.find? id) with
       | some ty' => 
-        Ty.combine (Ty.unify i env_ty {} {} ty' ty) ty'
+        Ty.combine (Ty.unify i context ty' ty) ty'
       | none => (i, [])
 
     | .tag l t1 =>   
       let (i, ty1) := (i + 1, Ty.fvar i)
-      assume_env (Ty.unify i env_ty {} {} (Ty.tag l ty1) ty) (fun i env_ty =>
-      assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
-        (i, [(env_ty, Ty.tag l ty1')])
+      bind_nl (Ty.unify i context (Ty.tag l ty1) ty) (fun i context =>
+      bind_nl (infer i context env_tm t1 ty1) (fun i (context, ty1') =>
+        (i, [(context, Ty.tag l ty1')])
       ))
 
     | .record fds =>
@@ -1420,17 +1410,17 @@ namespace Nameless
       ) ty_init trips 
 
       let f_step := (fun (l, t1, ty1) acc =>
-        assume_env acc (fun i (env_ty, ty_acc) =>
-        assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
-          (i, [(env_ty, Ty.inter (Ty.field l ty1') ty_acc)])
+        bind_nl acc (fun i (context, ty_acc) =>
+        bind_nl (infer i context env_tm t1 ty1) (fun i (context, ty1') =>
+          (i, [(context, Ty.inter (Ty.field l ty1') ty_acc)])
         ))
       )
 
-      let init := Ty.combine (Ty.unify i env_ty {} {} ty' ty) [lesstype| ⊤ ]
+      let init := Ty.combine (Ty.unify i context ty' ty) [lesstype| ⊤ ]
       List.foldr f_step init trips
 
     | .func fs =>
-      let expandable := from_list ((List.range (fs.length)).map (fun j => i + (2 * j)))
+      let set_expandable := from_list ((List.range (fs.length)).map (fun j => i + (2 * j)))
       let (i, fs_typed) := List.foldr (fun (p, b) (i, ty_acc) =>
         (i + 2, (p, Ty.fvar i, b, Ty.fvar (i + 1)) :: ty_acc)
       ) (i, []) fs
@@ -1442,7 +1432,7 @@ namespace Nameless
       ) (i, case_init) fs_typed 
 
       let f_step := (fun (p, ty_p, b, ty_b) acc =>
-        assume_env acc (fun i (env_ty, ty_acc) =>
+        bind_nl acc (fun i (context, ty_acc) =>
         match pattern_wellformed 0 p with
         | none => (i, [])
         | some n =>
@@ -1457,41 +1447,41 @@ namespace Nameless
 
           let p := instantiate 0 list_tm_x p 
           let b := instantiate 0 list_tm_x b  
-          assume_env (infer i env_ty (env_tm ; env_pat) p ty_p) (fun i (env_ty, ty_p') =>
-          assume_env (infer i env_ty (env_tm ; env_pat) b ty_b) (fun i (env_ty, ty_b') =>
-              (i, [(env_ty, Ty.simplify (Ty.inter (Ty.case ty_p' ty_b') ty_acc))])
+          bind_nl (infer i context (env_tm ; env_pat) p ty_p) (fun i (context, ty_p') =>
+          bind_nl (infer i context (env_tm ; env_pat) b ty_b) (fun i (context, ty_b') =>
+              (i, [(context, Ty.simplify (Ty.inter (Ty.case ty_p' ty_b') ty_acc))])
           )))
         )
 
-      let init := Ty.combine (Ty.unify i env_ty {} expandable ty' ty) [lesstype| ⊤ ]
+      let init := Ty.combine (Ty.unify i {context with set_expandable := set_expandable} ty' ty) [lesstype| ⊤ ]
       List.foldr f_step init fs_typed
 
     | .proj t1 l =>
-      assume_env (infer i env_ty env_tm t1 (Ty.field l ty)) (fun i (env_ty, ty1') =>
+      bind_nl (infer i context env_tm t1 (Ty.field l ty)) (fun i (context, ty1') =>
       let (i, ty') := (i + 1, Ty.fvar i)
-      assume_env (Ty.unify i env_ty {} {} ty1' (Ty.field l ty')) (fun i env_ty =>
-        (i, [(env_ty, ty')])
+      bind_nl (Ty.unify i context ty1' (Ty.field l ty')) (fun i context =>
+        (i, [(context, ty')])
       ))
 
     | .app t1 t2 =>
     ------------------------------ 
     ------------------------------ 
       let (i, ty2) := (i + 1, Ty.fvar i)
-      assume_env (infer i env_ty env_tm t2 ty2) (fun i (env_ty, ty2') =>
-      assume_env (infer i env_ty env_tm t1 (Ty.case ty2' ty)) (fun i (env_ty, ty1) =>
+      bind_nl (infer i context env_tm t2 ty2) (fun i (context, ty2') =>
+      bind_nl (infer i context env_tm t1 (Ty.case ty2' ty)) (fun i (context, ty1) =>
       let (i, ty') := (i + 1, Ty.fvar i)
-      assume_env (Ty.unify i env_ty {} {} ty1 (Ty.case ty2' ty')) (fun i env_ty =>
-        (i, [(env_ty, ty')])
+      bind_nl (Ty.unify i context ty1 (Ty.case ty2' ty')) (fun i context =>
+        (i, [(context, ty')])
       )))
       ------------------------------------------
       ---- alternative 
       -------------------------------------------------------
       -- let (i, ty2) := (i + 1, Ty.fvar i)
       -- let (i, ty') := (i + 1, Ty.fvar i)
-      -- assume_env (infer i env_ty env_tm t1 (Ty.case ty2 ty)) (fun i (env_ty, ty1) =>
-      -- assume_env (infer i env_ty env_tm t2 ty2) (fun i (env_ty, ty2') =>
-      -- assume_env (Ty.unify i env_ty {} {} ty1 (Ty.case ty2' ty')) (fun i env_ty =>
-      --   (i, [(env_ty, ty')])
+      -- bind_nl (infer i context env_tm t1 (Ty.case ty2 ty)) (fun i (context, ty1) =>
+      -- bind_nl (infer i context env_tm t2 ty2) (fun i (context, ty2') =>
+      -- bind_nl (Ty.unify i context {} {} ty1 (Ty.case ty2' ty')) (fun i context =>
+      --   (i, [(context, ty')])
       -- )))
       ----------------------------------------------
 
@@ -1506,33 +1496,33 @@ namespace Nameless
       if t1 == Tm.hole then
         let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1)]) 
         let t := instantiate 0 [x] t 
-        (infer i env_ty (env_tm ; env_tmx) t ty) 
+        (infer i context (env_tm ; env_tmx) t ty) 
       else
         -- collapsing
-        let (i, u_env_ty) := (infer i env_ty env_tm t1 ty1) 
-        let ty1_schema := List.foldr (fun (env_ty, ty1') ty_acc => 
-          let ty1_schema := Ty.generalize free_var_boundary env_ty ty1'
+        let (i, contexts) := (infer i context env_tm t1 ty1) 
+        let ty1_schema := List.foldr (fun (context, ty1') ty_acc => 
+          let ty1_schema := Ty.generalize free_var_boundary context.env_simple ty1'
           (Ty.union ty1_schema ty_acc)
-        ) Ty.bot u_env_ty
+        ) Ty.bot contexts 
         let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
         let t := instantiate 0 [x] t 
 
         -- unification check, since downward propagation cannot check against a full union 
-        assume_env (Ty.unify i env_ty {} {} ty1_schema ty1) (fun i env_ty => 
-          (infer i env_ty (env_tm ; env_tmx) t ty) 
+        bind_nl (Ty.unify i context ty1_schema ty1) (fun i context => 
+          (infer i context (env_tm ; env_tmx) t ty) 
         )
 
       --------------------------------------------------------------------------------
       -- old version without collapsing 
       --------------------------------------------------------------------------------
-      -- assume_env (infer i env_ty env_tm t1 ty1) (fun i (env_ty, ty1') =>
-      --   let ty1_schema := Ty.generalize free_var_boundary env_ty ty1'
+      -- bind_nl (infer i context env_tm t1 ty1) (fun i (context, ty1') =>
+      --   let ty1_schema := Ty.generalize free_var_boundary context ty1'
       --   -- let ty1_schema := ty1'
 
       --   let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
       --   let t := instantiate 0 [x] t 
 
-      --   (infer i env_ty (env_tm ; env_tmx) t ty) 
+      --   (infer i context (env_tm ; env_tmx) t ty) 
 
       -- )
       --------------------------------------------------------------------------------
@@ -1542,9 +1532,9 @@ namespace Nameless
 
       let (i, ty_prem) := (i + 1, Ty.fvar i) 
       let (i, ty_conc) := (i + 1, Ty.fvar i) 
-      assume_env (infer i env_ty env_tm t1 (Ty.case ty_prem ty_conc)) (fun i (env_ty, ty1') =>
-        let ty_prem := (Ty.reduce env_ty ty_prem)
-        let ty_conc := (Ty.reduce env_ty ty_conc)
+      bind_nl (infer i context env_tm t1 (Ty.case ty_prem ty_conc)) (fun i (context, ty1') =>
+        let ty_prem := (Ty.reduce context.env_simple ty_prem)
+        let ty_conc := (Ty.reduce context.env_simple ty_conc)
 
         ------------------------------------------------------
         -- TODO: factor out this rewriting with higher order function 
@@ -1598,80 +1588,82 @@ namespace Nameless
         -- NOTE: constraint that ty' <= ty_prem is built into inductive type
         let relational_type := [lesstype| induct ⟨ty_content⟩ ]
         let ty' := [lesstype| forall [1] β[0] <: ⟨ty_param⟩ have β[0] -> {[1] β[0] with β[1] * β[0] <: ⟨relational_type⟩} ] 
-        assume_env (Ty.unify i env_ty {} {} ty' ty) (fun i env_ty =>
-          (i, [(env_ty, ty')])
+        bind_nl (Ty.unify i context ty' ty) (fun i context =>
+          (i, [(context, ty')])
         )
       )
       --------------
-      -- assume_env (Ty.unify i env_ty {} {} ty1' (.case ty_prem ty)) (fun i env_ty =>
+      -- bind_nl (Ty.unify i context ty1' (.case ty_prem ty)) (fun i context =>
       -- )
       --------------
 
 
     partial def infer_simple i (t : Tm) :=
-      (infer (i + 1) {} {} t (Ty.fvar i))
+      let context : Ty.Context := ⟨empty, empty, empty⟩
+      (infer (i + 1) context {} t (Ty.fvar i))
 
     partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
       let boundary := i 
-      let (_, u_env) := (infer i {} {} t ty)
-      List.foldr (fun (env_ty, ty') ty_acc => 
-        let ty' := Ty.simplify ((Ty.subst env_ty (Ty.union ty' ty_acc)))
-        Ty.generalize boundary env_ty ty'
-      ) Ty.bot u_env
+      let context : Ty.Context := ⟨empty, empty, empty⟩
+      let (_, contexts) := (infer i context {} t ty)
+      List.foldr (fun (context, ty') ty_acc => 
+        let ty' := Ty.simplify ((Ty.subst context.env_simple (Ty.union ty' ty_acc)))
+        Ty.generalize boundary context.env_simple ty'
+      ) Ty.bot contexts
 
 
     partial def infer_reduce (i : Nat) (t : Tm) : Ty := infer_reduce_wt (i + 1) t (Ty.fvar i)
 
-    structure Work where
-      cost : Nat
-      i : Nat
-      guides : PHashMap Nat Guide
-      patches : PHashMap Nat Tm 
-      t : Tm
-    deriving Repr
+    -- structure Work where
+    --   cost : Nat
+    --   i : Nat
+    --   guides : PHashMap Nat Guide
+    --   patches : PHashMap Nat Tm 
+    --   t : Tm
+    -- deriving Repr
 
 
 
-    def Work.le (x y: Work): Bool := x.cost <= y.cost
+    -- def Work.le (x y: Work): Bool := x.cost <= y.cost
 
-    def Work.Queue := BinomialHeap Work Work.le
+    -- def Work.Queue := BinomialHeap Work Work.le
 
-    partial def cost : Tm -> Nat
-    | hole => 1 
-    | .unit => 1 
-    | bvar id => 1 
-    | fvar id => 1
-    | tag l t => 1 + (cost t)
-    | record entries => 
-      List.foldl (fun cost' (l, t) => cost' + (cost t)) 1 entries
-    | func cases =>
-      List.foldl (fun cost' (p, t_b) => cost' + (cost t_b)) 1 cases
-    | proj t l => 1 + (cost t)
-    | app t1 t2 => 1 + (cost t1) + (cost t2)
-    | letb ty t1 t2 => 1 + (cost t1) + (cost t2)
-    | .fix t => 1 + (cost t)
+    -- partial def cost : Tm -> Nat
+    -- | hole => 1 
+    -- | .unit => 1 
+    -- | bvar id => 1 
+    -- | fvar id => 1
+    -- | tag l t => 1 + (cost t)
+    -- | record entries => 
+    --   List.foldl (fun cost' (l, t) => cost' + (cost t)) 1 entries
+    -- | func cases =>
+    --   List.foldl (fun cost' (p, t_b) => cost' + (cost t_b)) 1 cases
+    -- | proj t l => 1 + (cost t)
+    -- | app t1 t2 => 1 + (cost t1) + (cost t2)
+    -- | letb ty t1 t2 => 1 + (cost t1) + (cost t2)
+    -- | .fix t => 1 + (cost t)
 
-    partial def subst (m : PHashMap Nat Tm) : Tm -> Tm 
-    | hole => hole 
-    | .unit => .unit 
-    | bvar id => bvar id 
-    | fvar id => (match m.find? id with
-      | some t => subst m t 
-      | none => .fvar id
-    )
-    | tag l t => tag l (subst m t)
-    | record entries => 
-      let entries' := List.map (fun (l, t) => (l, subst m t)) entries 
-      record entries'
-    | func cases =>
-      let cases' := List.map (fun (p, t_b) => 
-        (p, subst m t_b)
-      ) cases 
-      func cases'
-    | proj t l => proj (subst m t) l
-    | app t1 t2 => app (subst m t1) (subst m t2)
-    | letb ty t1 t2 => letb ty (subst m t1) (subst m t2)
-    | .fix t => .fix (subst m t)
+    -- partial def subst (m : PHashMap Nat Tm) : Tm -> Tm 
+    -- | hole => hole 
+    -- | .unit => .unit 
+    -- | bvar id => bvar id 
+    -- | fvar id => (match m.find? id with
+    --   | some t => subst m t 
+    --   | none => .fvar id
+    -- )
+    -- | tag l t => tag l (subst m t)
+    -- | record entries => 
+    --   let entries' := List.map (fun (l, t) => (l, subst m t)) entries 
+    --   record entries'
+    -- | func cases =>
+    --   let cases' := List.map (fun (p, t_b) => 
+    --     (p, subst m t_b)
+    --   ) cases 
+    --   func cases'
+    -- | proj t l => proj (subst m t) l
+    -- | app t1 t2 => app (subst m t1) (subst m t2)
+    -- | letb ty t1 t2 => letb ty (subst m t1) (subst m t2)
+    -- | .fix t => .fix (subst m t)
 
     -- (tag labels, field labels)
     partial def extract_labels : Ty -> (List String × List String)
@@ -2100,6 +2092,7 @@ namespace Nameless
     y[0]
   ]
 
+  -- TODO: why is there a union with base case?
   -- expected: ?cons ?nil unit
   #eval infer_reduce 10 [lessterm|
     let y[0] = fix(\ y[0] => ( 
@@ -2109,6 +2102,7 @@ namespace Nameless
     (y[0] (#succ #zero ()))
   ]
 
+  -- TODO: why is there a union with base case?
   -- expected: ?cons ?nil unit
   #eval infer_reduce 10 [lessterm|
     (fix(\ y[0] => ( 
@@ -2502,8 +2496,8 @@ end Nameless
     --   )
 
     --   -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
-    --   assume_env (i, contexts) (fun i env_ty => 
-    --   assume_env (unify i env_ty env_relational {} ty1 ty2) (fun i env_ty => 
+    --   bind_nl (i, contexts) (fun i env_ty => 
+    --   bind_nl (unify i env_ty env_relational {} ty1 ty2) (fun i env_ty => 
     --     let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
     --       not (is_bound_var key) 
     --     )
@@ -2518,7 +2512,7 @@ end Nameless
     --   let n1 := infer_abstraction ty1 
     --   let n3 := infer_abstraction ty3 
     --   if n1 == 0 && n3 == 0 then 
-    --     assume_env (unify i env_ty env_relational {} ty3 ty1) (fun i env_ty =>
+    --     bind_nl (unify i env_ty env_relational {} ty3 ty1) (fun i env_ty =>
     --       (unify i env_ty env_relational {} ty2 ty4)
     --     ) 
     --   else if n1 >= n3 then
@@ -2533,7 +2527,7 @@ end Nameless
     --     let ty3' := Ty.instantiate 0 args3 ty3
     --     let ty4' := Ty.instantiate 0 args3 ty4
 
-    --     assume_env (unify i env_ty env_relational {} ty3' ty1') (fun i env_ty =>
+    --     bind_nl (unify i env_ty env_relational {} ty3' ty1') (fun i env_ty =>
     --       let is_result_safe := List.all env_ty.toList (fun (key, ty_value) =>
     --         not (is_introduction key)
     --       )
