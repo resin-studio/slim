@@ -1904,7 +1904,10 @@ namespace Nameless
       {?succ ?succ β[0] * ?cons ?cons β[1] with (β[0] * β[1]) <: β[2]}
   ]
 
+  -- broken
+  -- expected: true
   #eval unify_decide 0 even_list nat_list 
+
   #eval unify_decide 0 nat_list even_list
 
   def even := [lesstype| 
@@ -1913,9 +1916,44 @@ namespace Nameless
 
 
   -- broken: limitation: sound, but incomplete
+  -- expected: true
   #eval unify_decide 0
   [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
+  -- expected: true
+  #eval unify_decide 0
+  [lesstype| forall [1] β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| forall [1] β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
+-----------------
+  -- broken
+  -- expected: true
+  -- note: using a pair type causes problems for some reason, but a single variable is fine  
+  -- a single variable is saved in the environment; need to ensure the pair type is also saved
+  #eval unify_decide 10 
+  [lesstype| {β[0] * β[1] with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| {β[0] * β[1] with β[0] * β[1] <: ⟨nat_list⟩} ]
+
+  -- expected: true
+  -- this works!
+  #eval unify_decide 10 
+  [lesstype| {β[0] with β[0] <: ⟨nat_list⟩} ]
+  [lesstype| {β[0] with β[0] <: ⟨nat_list⟩} ]
+
+
+  #eval unify_decide 10 
+  [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
+
+-----------------
+  -- expected: true
+  #eval unify_decide 10 
+  [lesstype| ⟨nat_list⟩ ]
+  [lesstype| ⟨nat_list⟩ ]
+---------------
+
+---------------
 
   #eval unify_decide 0
   [lesstype| forall β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩}  ]
