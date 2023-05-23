@@ -1442,7 +1442,6 @@ namespace Nameless
       List.foldr f_step init trips
 
     | .func fs =>
-      let set_expandable := from_list ((List.range (fs.length)).map (fun j => i + (2 * j)))
       let (i, fs_typed) := List.foldr (fun (p, b) (i, ty_acc) =>
         (i + 2, (p, Ty.fvar i, b, Ty.fvar (i + 1)) :: ty_acc)
       ) (i, []) fs
@@ -1475,7 +1474,7 @@ namespace Nameless
           )))
         )
 
-      let init := Ty.combine (Ty.unify i {context with set_expandable := set_expandable} ty' ty) [lesstype| ⊤ ]
+      let init := Ty.combine (Ty.unify i context ty' ty) [lesstype| ⊤ ]
       List.foldr f_step init fs_typed
 
     | .proj t1 l =>
@@ -2120,17 +2119,6 @@ namespace Nameless
     y[0]
   ]
 
-  -- broken: why is there a union with base case?
-  -- expected: ?cons ?nil unit
-  #eval infer_reduce 10 [lessterm|
-    let y[0] = fix(\ y[0] => ( 
-      \ #zero () => #nil ()
-      \ #succ y[0] => #cons (y[1] y[0])
-    )) in 
-    (y[0] (#succ #zero ()))
-  ]
-
-  -- broken: why is there a union with base case?
   -- expected: ?cons ?nil unit
   #eval infer_reduce 10 [lessterm|
     (fix(\ y[0] => ( 
@@ -2140,6 +2128,16 @@ namespace Nameless
     (#succ #zero ())
     )
   ]
+
+  -- expected: ?cons ?nil unit
+  #eval infer_reduce 10 [lessterm|
+    let y[0] = fix(\ y[0] => ( 
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[1] y[0])
+    )) in 
+    (y[0] (#succ #zero ()))
+  ]
+
 
   #eval unify_reduce 10 
   [lesstype|
@@ -2162,7 +2160,7 @@ namespace Nameless
       )))
   ] 
 
-  -- expected: false
+  -- expected: ⊥  
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     let y[0] : ?succ ?zero unit = 
     (
@@ -3067,7 +3065,6 @@ end Nameless
 
   --------------- debugging ---------------
 
-  -- broken
   -- expected: ?false unit 
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     (
@@ -3104,7 +3101,7 @@ end Nameless
       {(?succ β[0] * ?zero unit) * ?false unit}
   ]
 
-  -- expected: fail 
+  -- expected: ⊥ 
   #eval Nameless.Ty.unify_reduce 10 
   [lesstype|
     (forall [1] β[0] <: ?ooga unit 
