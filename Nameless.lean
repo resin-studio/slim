@@ -586,13 +586,13 @@ namespace Nameless
 
       let ty_subbed := simplify (subst context.env_simple ty)
 
-      if no_function_types ty_subbed then
+      if fids.isEmpty then
+          ty
+      else if no_function_types ty_subbed then
         let env_sub := PHashMap.from_list (
           fids.map (fun fid => (fid, Ty.bot))
         )
         simplify (subst env_sub ty_subbed)
-      else if fids.isEmpty then
-          ty
       else
         [lesstype|
           forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
@@ -2089,8 +2089,14 @@ namespace Nameless
   (y[0] #one ())
   ]
 
-  -- broken 
   -- expected: ?cons ?nil unit
+  #eval infer_reduce 0 [lessterm|
+    let y[0] : forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
+    (y[0] (#succ #zero ()))
+  ]
+
+  -- expected: ⊥  
+  -- expansion causes type-checking constraint to fail; since param type is allowed to be anything 
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
     (y[0] (#succ #zero ()))
