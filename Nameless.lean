@@ -2212,10 +2212,10 @@ namespace Nameless
   )  
   ]
 
-  -- Note: is this in effect, the same thing as PDR/IC3
-  -- That is, whatever is learned to strengthen the premise 
+  -- Note: is this in effect, the same thing as PDR/IC3?
+  -- That is, whatever is learned to strengthen the conclusion 
   -- is automatically applied to preceding iterations 
-  -- due to the wrapping type with the co-inductive nu binder
+  -- due to the wrapping type in inductive binding 
   #eval infer_reduce 10 
   [lessterm|
   let y[0] : ⟨spec⟩ = fix(\ y[0] => ( 
@@ -2716,3 +2716,12 @@ end Nameless
   [lesstype| α[0] ]
 
   ----------------------------
+  -- incomplete without model-based subtyping
+  -- model-based subtyping could outsource to more complete systems
+  ----------------------------
+  -- URL: https://pnwamk.github.io/sst-tutorial/#%28part._sec~3asemantic-subtyping%29
+  #eval Nameless.Ty.unify_decide 0
+  [lesstype| (?x unit | ?y unit) * ?y unit ] 
+  [lesstype| (?x unit * ?y unit) | (?y unit * ?y unit) ] 
+
+  -------------------------

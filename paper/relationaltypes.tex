@@ -1,0 +1,110 @@
+\documentclass[letterpaper]{llncs}
+\usepackage[letterpaper, margin=1.5in]{geometry}
+
+\usepackage{mathpartir}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{nccmath}
+\usepackage{stmaryrd}
+\usepackage{amssymb}
+\usepackage{listings}
+
+
+\usepackage{graphicx}
+\graphicspath{ {./images/} }
+
+\usepackage{url}
+
+\makeatletter % allow us to mention @-commands
+\def\arcr{\@arraycr}
+\makeatother
+
+\lstset{
+    % identifierstyle=\color{violet},
+    % textcolor=blue,
+    % keywordstyle=\color{blue},
+    keywordstyle=\text,
+    basicstyle=\ttfamily,
+    mathescape=true,
+    showspaces=false,
+    morekeywords={let, fix, in}
+}
+\usepackage[utf8]{inputenc}
+% \usepackage[T1]{fontenc}
+
+
+\title{Relational Types}
+% \author{}
+% \institute{}
+
+\begin{document}
+\maketitle
+
+
+\section{Introduction}
+
+\textbf{Context}. \newline
+\textbf{Gap}. \newline
+\textbf{Innovation}. \newline
+
+\section{Overview}
+
+\subsection{Language of types}
+\textbf{Polymorphic}.  \newline
+\textbf{Set-theoretic}. Union implies extrinsic/non-intrinsic. Implies Subtyping  \newline
+\textbf{Relational}.  \newline
+
+\subsection{Automation}
+\textbf{Let-poly type-inference}. \newline
+\textbf{Adjustments with union and intersection}. \newline
+\textbf{Type checking two relational types}. \newline
+\textbf{Path sensitivity}. \newline
+
+\subsection{Examples}
+
+\section{Related Techniques}
+
+\textbf{HM type inference}.  \newline
+\textbf{model-based subtyping}. Exemplified by XDuce and CDuce. complete subtyping.
+% set theoretic notes: https://pnwamk.github.io/sst-tutorial/#%28part._sec~3asemantic-subtyping%29
+% semantic subtyping: https://www.irif.fr/~gc/papers/semantic_subtyping.pdf
+The terminology "semantic subtyping" vs "syntactic subtyping" are confusing terms. 
+They actually refer to the meta-linguistic semantics of denotation 
+meta-linguistic syntax of inference rules.
+Better terms would be "model-based" vs "rule-based", or "denotational" vs "operational".
+The former merely uses indirection into the language of sets.
+Both are semantics that are defined in terms of syntax, either directly or indirectly.
+Really, the dichotomy should be referred to as "indirect subtyping" vs "direct subtyping".
+All semantics are defined in terms of syntax, either directly or indirectly. 
+necessary for a complete semantics at the cost of undecidability; syntactic inference rules are incomplete, but decidable.
+This basically seems like kicking the can down the road. Eventually there will need to be 
+a syntactic-based procedure for checking inhabitation of sets.
+\newline
+\textbf{Typescript}. Unsound. Maybe not as lenient?  \newline
+\textbf{Refinement Types}. a restricted to intersection; implies intrinsic top\newline
+\textbf{Predicate Subtyping}. An extension of refinement types exemplified by Liquid Types.
+RLT starts with an invalid post-condition, then weakens return type to the (strongest) valid post-condition from outside in by expanding unions. 
+RLT starts with an invalid pre-condition, then strengthens parameter type to a (weakest) valid pre-condition from inside out by adding intersections. 
+Liquid types starts with an invalid post-condition, then uses iterative weakening by dropping conjunctions until a valid post-condition is reached.
+\newline
+\textbf{Abstraction Refinement}. Type unification over subtyping resembles abstraction refinement  
+where solving for variables on different sides of the subtyping relation corresponds to
+solving with the abstractor vs solving with the refiner.
+\newline
+\textbf{Craig interpolation}. extracting an inductive type with unions and intersections 
+from a recursive program without needing to specify a predicate universe might be similar to
+craig interpolation. \newline
+\textbf{PDR}. exemplified by IC3. RLT infers abstract type for return type, 
+then safely constrains the variables in previous step (fix's antecedent) to subtype the least fixed point.
+This, in essence, propagates the type for the last step to the previous steps.
+This is safe as antecedent is stronger than consequent at any step.
+the technique in PDR for propagating loss points might be related. 
+ \newline 
+
+
+
+
+\end{document}
+
+
