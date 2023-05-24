@@ -76,7 +76,7 @@ namespace PHashSet
 
   def repr [Repr α] [BEq α] [Hashable α] 
   (m : PHashSet α) (n : Nat) : Format :=
-    Format.bracket "{|" (List.repr (toList m) n) "|}"
+    Format.bracket "{" (List.repr (toList m) n) "}"
 
   instance [Repr α] [BEq α] [Hashable α] : Repr (PHashSet α) where
     reprPrec := repr
