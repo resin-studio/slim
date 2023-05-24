@@ -492,10 +492,14 @@ namespace Nameless
 
     def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
       --------------------------------------
-      -- avoids substitution, as type variable determines type adjustment
       -- boundary prevents overgeneralizing
+
+      -- sub in simple types; 
+      -- subbing prevents strengthening from the outside in 
+      -- only the body type (conclusion) can safely strengthen the parameter type (the premise)  
+      -- subbing does not prevent weakening, as weakining is handles adding unions of fresh variables  
       --------------------------------------
-      --------------------------------------
+
       let map_kcs := map_keys_to_constraints context
       let ty := simplify (subst context.env_simple ty)
       let (lhs, rhs) := List.unzip (reachable_constraints map_kcs ty)
@@ -832,7 +836,6 @@ namespace Nameless
     | .fvar id, ty  => 
       ----------------------------
       -- adjustment updates the variable assignment to lower the upper bound 
-      -- TODO: may also need to weaken?
       ---------------------------
       match context.env_simple.find? id with 
       | none => 
