@@ -497,6 +497,7 @@ namespace Nameless
       --------------------------------------
       --------------------------------------
       let map_kcs := map_keys_to_constraints context
+      let ty := simplify (subst context.env_simple ty)
       let (lhs, rhs) := List.unzip (reachable_constraints map_kcs ty)
 
       let ty_lhs := nested_pairs lhs
@@ -506,15 +507,13 @@ namespace Nameless
         toList ((free_vars ty) + (free_vars ty_lhs) + (free_vars ty_rhs))
       )
 
-      let ty_subbed := simplify (subst context.env_simple ty)
-
       if fids.isEmpty then
           ty
-      else if no_function_types ty_subbed then
+      else if no_function_types ty then
         let env_sub := PHashMap.from_list (
           fids.map (fun fid => (fid, Ty.bot))
         )
-        simplify (subst env_sub ty_subbed)
+        simplify (subst env_sub ty)
       else
         [lesstype|
           forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
@@ -713,11 +712,8 @@ namespace Nameless
             not (is_bound_var key) || (locally_constrained key)
           )
           if is_result_safe then
-            --------- generalizing
+            --------- generalizing 
             (.union (generalize bound_start context ty1) ty_acc)
-            ----------
-            ------- subbing
-            -- (simplify (subst context.env_simple (.union ty1 ty_acc)))
             ----------
           else
             Ty.top
@@ -748,6 +744,12 @@ namespace Nameless
           not (is_bound_var key) || (locally_constrained key)
         )
         if is_result_safe then
+          ---------
+          -- generalization causes non-termination; need to understand this 
+          ---------
+          -- (.inter (generalize bound_start context ty2) ty_acc)
+          ----------------------------------
+
           (simplify (subst context.env_simple (.inter ty2 ty_acc)))
         else
           Ty.bot
@@ -830,6 +832,7 @@ namespace Nameless
     | .fvar id, ty  => 
       ----------------------------
       -- adjustment updates the variable assignment to lower the upper bound 
+      -- TODO: may also need to weaken?
       ---------------------------
       match context.env_simple.find? id with 
       | none => 
@@ -966,6 +969,16 @@ namespace Nameless
       
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
       let context : Context := ⟨empty, empty, empty⟩
+      let (_, contexts) := (unify i context ty1 ty2)
+      generalize i context (
+        List.foldr (fun context ty_acc => 
+          let env_simple := Context.env_simple context
+          simplify (subst env_simple (Ty.union ty_result ty_acc))
+        ) Ty.bot contexts
+      )
+
+    partial def unify_reduce_expand (i : Nat) (exp : List Nat) (ty1) (ty2) (ty_result) :=
+      let context : Context := ⟨empty, empty, from_list exp⟩
       let (_, contexts) := (unify i context ty1 ty2)
       generalize i context (
         List.foldr (fun context ty_acc => 
@@ -1365,7 +1378,9 @@ namespace Nameless
         let t := instantiate 0 [x] t 
         (infer i context (env_tm ; env_tmx) t ty) 
       else
+        --------------------------------------------------------------------------------
         -- collapsing
+        --------------------------------------------------------------------------------
         let (i, contexts) := (infer i context env_tm t1 ty1) 
         let ty1_schema := List.foldr (fun (context, ty1') ty_acc => 
           let ty1_schema := Ty.generalize free_var_boundary context ty1'
@@ -1378,21 +1393,22 @@ namespace Nameless
         bind_nl (Ty.unify i context ty1_schema ty1) (fun i context => 
           (infer i context (env_tm ; env_tmx) t ty) 
         )
+        --------------------------------------------------------------------------------
 
-      --------------------------------------------------------------------------------
-      -- old version without collapsing 
-      --------------------------------------------------------------------------------
-      -- bind_nl (infer i context env_tm t1 ty1) (fun i (context, ty1') =>
-      --   let ty1_schema := Ty.generalize free_var_boundary context ty1'
-      --   -- let ty1_schema := ty1'
+        --------------------------------------------------------------------------------
+        -- old version without collapsing 
+        --------------------------------------------------------------------------------
+        -- bind_nl (infer i context env_tm t1 ty1) (fun i (context, ty1') =>
+        --   let ty1_schema := Ty.generalize free_var_boundary context ty1'
+        --   -- let ty1_schema := ty1'
 
-      --   let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
-      --   let t := instantiate 0 [x] t 
+        --   let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
+        --   let t := instantiate 0 [x] t 
 
-      --   (infer i context (env_tm ; env_tmx) t ty) 
+        --   (infer i context (env_tm ; env_tmx) t ty) 
 
-      -- )
-      --------------------------------------------------------------------------------
+        -- )
+        --------------------------------------------------------------------------------
 
 
     | .fix t1 =>
@@ -1666,6 +1682,7 @@ namespace Nameless
   [lesstype| α[0] ]
 
   -- subtyping via local constraints
+  -- expected: ?nil unit
   #eval unify_reduce 30
   [lesstype| {β[0] with ?succ ?zero unit * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ?cons α[0] ] 
@@ -1710,7 +1727,6 @@ namespace Nameless
   [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
 
-  --broken
   -- expected: true
   #eval unify_decide 10 
   [lesstype| forall [1] β[0] <: α[0] have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
@@ -2069,11 +2085,11 @@ namespace Nameless
     (y[0] #hello ())
   ]
 
-  -- broken
+  -- NOTE: this requires subbing in unions to maintain expansion after let-poly generalization
   #eval infer_reduce 0 [lessterm|
     let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
     let y[0] = (y[0] #hello ()) in
-    (y[0] #world ())
+    (y[0] #world())
   ]
 
   -- narrowing
@@ -2120,11 +2136,13 @@ namespace Nameless
     [lesstype| α[0] ] 
 
   -- not well foundend: induction untagged 
+  -- expected: false
   #eval unify_decide 0 
     [lesstype| ?hello unit ] 
     [lesstype| induct ?wrong unit | β[0] ] 
 
   -- potentially diverges - inductive type not well founded
+  -- expected: false
   #eval unify_decide 0 
     [lesstype| ?hello unit ] 
     [lesstype| induct β[0] ] 
@@ -2135,6 +2153,7 @@ namespace Nameless
       {(β[0] * β[1]) with β[0] * β[1] <: β[2]}
   ]
 
+  -- expected: false
   #eval unify_decide 0 
     [lesstype| ?zero unit * ?nil unit ] 
     bad_nat_list
@@ -2214,7 +2233,6 @@ namespace Nameless
   y[0]
   ]
 
-  -- broken 
   -- expected: ?succ ?zero unit 
   #eval infer_reduce 10 
   [lessterm|
@@ -2605,6 +2623,7 @@ end Nameless
   ] 
 
   -- better: notions of ?zero and ?true appear in inferred type? 
+  -- this requires including relational constraints in generalization
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     (\ (y[0]) => ((fix (\ y[0] =>
       \ (#zero(), #zero()) => #true()  
