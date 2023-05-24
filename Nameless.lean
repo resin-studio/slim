@@ -704,9 +704,9 @@ namespace Nameless
         else 
           (i, []) 
       ) else ( 
-        ------------------------------
-        -- collapsing causes relational information to vanish??
-        ------------------------------
+        ------------------------------------------------------------
+        -- collapsing: necessarying for soundness 
+        ------------------------------------------------------------
         let ty1_unioned := List.foldr (fun context ty_acc => 
           let locally_constrained := (fun key => context.env_simple.contains key)
           let is_result_safe := List.all context.env_simple.toList (fun (key, ty_value) =>
@@ -723,18 +723,6 @@ namespace Nameless
             Ty.top
         ) Ty.bot contexts 
         (unify i context ty1_unioned ty2) 
-        -----------------------------------
-        -- bind_nl (i, contexts) (fun i context => 
-        --   let locally_constrained := (fun key => context.env_simple.contains key)
-        --   let is_result_safe := List.all context.env_simple.toList (fun (key, ty_value) =>
-        --     not (is_bound_var key) || (locally_constrained key)
-        --   )
-        --   if is_result_safe then
-        --     (unify i context ty1 ty2) 
-        --   else
-        --     (i, []) 
-        -- )
-        -----------------------------------
       )
     ) 
 
