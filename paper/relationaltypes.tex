@@ -81,7 +81,13 @@ necessary for a complete semantics at the cost of undecidability; syntactic infe
 This basically seems like kicking the can down the road. Eventually there will need to be 
 a syntactic-based procedure for checking inhabitation of sets.
 \newline
-\textbf{Typescript}. Unsound. Maybe not as lenient?  \newline
+\textbf{Extrinsic typing}. The static behavior of a program is not necessarily specified/prescribed; 
+it may be over-approximated from the program composition. 
+All modern languages use a combination of static and dynamic type checking.
+The term "dynamically typed" some times refers to a language that doesn't prescribe static meaning,
+even if it uses both static and dynamic type checking. The term "extrinsic typing" is less ambiguous.
+Exemplified by Typescript, which is unsound. Maybe not as lenient?  
+\newline
 \textbf{Refinement Types}. a restricted to intersection; implies intrinsic top\newline
 \textbf{Predicate Subtyping}. An extension of refinement types exemplified by Liquid Types.
 RLT starts with an invalid post-condition, then weakens return type to the (strongest) valid post-condition from outside in by expanding unions. 
@@ -96,10 +102,11 @@ solving with the abstractor vs solving with the refiner.
 from a recursive program without needing to specify a predicate universe might be similar to
 craig interpolation. \newline
 \textbf{PDR}. exemplified by IC3. RLT infers abstract type for return type, 
-then safely constrains the variables in previous step (fix's antecedent) to subtype the least fixed point.
+then safely constrains the variables in previous step (fix's antecedent) 
+to subtype the least fixed point.
 This, in essence, propagates the type for the last step to the previous steps.
 This is safe as antecedent is stronger than consequent at any step.
-the technique in PDR for propagating loss points might be related. 
+the technique in PDR for propagating negation of loss points might be related. 
  \newline 
 
 
