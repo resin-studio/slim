@@ -79,22 +79,61 @@ from untyped programs.
 To overcome these limitations, we present a new system that automatically infers expressive properties 
 from untyped functional programs. 
 We design a new type language \textit{relational types} to represent these properties.
-The key contribution is the ability to infer expressive types from untyped programs
-without loss of important features from intrinsically typed languages, such as let-polymormism and path-sensitivity. 
-\newline
+The key contribution is the ability to infer expressive parametric types from untyped programs.
+
+
+
+
+
+The relational type language offers comparable expressivity to Liquid Types, but differs substantially differs in design,
+due to the extrinsic nature of the problem.
+Since Liquid types relies on base types and the universe of predicates to be specified, 
+it can use a rigid language design to separate concerns. That is, it makes a syntactic distinction
+between predicates and base types, allowing ML-style disjoint unions for base types, 
+and conjunctions of predicates to refine base types. Liquid types' design enables  
+weakening to the strongest inductive invariant by dropping conjunctions, 
+knowing that the weakest possible type is the base type.
+
+
+Like the predicate subtyping techniques of Liquid Types, 
+In addition to inferring expressive properties without
 
 \section{Overview}
 
 \subsection{Language of types}
-\textbf{Polymorphic}.  \newline
-\textbf{Set-theoretic}. Union implies extrinsic/non-intrinsic. Implies Subtyping  \newline
-\textbf{Relational}.  \newline
+
+\paragraph{combinators}
+Due to the flexible manner in which untyped programs may be written, 
+which some view as one of their key benefits, subtyping is necessary
+safely reflect the flexibility of compositions in programs.
+Additionally, since type specifications are not provided, 
+a general way of constructing types from compositions 
+encountered in the the program is necessary.
+Some compositions indicate that a type should strengthen, 
+and some composition indicate that a type should weaken.
+To this end, the type language uses intersection and union combinators,
+whose semantics are degenerate versions of those in set-theory.
+
+For instance, when inferring the type of a function, 
+the system aims to infer the weakest valid parameter type and the strongest valid return type for a function definition.
+It contracts the parameter type with intersection and expands the return type with union according to the function body,
+to arrive at a valid type for the function.  
+
+By contrast, the liquid type language relies on less general tagged unions of ML datatypes, 
+which is sufficient in its setting since those base types are specified by the user. 
+Likewise, it does not rely on union to expand to a valid return type. 
+Instead, it infers the strongest valid return type by dropping conjunctions from 
+the return type's qualifiers until a valid return type is found.
+
+
+\paragraph{constraints}
+The design of the relational type language blends ideas from ML and Prolog.
 
 \subsection{Automation}
-\textbf{Let-poly type-inference}. \newline
-\textbf{Adjustments with union and intersection}. \newline
-\textbf{Type checking two relational types}. \newline
-\textbf{Path sensitivity}. \newline
+\paragraph{Let-poly type-inference.}
+\paragraph{Adjustments with union and intersection.}
+\paragraph{Type checking two relational types.}
+\paragraph{Path sensitivity.}
 
 \subsection{Examples}
 
