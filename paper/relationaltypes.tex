@@ -44,9 +44,44 @@
 
 \section{Introduction}
 
-\textbf{Context}. \newline
-\textbf{Gap}. \newline
-\textbf{Innovation}. \newline
+\paragraph{Context.} 
+Ensuring correctness of programs in general is a hard enough problem
+that many languages rely on annotations to limit that space of correctness.
+Languages, such as Java and ML, are \textit{intrinsically typed}, requiring
+all terms to be associated with some type specified by the user. 
+The clever design of ML allows annotations to be fairly sparse by 
+requiring types to be specified at constructor definitions and relying on type inference elsewhere.
+For various reasons that aren't completely clear, intrinsically typed languages have lost favor,
+and untyped or \textit{extrinsically typed} languages, 
+such as Javascript/Typescript and Python, have surged in popularity. 
+
+Despite the ever increasing use of untyped languages in production systems, 
+the need to automatically verify precise and expressive properties of systems has never been greater.
+To this end, researchers have extended the simple types found in Java and ML into 
+refinement types, predicate subtyping, and dependent types. 
+Refinement types offer greater precision than simple types, but still rely on intrinsic type specifications.
+Dependent types can express detailed relations, but may require users to provide proofs.
+Predicate subtyping offers some of the expressivity of dependent types, 
+but with the automatic subtyping of refinement types.
+All of these techniques are based on intrinsic typing and therefore require users to provide some amount of specification.
+
+\paragraph{Gap.} 
+Unfortunately, since typing specifications are optional in extrinsically typed languages,
+there are many untyped programs that cannot benefit from the intrinsically typed techniques,
+not to mention techniques that require users to provide proofs.
+For instance, Liquid Types can verify and infer simple relational properties, but requires
+users to specify ML-style base types and a universe of predicates to draw from.
+The effort manually annotate untyped programs would be enormous in many cases.
+Therefore, it is necessary to develop techniques that can automatically infer expressive types
+from untyped programs.
+
+\paragraph{Innovation.} 
+To overcome these limitations, we present a new system that automatically infers expressive properties 
+from untyped functional programs. 
+We design a new type language \textit{relational types} to represent these properties.
+The key contribution is the ability to infer expressive types from untyped programs
+without loss of important features from intrinsically typed languages, such as let-polymormism and path-sensitivity. 
+\newline
 
 \section{Overview}
 
