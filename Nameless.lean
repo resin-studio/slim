@@ -1742,6 +1742,27 @@ namespace Nameless
   [lesstype| ?succ ?succ ?zero unit -> ?cons α[0] ] 
   [lesstype| α[0] ]
 
+  -- expected: ?cons ?nil unit
+  #eval unify_reduce 30
+  [lesstype| forall β[1] * β[0] <: ⟨nat_list⟩ have β[1] -> β[0]]
+  [lesstype| ?succ ?succ ?zero unit -> ?cons α[0] ] 
+  [lesstype| α[0] ]
+
+  -- expected: true 
+  #eval unify_decide 30
+  [lesstype| forall β[0] <: α[11] have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| forall β[1] * β[0] <: ⟨nat_list⟩ have β[1] -> β[0]]
+
+  -- sound, but incomplete
+  #eval unify_decide 30
+  [lesstype| forall β[1] * β[0] <: ⟨nat_list⟩ have β[1] -> β[0]]
+  [lesstype| forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
+  -- expected: false
+  #eval unify_decide 20
+  [lesstype| forall β[1] * β[0] <: ⟨nat_list⟩ have β[1] -> β[0]]
+  [lesstype| ?succ ?succ ?zero unit -> ?cons ?nil unit ] 
+
 
   -- expected: ⊥
   #eval unify_reduce 30
@@ -2625,12 +2646,59 @@ end Nameless
       )
     ) in
     y[0]
-    -- (y[0] (#succc #zero(), #succ #succ #succc #zero()))
-    -- (y[0] (#succc #zero(), #zero()))
+    -- (y[0] (#succ #zero(), #succ #succ #succ #zero()))
+    -- (y[0] (#succ #zero(), #zero()))
   ] 
+
+/-
+--
+-/
+
+------ debugging
+  -- broken
+
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    let y[0] = (\ (y[0], y[1]) => 
+        (y[2] (y[0], y[1]))
+    ) in
+    -- y[0]
+    (y[0] (#succ #succ #zero(), #zero()))
+    -- (y[0] (#succ #zero(), #zero()))
+  ] 
+--expected:
+/-
+(forall [1] β[0] <: α[40] have (β[0] ->
+  {[1] β[0] with (β[1] * β[0]) <: 
+    (induct 
+      {[1] ((?zero unit * β[0]) * ?true unit)} |
+      {[3] ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
+      {[1] ((?succ β[0] * ?zero unit) * ?false unit)}
+    )
+  }
+))
+-/
+--actual:
+/-
+(forall [4] ((β[2] * β[3]) * β[0]) <: 
+  (induct 
+    {[1] ((?zero unit * β[0]) * ?true unit)} |
+    {[3] ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
+    {[1] ((?succ β[0] * ?zero unit) * ?false unit)}
+  ) 
+  have β[2] * β[3] -> β[0]
+)
+-/
+  -------------------
 
   -- broken
   -- expected: max of the two numbers
+  -- non-termination
+  /-
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
@@ -2646,9 +2714,10 @@ end Nameless
         (y[2] (y[0], y[1]))
       )
     ) in
-    (y[0] (#succc #zero(), #succ #succ #succc #zero()))
-    -- (y[0] (#succc #zero(), #zero()))
+    (y[0] (#succ #zero(), #succ #succ #succ #zero()))
+    -- (y[0] (#succ #zero(), #zero()))
   ] 
+  -/
 
   -- better: notions of ?zero and ?true appear in inferred type? 
   -- this requires including relational constraints in generalization
@@ -2680,6 +2749,15 @@ end Nameless
       ))
       (#succ #succ #zero(), #succ #zero())
     )
+  ] 
+
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    let y[0] = (fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    )) in
+    (y[0] (#succ #succ #zero(), #succ #zero()))
   ] 
 
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
