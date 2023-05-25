@@ -66,20 +66,21 @@
 \section{Related Techniques}
 
 \textbf{HM type inference}.  \newline
-\textbf{model-based subtyping}. Exemplified by XDuce and CDuce. complete subtyping.
+\textbf{semantic subtyping}. Exemplified by XDuce and CDuce. complete subtyping.
 % set theoretic notes: https://pnwamk.github.io/sst-tutorial/#%28part._sec~3asemantic-subtyping%29
 % semantic subtyping: https://www.irif.fr/~gc/papers/semantic_subtyping.pdf
 The terminology "semantic subtyping" vs "syntactic subtyping" are confusing terms. 
-They actually refer to the meta-linguistic semantics of denotation 
-meta-linguistic syntax of inference rules.
-Better terms would be "model-based" vs "rule-based", or "denotational" vs "operational".
-The former merely uses indirection into the language of sets.
-Both are semantics that are defined in terms of syntax, either directly or indirectly.
-Really, the dichotomy should be referred to as "indirect subtyping" vs "direct subtyping".
-All semantics are defined in terms of syntax, either directly or indirectly. 
-necessary for a complete semantics at the cost of undecidability; syntactic inference rules are incomplete, but decidable.
-This basically seems like kicking the can down the road. Eventually there will need to be 
-a syntactic-based procedure for checking inhabitation of sets.
+They actually refer 
+to whether the semantics of types is determined indirectly by the semantics of another structure (as in semantics)
+or whether the semantics of types is determined directly by the type structure (as in syntactic) 
+Better terms would be "model-based" vs "proof-based".
+A model-based system can be more complete but would require finding an inhabitations of the types.
+That is the semantics of subtyping would depend on the semantics of typing (inhabitation of types).
+This is analogous to SAT solving, proof synthesis more generally, model checking problem, and SMT.
+If a type is model-based, not proof-based, then a proof must be found,
+Since the "proof" is not part of the model-based subtyping statement, 
+there is an infinite space to search to prove that the subtyping statement holds.
+This leads to a more complete system, but a more difficult system to decide.
 \newline
 \textbf{Extrinsic typing}. The static behavior of a program is not necessarily specified/prescribed; 
 it may be over-approximated from the program composition. 

@@ -2717,7 +2717,6 @@ end Nameless
 
   ----------------------------
   -- incomplete without model-based subtyping
-  -- model-based subtyping could outsource to more complete systems
   ----------------------------
   -- URL: https://pnwamk.github.io/sst-tutorial/#%28part._sec~3asemantic-subtyping%29
   #eval Nameless.Ty.unify_decide 0
