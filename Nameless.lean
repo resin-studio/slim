@@ -433,21 +433,6 @@ namespace Nameless
     | .recur ty => .recur (abstract fids (start + 1) ty)
 
 
-    partial def map_keys_to_constraints (context : Context) : PHashMap Nat (PHashSet (Ty × Ty)) :=
-      let constraints := (
-          context.env_simple.toList.map (fun (k,rhs) => (Ty.fvar k, rhs)) ++
-          context.env_relational.toList
-      )
-      constraints.foldl (fun acc constraint => 
-        let (lhs, _) := constraint
-        let fids := toList (free_vars lhs)
-        fids.foldl (fun acc fid =>
-          match acc.find? fid with
-          | some constraints => acc.insert fid (constraints.insert constraint)
-          | none => acc.insert fid (empty.insert constraint)
-        ) acc
-      ) {}
-
 
     def nested_pairs : (List Ty) -> Ty 
     | [] => .unit 
@@ -478,6 +463,22 @@ namespace Nameless
       no_function_types ty_pl
     | .recur content => no_function_types content 
 
+    partial def map_keys_to_constraints (context : Context) : PHashMap Nat (PHashSet (Ty × Ty)) :=
+      let constraints := (
+          context.env_simple.toList.map (fun (k,rhs) => (Ty.fvar k, rhs)) ++
+          context.env_relational.toList
+      )
+      constraints.foldl (fun acc constraint => 
+        let (lhs, _) := constraint
+        let fids := toList (free_vars lhs)
+        fids.foldl (fun acc fid =>
+          match acc.find? fid with
+          | some constraints => acc.insert fid (constraints.insert constraint)
+          | none => acc.insert fid (empty.insert constraint)
+        ) acc
+      ) {}
+
+
     partial def reachable_constraints (map_kcs : PHashMap Nat (PHashSet (Ty × Ty))) (ty : Ty) : List (Ty × Ty) :=
       let fvs := PHashSet.toList (free_vars ty)
       List.bind fvs (fun key =>
@@ -489,6 +490,40 @@ namespace Nameless
           ))
         | none => []
       )
+
+    -- def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
+    --   --------------------------------------
+    --   -- boundary prevents overgeneralizing
+
+    --   -- sub in simple types; 
+    --   -- subbing prevents strengthening from the outside in 
+    --   -- only the body type (conclusion) can safely strengthen the parameter type (the premise)  
+    --   -- subbing does not prevent weakening, as weakining is handles adding unions of fresh variables  
+    --   --------------------------------------
+
+    --   let map_kcs := map_keys_to_constraints context
+    --   let ty := simplify (subst context.env_simple ty)
+    --   let (lhs, rhs) := List.unzip (reachable_constraints map_kcs ty)
+
+    --   let ty_lhs := nested_pairs lhs
+    --   let ty_rhs := nested_pairs rhs
+      
+    --   let fids := List.filter (fun id => id >= boundary) (
+    --     toList ((free_vars ty) + (free_vars ty_lhs) + (free_vars ty_rhs))
+    --   )
+
+    --   if fids.isEmpty then
+    --       ty
+    --   else if no_function_types ty then
+    --     let env_sub := PHashMap.from_list (
+    --       fids.map (fun fid => (fid, Ty.bot))
+    --     )
+    --     simplify (subst env_sub ty)
+    --   else
+    --     [lesstype|
+    --       forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
+    --       ⟨abstract fids 0 ty⟩
+    --     ]
 
     def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
       --------------------------------------
@@ -502,13 +537,16 @@ namespace Nameless
 
       let map_kcs := map_keys_to_constraints context
       let ty := simplify (subst context.env_simple ty)
-      let (lhs, rhs) := List.unzip (reachable_constraints map_kcs ty)
+      let constraints := reachable_constraints map_kcs ty
 
-      let ty_lhs := nested_pairs lhs
-      let ty_rhs := nested_pairs rhs
+
+      let fvs_constraints := constraints.foldl (fun acc (lhs, rhs) =>
+        (free_vars lhs) + (free_vars rhs) + acc
+      ) {} 
+
       
       let fids := List.filter (fun id => id >= boundary) (
-        toList ((free_vars ty) + (free_vars ty_lhs) + (free_vars ty_rhs))
+        toList ((free_vars ty) + fvs_constraints)
       )
 
       if fids.isEmpty then
@@ -518,11 +556,17 @@ namespace Nameless
           fids.map (fun fid => (fid, Ty.bot))
         )
         simplify (subst env_sub ty)
-      else
+      else if constraints.isEmpty then
         [lesstype|
-          forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
-          ⟨abstract fids 0 ty⟩
+          forall [⟨fids.length⟩] ⟨abstract fids 0 ty⟩
         ]
+      else
+        intersect_over (fun (ty_lhs, ty_rhs) => 
+          [lesstype|
+            forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
+            ⟨abstract fids 0 ty⟩
+          ]
+        ) constraints
 
     def instantiate (start : Nat) (args : List Ty) : Ty -> Ty
     | .bvar id => 
@@ -1759,9 +1803,6 @@ namespace Nameless
   [lesstype| {α[1] * β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| {α[2] * β[0] with α[2] * β[0] <: ⟨nat_list⟩} ]
 
-
-
------------------
   -- expected: true
   #eval unify_decide 10 
   [lesstype| {β[0] * β[1] with β[0] * β[1] <: ⟨nat_list⟩} ]
@@ -1771,26 +1812,13 @@ namespace Nameless
   #eval unify_decide 10 
   [lesstype| {β[0] with β[0] <: ⟨nat_list⟩} ]
   [lesstype| {β[0] with β[0] <: ⟨nat_list⟩} ]
------------------
+
   -- expected: true
   #eval unify_decide 10 
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| ⟨nat_list⟩ ]
 ---------------
 
----------------
-
-  #eval unify_decide 0
-  [lesstype| forall β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩}  ]
-  [lesstype| forall β[0] <: ⟨even⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨even_list⟩} ]
-
-
-  #eval [lesstype| forall β[0] <: ⟨even⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨even_list⟩} ]
-
-  #eval unify_decide 0
-  [lesstype| forall β[0] <: ⟨nat_⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| forall β[0] <: ⟨even⟩ have β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  ----------------------------
 
   def plus := [lesstype| 
     induct 
@@ -2081,11 +2109,6 @@ namespace Nameless
 
   #eval infer_reduce 0 [lessterm|
     (((\ y[0] => \ y[0] => (y[1], y[0])) #hello ()) #world ())
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-    let y[0] : forall β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
-    (y[0] #hello ())
   ]
 
   -- NOTE: this requires subbing in unions to maintain expansion after let-poly generalization
@@ -2584,6 +2607,8 @@ end Nameless
   ]
 
   -- better: notions of ?zero and ?true appear in inferred type? 
+  -- broken: type of max is bloated
+  -- TODO: formulate the expected type of max
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
@@ -2627,35 +2652,21 @@ end Nameless
 
   -- better: notions of ?zero and ?true appear in inferred type? 
   -- this requires including relational constraints in generalization
+  -- this works! 
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     (\ (y[0]) => ((fix (\ y[0] =>
       \ (#zero(), #zero()) => #true()  
     )) (y[0])))
   ] 
 
-  #eval Nameless.Tm.infer_simple 0 [lessterm| 
-    (\ (y[0]) => ((fix (\ y[0] =>
+  -- expected: ?true unit
+  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+    let y[0] = (\ (y[0]) => ((fix (\ y[0] =>
       \ (#zero(), #zero()) => #true()  
     )) (y[0])))
+    in
+    (y[0] (#zero(), #zero()))
   ] 
-
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
-    (fix (\ y[0] =>
-      \ (#zero(), #zero()) => #true()  
-    )) 
-  ] 
-
-  -- broken: can't unify pair of variables with inductive type
-  -- note: instead of failing, need to package constraint with the same existential
-  -- note: don't unroll existential?
-  #eval Nameless.Ty.unify_reduce 10 
-  [lesstype| 
-  (α[2] ->
-  {[1] β[0] with (α[2] * β[0]) <: (induct ((?zero unit * ?zero unit) * ?true unit))})
-  ]
-  [lesstype| α[0] -> α[1]]
-  [lesstype| α[0] -> α[1]]
-
 
   --------------- debugging ---------------
 
