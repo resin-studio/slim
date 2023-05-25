@@ -1518,6 +1518,8 @@ namespace Nameless
         -- NOTE: constraint that ty' <= ty_prem is built into inductive type
         let relational_type := [lesstype| induct ⟨ty_content⟩ ]
         let ty' := [lesstype| forall [1] β[0] <: ⟨ty_param⟩ have β[0] -> {[1] β[0] with β[1] * β[0] <: ⟨relational_type⟩} ] 
+        -- TODO: convert to version without existential
+        -- let ty' := [lesstype| forall [1] β[0] * β[1] <: ⟨relational_type⟩ have β[0] -> β[1] ] 
         bind_nl (Ty.unify i context ty' ty) (fun i context =>
           (i, [(context, ty')])
         )
@@ -1794,6 +1796,24 @@ namespace Nameless
   #eval unify_decide 0
   [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
+
+  -- broken
+  -- expected: true
+  #eval unify_decide 0
+  [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
+  [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
+
+  -- broken
+  -- expected: true
+  #eval unify_decide 0
+  [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
+  [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
+  -- expected: true
+  #eval unify_decide 0
+  [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
 
   -- expected: true
   #eval unify_decide 10 
@@ -2666,9 +2686,7 @@ end Nameless
     let y[0] = (\ (y[0], y[1]) => 
         (y[2] (y[0], y[1]))
     ) in
-    -- y[0]
-    (y[0] (#succ #succ #zero(), #zero()))
-    -- (y[0] (#succ #zero(), #zero()))
+    y[0]
   ] 
 --expected:
 /-
