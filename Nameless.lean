@@ -998,10 +998,9 @@ namespace Nameless
             let context := {context with env_relational := context.env_relational.insert ty' ty_cache}
             unify i context ty_cache (Ty.recur ty)
           | .none =>  
-            -- TODO: consider adding relational environment here;
-            -- Actually, this might not make sense; open variables should react to closed variables.
-            -- invariant: variables in env_relational cannot be assigned in env_simple
-            -- may need to flip direction of how variables are mapped to each other
+            -- NOTE: cannot save in relational type
+            -- the variables may have already be assigned in env_simple
+            -- must respect invariant that env_simple and env_relational have disjoint key variables
             (i, []) 
 
     | Ty.union ty1 ty2, ty => 
