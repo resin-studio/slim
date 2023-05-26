@@ -561,6 +561,7 @@ namespace Nameless
           forall [⟨fids.length⟩] ⟨abstract fids 0 ty⟩
         ]
       else
+        -- TODO: generalization should first existentially quantify to avoid over generalizing. 
         intersect_over (fun (ty_lhs, ty_rhs) => 
           [lesstype|
             forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
@@ -747,17 +748,20 @@ namespace Nameless
 
         if is_recur_type && unmatchable && is_consistent_variable_record then
           let context := {context with env_relational := context.env_relational.insert ty_key ty_c2}
-          -- TODO: this seems unsafe. should this be handled in existential elimination?
-          -- maybe it's ok, since unification alone is abstract, so it can be unsound, as typing ultimately decides correctness. 
           let (i, contexts) := (unify i context ty1 ty2) 
 
           let result_safe := contexts.all (fun context => context.env_simple.toList.all (fun (key, _) =>
             not (is_bound_var key)
           ))
           if result_safe then 
-            (i, contexts.map (fun context =>
-              {context with env_relational := context.env_relational.erase ty_key}
-            ))
+            (i, contexts)
+            -- TODO: is it safe to allow closed variables? 
+            -- should be since it has been confirmed by subtyping by this point
+            -- existential may be converted to universal via generalization. 
+            -- TODO: generalization should first existentially quantify to avoid over generalizing. 
+            -- (i, contexts.map (fun context =>
+            --   {context with env_relational := context.env_relational.erase ty_key}
+            -- ))
           else
             (i, [])
 
@@ -772,8 +776,6 @@ namespace Nameless
           (.union (generalize bound_start context ty1) ty_acc)
         ) Ty.bot contexts 
 
-        -- TODO: ensure that closed variables are unconstrained or only locally constrained
-        -- let locally_constrained := (fun key => context.env_simple.contains key)
         (unify i context ty1_unioned ty2) 
       )
     ) 
@@ -803,11 +805,6 @@ namespace Nameless
         (simplify (subst context.env_simple (.inter ty2 ty_acc)))
       ) Ty.top contexts 
 
-      -- TODO: ensure that closed variables are unconstrained or only locally constrained
-      -- let locally_constrained := (fun key => context.env_simple.contains key)
-      -- let is_result_safe := List.all context.env_simple.toList (fun (key, ty_value) =>
-      --   not (is_bound_var key) || (locally_constrained key)
-      -- )
       (unify i context ty1 ty2_inter)
     )
 
@@ -879,7 +876,6 @@ namespace Nameless
           let unmatchable := !(matchable (extract_nested_fields ty_key))
 
           if is_recur_type && unmatchable && is_consistent_variable_record then
-            let context := {context with env_relational := context.env_relational.insert ty_key ty_c2}
             (i, [context])
           else 
             (i, []) 
@@ -991,6 +987,7 @@ namespace Nameless
           let ty_key := simplify (subst context.env_simple ty')
           match context.env_relational.find? ty_key with
           | .some ty_cache => 
+            let context := {context with env_relational := context.env_relational.insert ty' ty_cache}
             unify i context ty_cache (Ty.recur ty)
           | .none =>  
             (i, []) 
@@ -2687,6 +2684,7 @@ end Nameless
   -- better: notions of ?zero and ?true appear in inferred type? 
   -- broken: type of max is bloated
   -- TODO: formulate the expected type of max
+  -- NOTE: affected by erasing closed relational subtyping
   #eval Nameless.Tm.infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
