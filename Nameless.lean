@@ -491,39 +491,6 @@ namespace Nameless
         | none => []
       )
 
-    -- def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
-    --   --------------------------------------
-    --   -- boundary prevents overgeneralizing
-
-    --   -- sub in simple types; 
-    --   -- subbing prevents strengthening from the outside in 
-    --   -- only the body type (conclusion) can safely strengthen the parameter type (the premise)  
-    --   -- subbing does not prevent weakening, as weakining is handles adding unions of fresh variables  
-    --   --------------------------------------
-
-    --   let map_kcs := map_keys_to_constraints context
-    --   let ty := simplify (subst context.env_simple ty)
-    --   let (lhs, rhs) := List.unzip (reachable_constraints map_kcs ty)
-
-    --   let ty_lhs := nested_pairs lhs
-    --   let ty_rhs := nested_pairs rhs
-      
-    --   let fids := List.filter (fun id => id >= boundary) (
-    --     toList ((free_vars ty) + (free_vars ty_lhs) + (free_vars ty_rhs))
-    --   )
-
-    --   if fids.isEmpty then
-    --       ty
-    --   else if no_function_types ty then
-    --     let env_sub := PHashMap.from_list (
-    --       fids.map (fun fid => (fid, Ty.bot))
-    --     )
-    --     simplify (subst env_sub ty)
-    --   else
-    --     [lesstype|
-    --       forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
-    --       ⟨abstract fids 0 ty⟩
-    --     ]
 
     def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
       --------------------------------------
@@ -535,15 +502,14 @@ namespace Nameless
       -- subbing does not prevent weakening, as weakining is handles adding unions of fresh variables  
       --------------------------------------
 
-      let map_kcs := map_keys_to_constraints context
       let ty := simplify (subst context.env_simple ty)
-      let constraints := reachable_constraints map_kcs ty
 
+      let map_kcs := map_keys_to_constraints context
+      let constraints := reachable_constraints map_kcs ty
 
       let fvs_constraints := constraints.foldl (fun acc (lhs, rhs) =>
         (free_vars lhs) + (free_vars rhs) + acc
       ) {} 
-
       
       let fids := List.filter (fun id => id >= boundary) (
         toList ((free_vars ty) + fvs_constraints)
@@ -561,12 +527,12 @@ namespace Nameless
           forall [⟨fids.length⟩] ⟨abstract fids 0 ty⟩
         ]
       else
-        -- TODO: generalization should first existentially quantify to avoid over generalizing. 
         intersect_over (fun (ty_lhs, ty_rhs) => 
-          [lesstype|
-            forall [⟨fids.length⟩] ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩ have 
-            ⟨abstract fids 0 ty⟩
+          let ty_ex := [lesstype|
+            {[⟨fids.length⟩] ⟨abstract fids 0 ty⟩ with ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩}
+            
           ]
+          [lesstype| forall [1] β[0] <: ⟨ty_ex⟩ have β[0]]
         ) constraints
 
     def instantiate (start : Nat) (args : List Ty) : Ty -> Ty
@@ -797,17 +763,20 @@ namespace Nameless
       let (i, contexts) := (unify i context ty_c1 ty_c2)
 
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
+      if contexts.isEmpty then
+        (i, [])
+      else (
+        let ty2_inter := List.foldr (fun context ty_acc => 
+          ---------
+          -- broken: generalization causes non-termination; need to understand this 
+          ---------
+          -- (.inter (generalize bound_start context ty2) ty_acc)
+          ----------------------------------
+          (simplify (subst context.env_simple (.inter ty2 ty_acc)))
+        ) Ty.top contexts 
 
-      let ty2_inter := List.foldr (fun context ty_acc => 
-        ---------
-        -- generalization causes non-termination; need to understand this 
-        ---------
-        -- (.inter (generalize bound_start context ty2) ty_acc)
-        ----------------------------------
-        (simplify (subst context.env_simple (.inter ty2 ty_acc)))
-      ) Ty.top contexts 
-
-      (unify i context ty1 ty2_inter)
+        (unify i context ty1 ty2_inter)
+      )
     )
 
     -- existential quantifier introduction (open variables) 
@@ -1830,35 +1799,42 @@ namespace Nameless
   [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
 
 
-  -- broken
-  -- expected: true
+  -- sound but incomplete; relational types shouldn't be used in universal 
+  -- universal should only have simple constraints
+  -- TODO: could restrict universal syntax to merge variable binding and constraint
+  -- and also reduce universal to a single variable
+  -- e.g. from forall [X] X <: T have X -> Y
+  -- e.g. to forall [X <: T] X -> Y
   #eval unify_decide 0
   [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
   [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
 
-  ------------------------------
-  -- debugging
-  ------------------------------
-  -- TODO: understand when it's safe to save relational type.
-    -- always lhs? universal elimination and existential introduction?
-  -- broken
-  -- expected: true
-  #eval unify_decide 10
-  [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
-  [lesstype| α[0] -> α[1] ]
 
-  ------------------------------
+  -- expected: ?cons ?nil unit
+  #eval unify_reduce 10
+  [lesstype| forall β[0] <: {[2] β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩} have β[0]]
+  [lesstype| ?succ ?zero unit -> α[2]]
+  [lesstype| α[2]]
 
-  -- broken
-  -- expected: true
-  #eval unify_decide 0
-  [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
-  [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  -- expected: ⊥
+  #eval unify_reduce 10
+  [lesstype| ?succ ?zero unit -> α[2]]
+  [lesstype| forall β[0] <: {[2] β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩} have β[0]]
+  [lesstype| α[2]]
+  ----------------
 
-  -- expected: true
-  #eval unify_decide 0
-  [lesstype| forall [1] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
+  -- expected: ⊥
+  #eval unify_reduce 10
+  [lesstype| {[2] β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩}]
+  [lesstype| ?succ ?zero unit -> α[2]]
+  [lesstype| α[2]]
+
+  -- expected: ?cons ?nil unit 
+  #eval unify_reduce 10
+  [lesstype| ?succ ?zero unit -> α[2]]
+  [lesstype| {[2] β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩}]
+  [lesstype| α[2]]
+
 
   -- expected: true
   #eval unify_decide 10 
@@ -2734,29 +2710,6 @@ end Nameless
     ) in
     y[0]
   ] 
---expected:
-/-
-(forall [1] β[0] <: α[40] have (β[0] ->
-  {[1] β[0] with (β[1] * β[0]) <: 
-    (induct 
-      {[1] ((?zero unit * β[0]) * ?true unit)} |
-      {[3] ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
-      {[1] ((?succ β[0] * ?zero unit) * ?false unit)}
-    )
-  }
-))
--/
---actual:
-/-
-(forall [4] ((β[2] * β[3]) * β[0]) <: 
-  (induct 
-    {[1] ((?zero unit * β[0]) * ?true unit)} |
-    {[3] ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
-    {[1] ((?succ β[0] * ?zero unit) * ?false unit)}
-  ) 
-  have β[2] * β[3] -> β[0]
-)
--/
   -------------------
 
   -- broken
