@@ -747,6 +747,8 @@ namespace Nameless
         let unmatchable := !(matchable (extract_nested_fields ty_key))
 
         if is_recur_type && unmatchable && is_consistent_variable_record then
+
+          -- invariant: variables in env_relational cannot be assigned in env_simple
           let context := {context with env_relational := context.env_relational.insert ty_key ty_c2}
           let (i, contexts) := (unify i context ty1 ty2) 
 
@@ -997,6 +999,8 @@ namespace Nameless
             unify i context ty_cache (Ty.recur ty)
           | .none =>  
             -- TODO: consider adding relational environment here;
+            -- Actually, this might not make sense; open variables should react to closed variables.
+            -- invariant: variables in env_relational cannot be assigned in env_simple
             -- may need to flip direction of how variables are mapped to each other
             (i, []) 
 
