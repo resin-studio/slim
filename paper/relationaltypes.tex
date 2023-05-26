@@ -45,12 +45,12 @@
 \section{Introduction}
 
 \paragraph{Context.} 
-Ensuring correctness of programs in general is a hard enough problem
-that many languages rely on annotations to limit that space of correctness.
-Languages, such as Java and ML, are \textit{intrinsically typed}, requiring
-all terms to be associated with some type specified by the user. 
+Automatically catching errors in programs is a hard enough problem
+that many languages require users to provide simple specifications to limit that space of correctness.
+Languages, such as Java and ML, are \textit{intrinsically typed}, 
+requiring nearly all terms to be associated with some type specified by the user. 
 The clever design of ML allows annotations to be fairly sparse by 
-requiring types to be specified at constructor definitions and relying on type inference elsewhere.
+having types specified at constructor definitions and relying on type inference elsewhere.
 For various reasons that aren't completely clear, intrinsically typed languages have lost favor,
 and untyped or \textit{extrinsically typed} languages, 
 such as Javascript/Typescript and Python, have surged in popularity. 
@@ -58,133 +58,161 @@ such as Javascript/Typescript and Python, have surged in popularity.
 Despite the ever increasing use of untyped languages in production systems, 
 the need to automatically verify precise and expressive properties of systems has never been greater.
 To this end, researchers have extended the simple types found in Java and ML into 
-refinement types, predicate subtyping, and dependent types. 
+\textit{refinement types}, \textit{predicate subtyping}, and \textit{dependent types}. 
 Refinement types offer greater precision than simple types, but still rely on intrinsic type specifications.
-Dependent types can express detailed relations, but may require users to provide proofs.
-Predicate subtyping offers some of the expressivity of dependent types, 
-but with the automatic subtyping of refinement types.
-All of these techniques are based on intrinsic typing and therefore require users to provide some amount of specification.
+Dependent types can express detailed relations, but may require users to provide proofs along with detailed annotations.
+Predicate subtyping offers some of the expressivity of dependent types, but with the automatic subtyping of refinement types.
+All of these techniques are based on intrinsic typing and therefore require users to provide additional annotations
+beyond the runtime behavior of their programs.
 
 \paragraph{Gap.} 
 Unfortunately, since typing specifications are optional in extrinsically typed languages,
 there are many untyped programs that cannot benefit from the intrinsically typed techniques,
 not to mention techniques that require users to provide proofs.
-For instance, Liquid Types can verify and infer simple relational properties, but requires
-users to specify ML-style base types and a universe of predicates to draw from.
-The effort manually annotate untyped programs would be enormous in many cases.
-Therefore, it is necessary to develop techniques that can automatically infer expressive types
-from untyped programs.
+For instance, the liquid type system \cite{} can verify and infer some relational properties, 
+but it requires users to specify ML-style base types and a set of logical qualifiers to draw from.
+
+While these intrinsic-based techniques could be useful if untyped programs were annotated,
+the effort to manually annotate untyped programs is often enormous and error-prone, 
+especially in cases where a programmer is using code written by third parties.
+Thus, it is has become increasingly important to develop techniques 
+that can automatically infer expressive types from untyped programs.
 
 \paragraph{Innovation.} 
-To overcome these limitations, we present a new system that automatically infers expressive properties 
-from untyped functional programs. 
-We design a new type language \textit{relational types} to represent these properties.
-The key contribution is the ability to infer expressive parametric types from untyped programs.
-
-
-
-
-
-The relational type language offers comparable expressivity to Liquid Types, but differs substantially differs in design,
-due to the extrinsic nature of the problem.
-Since Liquid types relies on base types and the universe of predicates to be specified, 
-it can use a rigid language design to separate concerns. That is, it makes a syntactic distinction
-between predicates and base types, allowing ML-style disjoint unions for base types, 
-and conjunctions of predicates to refine base types. Liquid types' design enables  
-weakening to the strongest inductive invariant by dropping conjunctions, 
-knowing that the weakest possible type is the base type.
-
-
-Like the predicate subtyping techniques of Liquid Types, 
-In addition to inferring expressive properties without
+To overcome these limitations, we introduce a new system 
+that automatically infers expressive properties from untyped functional programs. 
+We introduce a new type language \textit{relational types} to represent these properties.
 
 \section{Overview}
 
 \subsection{Language of types}
 
-\paragraph{combinators}
-Due to the flexible manner in which untyped programs may be written, 
-which some view as one of their key benefits, subtyping is necessary
-safely reflect the flexibility of compositions in programs.
-Additionally, since type specifications are not provided, 
-a general way of constructing types from compositions 
-encountered in the the program is necessary.
-Some compositions indicate that a type should strengthen, 
-and some composition indicate that a type should weaken.
-To this end, the type language uses intersection and union combinators,
+\paragraph{Parametric types}
+Universal types. Existential type. System F-style. Parameterization of types indexed by types (i.e. second order).
+
+\paragraph{Combination types.}
+One of the advantages of untyped programs is that they may be written in a flexible manner.
+Subtyping is necessary safely reflect the flexibility of compositions in programs, without too many false failures.
+Another main advantage of untyped programs is that users don't have to provide type specifications.
+Thus, a general way of constructing types from compositions encountered in the the program is necessary.
+Some compositions indicate that a type should strengthen, and some compositions indicate that a type should weaken.
+To this end, the type language uses intersection and union combinators, 
 whose semantics are degenerate versions of those in set-theory.
 
 For instance, when inferring the type of a function, 
-the system aims to infer the weakest valid parameter type and the strongest valid return type for a function definition.
-It contracts the parameter type with intersection and expands the return type with union according to the function body,
+the system's goal is to infer the weakest valid parameter type and the strongest valid return type for a function definition.
+It strengthens the parameter type with intersection and weakens the return type with union according to the function body,
 to arrive at a valid type for the function.  
 
-By contrast, the liquid type language relies on less general tagged unions of ML datatypes, 
-which is sufficient in its setting since those base types are specified by the user. 
-Likewise, it does not rely on union to expand to a valid return type. 
-Instead, it infers the strongest valid return type by dropping conjunctions from 
+By contrast, the liquid type language relies on the less flexible tagged unions of ML datatypes, 
+which is sufficient in its setting since those types are specified by the user. 
+Likewise, it does not rely on union to weaken to a valid return type. 
+Instead, it weakens to the strongest valid return type by dropping conjunctions from 
 the return type's qualifiers until a valid return type is found.
 
+\paragraph{Inductive types.} Similar to ML datatypes.
 
-\paragraph{constraints}
-The design of the relational type language blends ideas from ML and Prolog.
+\paragraph{Constraint types.}
+In addition to expressing the shapes of terms, the system should be able express relations between terms,
+such as "a list has the length of some natural number".
+Rather than using a distinct syntax for relational predicates, 
+the type language treats relations as just another type thereby reusing machinery already 
+available for types, such as existential types, union types, and inductive types.
+Since parametric types are second order, constraining relations requires subtyping.
+Thus, parametric types are extended with constraints in the form of subtyping.
 
-\subsection{Automation}
-\paragraph{Let-poly type-inference.}
-\paragraph{Adjustments with union and intersection.}
-\paragraph{Type checking two relational types.}
+
+
+\subsection{Type inference}
+\paragraph{Strengthening parameter type.}
+\paragraph{Weakening return type.}
+\paragraph{Recursion.}
 \paragraph{Path sensitivity.}
+\paragraph{List bounds.}
+\paragraph{Let-polymorphism.}
+\paragraph{Subtyping relations.}
 
-\subsection{Examples}
+\section{Related work}
 
-\section{Related Techniques}
+\paragraph{Hindley-Milner type inference}
+Exemplified by ML.
 
-\textbf{HM type inference}.  \newline
-\textbf{Logic programming}. Exemplified by Prolog. \newline
-\textbf{Semantic subtyping}. Exemplified by XDuce and CDuce. complete subtyping.
+\paragraph{Logic programming.}
+Exemplified by Prolog. 
+
+Similar: both have backchaining. 
+
+Different: RLT is fully declarative, lacks negations, but has implication. 
+
+Different: RLT allows comparing inductive relations via subtyping. 
+
+\paragraph{Semantic subtyping.} 
+Exemplified by XDuce and CDuce. complete subtyping.
+
+Similar: set-like combinators: union and intersection.
+
+Different: RLT uses rigid syntactic rules; incomplete subtyping.
+
 % set theoretic notes: https://pnwamk.github.io/sst-tutorial/#%28part._sec~3asemantic-subtyping%29
 % semantic subtyping: https://www.irif.fr/~gc/papers/semantic_subtyping.pdf
 The terminology "semantic subtyping" vs "syntactic subtyping" are confusing terms. 
-They actually refer 
-to whether the semantics of types is determined indirectly by the semantics of another structure (as in semantics)
-or whether the semantics of types is determined directly by the type structure (as in syntactic) 
-Better terms would be "model-based" vs "proof-based".
-A model-based system can be more complete but would require finding an inhabitations of the types.
-That is the semantics of subtyping would depend on the semantics of typing (inhabitation of types).
-This is analogous to SAT solving, proof synthesis more generally, model checking problem, and SMT.
-If a type is model-based, not proof-based, then a proof must be found,
+"semantics subtyping" means the semantics of types is determined indirectly by the semantics of another structure.
+"syntactic subtyping" means the semantics of types is determined directly by the type structure
+
+In my opinion, better terms would be "model-based" vs "proof-based".
+A model-based system can be more complete but requires proving absence of inhabitation of the types.
+That is, the semantics of subtyping would depend on the semantics of inhabitation of types.
+This is related to SAT solving, proof synthesis, model checking, and SMT.
+If a type is model-based, not proof-based, then a proof must be found.
 Since the "proof" is not part of the model-based subtyping statement, 
 there is an infinite space to search to prove that the subtyping statement holds.
 This leads to a more complete system, but a more difficult system to decide.
-\newline
-\textbf{Extrinsic typing}. The static behavior of a program is not necessarily specified/prescribed; 
+
+\paragraph{Extrinsic typing.}
+Exemplified by Typescript, which is unsound. Maybe not as lenient?  
+The static behavior of a program is not necessarily specified/prescribed; 
 it may be over-approximated from the program composition. 
+Intrinsic vs extrinsic is orthogonal to static vs dynamic, although static and dynamic are often used to mean the former.
 All modern languages use a combination of static and dynamic type checking.
 The term "dynamically typed" some times refers to a language that doesn't prescribe static meaning,
 even if it uses both static and dynamic type checking. The term "extrinsic typing" is less ambiguous.
-Exemplified by Typescript, which is unsound. Maybe not as lenient?  
-\newline
-\textbf{Refinement Types}. a restricted to intersection; implies intrinsic top\newline
-\textbf{Predicate Subtyping}. An extension of refinement types exemplified by Liquid Types.
-RLT starts with an invalid post-condition, then weakens return type to the (strongest) valid post-condition from outside in by expanding unions. 
-RLT starts with an invalid pre-condition, then strengthens parameter type to a (weakest) valid pre-condition from inside out by adding intersections. 
-Liquid types starts with an invalid post-condition, then uses iterative weakening by dropping conjunctions until a valid post-condition is reached.
-\newline
-\textbf{Abstraction Refinement}. Type unification over subtyping resembles abstraction refinement  
-where solving for variables on different sides of the subtyping relation corresponds to
+
+\paragraph{Refinement Types.}
+Exemplified by Refinement ML. Base types with intersections and subtyping.
+
+\paragraph{Predicate Subtyping.}
+Exemplified by Liquid Types. An extension of refinement types.
+
+Similar: both use type inference to infer expressive relational properties. 
+
+Different: RLT starts with an invalid post-condition, then weakens return type to a valid post-condition from outside in by expanding unions.
+
+Different: RLT starts with an invalid pre-condition, then strengthens parameter type to a valid pre-condition from inside out by adding intersections.
+
+Different: Liquid types starts with an invalid post-condition, then uses iterative weakening by dropping conjunctions until a valid post-condition is reached.
+
+
+\paragraph{Abstraction Refinement.} 
+Similar: type unification over subtyping resembles abstraction refinement  
+where solving for variables and failing on different sides of the subtyping relation corresponds to
 solving with the abstractor vs solving with the refiner.
-\newline
-\textbf{Craig interpolation}. extracting an inductive type with unions and intersections 
+
+\paragraph{Craig interpolation.} 
+Similar: extracting an inductive type with unions and intersections 
 from a recursive program without needing to specify a predicate universe might be similar to
-craig interpolation. \newline
-\textbf{PDR}. exemplified by IC3. RLT infers abstract type for return type, 
+craig interpolation.
+
+\paragraph{PDR.}
+exemplified by IC3. 
+
+Similar: RLT infers abstract type for return type, 
 then safely constrains the variables in previous step (fix's antecedent) 
 to subtype the least fixed point.
-This, in essence, propagates the type for the last step to the previous steps.
+This lazily propagates the type for the last step to the previous steps.
 This is safe as antecedent is stronger than consequent at any step.
-the technique in PDR for propagating negation of loss points might be related. 
- \newline 
+Seems similar to the notion in PDR of propagating negation of loss points to previous steps. 
 
+Different: RLT isn't cartesian
 
 
 
