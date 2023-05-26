@@ -748,8 +748,20 @@ namespace Nameless
         if is_recur_type && unmatchable && is_consistent_variable_record then
           let context := {context with env_relational := context.env_relational.insert ty_key ty_c2}
           -- TODO: this seems unsafe. should this be handled in existential elimination?
-          -- unification alone is abstract, so it can be unsound, as typing ultimately decides correctness. 
-          (unify i context ty1 ty2) 
+          -- maybe it's ok, since unification alone is abstract, so it can be unsound, as typing ultimately decides correctness. 
+          let (i, contexts) := (unify i context ty1 ty2) 
+
+          let result_safe := contexts.all (fun context => context.env_simple.toList.all (fun (key, _) =>
+            not (is_bound_var key)
+          ))
+          if result_safe then 
+            (i, contexts.map (fun context =>
+              {context with env_relational := context.env_relational.erase ty_key}
+            ))
+          else
+            (i, [])
+
+
         else 
           (i, []) 
       ) else ( 
@@ -757,20 +769,11 @@ namespace Nameless
         -- collapsing: necessarying for soundness 
         ------------------------------------------------------------
         let ty1_unioned := List.foldr (fun context ty_acc => 
-          -- TODO: this local constraint should only be used for saving constraints; 
-          -- let locally_constrained := (fun key => context.env_simple.contains key)
-          -- let is_result_safe := List.all context.env_simple.toList (fun (key, ty_value) =>
-          --   not (is_bound_var key) || (locally_constrained key)
-          -- )
-          -- if is_result_safe then
-          --   --------- generalizing 
-          --   (.union (generalize bound_start context ty1) ty_acc)
-          --   ----------
-          -- else
-          --   Ty.top
           (.union (generalize bound_start context ty1) ty_acc)
         ) Ty.bot contexts 
 
+        -- TODO: ensure that closed variables are unconstrained or only locally constrained
+        -- let locally_constrained := (fun key => context.env_simple.contains key)
         (unify i context ty1_unioned ty2) 
       )
     ) 
@@ -792,22 +795,19 @@ namespace Nameless
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
 
       let ty2_inter := List.foldr (fun context ty_acc => 
-        let locally_constrained := (fun key => context.env_simple.contains key)
-        let is_result_safe := List.all context.env_simple.toList (fun (key, ty_value) =>
-          not (is_bound_var key) || (locally_constrained key)
-        )
-        if is_result_safe then
-          ---------
-          -- generalization causes non-termination; need to understand this 
-          ---------
-          -- (.inter (generalize bound_start context ty2) ty_acc)
-          ----------------------------------
-
-          (simplify (subst context.env_simple (.inter ty2 ty_acc)))
-        else
-          Ty.bot
+        ---------
+        -- generalization causes non-termination; need to understand this 
+        ---------
+        -- (.inter (generalize bound_start context ty2) ty_acc)
+        ----------------------------------
+        (simplify (subst context.env_simple (.inter ty2 ty_acc)))
       ) Ty.top contexts 
 
+      -- TODO: ensure that closed variables are unconstrained or only locally constrained
+      -- let locally_constrained := (fun key => context.env_simple.contains key)
+      -- let is_result_safe := List.all context.env_simple.toList (fun (key, ty_value) =>
+      --   not (is_bound_var key) || (locally_constrained key)
+      -- )
       (unify i context ty1 ty2_inter)
     )
 
@@ -896,8 +896,8 @@ namespace Nameless
         if id1 == id2 then
           (i, [context])
         else
+          -- NOTE: save as rhs maps to lhs. Enables freed existential vars (rhs) to map to closed existential vars (lhs). 
           (i, [{context with env_simple := context.env_simple.insert id2 (Ty.fvar id1)}])
-          -- (i, [{context with env_simple := context.env_simple.insert id1 (Ty.fvar id2)}])
       | (_, .some ty) => unify i context (.fvar id1) ty 
       | (.some ty', _) => unify i context ty' (.fvar id2) 
 
