@@ -720,7 +720,7 @@ namespace Nameless
     partial def unify (i : Nat) (context : Context)
     : Ty -> Ty -> (Nat × List Context)
 
-    -- existential quantifier introduction 
+    -- existential quantifier elimination (closed variables) 
     | .exis n ty_c1 ty_c2 ty1, ty2 => (
       let bound_start := i
       let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
@@ -780,7 +780,7 @@ namespace Nameless
       )
     ) 
 
-    -- universal quantifier introduction 
+    -- universal quantifier introduction (closed variables)
     | ty1, .univ n ty_c1 ty_c2 ty2  => (
       let bound_start := i
       let (i, ids) := (i + n, (List.range n).map (fun j => i + j))
@@ -808,7 +808,7 @@ namespace Nameless
       (unify i context ty1 ty2_inter)
     )
 
-    -- existential quantifier elimination 
+    -- existential quantifier introduction (open variables) 
     | ty', .exis n ty_c1 ty_c2 ty =>
       let (i, args) := (
         i + n, 
@@ -825,7 +825,7 @@ namespace Nameless
       )
 
 
-    -- universal quantifier elimination 
+    -- universal quantifier elimination (open variables)
     | .univ n ty_c1 ty_c2 ty1, ty2 =>
       let bound_start := i
       let (i, args, set_expandable) := (
@@ -864,21 +864,27 @@ namespace Nameless
 
         let (i,contexts) := (unify i context ty_c1 ty_c2)
         if contexts.isEmpty then
-          let is_recur_type := match ty_c2 with 
-          | Ty.recur _ => true
-          | _ => false
+          -------------------------------
+          -- TODO: delete saveing the relation subtyping
+          -- seems odd to state an assumption should hold by return it in the context
+          -------------------------------
+          -- let is_recur_type := match ty_c2 with 
+          -- | Ty.recur _ => true
+          -- | _ => false
 
-          let rlabels := extract_record_labels ty_c1 
-          let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
-              rlabels.contains l 
-            )
-          let ty_key := (simplify (subst context.env_simple ty_c1))
-          let unmatchable := !(matchable (extract_nested_fields ty_key))
+          -- let rlabels := extract_record_labels ty_c1 
+          -- let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
+          --     rlabels.contains l 
+          --   )
+          -- let ty_key := (simplify (subst context.env_simple ty_c1))
+          -- let unmatchable := !(matchable (extract_nested_fields ty_key))
 
-          if is_recur_type && unmatchable && is_consistent_variable_record then
-            (i, [context])
-          else 
-            (i, []) 
+          -- if is_recur_type && unmatchable && is_consistent_variable_record then
+          --   (i, [context])
+          -- else 
+          --   (i, []) 
+          -------------------------------
+          (i, [])
         else
           (i, contexts)
       )
@@ -990,6 +996,8 @@ namespace Nameless
             let context := {context with env_relational := context.env_relational.insert ty' ty_cache}
             unify i context ty_cache (Ty.recur ty)
           | .none =>  
+            -- TODO: consider adding relational environment here;
+            -- may need to flip direction of how variables are mapped to each other
             (i, []) 
 
     | Ty.union ty1 ty2, ty => 
