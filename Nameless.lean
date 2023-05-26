@@ -747,6 +747,8 @@ namespace Nameless
 
         if is_recur_type && unmatchable && is_consistent_variable_record then
           let context := {context with env_relational := context.env_relational.insert ty_key ty_c2}
+          -- TODO: this seems unsafe. should this be handled in existential elimination?
+          -- unification alone is abstract, so it can be unsound, as typing ultimately decides correctness. 
           (unify i context ty1 ty2) 
         else 
           (i, []) 
@@ -755,17 +757,20 @@ namespace Nameless
         -- collapsing: necessarying for soundness 
         ------------------------------------------------------------
         let ty1_unioned := List.foldr (fun context ty_acc => 
-          let locally_constrained := (fun key => context.env_simple.contains key)
-          let is_result_safe := List.all context.env_simple.toList (fun (key, ty_value) =>
-            not (is_bound_var key) || (locally_constrained key)
-          )
-          if is_result_safe then
-            --------- generalizing 
-            (.union (generalize bound_start context ty1) ty_acc)
-            ----------
-          else
-            Ty.top
+          -- TODO: this local constraint should only be used for saving constraints; 
+          -- let locally_constrained := (fun key => context.env_simple.contains key)
+          -- let is_result_safe := List.all context.env_simple.toList (fun (key, ty_value) =>
+          --   not (is_bound_var key) || (locally_constrained key)
+          -- )
+          -- if is_result_safe then
+          --   --------- generalizing 
+          --   (.union (generalize bound_start context ty1) ty_acc)
+          --   ----------
+          -- else
+          --   Ty.top
+          (.union (generalize bound_start context ty1) ty_acc)
         ) Ty.bot contexts 
+
         (unify i context ty1_unioned ty2) 
       )
     ) 
@@ -860,7 +865,26 @@ namespace Nameless
         let ty_c1 := (simplify (subst env_sub ty_c1))
         let ty_c2 := (simplify (subst env_sub ty_c2))
 
-        (unify i context ty_c1 ty_c2)
+        let (i,contexts) := (unify i context ty_c1 ty_c2)
+        if contexts.isEmpty then
+          let is_recur_type := match ty_c2 with 
+          | Ty.recur _ => true
+          | _ => false
+
+          let rlabels := extract_record_labels ty_c1 
+          let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
+              rlabels.contains l 
+            )
+          let ty_key := (simplify (subst context.env_simple ty_c1))
+          let unmatchable := !(matchable (extract_nested_fields ty_key))
+
+          if is_recur_type && unmatchable && is_consistent_variable_record then
+            let context := {context with env_relational := context.env_relational.insert ty_key ty_c2}
+            (i, [context])
+          else 
+            (i, []) 
+        else
+          (i, contexts)
       )
 
     ---------------------------------------------------------------
@@ -1803,6 +1827,19 @@ namespace Nameless
   #eval unify_decide 0
   [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
   [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
+
+  ------------------------------
+  -- debugging
+  ------------------------------
+  -- TODO: understand when it's safe to save relational type.
+    -- always lhs? universal elimination and existential introduction?
+  -- broken
+  -- expected: true
+  #eval unify_decide 10
+  [lesstype| forall [1] β[0] * β[1] <: ⟨nat_list⟩ have β[0] -> β[1] ]
+  [lesstype| α[0] -> α[1] ]
+
+  ------------------------------
 
   -- broken
   -- expected: true
