@@ -589,18 +589,25 @@ namespace Nameless
     | .recur ty => .recur (instantiate (start + 1) args ty)
 
 
-    partial def roll_recur (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
-      if (free_vars_env m ty).contains key then
-        Ty.recur (instantiate 0 [(Ty.fvar key)] ty)
-        -- subst (PHashMap.from_list [(key, [lesstype| β[0] ])]) [lesstype| (induct ⟨ty⟩) ] 
-      else
-        ty 
 
-    partial def occurs_not (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
-      if (free_vars_env m ty).contains key then
-        .bot
-      else
-        ty
+    -- partial def roll_recur (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
+    --   let ty' := subst m ty 
+    --   if (free_vars_env m ty').contains key then
+    --     Ty.recur (instantiate 0 [(Ty.fvar key)] ty')
+    --     -- subst (PHashMap.from_list [(key, [lesstype| β[0] ])]) [lesstype| (induct ⟨ty⟩) ] 
+    --   else
+    --     ty 
+
+    -- partial def occurs_not (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Ty :=
+    --   if (free_vars_env m ty).contains key then
+    --     .bot
+    --   else
+    --     ty
+
+    partial def occurs (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Bool :=
+      let ty_sub := subst m ty
+      (free_vars_env m ty_sub).contains key
+
 
 
     partial def subst_default (sign : Bool) : Ty -> Ty
@@ -927,11 +934,17 @@ namespace Nameless
         ---------------------------
         match context.env_simple.find? id with 
         | none => 
-          (i, [{context with env_simple := context.env_simple.insert id (occurs_not id context.env_simple ty)}])
+          if (occurs id context.env_simple ty) then
+            (i, [])
+          else
+            (i, [{context with env_simple := context.env_simple.insert id ty}])
         | some ty' => 
           let (i, contexts) := (unify i context ty' ty)
           if contexts.isEmpty then
-            (i, [{context with env_simple := context.env_simple.insert id (occurs_not id context.env_simple (Ty.inter ty ty'))}])
+            if (occurs id context.env_simple (Ty.inter ty ty')) then
+              (i, [])
+            else
+              (i, [{context with env_simple := context.env_simple.insert id (Ty.inter ty ty')}])
           else
             (i, contexts)
       )
@@ -952,7 +965,11 @@ namespace Nameless
           else
             (i, ty')
         )
-        (i, [{context with env_simple := context.env_simple.insert id (roll_recur id context.env_simple ty_assign)}])
+
+        if occurs id context.env_simple ty_assign then
+          (i, [])
+        else
+          (i, [{context with env_simple := context.env_simple.insert id ty_assign}])
       | some ty => 
         (unify i context ty' ty) 
       ---------------------------------------
@@ -2525,16 +2542,33 @@ end Nameless
 
 
   ----- transposition construction ----
+  
+
+  -----------------------
+  -- debugging transpose construction via unification
+  -----------------------
+  -- TODO: roll_recur is broken; doesn't build up simple inductive type
+  #eval nat_list
 
   #eval Nameless.Ty.unify_decide 10
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+  [lesstype|
+    ({2 // (?succ β[0] * ?cons β[1]) with (β[0] * β[1]) <: ⟨nat_⟩ * α[0]})
+  ]
+  [lesstype| ⟨nat_⟩ * α[0] ]
+
+  -----------------
 
   -- expected: ⟨nat_⟩ * ⟨list_⟩
   #eval Nameless.Ty.unify_reduce 10
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| α[1] * α[2] ]
   [lesstype| α[1] * α[2] ]
+
+  -- expected: ⟨list_⟩
+  #eval Nameless.Ty.unify_reduce 10
+  [lesstype| ⟨nat_list⟩ ]
+  [lesstype| ⟨nat_⟩ * α[0] ]
+  [lesstype|  α[0] ]
 
   #eval Nameless.Ty.unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
