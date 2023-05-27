@@ -446,31 +446,30 @@ namespace Nameless
       no_function_types ty_pl
     | .recur content => no_function_types content 
 
-    partial def map_keys_to_constraints (context : Context) : PHashMap Nat (PHashSet (Ty × Ty)) :=
-      let constraints := (
-          context.env_simple.toList.map (fun (k,rhs) => (Ty.fvar k, rhs)) ++
-          context.env_relational.toList
-      )
+    partial def map_keys_to_constraints (env_relational : PHashMap Ty Ty) : PHashMap Nat (Ty × Ty) :=
+      let constraints := env_relational.toList
       constraints.foldl (fun acc constraint => 
         let (lhs, _) := constraint
         let fids := toList (free_vars lhs)
         fids.foldl (fun acc fid =>
           match acc.find? fid with
-          | some constraints => acc.insert fid (constraints.insert constraint)
-          | none => acc.insert fid (empty.insert constraint)
+          | some _ => 
+            -- this case should never happen; safely go to top in case it does
+            acc.insert fid (lhs, Ty.top) 
+          | none => acc.insert fid constraint
         ) acc
       ) {}
 
 
-    partial def reachable_constraints (map_kcs : PHashMap Nat (PHashSet (Ty × Ty))) (ty : Ty) : List (Ty × Ty) :=
+    partial def reachable_constraints (map_kcs : PHashMap Nat (Ty × Ty)) (ty : Ty) : List (Ty × Ty) :=
       let fvs := PHashSet.toList (free_vars ty)
       List.bind fvs (fun key =>
         match map_kcs.find? (key) with
-        | some constraints => 
-          let cs := toList constraints
-          cs ++ (cs.bind (fun (_, rhs) =>
+        | some constraint => 
+          [constraint] ++ (
+            let (_, rhs) := constraint
             reachable_constraints map_kcs rhs
-          ))
+          )
         | none => []
       )
 
@@ -486,7 +485,7 @@ namespace Nameless
 
       let ty := simplify (subst context.env_simple ty)
 
-      let map_kcs := map_keys_to_constraints context
+      let map_kcs := map_keys_to_constraints context.env_relational
       let constraints := reachable_constraints map_kcs ty
 
       let fvs_constraints := constraints.foldl (fun acc (lhs, rhs) =>
@@ -518,7 +517,7 @@ namespace Nameless
 
       let ty := simplify (subst context.env_simple ty)
 
-      let map_kcs := map_keys_to_constraints context
+      let map_kcs := map_keys_to_constraints context.env_relational
       let constraints := reachable_constraints map_kcs ty
 
       let fvs_constraints := constraints.foldl (fun acc (lhs, rhs) =>
@@ -794,8 +793,10 @@ namespace Nameless
 
         if is_recur_type && unmatchable && is_consistent_variable_record then
 
-          -- invariant: variables in env_relational cannot be assigned in env_simple
-          let context := {context with env_relational := context.env_relational.insert ty_key ty_c2}
+          -- add tranposition to env_simple: variables in env_relational cannot be assigned in env_simple
+          let context := {context with 
+            env_relational := context.env_relational.insert ty_key ty_c2,
+          }
           let (i, contexts) := (unify i context ty1 ty2) 
           let result_safe := contexts.all (fun context => 
             bound_keys.all (fun key => !(context.env_simple.contains key))
@@ -803,13 +804,7 @@ namespace Nameless
           if result_safe then 
             (i, contexts)
           else
-            match ty_c2 with
-            | .recur _ =>
-              -- transpose to find some valid unification
-              let labels := extract_label_list ty_c1
-              let ty_c2 := (transpose_relation labels ty_c2)
-              unify i context (.exis n ty_c1 ty_c2 ty1) ty2
-            | _ => (i, [])
+            (i, [])
 
         else 
           (i, []) 
@@ -908,18 +903,38 @@ namespace Nameless
       | (.some ty', _) => unify i context ty' (.fvar id2) 
 
     | .fvar id, ty  => 
-      ----------------------------
-      -- adjustment updates the variable assignment to lower the upper bound 
-      ---------------------------
-      match context.env_simple.find? id with 
-      | none => 
-        (i, [{context with env_simple := context.env_simple.insert id (occurs_not id context.env_simple ty)}])
-      | some ty' => 
-        let (i, contexts) := (unify i context ty' ty)
-        if contexts.isEmpty then
-          (i, [{context with env_simple := context.env_simple.insert id (occurs_not id context.env_simple (Ty.inter ty ty'))}])
-        else
-          (i, contexts)
+
+      let map_kcs := map_keys_to_constraints context.env_relational
+      match map_kcs.find? id with
+      | some (relational_key, relational_payload) =>      
+        -- id is part of relational key
+        -- check consistinecy of relational payload looked up from lhs 
+        -- construct a relational rhs from the relational_key
+
+        -- super type into relational key (lhs)
+        let env_sub : PHashMap Nat Ty := empty.insert id ty
+        let ty_sub := subst env_sub relational_key  
+
+        -- weaken with existential 
+        let fids := toList (free_vars ty_sub)
+        let ty_weak := [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
+
+        -- unify relational lhs and constructed relational rhs 
+        (unify i context relational_payload ty_weak)
+      | none => (
+        ----------------------------
+        -- adjustment updates the variable assignment to lower the upper bound 
+        ---------------------------
+        match context.env_simple.find? id with 
+        | none => 
+          (i, [{context with env_simple := context.env_simple.insert id (occurs_not id context.env_simple ty)}])
+        | some ty' => 
+          let (i, contexts) := (unify i context ty' ty)
+          if contexts.isEmpty then
+            (i, [{context with env_simple := context.env_simple.insert id (occurs_not id context.env_simple (Ty.inter ty ty'))}])
+          else
+            (i, contexts)
+      )
       ---------------------------------------
 
     | ty', .fvar id => 
@@ -975,8 +990,15 @@ namespace Nameless
         (i, [context])
       else
         -- using induction hypothesis, ty1 ≤ ty2; safely unroll
-        let ty1 := instantiate 0 [ty2] ty1
-        unify i context ty1 ty2
+        let ty1' := instantiate 0 [ty2] ty1
+        let (i, contexts) := unify i context ty1' ty2
+        if contexts.isEmpty then
+            -- transpose to find some valid unification
+            let labels := extract_label_list ty2 
+            let ty_trans := (transpose_relation labels (.recur ty1))
+            unify i context ty_trans ty2
+        else 
+          (i, contexts)
 
     | ty', .recur ty =>
       let ty' := (simplify (subst context.env_simple ty'))
@@ -2501,17 +2523,68 @@ end Nameless
   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
   [lesstype| ⟨nat_list⟩ ]
 
-  ----- transposition weakening ----
 
-  -- expected: true
+  ----- transposition construction ----
+
+  #eval Nameless.Ty.unify_decide 10
+  [lesstype| ⟨nat_list⟩ ]
+  [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+
+  -- expected: ⟨nat_⟩ * ⟨list_⟩
+  #eval Nameless.Ty.unify_reduce 10
+  [lesstype| ⟨nat_list⟩ ]
+  [lesstype| α[1] * α[2] ]
+  [lesstype| α[1] * α[2] ]
+
   #eval Nameless.Ty.unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⊤ ]
 
-  -- expected: true
+
+
+  ----- transposition projection ----
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 10
+  [lesstype| {β[0] -> unit with β[0] * α[0] <: ⟨nat_list⟩} ]
+  [lesstype| ?succ ?zero unit -> unit ]
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 10
+  [lesstype| {β[0] -> unit with β[0] * α[0] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩ -> unit ]
+
+  -- expected: false 
+  #eval Nameless.Ty.unify_decide 10
+  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
+  [lesstype| ?succ ?zero unit ]
+
+  -- expected: true 
   #eval Nameless.Ty.unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ ]
+
+  -----------------------
+  -- debugging
+  -----------------------
+
+  #eval Nameless.Ty.unify_decide 10
+  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩ ]
+
+  -- see that id is part of relational key
+  --  β[0] <: nat_
+
+  -- sub rhs into key and testify 
+  #eval [lesstype| ⟨nat_⟩ * α[0] ]
+
+  -- check that value of relational key subtypes 
+  #eval Nameless.Ty.unify_decide 10
+  [lesstype| ⟨nat_list⟩ ]
+  [lesstype| {1 // ⟨nat_⟩ * β[0]}]
+
+  ----------------------------
+  ----------------------------
 
   -- expected: true 
   #eval Nameless.Ty.unify_decide 10
