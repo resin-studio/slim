@@ -2543,21 +2543,6 @@ end Nameless
 
   ----- transposition construction ----
   
-
-  -----------------------
-  -- debugging transpose construction via unification
-  -----------------------
-  -- TODO: roll_recur is broken; doesn't build up simple inductive type
-  #eval nat_list
-
-  #eval Nameless.Ty.unify_decide 10
-  [lesstype|
-    ({2 // (?succ β[0] * ?cons β[1]) with (β[0] * β[1]) <: ⟨nat_⟩ * α[0]})
-  ]
-  [lesstype| ⟨nat_⟩ * α[0] ]
-
-  -----------------
-
   -- expected: ⟨nat_⟩ * ⟨list_⟩
   #eval Nameless.Ty.unify_reduce 10
   [lesstype| ⟨nat_list⟩ ]
@@ -2573,7 +2558,6 @@ end Nameless
   #eval Nameless.Ty.unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⊤ ]
-
 
 
   ----- transposition projection ----
