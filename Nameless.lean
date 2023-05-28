@@ -453,9 +453,10 @@ namespace Nameless
       let fids := toList (free_vars ty)
       fids.foldl (fun acc fid =>
         match acc.find? fid with
-        | some _ => 
+        | some ty' => 
           -- this case should never happen; safely go to top in case it does
           acc.insert fid Ty.top
+          -- acc.insert fid (unionize ty ty')
         | none => acc.insert fid ty 
       ) initial 
 
@@ -2718,10 +2719,49 @@ namespace Nameless
       {(?succ ⟨nat_⟩ * ?zero unit)}
   ]
 
-  -- better: notions of ?zero and ?true appear in inferred type? 
-  -- broken: type of max is bloated; relational information is missing
-  -- TODO: formulate the expected type of max
-  -- NOTE: affected by erasing closed relational subtyping
+  -- expected: relational function type
+  #eval infer_reduce 0 [lessterm| 
+    fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    )
+  ] 
+
+  -- expected: type maintains relationa information 
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    let y[0] = (\ (y[0], y[1]) => 
+        (y[2] (y[0], y[1]))
+    ) in
+    y[0]
+  ] 
+
+  -- broken
+  -- expected: type that describes max invariant
+  -- e.g. X -> Y -> {Z with (X * Z) <: LE} & {Z with (X * Y) <: LE}
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    (\ (y[0], y[1]) => 
+      (
+        (
+        \ #true() => y[1]
+        \ #false() => y[0]
+        )
+        (y[2] (y[0], y[1]))
+      )
+    )
+  ] 
+
+  -- broken
   #eval infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
@@ -2742,45 +2782,11 @@ namespace Nameless
     -- (y[0] (#succ #zero(), #zero()))
   ] 
 
+
 /-
 --
 -/
 
------- debugging
-  #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    let y[0] = (\ (y[0], y[1]) => 
-        (y[2] (y[0], y[1]))
-    ) in
-    y[0]
-  ] 
-  -------------------
-
-  #eval infer_reduce 0 [lessterm| 
-    fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    )
-  ] 
-
-  #eval unify_decide 300
-  [lesstype|
-  α[38] >> β[0] ->
-  {1 // β[0] with (β[1] * β[0]) <: (induct (
-      {1 // ((?zero unit * β[0]) * ?true unit)} |
-      {3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
-      {1 // ((?succ β[0] * ?zero unit) * ?false unit)}))}
-  ]
-  [lesstype| α[100] ]
-
-  #eval unify_decide 300
-  nat_list
-  [lesstype| α[100] ]
 
   -- broken
   -- expected: max of the two numbers
