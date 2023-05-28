@@ -369,7 +369,6 @@ namespace Nameless
 ------------------------------------------------------------
 
 
-
     partial def free_vars: Ty -> PHashSet Nat 
     | .bvar id => {} 
     | .fvar id => PersistentHashSet.empty.insert id 
@@ -808,6 +807,7 @@ namespace Nameless
           let context := {context with 
             env_relational := context.env_relational.insert ty_key ty_c2,
           }
+
           let (i, contexts) := (unify i context ty1 ty2) 
 
           -------------------
@@ -933,7 +933,6 @@ namespace Nameless
         -- weaken with existential 
         let fids := toList (free_vars ty_sub)
         let ty_weak := [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
-
         -- unify relational lhs and constructed relational rhs 
         (unify i context relational_payload ty_weak)
       | none => (
@@ -2577,32 +2576,16 @@ namespace Nameless
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ ]
 
-  -- broken
   -- expected: true 
   #eval unify_decide 10
-  [lesstype| {β[0] with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| {2 // β[0] with β[0] * β[1] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ ]
 
-  -----------------------
-  -- debugging
-  -----------------------
-
+  -- expected: false
   #eval unify_decide 10
-  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
-  [lesstype| ⟨nat_⟩ ]
+  [lesstype| {2 // β[0] with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| ?succ ?zero unit ]
 
-  -- see that id is part of relational key
-  --  β[0] <: nat_
-
-  -- sub rhs into key and testify 
-  #eval [lesstype| ⟨nat_⟩ * α[0] ]
-
-  -- check that value of relational key subtypes 
-  #eval unify_decide 10
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| {1 // ⟨nat_⟩ * β[0]}]
-
-  ----------------------------
   ----------------------------
 
   -- expected: true 
