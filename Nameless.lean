@@ -54,7 +54,7 @@ namespace Nameless
       -- invariant: simple_to_relational.contains key --> 
       --              exsists ty_lower , ty_lower == simple_to_relational.find key  && env_relational.contains ty_lower   
       env_simple : PHashMap Nat Ty
-      -- TODO: add connection simple_to_relational : PHashMap Nat Ty
+      simple_to_relational : PHashMap Nat Ty
       env_relational : PHashMap Ty Ty
       set_expandable : PHashSet Nat
     deriving Repr
@@ -449,29 +449,28 @@ namespace Nameless
       no_function_types ty_pl
     | .recur content => no_function_types content 
 
-    partial def map_keys_to_constraints (env_relational : PHashMap Ty Ty) : PHashMap Nat (Ty × Ty) :=
-      let constraints := env_relational.toList
-      constraints.foldl (fun acc constraint => 
-        let (lhs, _) := constraint
-        let fids := toList (free_vars lhs)
-        fids.foldl (fun acc fid =>
-          match acc.find? fid with
-          | some _ => 
-            -- this case should never happen; safely go to top in case it does
-            acc.insert fid (lhs, Ty.top) 
-          | none => acc.insert fid constraint
-        ) acc
-      ) {}
+    partial def index_free_vars (initial : PHashMap Nat Ty) (ty : Ty) : PHashMap Nat Ty :=
+      let fids := toList (free_vars ty)
+      fids.foldl (fun acc fid =>
+        match acc.find? fid with
+        | some _ => 
+          -- this case should never happen; safely go to top in case it does
+          acc.insert fid Ty.top
+        | none => acc.insert fid ty 
+      ) initial 
 
 
-    partial def reachable_constraints (map_kcs : PHashMap Nat (Ty × Ty)) (ty : Ty) : List (Ty × Ty) :=
+    partial def reachable_constraints (context : Context) (ty : Ty) : List (Ty × Ty) :=
       let fvs := PHashSet.toList (free_vars ty)
       List.bind fvs (fun key =>
-        match map_kcs.find? (key) with
-        | some constraint => 
-          [constraint] ++ (
-            let (_, rhs) := constraint
-            reachable_constraints map_kcs rhs
+        match context.simple_to_relational.find? (key) with
+        | some ty_lower => 
+          (match context.env_relational.find? ty_lower with
+          | some ty_upper => 
+            [(ty_lower, ty_upper)] ++ (
+              reachable_constraints context ty_upper
+            )
+          | none => []
           )
         | none => []
       )
@@ -488,8 +487,7 @@ namespace Nameless
 
       let ty := simplify (subst context.env_simple ty)
 
-      let map_kcs := map_keys_to_constraints context.env_relational
-      let constraints := reachable_constraints map_kcs ty
+      let constraints := reachable_constraints context ty
 
       let fvs_constraints := constraints.foldl (fun acc (lhs, rhs) =>
         (free_vars lhs) + (free_vars rhs) + acc
@@ -520,8 +518,7 @@ namespace Nameless
 
       let ty := simplify (subst context.env_simple ty)
 
-      let map_kcs := map_keys_to_constraints context.env_relational
-      let constraints := reachable_constraints map_kcs ty
+      let constraints := reachable_constraints context ty
 
       let fvs_constraints := constraints.foldl (fun acc (lhs, rhs) =>
         (free_vars lhs) + (free_vars rhs) + acc
@@ -803,8 +800,9 @@ namespace Nameless
 
         if is_recur_type && unmatchable && is_consistent_variable_record then
 
-          -- add tranposition to env_simple: variables in env_relational cannot be assigned in env_simple
+          -- update context with relational information 
           let context := {context with 
+            simple_to_relational := index_free_vars context.simple_to_relational ty_key
             env_relational := context.env_relational.insert ty_key ty_c2,
           }
 
@@ -919,22 +917,27 @@ namespace Nameless
 
     | .fvar id, ty  => 
 
-      let map_kcs := map_keys_to_constraints context.env_relational
-      match map_kcs.find? id with
-      | some (relational_key, relational_payload) =>      
-        -- id is part of relational key
-        -- check consistinecy of relational payload looked up from lhs 
-        -- construct a relational rhs from the relational_key
+      match context.simple_to_relational.find? id with
+      | some relational_shape =>
+        (match context.env_relational.find? relational_shape with
+        | some relation =>      
+          -- id is part of relational key
+          -- check consistinecy of relational payload looked up from lhs 
+          -- construct a relational rhs from the relational_key
 
-        -- super type into relational key (lhs)
-        let env_sub : PHashMap Nat Ty := empty.insert id ty
-        let ty_sub := subst env_sub relational_key  
+          -- super type into relational key (lhs)
+          let env_sub : PHashMap Nat Ty := empty.insert id ty
+          let ty_sub := subst env_sub relational_shape  
 
-        -- weaken with existential 
-        let fids := toList (free_vars ty_sub)
-        let ty_weak := [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
-        -- unify relational lhs and constructed relational rhs 
-        (unify i context relational_payload ty_weak)
+          -- weaken with existential 
+          let fids := toList (free_vars ty_sub)
+          let ty_weak := [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
+          -- unify relational lhs and constructed relational rhs 
+          (unify i context relation ty_weak)
+        | none => 
+          -- invariant: False
+          (i, []) 
+        )
       | none => (
         ----------------------------
         -- adjustment updates the variable assignment to lower the upper bound 
@@ -1086,7 +1089,7 @@ namespace Nameless
 
 
     partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
-      let context : Context := Context.mk env_simple empty empty
+      let context : Context := Context.mk env_simple empty empty empty
       let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
         let env_simple := Context.env_simple context
@@ -1095,7 +1098,7 @@ namespace Nameless
 
       
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
-      let context : Context := ⟨empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty, empty⟩
       let (_, contexts) := (unify i context ty1 ty2)
       generalize i context (
         List.foldr (fun context ty_acc => 
@@ -1105,7 +1108,7 @@ namespace Nameless
       )
 
     partial def unify_reduce_expand (i : Nat) (exp : List Nat) (ty1) (ty2) (ty_result) :=
-      let context : Context := ⟨empty, empty, from_list exp⟩
+      let context : Context := ⟨empty, empty, empty, from_list exp⟩
       let (_, contexts) := (unify i context ty1 ty2)
       generalize i context (
         List.foldr (fun context ty_acc => 
@@ -1116,11 +1119,11 @@ namespace Nameless
 
 
     partial def unify_simple (i : Nat) (ty1) (ty2) :=
-      let context : Context := ⟨empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty, empty⟩
       (unify i context ty1 ty2)
 
     partial def unify_decide (i : Nat) (ty1) (ty2) :=
-      let context : Context := ⟨empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty, empty⟩
       let (_, result) := (unify i context ty1 ty2)
       !result.isEmpty
 
@@ -1610,12 +1613,12 @@ namespace Nameless
 
 
     partial def infer_simple i (t : Tm) :=
-      let context : Ty.Context := ⟨empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
       (infer (i + 1) context {} t (Ty.fvar i))
 
     partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
       let boundary := i 
-      let context : Ty.Context := ⟨empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
       let (_, contexts) := (infer i context {} t ty)
       List.foldr (fun (context, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst context.env_simple (Ty.union ty' ty_acc)))
@@ -2414,80 +2417,7 @@ namespace Nameless
   ]
   spec
   [lesstype| α[0] * α[1] ]
-  --------------------------------------
 
-  -- def even_to_list := [lesstype| 
-  --   ν 1 . (
-  --     (?zero unit -> ?nil unit) & 
-  --     (∀ 2 . (?succ ?succ β[0] -> ?cons ?cons β[1]) | 
-  --       β[2] ≤ β[0] -> β[1])
-  --   )
-  -- ]
-
-  -- #eval unify_decide 0 
-  --   even_to_list
-  --   nat_to_list
-  -- -- == false 
-
-  -- -- broken 
-  -- #eval unify_decide 0 
-  --   nat_to_list
-  --   even_to_list
-  -- -- == true
-
-  -- #eval unify_decide 0 
-  -- [lesstype| ∃ 1 .  β[0] ]
-  -- [lesstype| ∃ 1 .  ?cons unit ]
-  -- -- == false 
-
-  -- #eval unify_decide 0 
-  -- [lesstype| ∃ 1 .  ?cons unit ]
-  -- [lesstype| ∃ 1 .  β[0] ]
-  -- -- == true 
-
-  -- #eval unify_decide 0 
-  -- [lesstype| ∀ 1 .  β[0] ]
-  -- [lesstype| ∀ 1 .  ?cons unit ]
-  -- -- == true 
-
-  -- #eval unify_decide 0 
-  -- [lesstype| ∀ 1 .  ?cons unit ]
-  -- [lesstype| ∀ 1 .  β[0] ]
-  -- -- == false 
-
-
-  -- #eval unify_decide 0 
-  -- [lesstype| ∃ 1 . (?succ ?succ unit) ]
-  -- [lesstype| ∃ 1 . (?succ ?succ β[0]) ]
-
-  -- #eval unify_decide 0 
-  -- [lesstype| ∀ 2 . (?succ ?succ β[0] -> ?cons ?cons β[1]) ]
-  -- [lesstype| ∀ 2 . (?succ ?succ unit -> ?cons ?cons unit) ]
-
-
-
-
-  -- -- def nat_to_list := [lesstype| 
-  -- --   ν 1 . (
-  -- --     (?zero unit -> ?nil unit) & 
-  -- --     (∀ 2 . (?succ β[0] -> ?cons β[1]) | 
-  -- --       β[2] ≤ β[0] -> β[1])
-  -- --   )
-  -- -- ]
-
-
-  -- -- def even_to_list := [lesstype| 
-  -- --   ν 1 . (
-  -- --     (?zero unit -> ?nil unit) & 
-  -- --     (∀ 2 . (?succ ?succ β[0] -> ?cons ?cons β[1]) | 
-  -- --       β[2] ≤ β[0] -> β[1])
-  -- --   )
-  -- -- ]
-
-
-
-
------------------------------------------------
   ------------ transposition checking ----------------
 
   def list_ := [lesstype|
@@ -2789,7 +2719,7 @@ namespace Nameless
   ]
 
   -- better: notions of ?zero and ?true appear in inferred type? 
-  -- broken: type of max is bloated
+  -- broken: type of max is bloated; relational information is missing
   -- TODO: formulate the expected type of max
   -- NOTE: affected by erasing closed relational subtyping
   #eval infer_reduce 0 [lessterm| 
