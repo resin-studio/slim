@@ -2146,7 +2146,7 @@ namespace Nameless
 
   -------------------------------
 
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
       (fix (\ y[0] => (
         \ (#zero(), y[0]) => #true()  
         \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
@@ -2155,7 +2155,7 @@ namespace Nameless
   ] 
 
   -- expected: ⊥  
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     let y[0] : ?succ ?zero unit = 
     (
       (\ (y[0], y[1]) => (
@@ -2478,28 +2478,15 @@ namespace Nameless
   -- -- ]
 
 
-end Nameless 
 
 
 -----------------------------------------------
   ------------ transposition checking ----------------
 
-  def nat_ := [lesstype|
-    induct 
-      ?zero unit |
-      ?succ β[0]
-  ]
-
   def list_ := [lesstype|
     induct 
       ?nil unit |
       ?cons β[0]
-  ]
-
-  def nat_list := [lesstype|
-    induct 
-      (?zero unit * ?nil unit) |
-      {?succ β[0] * ?cons β[1] with β[0] * β[1] <: β[2]}
   ]
 
   -- #eval [lessterm| 
@@ -2511,7 +2498,7 @@ end Nameless
   --   y[0]
   -- ] 
 
-  -- #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  -- #eval infer_reduce 0 [lessterm| 
   --   fix(\ y[0] =>
   --     \ #zero() => #nil()  
   --     \ #succ y[0] => #cons (y[1] y[0]) 
@@ -2521,22 +2508,22 @@ end Nameless
 
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| ⟨nat_⟩ * ⟨nat_⟩ ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| ⟨nat_⟩ * ?nil unit ]
 
   -- expected: false
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
   [lesstype| ⟨nat_list⟩ ]
 
@@ -2544,18 +2531,18 @@ end Nameless
   ----- transposition construction ----
   
   -- expected: ⟨nat_⟩ * ⟨list_⟩
-  #eval Nameless.Ty.unify_reduce 10
+  #eval unify_reduce 10
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| α[1] * α[2] ]
   [lesstype| α[1] * α[2] ]
 
   -- expected: ⟨list_⟩
-  #eval Nameless.Ty.unify_reduce 10
+  #eval unify_reduce 10
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| ⟨nat_⟩ * α[0] ]
   [lesstype|  α[0] ]
 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⊤ ]
 
@@ -2563,22 +2550,22 @@ end Nameless
   ----- transposition projection ----
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| {β[0] -> unit with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?zero unit -> unit ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| {β[0] -> unit with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ -> unit ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?zero unit ]
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ ]
 
@@ -2586,7 +2573,7 @@ end Nameless
   -- debugging
   -----------------------
 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ ]
 
@@ -2597,7 +2584,7 @@ end Nameless
   #eval [lesstype| ⟨nat_⟩ * α[0] ]
 
   -- check that value of relational key subtypes 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| {1 // ⟨nat_⟩ * β[0]}]
 
@@ -2605,32 +2592,32 @@ end Nameless
   ----------------------------
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨list_⟩ ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?succ ?zero unit ]
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| ⟨nat_⟩ >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| ⟨nat_⟩ >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?zero unit -> α[0] ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
   [lesstype| ⟨nat_⟩ >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| {β[0] with β[0] <: ⟨list_⟩} ]
   [lesstype| ⟨list_⟩ ]
 
@@ -2639,7 +2626,7 @@ end Nameless
 
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| ⟨nat_⟩ ]
   [lesstype|
     induct
@@ -2649,7 +2636,7 @@ end Nameless
 
 ---------------- debugging
 
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     let y[0] : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
       \ #zero() => #nil()  
       \ #succ y[0] => #cons (y[1] y[0]) 
@@ -2662,67 +2649,67 @@ end Nameless
   ------- soundness ---------
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| {β[0] with β[0] <: ?ooga unit} ]
   [lesstype|  ?ooga unit | ?booga unit]
 
   -- expected: false
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| {β[0] with β[0] <: (?three unit)} ]
   [lesstype| ?one unit ]
 
   -- expected: false
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| (?one unit | ?three unit) ]
   [lesstype| ?one unit ]
 
   -- expected: false
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| {β[0] with β[0] <: (?one unit | ?three unit)} ]
   [lesstype| ?one unit ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| (?one unit * ?two unit) | (?three unit * ?four unit) ]
   [lesstype| (?three unit * ?four unit)  ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| {β[0] with β[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit * ?two unit ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| {2 // β[0]  with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 10
+  #eval unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit  ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| {2 // β[0] with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit ]
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| {2 // β[0] with β[0] * β[1] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit | ?three unit ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| (?one unit * ?two unit) | (?three unit * ?four unit) ]
   [lesstype| ?one unit  ]
 
   -- expected: true 
-  #eval Nameless.Ty.unify_decide 10 
+  #eval unify_decide 10 
   [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit | ?three unit  ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 10 
+  #eval unify_decide 10 
   [lesstype| {β[0] with β[0] * α[0] <: (?one unit * ?two unit) | (?three unit * ?four unit)} ]
   [lesstype| ?one unit  ]
 
@@ -2731,28 +2718,28 @@ end Nameless
 --------------------- universal introduction subtyping ----------------
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| ?one unit  ]
   [lesstype| {(β[0] | α[0]) -> β[0] with (β[0] | α[0]) <: (?one unit | ?two unit) & (?three unit | ?four unit) } >> β[0] ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| ?one unit  ]
   [lesstype| (?one unit | ?two unit) & (?three unit | ?four unit) ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| ?one unit  ]
   [lesstype|  {(β[0] | α[0]) -> β[0] with (β[0] | α[0]) <: (?one unit | ?two unit) * (?three unit | ?four unit)} >> β[0] ]
 
   -- expected: false 
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| ?one unit  ]
   [lesstype| (?one unit | ?two unit) * (?three unit | ?four unit) ]
 
 
 ---------------------------------
-  #eval Nameless.Tm.infer_reduce 1 [lessterm| 
+  #eval infer_reduce 1 [lessterm| 
     let y[0] : α[0] = _ in
     y[0] 
   ] 
@@ -2763,7 +2750,7 @@ end Nameless
       {?succ β[0] * ?succ β[1] with β[0] * β[1] <: β[2]}
   ]
 
-  #eval Nameless.Ty.unify_reduce 10
+  #eval unify_reduce 10
   [lesstype| α[2] * α[3] -> {β[0] with (α[2] * β[0]) * (α[3] * β[0]) <: ⟨ooga⟩ * ⟨ooga⟩} ]
   [lesstype| α[0] * α[1] -> α[1] ]
   [lesstype| ?hmm unit ]
@@ -2772,7 +2759,7 @@ end Nameless
 --------------------------------------------------------
 
   -- expected: terminates
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     let y[0] : (? >> ? >> β[0] * β[1] -> {1 // β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩}) = 
     (\ (y[0], y[1]) => y[0]) in
     y[0]
@@ -2793,7 +2780,7 @@ end Nameless
   -- broken: type of max is bloated
   -- TODO: formulate the expected type of max
   -- NOTE: affected by erasing closed relational subtyping
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
       \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
@@ -2818,7 +2805,7 @@ end Nameless
 -/
 
 ------ debugging
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
       \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
@@ -2831,7 +2818,7 @@ end Nameless
   ] 
   -------------------
 
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
       \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
@@ -2839,7 +2826,7 @@ end Nameless
     )
   ] 
 
-  #eval Nameless.Ty.unify_decide 300
+  #eval unify_decide 300
   [lesstype|
   α[38] >> β[0] ->
   {1 // β[0] with (β[1] * β[0]) <: (induct (
@@ -2849,7 +2836,7 @@ end Nameless
   ]
   [lesstype| α[100] ]
 
-  #eval Nameless.Ty.unify_decide 300
+  #eval unify_decide 300
   nat_list
   [lesstype| α[100] ]
 
@@ -2857,7 +2844,7 @@ end Nameless
   -- expected: max of the two numbers
   -- non-termination
   /-
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
       \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
@@ -2880,14 +2867,14 @@ end Nameless
   -- better: notions of ?zero and ?true appear in inferred type? 
   -- this requires including relational constraints in generalization
   -- this works! 
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     (\ (y[0]) => ((fix (\ y[0] =>
       \ (#zero(), #zero()) => #true()  
     )) (y[0])))
   ] 
 
   -- expected: ?true unit
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     let y[0] = (\ (y[0]) => ((fix (\ y[0] =>
       \ (#zero(), #zero()) => #true()  
     )) (y[0])))
@@ -2898,7 +2885,7 @@ end Nameless
   --------------- debugging ---------------
 
   -- expected: ?false unit 
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     (
       (fix (\ y[0] =>
         \ (#zero(), y[0]) => #true()  
@@ -2909,7 +2896,7 @@ end Nameless
     )
   ] 
 
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     let y[0] = (fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
       \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
@@ -2918,7 +2905,7 @@ end Nameless
     (y[0] (#succ #succ #zero(), #succ #zero()))
   ] 
 
-  #eval Nameless.Tm.infer_reduce 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     (fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
       \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
@@ -2928,7 +2915,7 @@ end Nameless
 
 
 
-  #eval Nameless.Ty.unify_decide 10 
+  #eval unify_decide 10 
   [lesstype| ?succ ?zero unit * ?zero unit]
   nat_pair
 
@@ -2943,7 +2930,7 @@ end Nameless
   ]
 
   -- expected: ⊥ 
-  #eval Nameless.Ty.unify_reduce 10 
+  #eval unify_reduce 10 
   [lesstype|
     (?ooga unit >>
        (β[0] -> {1 // β[0] with (β[1] * β[0]) <: ⟨le_⟩}))
@@ -2952,7 +2939,7 @@ end Nameless
   [lesstype| α[0] ]
 
   -- expected: ?false unit 
-  #eval Nameless.Ty.unify_reduce 10 
+  #eval unify_reduce 10 
   [lesstype| (⟨nat_pair⟩ >> (β[0] -> {1 // β[0] with (β[1] * β[0]) <: ⟨le_⟩})) ]
   [lesstype| ?succ ?succ ?zero unit * ?succ ?zero unit -> α[0]]
   [lesstype| α[0] ]
@@ -2961,8 +2948,10 @@ end Nameless
   -- incomplete without model-based subtyping
   ----------------------------
   -- URL: https://pnwamk.github.io/sst-tutorial/#%28part._sec~3asemantic-subtyping%29
-  #eval Nameless.Ty.unify_decide 0
+  #eval unify_decide 0
   [lesstype| (?x unit | ?y unit) * ?y unit ] 
   [lesstype| (?x unit * ?y unit) | (?y unit * ?y unit) ] 
 
   -------------------------
+
+end Nameless 
