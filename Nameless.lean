@@ -50,7 +50,11 @@ namespace Nameless
   namespace Ty
 
     structure Context where
+      -- invariant: !simple_to_relational.contains key || !env_simple.contains key   
+      -- invariant: simple_to_relational.contains key --> 
+      --              exsists ty_lower , ty_lower == simple_to_relational.find key  && env_relational.contains ty_lower   
       env_simple : PHashMap Nat Ty
+      -- TODO: add connection simple_to_relational : PHashMap Nat Ty
       env_relational : PHashMap Ty Ty
       set_expandable : PHashSet Nat
     deriving Repr
@@ -805,14 +809,18 @@ namespace Nameless
             env_relational := context.env_relational.insert ty_key ty_c2,
           }
           let (i, contexts) := (unify i context ty1 ty2) 
-          let result_safe := contexts.all (fun context => 
+
+          -------------------
+          -- safety invariant:
+          -- usually true due constraints on proactive variables, but sometimes proactive variables are not prescribed constraints 
+          -------------------
+          let proactive_variables_assigned_safely := contexts.all (fun context => 
             bound_keys.all (fun key => !(context.env_simple.contains key))
           )
-          if result_safe then 
+          if proactive_variables_assigned_safely then
             (i, contexts)
-          else
+          else 
             (i, [])
-
         else 
           (i, []) 
       ) else ( 
@@ -2569,6 +2577,12 @@ namespace Nameless
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ ]
 
+  -- broken
+  -- expected: true 
+  #eval unify_decide 10
+  [lesstype| {β[0] with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩ ]
+
   -----------------------
   -- debugging
   -----------------------
@@ -2646,7 +2660,22 @@ namespace Nameless
   ] 
   --------------------------------
 
-  ------- soundness ---------
+  ------- proactive safely assgined ---------
+
+  -- expected: false 
+  #eval unify_decide 0
+  [lesstype| {β[0]} ]
+  [lesstype|  ?ooga unit ]
+
+  -- expected: false 
+  #eval unify_decide 0
+  [lesstype| {β[0] with β[0] <: ?ooga unit} ]
+  [lesstype|  ?booga unit]
+
+  -- expected: false 
+  #eval unify_decide 0
+  [lesstype| {3 // β[2] with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩]
 
   -- expected: true 
   #eval unify_decide 0
