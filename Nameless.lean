@@ -2728,7 +2728,7 @@ namespace Nameless
     )
   ] 
 
-  -- expected: type maintains relationa information 
+  -- expected: type maintains relational information 
   #eval infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
@@ -2743,13 +2743,17 @@ namespace Nameless
 
   -- broken
   -- expected: type that describes max invariant
-  -- e.g. X -> Y -> {Z with (X * Z) <: LE} & {Z with (X * Y) <: LE}
+  -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
+  -- TODO: propagate relational type information from less-than-or-equal to max
+  -- actual: (X -> Y -> X) | (X -> Y -> Y)
   #eval infer_reduce 0 [lessterm| 
+    -- less than or equal:
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
       \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
       \ (#succ y[0], #zero()) => #false() 
     ) in
+    -- max:
     (\ (y[0], y[1]) => 
       (
         (
@@ -2762,6 +2766,9 @@ namespace Nameless
   ] 
 
   -- broken
+  -- expected: max of the two inputs  
+  -- actual: union of two inputs  
+  -- e.g. (?succ ?zero unit | ?succ ?succ ?succ ?zero unit) 
   #eval infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
@@ -2777,9 +2784,7 @@ namespace Nameless
         (y[2] (y[0], y[1]))
       )
     ) in
-    y[0]
-    -- (y[0] (#succ #zero(), #succ #succ #succ #zero()))
-    -- (y[0] (#succ #zero(), #zero()))
+    (y[0] (#succ #zero(), #succ #succ #succ #zero()))
   ] 
 
 
