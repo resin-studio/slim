@@ -1091,32 +1091,35 @@ namespace Nameless
 
     partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
       let context : Context := Context.mk env_simple empty empty empty
+      let boundary := i
       let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
         let env_simple := Context.env_simple context
-        simplify (subst env_simple (Ty.union ty_result ty_acc))
+        let ty' := simplify (subst env_simple (Ty.union ty_result ty_acc))
+        generalize boundary context ty' 
       ) Ty.bot contexts 
 
       
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
       let context : Context := ⟨empty, empty, empty, empty⟩
+      let boundary := i
       let (_, contexts) := (unify i context ty1 ty2)
-      generalize i context (
-        List.foldr (fun context ty_acc => 
-          let env_simple := Context.env_simple context
-          simplify (subst env_simple (Ty.union ty_result ty_acc))
-        ) Ty.bot contexts
-      )
+      List.foldr (fun context ty_acc => 
+        let env_simple := Context.env_simple context
+        let ty' := simplify (subst env_simple (Ty.union ty_result ty_acc))
+        generalize boundary context ty' 
+      ) Ty.bot contexts
+
 
     partial def unify_reduce_expand (i : Nat) (exp : List Nat) (ty1) (ty2) (ty_result) :=
       let context : Context := ⟨empty, empty, empty, from_list exp⟩
+      let boundary := i
       let (_, contexts) := (unify i context ty1 ty2)
-      generalize i context (
-        List.foldr (fun context ty_acc => 
-          let env_simple := Context.env_simple context
-          simplify (subst env_simple (Ty.union ty_result ty_acc))
-        ) Ty.bot contexts
-      )
+      List.foldr (fun context ty_acc => 
+        let env_simple := Context.env_simple context
+        let ty' := simplify (subst env_simple (Ty.union ty_result ty_acc))
+        generalize boundary context ty' 
+      ) Ty.bot contexts
 
 
     partial def unify_simple (i : Nat) (ty1) (ty2) :=
@@ -1475,15 +1478,72 @@ namespace Nameless
       ))
 
     | .app t1 t2 =>
-    ------------------------------ 
-    ------------------------------ 
+      -------------------------------------------------
+      -- original
+      -------------------------------------------------
       let (i, ty2) := (i + 1, Ty.fvar i)
+      -- TODO: result of ty2 should be collapsed  
       bind_nl (infer i context env_tm t2 ty2) (fun i (context, ty2') =>
       bind_nl (infer i context env_tm t1 (Ty.case ty2' ty)) (fun i (context, ty1) =>
       let (i, ty') := (i + 1, Ty.fvar i)
       bind_nl (Ty.unify i context ty1 (Ty.case ty2' ty')) (fun i context =>
         (i, [(context, ty')])
       )))
+      -----------------------------------------------
+      -- simplest version
+      -----------------------------------------------
+      -- let (i, ty2) := (i + 1, Ty.fvar i)
+      -- let (i, ty') := (i + 1, Ty.fvar i)
+      -- bind_nl (infer i context env_tm t1 (Ty.case ty2 ty')) (fun i (context, ty1) =>
+      --   (i, [(context, ty')])
+      -- )
+      --------------------------------------------------
+      -- Question: does generalization need to be restricted to let-binding?
+      -- Answer: becomes impredicate if allowed in arguments of application   
+      -- the function being applied could be generalized already.
+      -- means the type inference is incomplete w.r.t the semantics
+      -- which fine, since it probably already is.
+      --------------------------------------------------------------------------------
+      -- collapsing
+      --------------------------------------------------------------------------------
+      -- causes non-termination somwhere; related to impredicativity?
+      --------------------------------------------------------------------------------
+      -- let (i, ty2) := (i + 1, Ty.fvar i)
+      -- let free_var_boundary := i
+      -- let (i, contexts) := infer i context env_tm t2 ty2
+      -- let ty2_schema := List.foldr (fun (context, ty2') ty_acc => 
+      --   let ty2_schema := Ty.generalize free_var_boundary context ty2'
+      --   (Ty.union ty2_schema ty_acc)
+      -- ) Ty.bot contexts 
+      -- bind_nl (infer i context env_tm t1 (Ty.case ty2_schema ty)) (fun i (context, ty1) =>
+      -- let (i, ty') := (i + 1, Ty.fvar i)
+      -- bind_nl (Ty.unify i context ty1 (Ty.case ty2_schema ty')) (fun i context =>
+      --   (i, [(context, ty')])
+      -- ))
+      ---------------
+
+      -- let (i, ty2) := (i + 1, Ty.fvar i)
+      -- let (i, ty') := (i + 1, Ty.fvar i)
+      -- let free_var_boundary := i
+      -- bind_nl (infer i context env_tm t1 (Ty.case ty2 ty)) (fun i (context, ty1) =>
+      -- let (i, contexts) := (infer i context env_tm t2 ty2)
+      -- let ty2_schema := List.foldr (fun (context, ty2') ty_acc => 
+      --   let ty2_schema := Ty.generalize free_var_boundary context ty2'
+      --   (Ty.union ty2_schema ty_acc)
+      -- ) Ty.bot contexts 
+      -- bind_nl (Ty.unify i context ty1 (Ty.case ty2_schema ty')) (fun i context =>
+      --   (i, [(context, ty')])
+      -- ))
+      ------------------------------------------
+      -- let (i, ty2) := (i + 1, Ty.fvar i)
+      -- let (i, ty') := (i + 1, Ty.fvar i)
+      -- let free_var_boundary := i
+      -- bind_nl (infer i context env_tm t1 (Ty.case ty2 ty)) (fun i (context, ty1) =>
+      -- bind_nl (infer i context env_tm t2 ty2) (fun i (context, ty2') =>
+      -- let ty2' := Ty.generalize free_var_boundary context ty2'
+      -- bind_nl (Ty.unify i context ty1 (Ty.case ty2' ty')) (fun i context =>
+      --   (i, [(context, ty')])
+      -- )))
       ------------------------------------------
       ---- alternative 
       -------------------------------------------------------
@@ -1491,7 +1551,7 @@ namespace Nameless
       -- let (i, ty') := (i + 1, Ty.fvar i)
       -- bind_nl (infer i context env_tm t1 (Ty.case ty2 ty)) (fun i (context, ty1) =>
       -- bind_nl (infer i context env_tm t2 ty2) (fun i (context, ty2') =>
-      -- bind_nl (Ty.unify i context {} {} ty1 (Ty.case ty2' ty')) (fun i context =>
+      -- bind_nl (Ty.unify i context ty1 (Ty.case ty2' ty')) (fun i context =>
       --   (i, [(context, ty')])
       -- )))
       ----------------------------------------------
@@ -2742,6 +2802,85 @@ namespace Nameless
   ] 
 
   -- broken
+  -- expected: the argument type should be refined by the function application 
+  -- should be similar to the function type, but just an exisitential without the return type
+  -- the return type is inferred, but the argument type is not inferred 
+  -- e.g.
+  /-
+    ({2 // β[0] with (β[0] * β[1]) <: (induct (
+          (?zero unit * ?nil unit) |
+          {2 // (?succ β[1] * ?cons β[0]) with (β[1] * β[0]) <: β[2]}
+    ))})
+  -/
+  #eval unify_simple 50
+  [lesstype| 
+  (α[10] >> (β[0] ->
+  {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
+     {2 // (?succ β[1] * ?cons β[0]) with (β[1] * β[0]) <: β[2]}))}))
+  ]
+  [lesstype| α[20] -> α[12]]
+  -- [lesstype| α[12]]
+
+  -- broken
+  -- expected: the argument type should be refined by the function application 
+  -- should be similar to the function type, but just an exisitential without the return type
+  -- the return type is inferred, but the argument type is not inferred 
+  -- e.g.
+  /-
+    ({2 // β[0] with (β[0] * β[1]) <: (induct (
+          (?zero unit * ?nil unit) |
+          {2 // (?succ β[1] * ?cons β[0]) with (β[1] * β[0]) <: β[2]}
+    ))})
+  -/
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero()) => #nil()  
+      \ (#succ y[0]) => #cons (y[1] y[0]) 
+    ) in
+    let y[0] = _ in
+    -- (y[1] (y[0]))
+    let y[0] = (y[1] (y[0])) in
+    y[1]
+  ] 
+
+
+
+  -- broken
+  -- expected: the argument type should be refined by the function application 
+  #eval infer_reduce 0 [lessterm| 
+    -- less than or equal:
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    (\ (y[0], y[1]) => 
+      (
+        let y[0] = (y[2] (y[0], y[1])) in
+        y[1]
+      )
+    )
+  ] 
+
+  -- broken
+  -- expected: type is maintained after identity function application
+  #eval infer_reduce 0 [lessterm| 
+    -- less than or equal:
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    -- max:
+    (\ (y[0], y[1]) => 
+      (
+        (\ y[0] => y[0])
+        (y[2] (y[0], y[1]))
+      )
+    )
+  ]
+
+  -- broken
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   -- TODO: propagate relational type information from less-than-or-equal to max
@@ -2760,10 +2899,71 @@ namespace Nameless
         \ #true() => y[1]
         \ #false() => y[0]
         )
+        -- whatever property for the result of application should hold for 
+        -- the parameters inside the conditional
         (y[2] (y[0], y[1]))
       )
     )
   ] 
+  -----------------------
+
+
+  #eval infer_reduce 0 [lessterm| 
+    -- less than or equal:
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    -- max:
+    (\ (y[0], y[1]) => 
+      (
+        (\ y[0] => y[0])
+        -- whatever property for the result of application should hold for 
+        -- the parameters inside the conditional
+        -- idea: does the type of the argument need to be collapsed? 
+        (y[2] (y[0], y[1]))
+        -- let y[0] = (y[2] (y[0], y[1])) in
+        -- y[0]
+      )
+    )
+  ] 
+
+-- actual 
+  /-
+  (? >> (? >> (? >> 
+  ({3 // ((β[1] * β[2]) -> β[0]) with ((β[1] * β[2]) * β[0]) <: (induct (
+          {1 // ((?zero unit * β[0]) * ?true unit)} |
+          ({3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
+          {1 // ((?succ β[0] * ?zero unit) * ?false unit)})))
+  } >> β[0]))))
+  -/
+
+
+-- expected
+  /-
+  (α[38] >> (β[0] ->
+  {1 // β[0] with (β[1] * β[0]) <: (induct (
+      {1 // ((?zero unit * β[0]) * ?true unit)} |
+      ({3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
+      {1 // ((?succ β[0] * ?zero unit) * ?false unit)})))
+  }))
+  -/
+
+  #eval infer_reduce 0 [lessterm| 
+    -- less than or equal:
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    (
+      (\ y[0] => y[0])
+      (y[0] (#succ #succ #zero(), #succ #zero()))
+    )
+  ] 
+
+  -----------------------
 
   -- broken
   -- expected: max of the two inputs  
