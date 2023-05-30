@@ -1091,7 +1091,7 @@ namespace Nameless
 
     partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
       let context : Context := Context.mk env_simple empty empty empty
-      let boundary := i
+      let boundary := 0 
       let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
         let env_simple := Context.env_simple context
@@ -1102,7 +1102,7 @@ namespace Nameless
       
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
       let context : Context := ⟨empty, empty, empty, empty⟩
-      let boundary := i
+      let boundary := 0 
       let (_, contexts) := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
         let env_simple := Context.env_simple context
@@ -1113,7 +1113,7 @@ namespace Nameless
 
     partial def unify_reduce_expand (i : Nat) (exp : List Nat) (ty1) (ty2) (ty_result) :=
       let context : Context := ⟨empty, empty, empty, from_list exp⟩
-      let boundary := i
+      let boundary := 0 
       let (_, contexts) := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
         let env_simple := Context.env_simple context
@@ -1678,7 +1678,7 @@ namespace Nameless
       (infer (i + 1) context {} t (Ty.fvar i))
 
     partial def infer_reduce_wt (i : Nat) (t : Tm) (ty : Ty): Ty :=
-      let boundary := i 
+      let boundary := 0
       let context : Ty.Context := ⟨empty, empty, empty, empty⟩
       let (_, contexts) := (infer i context {} t ty)
       List.foldr (fun (context, ty') ty_acc => 
@@ -2801,7 +2801,6 @@ namespace Nameless
     y[0]
   ] 
 
-  -- broken
   -- expected: the argument type should be refined by the function application 
   -- should be similar to the function type, but just an exisitential without the return type
   -- the return type is inferred, but the argument type is not inferred 
@@ -2812,14 +2811,15 @@ namespace Nameless
           {2 // (?succ β[1] * ?cons β[0]) with (β[1] * β[0]) <: β[2]}
     ))})
   -/
-  #eval unify_simple 50
+  #eval unify_reduce 50
   [lesstype| 
   (α[10] >> (β[0] ->
   {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
      {2 // (?succ β[1] * ?cons β[0]) with (β[1] * β[0]) <: β[2]}))}))
   ]
   [lesstype| α[20] -> α[12]]
-  -- [lesstype| α[12]]
+  [lesstype| α[20]]
+
 
   -- broken
   -- expected: the argument type should be refined by the function application 
