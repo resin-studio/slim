@@ -454,9 +454,12 @@ namespace Nameless
       fids.foldl (fun acc fid =>
         match acc.find? fid with
         | some ty' => 
-          -- this case should never happen; safely go to top in case it does
-          acc.insert fid Ty.top
-          -- acc.insert fid (unionize ty ty')
+          if ty == ty' then
+            acc
+          else
+            -- this case should never happen; safely go to top in case it does
+            acc.insert fid Ty.top
+            -- acc.insert fid (unionize ty ty')
         | none => acc.insert fid ty 
       ) initial 
 
@@ -914,8 +917,8 @@ namespace Nameless
         -- assign older variable mapping to newer variable
         -- ensure that freed variables are older than closed existential variables
         -----------------
-        -- else if id1 < id2 then
-        --   (i, [{context with env_simple := context.env_simple.insert id1 (Ty.fvar id2)}])
+        else if id1 < id2 then
+          (i, [{context with env_simple := context.env_simple.insert id1 (Ty.fvar id2)}])
         else
           -- NOTE: save as rhs maps to lhs. Enables freed existential vars (rhs) to map to closed existential vars (lhs). 
           (i, [{context with env_simple := context.env_simple.insert id2 (Ty.fvar id1)}])
@@ -1503,8 +1506,9 @@ namespace Nameless
 
       -- bind_nl (infer i context env_tm t2 ty2) (fun i (context, ty2') =>
       -- bind_nl (infer i context env_tm t1 (Ty.case ty2' ty')) (fun i (context, ty1) =>
-      --   (i, [(context, ty')])
-      -- ))
+      -- bind_nl (Ty.unify i context ty1 (Ty.case ty2' ty')) (fun i context =>
+      --   (i, [(context, ty2')])
+      -- )))
       --------------------------------------------------
       -- Question: does generalization need to be restricted to let-binding?
       -- Answer: becomes impredicate if allowed in arguments of application   
@@ -1692,6 +1696,7 @@ namespace Nameless
       List.foldr (fun (context, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst context.env_simple (Ty.union ty' ty_acc)))
         Ty.generalize boundary context ty'
+        -- (Ty.union ty' ty_acc)
       ) Ty.bot contexts
 
 
@@ -2852,13 +2857,15 @@ namespace Nameless
       \ (#succ y[0]) => #cons (y[1] y[0]) 
     ) in
     let y[0] = _ in
-    -- (y[1] (y[0]))
     let y[0] = (y[1] (y[0])) in
     y[1]
   ] 
   -------------------
   -- arg type: α[22]
   -- variable is not present in keys of env_relational
+  -- potential problem: α[22] <: ⊤
+  -- potential problem: α[22] points to nothing 
+  -- potential problem: env_relational empty after let expression 
   -------------------
   #eval infer_simple 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
