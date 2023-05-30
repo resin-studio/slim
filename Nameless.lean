@@ -910,6 +910,12 @@ namespace Nameless
       | (.none, .none) => 
         if id1 == id2 then
           (i, [context])
+        -----------------
+        -- assign older variable mapping to newer variable
+        -- ensure that freed variables are older than closed existential variables
+        -----------------
+        -- else if id1 < id2 then
+        --   (i, [{context with env_simple := context.env_simple.insert id1 (Ty.fvar id2)}])
         else
           -- NOTE: save as rhs maps to lhs. Enables freed existential vars (rhs) to map to closed existential vars (lhs). 
           (i, [{context with env_simple := context.env_simple.insert id2 (Ty.fvar id1)}])
@@ -1494,9 +1500,11 @@ namespace Nameless
       -----------------------------------------------
       -- let (i, ty2) := (i + 1, Ty.fvar i)
       -- let (i, ty') := (i + 1, Ty.fvar i)
-      -- bind_nl (infer i context env_tm t1 (Ty.case ty2 ty')) (fun i (context, ty1) =>
+
+      -- bind_nl (infer i context env_tm t2 ty2) (fun i (context, ty2') =>
+      -- bind_nl (infer i context env_tm t1 (Ty.case ty2' ty')) (fun i (context, ty1) =>
       --   (i, [(context, ty')])
-      -- )
+      -- ))
       --------------------------------------------------
       -- Question: does generalization need to be restricted to let-binding?
       -- Answer: becomes impredicate if allowed in arguments of application   
@@ -2821,10 +2829,16 @@ namespace Nameless
   [lesstype| α[20]]
 
 
+------- argument type inference ------
   -- broken
   -- expected: the argument type should be refined by the function application 
   -- should be similar to the function type, but just an exisitential without the return type
   -- the return type is inferred, but the argument type is not inferred 
+  -- IDEA: context that constrains argument type needs to be updated
+  -- and propagated outward along with return type 
+  -- argument type variable needs to point to variable used in relation
+  -- IDEA: need to reverse variable assignment when both sides are variables
+  -- IDEA: go back to always having older variables point to newer variables?
   -- e.g.
   /-
     ({2 // β[0] with (β[0] * β[1]) <: (induct (
@@ -2842,6 +2856,21 @@ namespace Nameless
     let y[0] = (y[1] (y[0])) in
     y[1]
   ] 
+  -------------------
+  -- arg type: α[22]
+  -- variable is not present in keys of env_relational
+  -------------------
+  #eval infer_simple 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero()) => #nil()  
+      \ (#succ y[0]) => #cons (y[1] y[0]) 
+    ) in
+    let y[0] = _ in
+    -- (y[1] (y[0]))
+    let y[0] = (y[1] (y[0])) in
+    y[1]
+  ] 
+  ----------------------------
 
 
 
