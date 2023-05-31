@@ -54,7 +54,7 @@ namespace Nameless
       -- invariant: simple_to_relational.contains key --> 
       --              exsists ty_lower , ty_lower == simple_to_relational.find key  && env_relational.contains ty_lower   
       env_simple : PHashMap Nat Ty
-      simple_to_relational : PHashMap Nat Ty
+      env_keychain : PHashMap Nat (PHashSet Ty)
       env_relational : PHashMap Ty Ty
       set_expandable : PHashSet Nat
     deriving Repr
@@ -449,36 +449,39 @@ namespace Nameless
       no_function_types ty_pl
     | .recur content => no_function_types content 
 
-    partial def index_free_vars (initial : PHashMap Nat Ty) (ty : Ty) : PHashMap Nat Ty :=
+    partial def index_free_vars (initial : PHashMap Nat (PHashSet Ty)) (ty : Ty) : PHashMap Nat (PHashSet Ty) :=
       let fids := toList (free_vars ty)
       fids.foldl (fun acc fid =>
         match acc.find? fid with
-        | some ty' => 
-          if ty == ty' then
+        | some keys => 
+          if keys.contains ty then 
             acc
           else
-            -- TODO: need to handle simple in multiple relational keys 
-            -- broken
-            acc.insert fid Ty.top
-            -- acc.insert fid (unionize ty ty')
-        | none => acc.insert fid ty 
+            acc.insert fid (keys.insert ty)
+        | none => acc.insert fid (empty.insert ty)
       ) initial 
 
 
-    partial def reachable_constraints (context : Context) (ty : Ty) : List (Ty × Ty) :=
-      let fvs := PHashSet.toList (free_vars ty)
-      List.bind fvs (fun key =>
-        match context.simple_to_relational.find? (key) with
-        | some ty_lower => 
-          (match context.env_relational.find? ty_lower with
-          | some ty_upper => 
-            [(ty_lower, ty_upper)] ++ (
-              reachable_constraints context ty_upper
-            )
-          | none => []
-          )
-        | none => []
-      )
+    partial def reachable_constraints (context : Context) (ty : Ty) (constraints_acc : PHashMap Ty Ty) : PHashMap Ty Ty :=
+      (free_vars ty).fold (fun constraints_acc fid =>
+        match context.env_keychain.find? fid with
+        | some keychain =>
+          keychain.fold (fun constraints_acc key =>
+            if constraints_acc.contains key then
+              constraints_acc
+            else
+              (match context.env_relational.find? key with
+              | some relation => 
+                let constraints_acc := constraints_acc.insert key relation 
+                (reachable_constraints context relation constraints_acc)
+              | none => 
+                -- invariant: this case should never happen
+                constraints_acc 
+              )
+          ) constraints_acc
+        | none => constraints_acc
+      ) constraints_acc
+
 
     def pack (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
       --------------------------------------
@@ -492,7 +495,7 @@ namespace Nameless
 
       let ty := simplify (subst context.env_simple ty)
 
-      let constraints := reachable_constraints context ty
+      let constraints := (reachable_constraints context ty empty).toList
 
       let fvs_constraints := constraints.foldl (fun acc (lhs, rhs) =>
         (free_vars lhs) + (free_vars rhs) + acc
@@ -523,7 +526,7 @@ namespace Nameless
 
       let ty := simplify (subst context.env_simple ty)
 
-      let constraints := reachable_constraints context ty
+      let constraints := (reachable_constraints context ty empty).toList
 
       let fvs_constraints := constraints.foldl (fun acc (lhs, rhs) =>
         (free_vars lhs) + (free_vars rhs) + acc
@@ -807,7 +810,7 @@ namespace Nameless
 
           -- update context with relational information 
           let context := {context with 
-            simple_to_relational := index_free_vars context.simple_to_relational ty_key
+            env_keychain := index_free_vars context.env_keychain ty_key
             env_relational := context.env_relational.insert ty_key ty_c2,
           }
 
@@ -922,27 +925,31 @@ namespace Nameless
 
     | .fvar id, ty  => 
 
-      match context.simple_to_relational.find? id with
-      | some relational_shape =>
-        (match context.env_relational.find? relational_shape with
-        | some relation =>      
+      match context.env_keychain.find? id with
+      | some keychain =>
+        -- TODO: fold over keychain; for all 
+        keychain.fold (fun (i, contexts) key =>
           -- id is part of relational key
           -- check consistinecy of relational payload looked up from lhs 
           -- construct a relational rhs from the relational_key
 
-          -- super type into relational key (lhs)
-          let env_sub : PHashMap Nat Ty := empty.insert id ty
-          let ty_sub := subst env_sub relational_shape  
+          bind_nl (i, contexts) (fun i context => 
+          match context.env_relational.find? key with
+          | some relation =>
+            -- super type into relational key (lhs)
+            let env_sub : PHashMap Nat Ty := empty.insert id ty
+            let ty_sub := subst env_sub key  
 
-          -- weaken with existential 
-          let fids := toList (free_vars ty_sub)
-          let ty_weak := [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
-          -- unify relational lhs and constructed relational rhs 
-          (unify i context relation ty_weak)
-        | none => 
-          -- invariant: False
-          (i, []) 
-        )
+            -- weaken with existential 
+            let fids := toList (free_vars ty_sub)
+            let ty_weak := [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
+            -- unify relational lhs and constructed relational rhs 
+            (unify i context relation ty_weak)
+          | none => 
+            -- invariant: this should never happen
+            (i, [])
+          )
+        ) (i, [context])
       | none => (
         ----------------------------
         -- adjustment updates the variable assignment to lower the upper bound 
@@ -1107,42 +1114,6 @@ namespace Nameless
       let context_tys := contexts.map (fun context => (context, ty_pl))
       let ty_collapsed := collapse boundary context_tys
       (i, context, ty_collapsed)
-
-    def unionize_contexts (c1 c2 : Ty.Context) : Ty.Context := 
-
-      let env_simple := c1.env_simple ; (c2.env_simple.foldl (fun acc k v2 =>
-        match c1.env_simple.find? k with
-        | some v1 => acc.insert k (Ty.union v1 v2)
-        | none => acc.insert k v2
-      ) {}) 
-
-      let simple_to_relational := c1.simple_to_relational ; c2.simple_to_relational
-      let env_relational := c1.env_relational ; (c2.env_relational.foldl (fun acc k v2 =>
-        match c1.env_relational.find? k with
-        | some v1 => acc.insert k (Ty.union v1 v2)
-        | none => acc.insert k v2
-      ) {}) 
-
-      let set_expandable := c1.set_expandable + c2.set_expandable
-      ⟨env_simple, simple_to_relational, env_relational, set_expandable⟩
-
-
-    def Context.extend (c1 c2 : Context) : Context := 
-      ⟨
-        c1.env_simple ; c2.env_simple,
-        c1.simple_to_relational ; c2.simple_to_relational,
-        c1.env_relational ; c2.env_relational,
-        c1.set_expandable + c2.set_expandable
-      ⟩
-
-    def collapse_contexts (contexts : List Ty.Context) : Option Ty.Context :=
-      match contexts with
-      | context :: contexts => some (
-        contexts.foldl (fun context acc =>
-          unionize_contexts context acc
-        ) context 
-      )
-      | [] => none
 
 
     partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
@@ -2895,18 +2866,7 @@ namespace Nameless
 
 
 ------- argument type inference ------
-  -- broken
   -- expected: the argument type should be refined by the function application 
-  -- should be similar to the function type, but just an exisitential without the return type
-  -- the return type is inferred, but the argument type is not inferred 
-  -- IDEA: context that constrains argument type needs to be updated
-  -- and propagated outward along with return type 
-  -- argument type variable needs to point to variable used in relation
-  -- IDEA: need to reverse variable assignment when both sides are variables
-  -- IDEA: go back to always having older variables point to newer variables?
-  -- IDEA: need to collapse and pack after every call to unify.   
-  -- argument type is missing irrespective of collapsing or generalizing in let expression
-
   -- e.g.
   /-
     ({2 // β[0] with (β[0] * β[1]) <: (induct (
@@ -2923,25 +2883,6 @@ namespace Nameless
     let y[0] = (y[1] (y[0])) in
     y[1]
   ] 
-  -------------------
-  -- arg type: α[22]
-  -- variable is not present in keys of env_relational
-  -- potential problem: α[22] points to nothing 
-  -- potential problem: env_relational empty after let expression 
-  -- potential problem: α[22] <: ⊤
-  -- TODO: need to handle simple in multiple relational keys 
-  -------------------
-  #eval infer_simple 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (#zero()) => #nil()  
-      \ (#succ y[0]) => #cons (y[1] y[0]) 
-    ) in
-    let y[0] = _ in
-    (y[1] (y[0]))
-    -- let y[0] = (y[1] (y[0])) in
-    -- y[1]
-  ] 
-  ----------------------------
 
 
 
