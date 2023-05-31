@@ -1070,7 +1070,6 @@ namespace Nameless
           let ty_key := simplify (subst context.env_simple ty')
           match context.env_relational.find? ty_key with
           | .some ty_cache => 
-            let context := {context with env_relational := context.env_relational.insert ty' ty_cache}
             unify i context ty_cache (Ty.recur ty)
           | .none =>  
             -- NOTE: cannot save in relational type
@@ -2973,14 +2972,18 @@ namespace Nameless
         -- Arg is a variable that exists in a relational key 
         -- there are two distinct cases
           -- check if Arg <: ?true follows from relational constraints; 
-            -- eg. (Arg * ...) <: R <: (?true * ...) |- Arg <: ?true
+            -- eg. (Arg * ...) <: R <: (?true | ?false * ...) |- Arg <: ?true | ?false
+
+
+            ----------------- idea sketh follows ---------
+          -- in each case of function
           -- assume Arg <: ?true along with relational constraints. sub into relational constraints and unify;
             -- eg. (Arg * Other) <: (?true * Other) <: R |-  Other <: ...
-          -- how do we distinguish between the two?
-            -- just as let expressing signals to generalize
-              -- application should signal to refine the constraints, rather tha check the constraint.
-              -- for env_simple, a variable indicates that refinement is allowed
-              -- for env_relational, there is always a variable; so we need a separate signal 
+          -- how do we add constraint for a single case without affecting propagating back out in general?
+            -- pattern in function signals that substitution is allowed
+            -- substitution specialized for body of function case 
+            -- without adding constraints exposed outside of case that wouldn't necessarily hold
+            ----------------------------------------------------------------------
         /-
         assume y[0] : X 
         gurantee #true : B <: ?true unit 
