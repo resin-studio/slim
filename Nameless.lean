@@ -1521,10 +1521,12 @@ namespace Nameless
       -- original
       -------------------------------------------------
       let (i, ty2) := (i + 1, Ty.fvar i)
-      -- TODO: result of ty2 should be collapsed  
-      bind_nl (infer i context env_tm t2 ty2) (fun i (context, ty2') =>
-      bind_nl (infer i context env_tm t1 (Ty.case ty2' ty)) (fun i (context, ty1) =>
       let (i, ty') := (i + 1, Ty.fvar i)
+
+      -- let boundary := i
+      bind_nl (infer i context env_tm t2 ty2) (fun i (context, ty2') =>
+      -- let ty2' := Ty.generalize boundary context ty2'
+      bind_nl (infer i context env_tm t1 (Ty.case ty2' ty)) (fun i (context, ty1) =>
       bind_nl (Ty.unify i context ty1 (Ty.case ty2' ty')) (fun i context =>
         (i, [(context, ty')])
       )))
@@ -1734,8 +1736,7 @@ namespace Nameless
       let (_, contexts) := (infer i context {} t ty)
       List.foldr (fun (context, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst context.env_simple (Ty.union ty' ty_acc)))
-        ty'
-        -- Ty.generalize boundary context ty'
+        Ty.generalize boundary context ty'
         -- (Ty.union ty' ty_acc)
       ) Ty.bot contexts
 
@@ -2971,11 +2972,15 @@ namespace Nameless
         -- this causes Arg <: ?true
         -- Arg is a variable that exists in a relational key 
         -- there are two distinct cases
-          -- check if Arg <: ?true follows from relational constraints 
-          -- assume Arg <: ?true along with relational constraints
+          -- check if Arg <: ?true follows from relational constraints; 
+            -- eg. (Arg * ...) <: R <: (?true * ...) |- Arg <: ?true
+          -- assume Arg <: ?true along with relational constraints. sub into relational constraints and unify;
+            -- eg. (Arg * Other) <: (?true * Other) <: R |-  Other <: ...
           -- how do we distinguish between the two?
-          -- need to generalize argument in application?
-            -- this would be akin to stating the constraint is an assumption, not a conclusion, right?
+            -- just as let expressing signals to generalize
+              -- application should signal to refine the constraints, rather tha check the constraint.
+              -- for env_simple, a variable indicates that refinement is allowed
+              -- for env_relational, there is always a variable; so we need a separate signal 
         /-
         assume y[0] : X 
         gurantee #true : B <: ?true unit 
@@ -2996,7 +3001,7 @@ namespace Nameless
     )
   ] 
 
-  #eval infer_simple 0 [lessterm| 
+  #eval infer_reduce 0 [lessterm| 
     -- less than or equal:
     let y[0] = fix (\ y[0] =>
       \ (#zero(), y[0]) => #true()  
