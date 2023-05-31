@@ -357,6 +357,24 @@ namespace Nameless
       (simplify (subst (env_ty) ty))
 
 
+
+
+
+  def PHashMap.repr [Repr α] [Repr β] [Repr (α × β)] [BEq α] [Hashable α] 
+  (m : PHashMap α β) (n : Nat) : Format :=
+    Format.bracket "<" (List.repr (toList m) n) ">"
+
+  instance [Repr α] [Repr β] [Repr (α × β)] [BEq α] [Hashable α] : Repr (PHashMap α β) where
+    reprPrec := PHashMap.repr
+
+
+  def PHashSet.repr [Repr α] [BEq α] [Hashable α] 
+  (m : PHashSet α) (n : Nat) : Format :=
+    Format.bracket "{" (List.repr (toList m) n) "}"
+
+  instance [Repr α] [BEq α] [Hashable α] : Repr (PHashSet α) where
+    reprPrec := PHashSet.repr
+
 ------------------------------------------------------------
 
     #eval [lesstype| {β[0] with β[0] <: ?ooga unit, β[0] <: ?booga unit} ]
@@ -1716,7 +1734,8 @@ namespace Nameless
       let (_, contexts) := (infer i context {} t ty)
       List.foldr (fun (context, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst context.env_simple (Ty.union ty' ty_acc)))
-        Ty.generalize boundary context ty'
+        ty'
+        -- Ty.generalize boundary context ty'
         -- (Ty.union ty' ty_acc)
       ) Ty.bot contexts
 
@@ -2893,8 +2912,24 @@ namespace Nameless
     y[0]
   ] 
 
+  -- expected: type is maintained after identity function application
+  #eval infer_reduce 0 [lessterm| 
+    -- less than or equal:
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    -- max:
+    (\ (y[0], y[1]) => 
+      (
+        (\ y[0] => y[0])
+        (y[2] (y[0], y[1]))
+      )
+    )
+  ]
 
-  -- broken
+
   -- expected: the argument type should be refined by the function application 
   #eval infer_reduce 0 [lessterm| 
     -- less than or equal:
@@ -2913,24 +2948,6 @@ namespace Nameless
 
 
   -- broken
-  -- expected: type is maintained after identity function application
-  #eval infer_reduce 0 [lessterm| 
-    -- less than or equal:
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    -- max:
-    (\ (y[0], y[1]) => 
-      (
-        (\ y[0] => y[0])
-        (y[2] (y[0], y[1]))
-      )
-    )
-  ]
-
-  -- broken
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   -- TODO: propagate relational type information from less-than-or-equal to max
@@ -2947,6 +2964,29 @@ namespace Nameless
       (
         (
         \ #true() => y[1]
+        -- TODO: gurantee that result is {Z with (X,Z) <: LE} & {Z with (Y,Z) <: LE}  
+        -- first part by inductive definition; second part by equality
+        -- what happens if a relation is in the context and then a fid in its key is unified with a value?
+        -- application causes (?true -> Y & ?false -> X) <: Arg -> Ret
+        -- this causes Arg <: ?true
+        -- Arg is a variable that exists in a relational key 
+        -- there are two distinct cases
+          -- check if Arg <: ?true follows from relational constraints 
+          -- assume Arg <: ?true along with relational constraints
+          -- how do we distinguish between the two?
+          -- need to generalize argument in application?
+            -- this would be akin to stating the constraint is an assumption, not a conclusion, right?
+        /-
+        assume y[0] : X 
+        gurantee #true : B <: ?true unit 
+        guarantee: y[1] : Z = {Y with
+          (X * Y) * B <: (induct [T]
+              {Y' // ((?zero unit * Y') * ?true unit)} |
+              {X' Y' B' // ((?succ X' * ?succ Y') * B') with ((X' * Y') * B') <: T} |
+              {X' // ((?succ X' * ?zero unit) * ?false unit)}
+          )
+        }
+        -/
         \ #false() => y[0]
         )
         -- whatever property for the result of application should hold for 
@@ -2955,6 +2995,61 @@ namespace Nameless
       )
     )
   ] 
+
+  #eval infer_simple 0 [lessterm| 
+    -- less than or equal:
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    let y[0] = _ in
+    let y[0] = _ in
+    (
+    -- (\ #true() => y[1] \ #false() => y[0])
+    (y[2] (y[0], y[1]))
+    )
+  ]
+
+  -- broken; causes non-termination
+  -- #eval unify_reduce 10
+  -- [lesstype| (α[1] * α[2]) * ?true unit ]
+  -- [lesstype|
+  -- induct (
+  --     {1 // ((?zero unit * β[0]) * ?true unit)} |
+  --     {3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
+  --     {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
+  -- )
+  -- ]
+  -- [lesstype| (α[1] * α[2]) * ?true unit ]
+
+
+
+  /-
+  (? >> (? >> ( {3 // (((β[1] * β[2]) -> β[2]) | 
+    (? >> (? >> ( {3 // (((β[1] * β[2]) -> β[1]) | 
+      (? >> (? >> ( {3 // (((β[1] * β[2]) -> β[2]) | 
+        (? >> (? >> ( {3 // ((β[1] * β[2]) -> β[1]) with ((β[1] * β[2]) * β[0]) <: (induct (
+            {1 // ((?zero unit * β[0]) * ?true unit)} |
+            {3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
+            {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
+
+        ))} >> β[0])))) with ((β[1] * β[2]) * β[0]) <: (induct (
+            {1 // ((?zero unit * β[0]) * ?true unit)} |
+            {3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
+            {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
+
+        ))} >> β[0])))) with ((β[1] * β[2]) * β[0]) <: (induct (
+            {1 // ((?zero unit * β[0]) * ?true unit)} |
+            {3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
+            {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
+
+        ))} >> β[0])))) with ((β[1] * β[2]) * β[0]) <: (induct (
+            {1 // ((?zero unit * β[0]) * ?true unit)} |
+            {3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
+            {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
+       ))} >> β[0])))
+  -/
 
   -- broken
   -- expected: max of the two inputs  
