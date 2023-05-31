@@ -2983,6 +2983,15 @@ namespace Nameless
             -- pattern in function signals that substitution is allowed
             -- substitution specialized for body of function case 
             -- without adding constraints exposed outside of case that wouldn't necessarily hold
+            -- pattern matching subs for variables so that assumptions only add local constraints.
+            -- or from the other angle, assumptions don't refine non-local constraints.
+            -- here are the steps:
+              -- step 1: unify pattern type without current context to solve for variables
+              -- step 2: solve relational constraints under this context  
+              -- step 3: take this solution as assumption for typing function body
+            -- does the same principle apply to simple types?
+              -- Yes! pattern matching should not refine the argument type variable
+              -- It also should sub away the variable so the assumption is local
             ----------------------------------------------------------------------
         /-
         assume y[0] : X 
