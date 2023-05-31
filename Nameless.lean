@@ -457,7 +457,8 @@ namespace Nameless
           if ty == ty' then
             acc
           else
-            -- this case should never happen; safely go to top in case it does
+            -- TODO: need to handle simple in multiple relational keys 
+            -- broken
             acc.insert fid Ty.top
             -- acc.insert fid (unionize ty ty')
         | none => acc.insert fid ty 
@@ -479,9 +480,9 @@ namespace Nameless
         | none => []
       )
 
-    def testify (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
+    def pack (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
       --------------------------------------
-      -- boundary prevents overtestifying
+      -- boundary prevents overpacking
 
       -- sub in simple types; 
       -- subbing prevents strengthening from the outside in 
@@ -546,7 +547,7 @@ namespace Nameless
 
         let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
 
-        -- step 1: testify to existential 
+        -- step 1: pack to existential 
         let ty_ex := intersect_over (fun (ty_lhs, ty_rhs) => 
           [lesstype|
             {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
@@ -829,10 +830,10 @@ namespace Nameless
         ------------------------------------------------------------
         -- collapsing: necessarying for soundness 
         ------------------------------------------------------------
-        -- NOTE: must testify instead of generalize
+        -- NOTE: must pack instead of generalize
         -- can only turn existential into universal if moving from rhs to lhs
         let ty1_unioned := List.foldr (fun context ty_acc => 
-          (.union (testify bound_start context ty1) ty_acc)
+          (.union (pack bound_start context ty1) ty_acc)
         ) Ty.bot contexts 
 
         (unify i context ty1_unioned ty2) 
@@ -913,12 +914,6 @@ namespace Nameless
       | (.none, .none) => 
         if id1 == id2 then
           (i, [context])
-        -----------------
-        -- assign older variable mapping to newer variable
-        -- ensure that freed variables are older than closed existential variables
-        -----------------
-        else if id1 < id2 then
-          (i, [{context with env_simple := context.env_simple.insert id1 (Ty.fvar id2)}])
         else
           -- NOTE: save as rhs maps to lhs. Enables freed existential vars (rhs) to map to closed existential vars (lhs). 
           (i, [{context with env_simple := context.env_simple.insert id2 (Ty.fvar id1)}])
@@ -1096,6 +1091,58 @@ namespace Nameless
         match union_all ts with
           | .none => .some t
           | .some t' => Ty.union t t'
+
+    def collapse (boundary : Nat) (context_tys : List (Ty.Context × Ty)) : Ty :=
+      let ty_collapsed := List.foldr (fun (context, ty) ty_acc => 
+        let ty_collapsed := Ty.pack boundary context ty
+        (Ty.union ty_collapsed ty_acc)
+      ) Ty.bot context_tys 
+      ty_collapsed
+
+    def unify_collapse (i : Nat) (context : Ty.Context) (ty_lhs ty_rhs ty_pl : Ty) 
+    : (Nat × Ty.Context × Ty) 
+    := 
+      let boundary := i
+      let (i, contexts) := unify i context ty_lhs ty_rhs
+      let context_tys := contexts.map (fun context => (context, ty_pl))
+      let ty_collapsed := collapse boundary context_tys
+      (i, context, ty_collapsed)
+
+    def unionize_contexts (c1 c2 : Ty.Context) : Ty.Context := 
+
+      let env_simple := c1.env_simple ; (c2.env_simple.foldl (fun acc k v2 =>
+        match c1.env_simple.find? k with
+        | some v1 => acc.insert k (Ty.union v1 v2)
+        | none => acc.insert k v2
+      ) {}) 
+
+      let simple_to_relational := c1.simple_to_relational ; c2.simple_to_relational
+      let env_relational := c1.env_relational ; (c2.env_relational.foldl (fun acc k v2 =>
+        match c1.env_relational.find? k with
+        | some v1 => acc.insert k (Ty.union v1 v2)
+        | none => acc.insert k v2
+      ) {}) 
+
+      let set_expandable := c1.set_expandable + c2.set_expandable
+      ⟨env_simple, simple_to_relational, env_relational, set_expandable⟩
+
+
+    def Context.extend (c1 c2 : Context) : Context := 
+      ⟨
+        c1.env_simple ; c2.env_simple,
+        c1.simple_to_relational ; c2.simple_to_relational,
+        c1.env_relational ; c2.env_relational,
+        c1.set_expandable + c2.set_expandable
+      ⟩
+
+    def collapse_contexts (contexts : List Ty.Context) : Option Ty.Context :=
+      match contexts with
+      | context :: contexts => some (
+        contexts.foldl (fun context acc =>
+          unionize_contexts context acc
+        ) context 
+      )
+      | [] => none
 
 
     partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
@@ -1581,37 +1628,46 @@ namespace Nameless
         let t := instantiate 0 [x] t 
         (infer i context (env_tm ; env_tmx) t ty) 
       else
-        --------------------------------------------------------------------------------
-        -- collapsing
-        --------------------------------------------------------------------------------
-        let (i, contexts) := (infer i context env_tm t1 ty1) 
-        let ty1_schema := List.foldr (fun (context, ty1') ty_acc => 
+        bind_nl (infer i context env_tm t1 ty1) (fun i (context, ty1') =>
           let ty1_schema := Ty.generalize free_var_boundary context ty1'
-          (Ty.union ty1_schema ty_acc)
-        ) Ty.bot contexts 
-        let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
-        let t := instantiate 0 [x] t 
-
-        -- unification check, since downward propagation cannot check against a full union 
-        bind_nl (Ty.unify i context ty1_schema ty1) (fun i context => 
+          let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
+          let t := instantiate 0 [x] t 
           (infer i context (env_tm ; env_tmx) t ty) 
         )
         --------------------------------------------------------------------------------
-
         --------------------------------------------------------------------------------
-        -- old version without collapsing 
+        -- collapsing
+        -- doesn't actually seem to be necessary
         --------------------------------------------------------------------------------
-        -- bind_nl (infer i context env_tm t1 ty1) (fun i (context, ty1') =>
+        -- let (i, context_tys) := (infer i context env_tm t1 ty1) 
+        -- let ty1_schema := List.foldr (fun (context, ty1') ty_acc => 
         --   let ty1_schema := Ty.generalize free_var_boundary context ty1'
-        --   -- let ty1_schema := ty1'
+        --   (Ty.union ty1_schema ty_acc)
+        -- ) Ty.bot context_tys 
+        -- let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
+        -- let t := instantiate 0 [x] t 
 
-        --   let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
-        --   let t := instantiate 0 [x] t 
-
+        -- -- unification check, since downward propagation cannot check against a full union 
+        -- bind_nl (Ty.unify i context ty1_schema ty1) (fun i context => 
         --   (infer i context (env_tm ; env_tmx) t ty) 
-
         -- )
+
+        ----------------------------------------
+        -- let contexts := context_tys.map (fun (context, _) => context)
+        -- bind_nl (Ty.unify i context ty1_schema ty1) (fun i context => 
+        -- bind_nl (i, contexts.map (fun c => Ty.Context.extend c context)) (fun i context =>
+        --   (infer i context (env_tm ; env_tmx) t ty) 
+        -- ))
+
         --------------------------------------------------------------------------------
+
+        -- let contexts := context_tys.map (fun (context, _) => context)
+        -- let op_context := Ty.collapse_contexts contexts
+        -- match op_context with
+        -- | some context =>
+        -- | none => (i, [])
+        --------------------------------------------------------------------------------
+
 
 
     | .fix t1 =>
@@ -1903,6 +1959,7 @@ namespace Nameless
   [lesstype| α[0] ]
 
 
+  -- broken
   -- expected: ⊥
   #eval unify_reduce 30
   [lesstype| ? >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
@@ -1917,6 +1974,8 @@ namespace Nameless
       {?succ ?succ β[0] * ?cons ?cons β[1] with (β[0] * β[1]) <: β[2]}
   ]
 
+  -- broken
+  -- affected by direction of variable assigment
   -- expected: true
   #eval unify_decide 0 even_list nat_list 
 
@@ -2172,8 +2231,9 @@ namespace Nameless
     (y[0] (#succ #zero ()))
   ]
 
+  -- broken
   -- expected: ⊥  
-  -- expansion causes type-checking constraint to fail; since param type is allowed to be anything 
+  -- NOTE: expansion causes type-checking constraint to fail; since param type is allowed to be anything 
   #eval infer_reduce 0 [lessterm|
     let y[0] : ? >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
     (y[0] (#succ #zero ()))
@@ -2844,6 +2904,9 @@ namespace Nameless
   -- argument type variable needs to point to variable used in relation
   -- IDEA: need to reverse variable assignment when both sides are variables
   -- IDEA: go back to always having older variables point to newer variables?
+  -- IDEA: need to collapse and pack after every call to unify.   
+  -- argument type is missing irrespective of collapsing or generalizing in let expression
+
   -- e.g.
   /-
     ({2 // β[0] with (β[0] * β[1]) <: (induct (
@@ -2863,9 +2926,10 @@ namespace Nameless
   -------------------
   -- arg type: α[22]
   -- variable is not present in keys of env_relational
-  -- potential problem: α[22] <: ⊤
   -- potential problem: α[22] points to nothing 
   -- potential problem: env_relational empty after let expression 
+  -- potential problem: α[22] <: ⊤
+  -- TODO: need to handle simple in multiple relational keys 
   -------------------
   #eval infer_simple 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
@@ -2873,9 +2937,9 @@ namespace Nameless
       \ (#succ y[0]) => #cons (y[1] y[0]) 
     ) in
     let y[0] = _ in
-    -- (y[1] (y[0]))
-    let y[0] = (y[1] (y[0])) in
-    y[1]
+    (y[1] (y[0]))
+    -- let y[0] = (y[1] (y[0])) in
+    -- y[1]
   ] 
   ----------------------------
 
@@ -2986,6 +3050,7 @@ namespace Nameless
   }))
   -/
 
+  -- expected: ?false unit
   #eval infer_reduce 0 [lessterm| 
     -- less than or equal:
     let y[0] = fix (\ y[0] =>
