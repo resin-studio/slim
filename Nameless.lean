@@ -497,18 +497,16 @@ namespace Nameless
 
       let constraints := (reachable_constraints context ty empty).toList
 
-      let fvs_constraints := constraints.foldl (fun acc (lhs, rhs) =>
-        (free_vars lhs) + (free_vars rhs) + acc
-      ) {} 
+      let fids_pl := List.filter (fun id => id >= boundary) (toList (free_vars ty))
 
-      let fids := List.filter (fun id => id >= boundary) (toList ((free_vars ty) + fvs_constraints))
-
-      if fids.isEmpty then
+      if fids_pl.isEmpty then
           ty
       else (
         intersect_over (fun (ty_lhs, ty_rhs) => 
+          let fvs_constraints := (free_vars ty_lhs) + (free_vars ty_rhs)
+          let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
           [lesstype|
-            {⟨fids.length⟩ // ⟨abstract fids 0 ty⟩ with ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩}
+            {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
           ]
         ) constraints
       )
@@ -528,10 +526,6 @@ namespace Nameless
 
       let constraints := (reachable_constraints context ty empty).toList
 
-      let fvs_constraints := constraints.foldl (fun acc (lhs, rhs) =>
-        (free_vars lhs) + (free_vars rhs) + acc
-      ) {} 
-      
       let fids_pl := List.filter (fun id => id >= boundary) (toList (free_vars ty))
 
       if fids_pl.isEmpty then
@@ -548,10 +542,10 @@ namespace Nameless
         ) (abstract fids_pl 0 ty)
       else
 
-        let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
-
-        -- step 1: pack to existential 
+        -- step 1: pack existential 
         let ty_ex := intersect_over (fun (ty_lhs, ty_rhs) => 
+          let fvs_constraints := (free_vars ty_lhs) + (free_vars ty_rhs)
+          let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
           [lesstype|
             {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
           ]
@@ -2812,38 +2806,7 @@ namespace Nameless
     y[0]
   ] 
 
---------------------------------------
-
-  def nat_pair := [lesstype|
-    induct
-      {(?zero unit * ⟨nat_⟩)} 
-      | 
-      {(?succ β[0] * ?succ β[1]) with (β[0] * β[1]) <: β[2] } 
-      | 
-      {(?succ ⟨nat_⟩ * ?zero unit)}
-  ]
-
-  -- expected: relational function type
-  #eval infer_reduce 0 [lessterm| 
-    fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    )
-  ] 
-
-  -- expected: type maintains relational information 
-  #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    let y[0] = (\ (y[0], y[1]) => 
-        (y[2] (y[0], y[1]))
-    ) in
-    y[0]
-  ] 
+------- argument type inference ------
 
   -- expected: the argument type should be refined by the function application 
   -- should be similar to the function type, but just an exisitential without the return type
@@ -2865,7 +2828,6 @@ namespace Nameless
   [lesstype| α[20]]
 
 
-------- argument type inference ------
   -- expected: the argument type should be refined by the function application 
   -- e.g.
   /-
@@ -2884,6 +2846,52 @@ namespace Nameless
     y[1]
   ] 
 
+--------------------------------------
+
+  def nat_pair := [lesstype|
+    induct
+      {(?zero unit * ⟨nat_⟩)} 
+      | 
+      {(?succ β[0] * ?succ β[1]) with (β[0] * β[1]) <: β[2] } 
+      | 
+      {(?succ ⟨nat_⟩ * ?zero unit)}
+  ]
+
+  -- expected: relational function type
+  #eval infer_reduce 0 [lessterm| 
+    fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    )
+  ] 
+    
+  -- expected: ?false unit
+  #eval infer_reduce 0 [lessterm| 
+    -- less than or equal:
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    (
+      (\ y[0] => y[0])
+      (y[0] (#succ #succ #zero(), #succ #zero()))
+    )
+  ] 
+
+  -- expected: type maintains relational information 
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    let y[0] = (\ (y[0], y[1]) => 
+        (y[2] (y[0], y[1]))
+    ) in
+    y[0]
+  ] 
 
 
   -- broken
@@ -2902,6 +2910,7 @@ namespace Nameless
       )
     )
   ] 
+
 
   -- broken
   -- expected: type is maintained after identity function application
@@ -2946,66 +2955,6 @@ namespace Nameless
       )
     )
   ] 
-  -----------------------
-
-
-  #eval infer_reduce 0 [lessterm| 
-    -- less than or equal:
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    -- max:
-    (\ (y[0], y[1]) => 
-      (
-        (\ y[0] => y[0])
-        -- whatever property for the result of application should hold for 
-        -- the parameters inside the conditional
-        -- idea: does the type of the argument need to be collapsed? 
-        (y[2] (y[0], y[1]))
-        -- let y[0] = (y[2] (y[0], y[1])) in
-        -- y[0]
-      )
-    )
-  ] 
-
--- actual 
-  /-
-  (? >> (? >> (? >> 
-  ({3 // ((β[1] * β[2]) -> β[0]) with ((β[1] * β[2]) * β[0]) <: (induct (
-          {1 // ((?zero unit * β[0]) * ?true unit)} |
-          ({3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
-          {1 // ((?succ β[0] * ?zero unit) * ?false unit)})))
-  } >> β[0]))))
-  -/
-
-
--- expected
-  /-
-  (α[38] >> (β[0] ->
-  {1 // β[0] with (β[1] * β[0]) <: (induct (
-      {1 // ((?zero unit * β[0]) * ?true unit)} |
-      ({3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
-      {1 // ((?succ β[0] * ?zero unit) * ?false unit)})))
-  }))
-  -/
-
-  -- expected: ?false unit
-  #eval infer_reduce 0 [lessterm| 
-    -- less than or equal:
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    (
-      (\ y[0] => y[0])
-      (y[0] (#succ #succ #zero(), #succ #zero()))
-    )
-  ] 
-
-  -----------------------
 
   -- broken
   -- expected: max of the two inputs  
