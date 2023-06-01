@@ -2980,18 +2980,19 @@ namespace Nameless
           -- assume Arg <: ?true along with relational constraints. sub into relational constraints and unify;
             -- eg. (Arg * Other) <: (?true * Other) <: R |-  Other <: ...
           -- how do we add constraint for a single case without affecting propagating back out in general?
+            -- need away to toggle abilitiy to refine variables; eg. set_refinable
+            -- substitution is too strict; does not allow refinement from pattern matching assumptions
+            -- subtyping rule for intersection ensures that refinements are local
             -- pattern in function signals that substitution is allowed
             -- substitution specialized for body of function case 
-            -- without adding constraints exposed outside of case that wouldn't necessarily hold
-            -- pattern matching subs for variables so that assumptions only add local constraints.
-            -- or from the other angle, assumptions don't refine non-local constraints.
-            -- here are the steps:
-              -- step 1: unify pattern type without current context to solve for variables
-              -- step 2: solve relational constraints under this context  
-              -- step 3: take this solution as assumption for typing function body
+            -- general idea:
+              -- allow refinement for all variables
+              -- locally, solve relational constraints with new value  
+              -- after set of contexts are learned; union together and ensure R <: Union
+              -- final safety check handled at site where constraint is introduced 
+                -- i.e. the constraint of a closed existential
             -- does the same principle apply to simple types?
-              -- Yes! pattern matching should not refine the argument type variable
-              -- It also should sub away the variable so the assumption is local
+              -- Yes, see pattern matching test cases
             ----------------------------------------------------------------------
         /-
         assume y[0] : X 
@@ -3209,5 +3210,48 @@ namespace Nameless
   [lesstype| (?x unit * ?y unit) | (?y unit * ?y unit) ] 
 
   -------------------------
+  -----------  pattern matching local refinements ----------
+
+  -- expected: (?one unit | ?three unit) 
+  #eval infer_reduce 0 [lessterm|
+    let y[0] = _ in
+    let y[0] = (
+      (\ #one() => #two() \ #three() => #four())
+      y[0]
+    ) in
+    y[1]
+  ]
+
+  -- expected: ?one unit
+  #eval infer_reduce 0 [lessterm|
+    let y[0] = _ in
+    (
+      (\ #one() => y[0] \ #three() => #one ())
+      y[0]
+    )
+  ]
+
+
+  -- expected: ⊥ 
+  #eval infer_reduce 0 [lessterm|
+    let y[0] : ?one unit | ?two unit = _ in
+    (
+      (\ #one() => y[0] \ #three() => #one ())
+      y[0]
+    )
+  ]
+
+  -- broken
+  -- needs to allow refinements for assumptions (derived from patterns) 
+  -- expected: ?one unit 
+  #eval infer_reduce 0 [lessterm|
+    let y[0] : {β[0] with β[0] <: ?one unit | ?three unit}= _ in
+    (
+      (\ #one() => y[0] \ #three() => #one ())
+      y[0]
+    )
+  ]
+
+  ----------------------------------
 
 end Nameless 
