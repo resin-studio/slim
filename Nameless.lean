@@ -835,6 +835,7 @@ namespace Nameless
           let is_safe := contexts.all (fun context => 
             bound_keys.all (fun key => !(context.env_simple.contains key))
           )
+          let is_safe := true
           --------------------------------------
           if is_safe then
             (i, contexts)
@@ -943,55 +944,87 @@ namespace Nameless
       ----------------------------
       -- adjustment updates the variable assignment to lower the upper bound 
       ---------------------------
-      match context.env_keychain.find? id with
-      | some keychain =>
-        keychain.fold (fun (i, contexts) key =>
-          bind_nl (i, contexts) (fun i context => 
-          match context.env_relational.find? key with
-          | some relation =>
-            let env_sub : PHashMap Nat Ty := empty.insert id ty
-            let ty_sub := subst env_sub key  
-            let ty_weak := (
-              let fids := toList (free_vars ty_sub)
-              [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
-            )
-            -- unify relational lhs and constructed relational rhs 
-            let (i, contexts) := (unify i context relation ty_weak)
-            if contexts.isEmpty then
-              --------------------
-              -- relational refinement
-              -- when unifying relation create fresh context without the relations in the context 
-              --------------------
-              let context_relation_prop := {context with 
+      -- check env_simple first
+      -- then check env_keychain
+        -- check if the relational constraints can be solved 
+
+      match context.env_simple.find? id with 
+      | some ty' => 
+        let (i, contexts) := (unify i context ty' ty)
+        if contexts.isEmpty then
+          -------------------------------
+          -- simple refinement
+          -------------------------------
+          if (occurs id context.env_simple (Ty.inter ty ty')) then
+            (i, [])
+          else
+            let context := {context with env_simple := context.env_simple.insert id (Ty.inter ty ty')}
+            (i, [context])
+        else
+          (i, contexts)
+      | none => 
+        match context.env_keychain.find? id with
+        | some keychain =>
+          keychain.fold (fun (i, contexts) key =>
+            bind_nl (i, contexts) (fun i context => 
+            match context.env_relational.find? key with
+            | some relation =>
+              -- option 1: check id can be discovered by solving relational constraint
+              -- option 2: check that new constraint is weaker relational constraint  
+              -- option 3: add stronger simple constraint to environment  
+
+              let context_prop := {context with 
                 env_keychain := context.env_keychain.erase id
                 env_relational := keychain.fold (fun env_rel k => env_rel.erase k) context.env_relational
               }
 
-              (unify i context_relation_prop key relation)
-              -- (i, [])
-            else
-              (i, contexts)
-          | none => 
-            -- invariant: this should never happen
-            (i, [])
-          )
-        ) (i, [context])
-      | none =>
-        match context.env_simple.find? id with 
-        | some ty' => 
-          let (i, contexts) := (unify i context ty' ty)
-          if contexts.isEmpty then
-            -------------------------------
-            -- simple refinement
-            -------------------------------
-            if (occurs id context.env_simple (Ty.inter ty ty')) then
+              let (i, contexts) := (unify i context_prop key relation)
+
+              if !contexts.isEmpty then 
+                -- (i, contexts)
+                -- propagate simple type via relation and try again using simple type
+
+
+                -- expected: all variables in key exist in env_simple
+                bind_nl (i, contexts) (fun i context =>
+
+                  -------------- debugging -----------------
+                  -- let context := {context with env_simple := context.env_simple.insert 555 (Ty.fvar id)}
+                  -- let context := {context with env_simple := context.env_simple.insert 666 key}
+                  -- let context := {context with env_simple := context.env_simple.insert 777 relation}
+                  -- (i, [context])
+                  ---------------------------------------
+
+                  -- (i, [context])
+                  (unify i context (Ty.fvar id) ty)
+                  -- match context.env_simple.find? id with
+                  -- | some ty_old => (unify i context ty_old ty)
+                  -- | none => (i, [])
+                )
+              else
+                let env_sub : PHashMap Nat Ty := empty.insert id ty
+                let ty_sub := subst env_sub key  
+                let ty_weak := (
+                  let fids := toList (free_vars ty_sub)
+                  [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
+                )
+                -- unify relational lhs and constructed relational rhs 
+                let (i, contexts) := (unify i context relation ty_weak)
+                if !contexts.isEmpty then
+                  (i, contexts)
+                else
+                  if (occurs id context.env_simple ty) then
+                    (i, [])
+                  else (
+                    let context := {context with env_simple := context.env_simple.insert id ty}
+                    (i, [context])
+                  )
+            | none => 
+              -- invariant: this should never happen
               (i, [])
-            else
-              let context := {context with env_simple := context.env_simple.insert id (Ty.inter ty ty')}
-              (i, [context])
-          else
-            (i, contexts)
-        | none => 
+            )
+          ) (i, [context])
+        | none =>
           if (occurs id context.env_simple ty) then
             (i, [])
           else
@@ -999,6 +1032,34 @@ namespace Nameless
             (i, [context])
 
       ---------------------------------------
+
+                -- there is some non-termination when trying to propagate simple types via relations
+                -- is there some other way to achieve this?
+                -- the problem is that 
+                -- what is propagation is already handled by the existential?
+                -- let key := subst (empty.insert id ty) key
+                -- let context := {context with 
+                  -- env_simple := context.env_simple.insert id ty
+                --   env_keychain := {}
+                --   env_relational := {} 
+                --   -- env_keychain := context.env_keychain.erase id
+                --   -- env_relational := keychain.fold (fun env_rel k => env_rel.erase k) context.env_relational
+                -- }
+                -- (unify i context key relation)
+
+
+                ----------- debugging ----------------
+                -- let context_prop := {context_prop with env_simple := context_prop.env_simple.insert 500 key}
+                -- let context_prop := {context_prop with env_simple := context_prop.env_simple.insert 550 key_sub}
+                -- let context_prop := {context_prop with env_simple := context_prop.env_simple.insert 600 relation}
+                -- (i, [context_prop])
+                --------------------
+                ------ old ----------
+                -- bind_nl (i, context_props) (fun i context_prop =>
+                --   (i, [{context with env_simple := context_prop.env_simple}])
+                -- )
+                --------------------
+      -----------------------------------------------------------
 
     | ty', .fvar id => 
       ----------------------
@@ -3397,12 +3458,39 @@ namespace Nameless
 
   ----------------------------------
   ---------- relational propagation ---------
-  -- broken
-  -- expected ?nil unit | ?other unit
+  -- expected ?thing unit | ?other unit
   #eval unify_reduce 10 
-  [lesstype| (?zero unit -> α[0]) & (?succ α[1] -> ?other unit)]
+  [lesstype| (?zero unit -> ?thing unit) & (?succ α[1] -> ?other unit)]
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
-  [lesstype| α[0] ]
+  [lesstype| α[2] ]
+
+
+  -- sanity check
+  -- expected: false
+  #eval unify_decide 20
+  [lesstype| α[0] * α[17] ] 
+  nat_list
+
+  -- debugging
+  #eval unify_simple 20
+  [lesstype| {β[0] with β[0] * α[17] <: ⟨nat_list⟩}]
+  [lesstype| ?zero unit ]
+
+  -- broken
+  -- expected: ?nil unit
+  #eval unify_reduce 20
+  [lesstype| {β[0] with β[0] * α[17] <: ⟨nat_list⟩}]
+  [lesstype| ?zero unit ]
+  [lesstype| α[17] ]
+
+  -- broken
+  -- issue: ?nil unit should be propagated in first pattern matching 
+  -- issue β[0] i.e. α[11] needs be assigned to ?zero unit, but it's not
+  -- expected ?nil unit
+  #eval unify_simple 10 
+  [lesstype| (?zero unit -> α[0]) & (?succ α[1] -> ?nil unit)]
+  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
+  -- [lesstype| α[2] ]
 
   -- broken
   -- problem: α[0] never maps to ?nil unit in env_simple 
