@@ -3397,18 +3397,12 @@ namespace Nameless
 
   ----------------------------------
   ---------- relational propagation ---------
-  -- TODO: develop example of relational propagation
-
-  -- argument type is weaker than parameter type
-  -- expected: ⊥
-  #eval infer_reduce 10 [lessterm|
-    let y[0] : α[0] = _ in
-    let y[0] : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
-    (
-      (\ #zero() => y[1])
-      y[0]
-    )
-  ]
+  -- broken
+  -- expected ?nil unit | ?other unit
+  #eval unify_reduce 10 
+  [lesstype| (?zero unit -> α[0]) & (?succ α[1] -> ?other unit)]
+  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
+  [lesstype| α[0] ]
 
   -- broken
   -- problem: α[0] never maps to ?nil unit in env_simple 
@@ -3422,5 +3416,17 @@ namespace Nameless
       y[0]
     )
   ]
+
+  -- argument type is weaker than parameter type
+  -- expected: ⊥
+  #eval infer_reduce 10 [lessterm|
+    let y[0] : α[0] = _ in
+    let y[0] : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
+    (
+      (\ #zero() => y[1])
+      y[0]
+    )
+  ]
+
 
 end Nameless 
