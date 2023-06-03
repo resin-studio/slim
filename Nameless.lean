@@ -500,6 +500,7 @@ namespace Nameless
       ) constraints_acc
 
 
+    -- TODO: replace subbing with existential constraint 
     def pack (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
       --------------------------------------
       -- boundary prevents overpacking
@@ -529,6 +530,7 @@ namespace Nameless
       )
 
 
+    -- TODO: replace subbing with existential constraint 
     def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
       --------------------------------------
       -- boundary prevents overgeneralizing
@@ -978,28 +980,18 @@ namespace Nameless
                 env_relational := keychain.fold (fun env_rel k => env_rel.erase k) context.env_relational
               }
 
+              -- lookup type via unification over relation
+              -- this is propagation via relation on read
+              -- this is lazy to allow propagating only when needed
+              -- linear cascading of propagation of just the variable that's needed
+              -- eagerly on write would cause combinatorial cascading propagation
+              -- however this makes substitution incomplete
+              -- TODO: this makes subbing in packing/generalizing a problem
               let (i, contexts) := (unify i context_prop key relation)
-
               if !contexts.isEmpty then 
-                -- (i, contexts)
-                -- propagate simple type via relation and try again using simple type
-
-
-                -- expected: all variables in key exist in env_simple
+                -- invariant: all variables in key exist in env_simple
                 bind_nl (i, contexts) (fun i context =>
-
-                  -------------- debugging -----------------
-                  -- let context := {context with env_simple := context.env_simple.insert 555 (Ty.fvar id)}
-                  -- let context := {context with env_simple := context.env_simple.insert 666 key}
-                  -- let context := {context with env_simple := context.env_simple.insert 777 relation}
-                  -- (i, [context])
-                  ---------------------------------------
-
-                  -- (i, [context])
                   (unify i context (Ty.fvar id) ty)
-                  -- match context.env_simple.find? id with
-                  -- | some ty_old => (unify i context ty_old ty)
-                  -- | none => (i, [])
                 )
               else
                 let env_sub : PHashMap Nat Ty := empty.insert id ty
@@ -3475,6 +3467,14 @@ namespace Nameless
   #eval unify_simple 20
   [lesstype| {β[0] with β[0] * α[17] <: ⟨nat_list⟩}]
   [lesstype| ?zero unit ]
+
+  -- debugging 
+  -- this works!
+  -- expected: ?nil unit
+  #eval unify_reduce 20
+  [lesstype| {β[0] with β[0] * α[17] <: ⟨nat_list⟩} * α[17]]
+  [lesstype| ?zero unit * ⊤ ]
+  [lesstype| α[17] ]
 
   -- broken
   -- expected: ?nil unit
