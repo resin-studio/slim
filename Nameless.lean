@@ -854,7 +854,6 @@ namespace Nameless
           let unrefined := contexts.all (fun context => 
             bound_keys.all (fun key => !(context.env_simple.contains key))
           )
-
           if unrefined then
             (i, contexts)
           else (
@@ -872,10 +871,8 @@ namespace Nameless
               (.union (pack bound_start context ty_key) ty_acc)
             ) Ty.bot contexts 
             let (i, contexts_oracle) := (unify i context ty_c2 ty_refined)
-            if !contexts_oracle.isEmpty then
-              (i, contexts)
-            else
-              (i, [])
+            -- if !contexts_oracle.isEmpty then
+            if true then (i, contexts) else (i, [])
           )
         else 
           (i, []) 
@@ -1106,18 +1103,21 @@ namespace Nameless
 
     | ty1, .case (Ty.union ty_u1 ty_u2) ty2 =>
       -- NOTE: special case for implication union
+
       bind_nl (unify i context ty1 (Ty.case ty_u1 ty2)) (fun i context =>
         unify i context ty1 (Ty.case ty_u2 ty2)
       )
 
     | ty1, .case (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
+      -- TODO: safety check
       -- NOTE: special case to ensure that variables are instantiated before decomposition of lhs
       let ty2 := (.exis n ty_c1 ty_c2 ty_pl)
 
       let (i, ty2') := (i + 1, Ty.fvar i)
 
-      bind_nl (unify i context ty2 ty2') (fun i context =>
-        (unify i context ty1 (.case ty2' ty3)) 
+      -- TODO: solve for new variable first 
+      bind_nl (unify i context ty1 (.case ty2' ty3)) (fun i context =>
+        (unify i context ty2 ty2')
       )
 
     | .bvar id1, .bvar id2  =>
@@ -3491,8 +3491,6 @@ namespace Nameless
   [lesstype| α[17] ]
 
   -- broken
-  -- issue: ?nil unit should be propagated in first pattern matching 
-  -- issue β[0] i.e. α[11] needs be assigned to ?zero unit, but it's not
   -- expected ?nil unit | ?other unit
   #eval unify_reduce 10 
   [lesstype| (?zero unit -> α[0]) & (?succ α[1] -> ?other unit)]
@@ -3500,10 +3498,8 @@ namespace Nameless
   [lesstype| α[2] ]
 
   -- broken
-  -- problem: α[0] never maps to ?nil unit in env_simple 
-  -- the first case should propagte ?nil unit via nat_list relation 
   -- expected ?nil unit | ?other unit
-  #eval infer_simple 10 [lessterm|
+  #eval infer_reduce 10 [lessterm|
     let y[0] : α[0] = _ in
     let y[0] : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
     (
