@@ -850,48 +850,24 @@ namespace Nameless
           }
 
           let (i, contexts) := (unify i context ty1 ty2) 
-
-
-          --- safety check and propagation --
-          -- now see if any of ty_c1's variables have been updated
-          -- if so, create a new constraint with that update and unify with that to propagate
-          -- TODO: what need to be checked so that we know the refinement is safe?
-          -- is a weakening of the constraint safe if we require that no arrow type is in payload? 
-
-          ----------------------
-          -- lookup type via unification over relation
-          -- this is propagation via relation on read
-          -- this is lazy to allow propagating only when needed
-          -- linear cascading of propagation of just the variable that's needed
-          -- eagerly on write would cause combinatorial cascading propagation
-          -- however this makes substitution incomplete
-          ---------
-          ---------
-          -- let context_prop := {context with 
-          --   env_keychain := context.env_keychain.erase id
-          --   env_relational := keychain.fold (fun env_rel k => env_rel.erase k) context.env_relational
-          -- }
-          -- let (i, contexts) := (unify i context_prop key relation)
-          -- if !contexts.isEmpty then 
-          --   -- invariant: all variables in key exist in env_simple
-          --   bind_nl (i, contexts) (fun i context =>
-          --     (unify i context (Ty.fvar id) ty)
-          --   )
-          ---------
-
-          -------------------
-          -- safety invariant:
-          -- usually true due to constraints on proactive variables, but sometimes proactive variables are not prescribed constraints 
-          -------------------
-          let is_safe := contexts.all (fun context => 
+          let unrefined := contexts.all (fun context => 
             bound_keys.all (fun key => !(context.env_simple.contains key))
           )
-          let is_safe := true
-          --------------------------------------
-          if is_safe then
+
+          if unrefined then
             (i, contexts)
-          else 
-            (i, [])
+          else (
+            -- step 1: solve constraint with updated context  
+            let fids_key := toList (free_vars ty_key)
+            let contexts_refined := bind_nl (i, contexts) (fun i context =>
+              if fids_key.any (fun fid_key => context.env_simple.contains fid_key) then
+                (unify i context ty_c1 ty_c2)
+              else
+                (i, contexts)
+            )
+            -- TODO: figure out a safety check
+            contexts_refined
+          )
         else 
           (i, []) 
       ) else ( 
@@ -3499,12 +3475,6 @@ namespace Nameless
   [lesstype| α[0] * α[17] ] 
   nat_list
 
-  -- debugging
-  #eval unify_simple 20
-  [lesstype| {β[0] with β[0] * α[17] <: ⟨nat_list⟩}]
-  [lesstype| ?zero unit ]
-
-  -- broken
   -- expected: ?nil unit
   #eval unify_reduce 20
   [lesstype| {β[0] with β[0] * α[17] <: ⟨nat_list⟩}]
@@ -3514,11 +3484,11 @@ namespace Nameless
   -- broken
   -- issue: ?nil unit should be propagated in first pattern matching 
   -- issue β[0] i.e. α[11] needs be assigned to ?zero unit, but it's not
-  -- expected ?nil unit
-  #eval unify_simple 10 
-  [lesstype| (?zero unit -> α[0]) & (?succ α[1] -> ?nil unit)]
+  -- expected ?nil unit | ?other unit
+  #eval unify_reduce 10 
+  [lesstype| (?zero unit -> α[0]) & (?succ α[1] -> ?other unit)]
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
-  -- [lesstype| α[2] ]
+  [lesstype| α[2] ]
 
   -- broken
   -- problem: α[0] never maps to ?nil unit in env_simple 
