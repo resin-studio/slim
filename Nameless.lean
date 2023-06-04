@@ -815,7 +815,7 @@ namespace Nameless
       let bound_start := i
       let (i, bound_keys) := (i + n, (List.range n).map (fun j => i + j))
       let bound_end := i
-      let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
+      -- let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
 
       let args := bound_keys.map (fun id => Ty.fvar id)
       let ty_c1 := instantiate 0 args ty_c1
@@ -825,8 +825,13 @@ namespace Nameless
       let (i, contexts) := (unify i context ty_c1 ty_c2)
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
       if contexts.isEmpty then (
-        let is_recur_type := match ty_c2 with 
-        | Ty.recur _ => true
+        -- constraint over function paramter type would prevent sound weakening of constraint
+        let no_function_constraint := no_function_types ty1 
+
+        let relation_wellformed := match ty_c2 with 
+        | Ty.recur ty_body => 
+          -- ensure there are no free variables
+          (free_vars ty_body).isEmpty 
         | _ => false
 
         let rlabels := extract_record_labels ty_c1 
@@ -836,9 +841,7 @@ namespace Nameless
         let ty_key := (simplify (subst context.env_simple ty_c1))
         let unmatchable := !(matchable (extract_nested_fields ty_key))
 
-        -- TODO: check that rhs (ty_c2) has no free variables
-        if is_recur_type && unmatchable && is_consistent_variable_record then
-          -- assumption: rhs of constraint (ty_c2) has no free variables
+        if no_function_constraint && relation_wellformed && unmatchable && is_consistent_variable_record then
 
           -- update context with relational information 
           let context := {context with 
@@ -855,9 +858,30 @@ namespace Nameless
           -- TODO: what need to be checked so that we know the refinement is safe?
           -- is a weakening of the constraint safe if we require that no arrow type is in payload? 
 
+          ----------------------
+          -- lookup type via unification over relation
+          -- this is propagation via relation on read
+          -- this is lazy to allow propagating only when needed
+          -- linear cascading of propagation of just the variable that's needed
+          -- eagerly on write would cause combinatorial cascading propagation
+          -- however this makes substitution incomplete
+          ---------
+          ---------
+          -- let context_prop := {context with 
+          --   env_keychain := context.env_keychain.erase id
+          --   env_relational := keychain.fold (fun env_rel k => env_rel.erase k) context.env_relational
+          -- }
+          -- let (i, contexts) := (unify i context_prop key relation)
+          -- if !contexts.isEmpty then 
+          --   -- invariant: all variables in key exist in env_simple
+          --   bind_nl (i, contexts) (fun i context =>
+          --     (unify i context (Ty.fvar id) ty)
+          --   )
+          ---------
+
           -------------------
           -- safety invariant:
-          -- usually true due constraints on proactive variables, but sometimes proactive variables are not prescribed constraints 
+          -- usually true due to constraints on proactive variables, but sometimes proactive variables are not prescribed constraints 
           -------------------
           let is_safe := contexts.all (fun context => 
             bound_keys.all (fun key => !(context.env_simple.contains key))
@@ -921,11 +945,6 @@ namespace Nameless
       let ty_c1 := instantiate 0 args ty_c1
       let ty_c2 := instantiate 0 args ty_c2
       let ty := instantiate 0 args ty
-
-      let fids_expandable := free_vars ty_c2
-      let context := {context with 
-        set_expandable := fids_expandable.fold (fun set_expandable fid => set_expandable.insert fid) context.set_expandable
-      }
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       bind_nl (unify i context ty' ty) (fun i context => 
@@ -1001,49 +1020,27 @@ namespace Nameless
             bind_nl (i, contexts) (fun i context => 
             match context.env_relational.find? key with
             | some relation =>
-              -- option 1: check id can be discovered by solving relational constraint
-              -- option 2: check that new constraint is weaker relational constraint  
-              -- option 3: add stronger simple constraint to environment  
+              -- check that new constraint is weaker than relational constraint  
+              -- weakening is only safe if the constraint is not over parameter type 
+              -- assumption: relational only constraints non-function types
 
-              let context_prop := {context with 
-                env_keychain := context.env_keychain.erase id
-                env_relational := keychain.fold (fun env_rel k => env_rel.erase k) context.env_relational
-              }
-
-              ----------------------
-              -- lookup type via unification over relation
-              -- this is propagation via relation on read
-              -- this is lazy to allow propagating only when needed
-              -- linear cascading of propagation of just the variable that's needed
-              -- eagerly on write would cause combinatorial cascading propagation
-              -- however this makes substitution incomplete
-              ---------
-              -- TODO: consider removing lazy propagation case; can be handled at left-existential level
-              ---------
-              let (i, contexts) := (unify i context_prop key relation)
-              if !contexts.isEmpty then 
-                -- invariant: all variables in key exist in env_simple
-                bind_nl (i, contexts) (fun i context =>
-                  (unify i context (Ty.fvar id) ty)
-                )
+              let env_sub : PHashMap Nat Ty := empty.insert id ty
+              let ty_sub := subst env_sub key  
+              let ty_weak := (
+                let fids := toList (free_vars ty_sub)
+                [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
+              )
+              -- unify relational lhs and constructed relational rhs 
+              let (i, contexts) := (unify i context relation ty_weak)
+              if !contexts.isEmpty then
+                (i, contexts)
               else
-                let env_sub : PHashMap Nat Ty := empty.insert id ty
-                let ty_sub := subst env_sub key  
-                let ty_weak := (
-                  let fids := toList (free_vars ty_sub)
-                  [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
+                if (occurs id context.env_simple ty) then
+                  (i, [])
+                else (
+                  let context := {context with env_simple := context.env_simple.insert id ty}
+                  (i, [context])
                 )
-                -- unify relational lhs and constructed relational rhs 
-                let (i, contexts) := (unify i context relation ty_weak)
-                if !contexts.isEmpty then
-                  (i, contexts)
-                else
-                  if (occurs id context.env_simple ty) then
-                    (i, [])
-                  else (
-                    let context := {context with env_simple := context.env_simple.insert id ty}
-                    (i, [context])
-                  )
             | none => 
               -- invariant: this should never happen
               (i, [])
@@ -3506,14 +3503,6 @@ namespace Nameless
   #eval unify_simple 20
   [lesstype| {β[0] with β[0] * α[17] <: ⟨nat_list⟩}]
   [lesstype| ?zero unit ]
-
-  -- debugging 
-  -- this works!
-  -- expected: ?nil unit
-  #eval unify_reduce 20
-  [lesstype| {β[0] with β[0] * α[17] <: ⟨nat_list⟩} * α[17]]
-  [lesstype| ?zero unit * ⊤ ]
-  [lesstype| α[17] ]
 
   -- broken
   -- expected: ?nil unit
