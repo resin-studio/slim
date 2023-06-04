@@ -479,58 +479,73 @@ namespace Nameless
       ) initial 
 
 
+      ---------------------------------------
+      -- let constraints_acc := (
+      --     if constraints_acc.contains (Ty.fvar fid) then
+      --       match context.env_simple.find? fid with
+      --       | some ty_simple =>
+      --         let constraints_acc := constraints_acc.insert (Ty.fvar fid) ty_simple 
+      --         (reachable_constraints context ty_simple constraints_acc)
+      --       | none => constraints_acc
+      --     else
+      --       constraints_acc
+      -- )
+      -------------------------------------------
+
     partial def reachable_constraints (context : Context) (ty : Ty) (constraints_acc : PHashMap Ty Ty) : PHashMap Ty Ty :=
       (free_vars ty).fold (fun constraints_acc fid =>
-        match context.env_keychain.find? fid with
-        | some keychain =>
-          keychain.fold (fun constraints_acc key =>
-            if constraints_acc.contains key then
-              constraints_acc
-            else
-              (match context.env_relational.find? key with
-              | some relation => 
-                let constraints_acc := constraints_acc.insert key relation 
-                (reachable_constraints context relation constraints_acc)
-              | none => 
-                -- invariant: this case should never happen
-                constraints_acc 
-              )
-          ) constraints_acc
-        | none => constraints_acc
+        let constraints_acc := (
+          match context.env_keychain.find? fid with
+          | some keychain =>
+            keychain.fold (fun constraints_acc key =>
+              if constraints_acc.contains key then
+                constraints_acc
+              else
+                (match context.env_relational.find? key with
+                | some relation => 
+                  let constraints_acc := constraints_acc.insert key relation 
+                  (reachable_constraints context relation constraints_acc)
+                | none => 
+                  -- invariant: this case should never happen
+                  constraints_acc 
+                )
+            ) constraints_acc
+          | none => constraints_acc
+        )
+        constraints_acc 
       ) constraints_acc
 
 
-    -- TODO: replace subbing with existential constraint 
     def pack (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
       --------------------------------------
       -- boundary prevents overpacking
+
+      -- assumption: rhs of relational constraint has no free variables
 
       -- sub in simple types; 
       -- subbing prevents strengthening from the outside in 
       -- only the body type (conclusion) can safely strengthen the parameter type (the premise)  
       -- subbing does not prevent weakening, as weakining is handles adding unions of fresh variables  
       --------------------------------------
-
       let ty := simplify (subst context.env_simple ty)
 
       let constraints := (reachable_constraints context ty empty).toList
 
       let fids_pl := List.filter (fun id => id >= boundary) (toList (free_vars ty))
-
       if fids_pl.isEmpty then
           ty
       else (
         intersect_over (fun (ty_lhs, ty_rhs) => 
           let fvs_constraints := (free_vars ty_lhs) + (free_vars ty_rhs)
           let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
+          let fids := fids_pl ++ fids_c
           [lesstype|
-            {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
+            {⟨fids.length⟩ // ⟨abstract fids 0 ty⟩ with ⟨abstract fids 0 ty_lhs⟩ <: ⟨abstract fids 0 ty_rhs⟩}
           ]
         ) constraints
       )
 
 
-    -- TODO: replace subbing with existential constraint 
     def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := 
       --------------------------------------
       -- boundary prevents overgeneralizing
@@ -577,6 +592,7 @@ namespace Nameless
         (List.range fids_pl.length).foldl (fun ty_acc _ =>
           [lesstype| ? >> ⟨ty_acc⟩]
         ) (abstract fids_pl 0 ty_base) 
+        ---------------------------------
 
 
 
@@ -820,7 +836,9 @@ namespace Nameless
         let ty_key := (simplify (subst context.env_simple ty_c1))
         let unmatchable := !(matchable (extract_nested_fields ty_key))
 
+        -- TODO: check that rhs (ty_c2) has no free variables
         if is_recur_type && unmatchable && is_consistent_variable_record then
+          -- assumption: rhs of constraint (ty_c2) has no free variables
 
           -- update context with relational information 
           let context := {context with 
@@ -829,6 +847,13 @@ namespace Nameless
           }
 
           let (i, contexts) := (unify i context ty1 ty2) 
+
+
+          --- safety check and propagation --
+          -- now see if any of ty_c1's variables have been updated
+          -- if so, create a new constraint with that update and unify with that to propagate
+          -- TODO: what need to be checked so that we know the refinement is safe?
+          -- is a weakening of the constraint safe if we require that no arrow type is in payload? 
 
           -------------------
           -- safety invariant:
@@ -896,6 +921,11 @@ namespace Nameless
       let ty_c1 := instantiate 0 args ty_c1
       let ty_c2 := instantiate 0 args ty_c2
       let ty := instantiate 0 args ty
+
+      let fids_expandable := free_vars ty_c2
+      let context := {context with 
+        set_expandable := fids_expandable.fold (fun set_expandable fid => set_expandable.insert fid) context.set_expandable
+      }
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       bind_nl (unify i context ty' ty) (fun i context => 
@@ -980,13 +1010,16 @@ namespace Nameless
                 env_relational := keychain.fold (fun env_rel k => env_rel.erase k) context.env_relational
               }
 
+              ----------------------
               -- lookup type via unification over relation
               -- this is propagation via relation on read
               -- this is lazy to allow propagating only when needed
               -- linear cascading of propagation of just the variable that's needed
               -- eagerly on write would cause combinatorial cascading propagation
               -- however this makes substitution incomplete
-              -- TODO: this makes subbing in packing/generalizing a problem
+              ---------
+              -- TODO: consider removing lazy propagation case; can be handled at left-existential level
+              ---------
               let (i, contexts) := (unify i context_prop key relation)
               if !contexts.isEmpty then 
                 -- invariant: all variables in key exist in env_simple
@@ -1769,7 +1802,6 @@ namespace Nameless
       List.foldr (fun (context, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst context.env_simple (Ty.union ty' ty_acc)))
         Ty.generalize boundary context ty'
-        -- (Ty.union ty' ty_acc)
       ) Ty.bot contexts
 
 
@@ -2410,6 +2442,13 @@ namespace Nameless
   let y[0] : ?dos unit -> unit = _ in 
   (\ y[0] =>
     ((y[2] y[0]), (y[1] y[0])))
+  ]
+
+  #eval infer_reduce 0 [lessterm|
+  let y[0] : ?uno unit -> unit = _ in 
+  let y[0] = _ in 
+  let y[0] = (y[1] y[0]) in 
+  y[0]
   ]
 
   #eval infer_reduce 0 [lessterm|
