@@ -822,6 +822,7 @@ namespace Nameless
       let ty_c2 := instantiate 0 args ty_c2
       let ty1 := instantiate 0 args ty1
 
+
       let (i, contexts) := (unify i context ty_c1 ty_c2)
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
       if contexts.isEmpty then (
@@ -859,14 +860,22 @@ namespace Nameless
           else (
             -- step 1: solve constraint with updated context  
             let fids_key := toList (free_vars ty_key)
-            let contexts_refined := bind_nl (i, contexts) (fun i context =>
+            let (i, contexts) := bind_nl (i, contexts) (fun i context =>
               if fids_key.any (fun fid_key => context.env_simple.contains fid_key) then
                 (unify i context ty_c1 ty_c2)
               else
                 (i, contexts)
             )
-            -- TODO: figure out a safety check
-            contexts_refined
+            -- step 2: safety check
+            -- checks that constraint is weaker; only safe if there's no constraint over parameter type
+            let ty_refined := List.foldr (fun context ty_acc => 
+              (.union (pack bound_start context ty_key) ty_acc)
+            ) Ty.bot contexts 
+            let (i, contexts_oracle) := (unify i context ty_c2 ty_refined)
+            if !contexts_oracle.isEmpty then
+              (i, contexts)
+            else
+              (i, [])
           )
         else 
           (i, []) 
