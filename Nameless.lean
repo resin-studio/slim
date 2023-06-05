@@ -865,6 +865,7 @@ namespace Nameless
               else
                 (i, contexts)
             )
+
             -- step 2: safety check
             -- checks that constraint is weaker; only safe if there's no constraint over parameter type
             let ty_refined := List.foldr (fun context ty_acc => 
@@ -930,7 +931,36 @@ namespace Nameless
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       bind_nl (unify i context ty' ty) (fun i context => 
-        unify i context ty_c1 ty_c2
+        let (i, contexts) := unify i context ty_c1 ty_c2
+
+        if !contexts.isEmpty then 
+          (i, contexts)
+        else (
+          -- constraint over function paramter type would prevent sound weakening of constraint
+          let no_function_constraint := no_function_types ty
+
+          let relation_wellformed := match ty_c2 with 
+          | Ty.recur ty_body => 
+            -- ensure there are no free variables
+            (free_vars ty_body).isEmpty 
+          | _ => false
+
+          let rlabels := extract_record_labels ty_c1 
+          let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
+              rlabels.contains l 
+            )
+          let ty_key := (simplify (subst context.env_simple ty_c1))
+          let unmatchable := !(matchable (extract_nested_fields ty_key))
+
+          if no_function_constraint && relation_wellformed && unmatchable && is_consistent_variable_record then
+            let context := {context with 
+              env_keychain := index_free_vars context.env_keychain ty_key
+              env_relational := context.env_relational.insert ty_key ty_c2,
+            }
+            (i, [context])
+          else
+            (i, [])
+        ) 
       )
 
 
@@ -1004,7 +1034,7 @@ namespace Nameless
             | some relation =>
               -- check that new constraint is weaker than relational constraint  
               -- weakening is only safe if the constraint is not over parameter type 
-              -- assumption: relational only constraints non-function types
+              -- assumption: relations do not constraintfunction parameter types
 
               let env_sub : PHashMap Nat Ty := empty.insert id ty
               let ty_sub := subst env_sub key  
@@ -1014,6 +1044,7 @@ namespace Nameless
               )
               -- unify relational lhs and constructed relational rhs 
               let (i, contexts) := (unify i context relation ty_weak)
+
               if !contexts.isEmpty then
                 (i, contexts)
               else
@@ -1034,36 +1065,6 @@ namespace Nameless
           else
             let context := {context with env_simple := context.env_simple.insert id ty}
             (i, [context])
-
-      ---------------------------------------
-
-                -- there is some non-termination when trying to propagate simple types via relations
-                -- is there some other way to achieve this?
-                -- the problem is that 
-                -- what is propagation is already handled by the existential?
-                -- let key := subst (empty.insert id ty) key
-                -- let context := {context with 
-                  -- env_simple := context.env_simple.insert id ty
-                --   env_keychain := {}
-                --   env_relational := {} 
-                --   -- env_keychain := context.env_keychain.erase id
-                --   -- env_relational := keychain.fold (fun env_rel k => env_rel.erase k) context.env_relational
-                -- }
-                -- (unify i context key relation)
-
-
-                ----------- debugging ----------------
-                -- let context_prop := {context_prop with env_simple := context_prop.env_simple.insert 500 key}
-                -- let context_prop := {context_prop with env_simple := context_prop.env_simple.insert 550 key_sub}
-                -- let context_prop := {context_prop with env_simple := context_prop.env_simple.insert 600 relation}
-                -- (i, [context_prop])
-                --------------------
-                ------ old ----------
-                -- bind_nl (i, context_props) (fun i context_prop =>
-                --   (i, [{context with env_simple := context_prop.env_simple}])
-                -- )
-                --------------------
-      -----------------------------------------------------------
 
     | ty', .fvar id => 
       ----------------------
@@ -3470,6 +3471,13 @@ namespace Nameless
   [lesstype| ?one unit -> (?two unit & ?three unit)]
 
   ----------------------------------
+
+  -- NOTE: in right-existential: if key is not matchable; save the relation
+  -- expected: true 
+  #eval unify_decide 10 
+  [lesstype| ?succ α[1] * α[0] ]
+  [lesstype| {2 // (?succ β[0] * ?cons β[1]) with (β[0] * β[1]) <: ⟨nat_list⟩} ]
+
   ---------- relational propagation ---------
   -- expected ?thing unit | ?other unit
   #eval unify_reduce 10 
@@ -3477,28 +3485,25 @@ namespace Nameless
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
   [lesstype| α[2] ]
 
+  -- expected: ?other unit | ?thing unit 
+  #eval unify_reduce 10 
+  [lesstype| (?succ ⟨nat_⟩ -> ?other unit) & (?zero unit -> ?thing unit)]
+  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
+  [lesstype| α[2] ]
 
-  -- sanity check
-  -- expected: false
-  #eval unify_decide 20
-  [lesstype| α[0] * α[17] ] 
-  nat_list
-
-  -- expected: ?nil unit
-  #eval unify_reduce 20
-  [lesstype| {β[0] with β[0] * α[17] <: ⟨nat_list⟩}]
-  [lesstype| ?zero unit ]
-  [lesstype| α[17] ]
-
-  -- broken
-  -- expected ?nil unit | ?other unit
+  -- expected: ?nil unit | ?other unit
   #eval unify_reduce 10 
   [lesstype| (?zero unit -> α[0]) & (?succ α[1] -> ?other unit)]
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
   [lesstype| α[2] ]
 
-  -- broken
-  -- expected ?nil unit | ?other unit
+  -- expected: ?nil unit | ?other unit
+  #eval unify_reduce 10 
+  [lesstype| (?zero unit -> α[0]) & (?succ ⟨list_⟩ -> ?other unit)]
+  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
+  [lesstype| α[2] ]
+
+  -- expected: ?nil unit | ?other unit
   #eval infer_reduce 10 [lessterm|
     let y[0] : α[0] = _ in
     let y[0] : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
@@ -3508,6 +3513,7 @@ namespace Nameless
     )
   ]
 
+  -- broken
   -- argument type is weaker than parameter type
   -- expected: ⊥
   #eval infer_reduce 10 [lessterm|
