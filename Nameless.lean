@@ -1784,7 +1784,7 @@ namespace Nameless
       let (_, contexts) := (infer i context {} t ty)
       List.foldr (fun (context, ty') ty_acc => 
         let ty' := Ty.simplify ((Ty.subst context.env_simple (Ty.union ty' ty_acc)))
-        Ty.generalize boundary context ty'
+        Ty.pack boundary context ty'
       ) Ty.bot contexts
 
 
@@ -3510,6 +3510,37 @@ namespace Nameless
     (
       (\ #zero() => y[1] \ #succ y[0] => #other())
       y[0]
+    )
+  ]
+
+  ----- using function application --------
+
+  -- sanity check
+  -- expected: ?zero unit | ?other unit
+  #eval infer_reduce 10 [lessterm|
+    let y[0] : α[0] >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in
+    let y[0] = #zero() in
+    (
+      (\ #nil() => y[0] \ #cons y[0] => #other())
+      (y[1] y[0])
+    )
+  ]
+
+
+  -- broken
+  -- NOTE: existential is required for argument type 
+  -- NOTE: left-existential rule propagates simple types via relation 
+  -- NOTE: left-existential rule does safety check across all cases of implication premises
+  -- TODO: consider packing argument into existential
+  -- NOTE: left-existential handles the details of propagation and safety so that application doesn't have to
+  -- NOTE: additionally, allows reusing mechanism let-expression
+  -- expected: ?zero unit | ?other unit
+  #eval infer_reduce 10 [lessterm|
+    let y[0] : α[0] >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in
+    let y[0] = _ in
+    (
+      -- (\ #nil() => y[0] \ #cons y[0] => #other())
+      (y[1] y[0])
     )
   ]
 
