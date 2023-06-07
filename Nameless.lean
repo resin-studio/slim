@@ -1100,7 +1100,6 @@ namespace Nameless
         let expandable := context.set_expandable.find? id != .none
         let (i, ty_assign) := (
           if expandable then
-          -- if false then
             (i + 1, Ty.union (Ty.fvar i) ty') 
           else
             (i, ty')
