@@ -1100,6 +1100,7 @@ namespace Nameless
         let expandable := context.set_expandable.find? id != .none
         let (i, ty_assign) := (
           if expandable then
+          -- if false then
             (i + 1, Ty.union (Ty.fvar i) ty') 
           else
             (i, ty')
@@ -2378,9 +2379,21 @@ namespace Nameless
     (y[0] (#cons (#ooga (), #booga ())))  
   ]
 
-  ---------- adjustment ----------------
-
-  -- widening
+  ---------- expanding return type ----------------
+  -- object-oriented example without type annotation ----------------
+  -- a typical object-oriented pattern:
+  -- an object with method : α -> object α
+  -- where the method constructs new data and calls constructor with new data 
+  #eval infer_reduce 0 [lessterm|
+    -- fix \ self \ data => 
+    let y[0] = fix (\ y[0] => \ y[0] => 
+      (@update = (\ y[0] => (y[2] #cons (y[0], y[1]))))
+    ) in 
+    -- y[0]
+    -- let y[0] = (y[1] #nil())
+    (((y[0] #nil()).update #hello()).update #world())
+  ]
+  ------------------
   #eval infer_reduce 0 [lessterm|
     let y[0] : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
     ((y[0] #hello ()) #world ())
@@ -2402,7 +2415,7 @@ namespace Nameless
     (y[0] #world())
   ]
 
-  -- narrowing
+  ---------- refining parameter type ----------------
   #eval infer_reduce 0 [lessterm|
   let y[0] : ?uno unit -> unit = _ in 
   let y[0] : ?dos unit -> unit = _ in 
