@@ -126,14 +126,19 @@ Thus, parametric types are extended with constraints in the form of subtyping.
 
 \subsection{Type inference}
 \paragraph{Refining parameter type.}
-\paragraph{Expanding return type.}
-\paragraph{Induction.}
-\paragraph{Transposition.}
+\paragraph{Inductive typing.}
+\paragraph{Inductive subtyping.} An evenList subtypes a natList.
+\paragraph{Transposition.} a function expects a NAT. 
+But the argument type is a Nat related to a List.
+To check safety, the NatList relation must be transposed into a pair of Nat and List.
 \paragraph{Path selection.}
 \paragraph{Path sensitivity.}
 \paragraph{List bounds.}
-\paragraph{Generalization.}
-\paragraph{Subtyping relations.}
+\paragraph{Generalization.} This is motivated by applying the same function to multiple arguments of varying types.
+\paragraph{Expanding return type.}  
+This is motivated by object-oriented patterns in untyped programs.
+The expansion flag may not actually be needed, as distinct types can be handled via existential inside of inductive type,
+which results in fresh variables at the time of unification.
 
 \section{Related work}
 

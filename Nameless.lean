@@ -2379,23 +2379,47 @@ namespace Nameless
   ]
 
   ---------- expanding return type ----------------
+  -- expansion mechanism may be superfluous; subsumed by behavior of inductive and existential types.
+  ----------------------------------------------
   -- object-oriented example without type annotation ----------------
   -- a typical object-oriented pattern:
-  -- an object with method : α -> object α
   -- where the method constructs new data and calls constructor with new data 
 
   -- expected:
   /-
-  datatype object = (update : α -> object)
-  constructor : {α // α -> μ object . (update : α -> object)}
-  constructor : {α // α -> μ object . (update : α -> {o with o <: object})}
+  datatype object = (update : Data -> Object)
+  constructor : α <: ? >> Data <: ? >> Data -> μ Object . (update : α -> Object)
+  constructor : Data <: ? >> Data -> μ Object . (update : α <: ? >> α -> Object)
+  constructor : Data <: ? >> Data -> μ Object . {α // (update : α -> Object)}
+  constructor : (Data <: ?) >> Data -> {Object with Data * Object <: DO  
+        where μ DO . {D * (data : D & update : α -> O) with ?cons (α * D) <: DO}
   -/
   #eval infer_reduce 0 [lessterm|
     -- fix \ self \ data => 
     fix (\ y[0] => \ y[0] => 
-      (@update = (\ y[0] => (y[2] #cons (y[0], y[1]))))
+      (
+        @data = y[0]
+        @update = (\ y[0] => (y[2] #cons (y[0], y[1])))
+      )
     ) 
   ]
+
+-- NOTE: 
+-- The expansion flag may not actually be needed, as distinct types can be handled via existential inside of inductive type,
+-- which results in fresh variables at the time of unification.
+  /-
+(? >> 
+
+(β[1] >> -- this looks wrong; 0 should occur before 1
+
+(β[0] ->
+   {1 // β[0] with (β[1] * β[0]) <: (induct 
+      {3 // (β[2] * ((data : β[2]) & (update : (β[1] -> β[0])))) with (?cons (β[1] * β[2]) * β[0]) <: β[3]}
+   )}
+ )
+ )
+ )
+  -/
 
 
   #eval infer_reduce 0 [lessterm|
