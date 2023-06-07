@@ -1,5 +1,6 @@
-\documentclass[letterpaper]{llncs}
-\usepackage[letterpaper, margin=1.5in]{geometry}
+\documentclass[acmsmall]{acmart}
+% \documentclass[letterpaper]{llncs}
+% \usepackage[letterpaper, margin=1.5in]{geometry}
 
 \usepackage{mathpartir}
 \usepackage{hyperref}
@@ -7,7 +8,6 @@
 \usepackage{amsmath}
 \usepackage{nccmath}
 \usepackage{stmaryrd}
-\usepackage{amssymb}
 \usepackage{listings}
 
 
@@ -20,25 +20,26 @@
 \def\arcr{\@arraycr}
 \makeatother
 
-\lstset{
-    % identifierstyle=\color{violet},
-    % textcolor=blue,
-    % keywordstyle=\color{blue},
-    keywordstyle=\text,
-    basicstyle=\ttfamily,
-    mathescape=true,
-    showspaces=false,
-    morekeywords={let, fix, in}
-}
-\usepackage[utf8]{inputenc}
-% \usepackage[T1]{fontenc}
+% \lstset{
+%     % identifierstyle=\color{violet},
+%     % textcolor=blue,
+%     % keywordstyle=\color{blue},
+%     keywordstyle=\text,
+%     basicstyle=\ttfamily,
+%     mathescape=true,
+%     showspaces=false,
+%     morekeywords={let, fix, in}
+% }
+% \usepackage[utf8]{inputenc}
+% % \usepackage[T1]{fontenc}
 
 
-\title{Relational Types}
-% \author{}
-% \institute{}
+\title{Relational Type Inference}
+\author{Thomas Logan}
+% \date{October 2022}
 
 \begin{document}
+
 \maketitle
 
 
@@ -214,8 +215,6 @@ This is safe as antecedent is stronger than consequent at any step.
 Seems similar to the notion in PDR of propagating negation of loss points to previous steps. 
 
 Different: RLT isn't cartesian
-
-
 
 \end{document}
 
