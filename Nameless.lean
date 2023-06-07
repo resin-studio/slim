@@ -2384,6 +2384,21 @@ namespace Nameless
   -- a typical object-oriented pattern:
   -- an object with method : α -> object α
   -- where the method constructs new data and calls constructor with new data 
+
+  -- expected:
+  /-
+  datatype object = (update : α -> object)
+  constructor : {α // α -> μ object . (update : α -> object)}
+  constructor : {α // α -> μ object . (update : α -> {o with o <: object})}
+  -/
+  #eval infer_reduce 0 [lessterm|
+    -- fix \ self \ data => 
+    fix (\ y[0] => \ y[0] => 
+      (@update = (\ y[0] => (y[2] #cons (y[0], y[1]))))
+    ) 
+  ]
+
+
   #eval infer_reduce 0 [lessterm|
     -- fix \ self \ data => 
     let y[0] = fix (\ y[0] => \ y[0] => 
@@ -2391,7 +2406,8 @@ namespace Nameless
     ) in 
     -- y[0]
     -- let y[0] = (y[1] #nil())
-    (((y[0] #nil()).update #hello()).update #world())
+    (y[0] #nil())
+    -- (((y[0] #nil()).update #hello()).update #world())
   ]
   ------------------
   #eval infer_reduce 0 [lessterm|
