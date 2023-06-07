@@ -228,24 +228,6 @@ namespace Nameless
         else
           .union ty1 ty2
 
-    partial def simplify : Ty -> Ty
-    | .bvar id => .bvar id  
-    | .fvar id => .fvar id
-    | .unit => .unit 
-    | .top => .top
-    | .bot => .bot 
-    | .tag l ty => .tag l (simplify ty) 
-    | .field l ty => .field l (simplify ty) 
-    | .union ty1 ty2 => unionize (simplify ty1) (simplify ty2)
-    | .inter ty1 ty2 => intersect (simplify ty1) (simplify ty2)
-    | .case ty1 ty2 => .case (simplify ty1) (simplify ty2)
-    | .exis n cty1 cty2 ty => 
-      .exis n (simplify cty1) (simplify cty2) (simplify ty)
-    | .univ op_ty_c ty => 
-      .univ (op_ty_c.map simplify) (simplify ty)
-    | .recur ty => .recur (simplify ty)
-
-
     def intersect_over (f : (Ty × Ty) -> Ty) (constraints : List (Ty × Ty)) : Ty :=
       (constraints.foldr (fun (lhs, rhs) ty_acc =>
         intersect (f (lhs, rhs)) ty_acc 
@@ -397,13 +379,6 @@ namespace Nameless
       reprPrec := repr
 
 
-    def reduce (env_ty : PHashMap Nat Ty) (ty : Ty) :=
-      (simplify (subst (env_ty) ty))
-
-
-
-
-
   def PHashMap.repr [Repr α] [Repr β] [Repr (α × β)] [BEq α] [Hashable α] 
   (m : PHashMap α β) (n : Nat) : Format :=
     Format.bracket "<" (List.repr (toList m) n) ">"
@@ -429,15 +404,6 @@ namespace Nameless
     #eval [lesstype| ?ooga unit >> β[0] -> {1 // β[0] with β[1] * β[0] <: ?booga unit} ] 
 
 ------------------------------------------------------------
-
-
-
-    partial def free_vars_env (env_ty : PHashMap Nat Ty) (ty : Ty) : PHashSet Nat :=  
-      free_vars (reduce env_ty ty)
-
-
-
-
 
 
     def nested_pairs : (List Ty) -> Ty 
@@ -614,8 +580,7 @@ namespace Nameless
 
 
     partial def occurs (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Bool :=
-      let ty_sub := subst m ty
-      (free_vars_env m ty_sub).contains key
+      (free_vars (subst m ty)).contains key
 
     partial def subst_default (sign : Bool) : Ty -> Ty
     | .bvar id => .bvar id  
@@ -638,8 +603,25 @@ namespace Nameless
       .univ op_ty_c ty
     | .recur ty => .recur (subst_default sign ty)
 
+    partial def simplify : Ty -> Ty
+    | .bvar id => .bvar id  
+    | .fvar id => .fvar id
+    | .unit => .unit 
+    | .top => .top
+    | .bot => .bot 
+    | .tag l ty => .tag l (simplify ty) 
+    | .field l ty => .field l (simplify ty) 
+    | .union ty1 ty2 => unionize (simplify ty1) (simplify ty2)
+    | .inter ty1 ty2 => intersect (simplify ty1) (simplify ty2)
+    | .case ty1 ty2 => .case (simplify ty1) (simplify ty2)
+    | .exis n cty1 cty2 ty => 
+      .exis n (simplify cty1) (simplify cty2) (simplify ty)
+    | .univ op_ty_c ty => 
+      .univ (op_ty_c.map simplify) (simplify ty)
+    | .recur ty => .recur (simplify ty)
 
-    partial def equal (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
+
+    partial def equiv (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
       let ty1 := simplify (subst env_ty ty1)
       let ty2 := simplify (subst env_ty ty2)
       ty1 == ty2
@@ -1185,7 +1167,7 @@ namespace Nameless
         (i, [])
 
     | .recur ty1, ty2 =>
-      if equal context.env_simple (.recur ty1) ty2 then
+      if equiv context.env_simple (.recur ty1) ty2 then
         (i, [context])
       else
         -- using induction hypothesis, ty1 ≤ ty2; safely unroll
@@ -1237,8 +1219,56 @@ namespace Nameless
 
     | _, _ => (i, []) 
 
+    partial def compress (boundary : Nat) (context : Context) (ty : Ty) :=
+      -----------------------
+      -- assumption: env_simple is cycle-free  
+      -----------------------
 
-    -- TODO: use unification and subtitution to simplify type 
+      let ty := simplify (subst context.env_simple ty)
+
+      let fids := (free_vars ty)
+      if fids.isEmpty then
+        ty
+      else 
+
+        let constraints : PHashMap Ty Ty := empty
+
+        -- relational constraints
+        let constraints : PHashMap Ty Ty := fids.fold (fun constraints fid => 
+          if fid >= boundary then
+            match context.env_keychain.find? fid with
+            | some keychain =>
+              keychain.fold (fun constraints key =>
+                (match context.env_relational.find? key with
+                | some relation => 
+                  let key := subst context.env_simple key
+                  if constraints.contains key then
+                    constraints
+                  else
+                    constraints.insert key (pack boundary context relation) 
+                | none => 
+                  -- invariant: this case should never happen
+                  constraints 
+                )
+              ) constraints
+            | none => constraints
+          else
+            constraints
+        ) constraints 
+
+
+        if constraints.isEmpty then
+          ty
+        else
+          intersect_over (fun (ty_lhs, ty_rhs) => 
+            let fvs_constraints := (free_vars ty_lhs)
+            let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
+            [lesstype|
+              {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
+            ]
+          ) constraints.toList
+
+
     def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := (
       --------------------------------------
       -- boundary prevents overgeneralizing
@@ -1250,16 +1280,8 @@ namespace Nameless
       --------------------------------------
 
       let ty := simplify (subst context.env_simple ty)
-
-      let constraints := (reachable_constraints context ty empty).toList.bind (fun (key, relation) => 
-        let key := Ty.subst context.env_simple key
-        if !(free_vars key).isEmpty then
-          [(key, relation)]
-        else
-          []
-      )
-
       let fids_pl := List.filter (fun id => id >= boundary) (toList (free_vars ty))
+      let constrained := fids_pl.any (fun fid => context.env_keychain.contains fid)  
 
       if fids_pl.isEmpty then
           ty
@@ -1268,30 +1290,17 @@ namespace Nameless
       --     fids.map (fun fid => (fid, Ty.bot))
       --   )
       --   simplify (subst env_sub ty)
-      else if constraints.isEmpty then
+      else if !constrained then
         -- NOTE: need to use universal in order to indicate expansion is allowed for unconstrained variables.
         (List.range fids_pl.length).foldl (fun ty_acc _ =>
           [lesstype| ? >> ⟨ty_acc⟩]
         ) (abstract fids_pl 0 ty)
       else (
-
-        -- step 1: pack existential 
-        let ty_ex := intersect_over (fun (ty_lhs, ty_rhs) => 
-          let fvs_constraints := (free_vars ty_lhs) + (free_vars ty_rhs)
-          let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
-          [lesstype|
-            {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
-          ]
-        ) constraints
-
-        -- step 2: generalize to universal 
-        let ty_base := [lesstype| ⟨ty_ex⟩ >> β[0]]
-
-        -- step 3: generalize over unconstrained variables using universal and expandable binder 
+        let ty_compressed := compress boundary context ty
+        let ty_base := [lesstype| ⟨ty_compressed⟩ >> β[0]]
         (List.range fids_pl.length).foldl (fun ty_acc _ =>
           [lesstype| ? >> ⟨ty_acc⟩]
         ) (abstract fids_pl 0 ty_base) 
-        ---------------------------------
       )
     )
 
@@ -1312,9 +1321,7 @@ namespace Nameless
       let boundary := 0 
       let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
-        let env_simple := Context.env_simple context
-        let ty' := simplify (subst env_simple (Ty.union ty_result ty_acc))
-        generalize boundary context ty' 
+        Ty.unionize (generalize boundary context ty_result) ty_acc
       ) Ty.bot contexts 
 
       
@@ -1323,9 +1330,7 @@ namespace Nameless
       let boundary := 0 
       let (_, contexts) := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
-        let env_simple := Context.env_simple context
-        let ty' := simplify (subst env_simple (Ty.union ty_result ty_acc))
-        generalize boundary context ty' 
+        Ty.unionize (generalize boundary context ty_result) ty_acc
       ) Ty.bot contexts
 
 
@@ -1334,9 +1339,7 @@ namespace Nameless
       let boundary := 0 
       let (_, contexts) := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
-        let env_simple := Context.env_simple context
-        let ty' := simplify (subst env_simple (Ty.union ty_result ty_acc))
-        generalize boundary context ty' 
+        Ty.unionize (generalize boundary context ty_result) ty_acc
       ) Ty.bot contexts
 
 
@@ -1709,8 +1712,8 @@ namespace Nameless
       let (i, ty_conc) := (i + 1, Ty.fvar i) 
       bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
       bind_nl (Ty.unify i context ty1 (Ty.case ty_IH ty_conc)) (fun i context =>
-        let ty_IH := (Ty.reduce context.env_simple ty_IH)
-        let ty_conc := (Ty.reduce context.env_simple ty_conc)
+        let ty_IH := (Ty.subst context.env_simple ty_IH)
+        let ty_conc := (Ty.subst context.env_simple ty_conc)
         ------------------------------------------------------
         -- TODO: factor out this rewriting with higher order function 
         -- TODO: need to avoid relational types in parameter
@@ -1786,16 +1789,13 @@ namespace Nameless
       let boundary := 0
       let (_, context_tys) := (infer i context {} t) 
       List.foldr (fun (context, ty') ty_acc => 
-        let ty' := Ty.simplify ((Ty.subst context.env_simple (Ty.union ty' ty_acc)))
-        Ty.generalize boundary context ty'
+        Ty.unionize (Ty.generalize boundary context ty') ty_acc
       ) Ty.bot context_tys
 
 
     partial def infer_reduce (i : Nat) (t : Tm) : Ty := 
       let context : Ty.Context := ⟨empty, empty, empty, empty⟩
       infer_reduce_context (i + 1)  context t
-      -- infer_reduce_context i  context t [lesstype| {β[0] with β[0] <: ⊤}]
-      -- infer_reduce_context i  context t [lesstype|  ⊤]
 
     -- structure Work where
     --   cost : Nat
@@ -3085,8 +3085,6 @@ namespace Nameless
   -----------------
 
 
-
-  -- broken
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   #eval infer_reduce 0 [lessterm| 
@@ -3106,7 +3104,6 @@ namespace Nameless
     )
   ] 
 
-  -- type is correct but too verbose 
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   #eval infer_reduce 0 [lessterm| 
