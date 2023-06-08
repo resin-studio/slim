@@ -55,6 +55,7 @@ namespace Nameless
       env_simple : PHashMap Nat Ty
       env_keychain : PHashMap Nat (PHashSet Ty)
       env_relational : PHashMap Ty Ty
+      -- TODO: remve expandable; ill-conceived mechanism
       set_expandable : PHashSet Nat
     deriving Repr
 
@@ -782,7 +783,8 @@ namespace Nameless
     | .case _ _ => false
     | .exis n' ty_c1 ty_c2 ty' => 
       match ty' with 
-      | .tag _ _ => true
+      | .tag _ _ => 
+        decreasing (id_induct + n') ty_c1
       | _ =>
         decreasing (id_induct + n') ty_c1 &&
         decreasing (id_induct + n') ty_c2 && 
@@ -798,10 +800,12 @@ namespace Nameless
     -- )
 
 
-    partial def wellfounded (ty_key ty_rec : Ty) : Bool :=
+    -- check that ty_rec is wellfounded with respect to reducible column in ty_key
+    partial def reducible (ty_key ty_rec : Ty) : Bool :=
       let fields := record_fields ty_key
       if fields.isEmpty then
         match ty_key with
+        | Ty.fvar _ => false
         | Ty.tag _ _ =>
           match ty_rec with
           | Ty.recur ty_body =>
@@ -815,7 +819,7 @@ namespace Nameless
         let ty_trans := toList (transpose_map labels ty_rec)
         ty_trans.any (fun (l, ty_rec) =>
           match fields.find? l with
-          | some ty_key => wellfounded ty_key ty_rec
+          | some ty_key => reducible ty_key ty_rec
           | none => false
         )  
   --------------------------------------------------
@@ -851,18 +855,24 @@ namespace Nameless
 
         let ty_key := (simplify (subst context.env_simple ty_c1))
         let rlabels := extract_record_labels ty_key 
+        -- TODO: is ensuring consistent variable record enough to ensure resulting payload is inhabitable?
         let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
             rlabels.contains l 
           )
-        let unfounded := !(wellfounded ty_key ty_c2)
+        let irreducible := !(reducible ty_key ty_c2)
 
-        if no_function_constraint && relation_wellformed && unfounded && is_consistent_variable_record then
+        if no_function_constraint && relation_wellformed && irreducible && is_consistent_variable_record then
 
           -- update context with relational information 
           let context := {context with 
             env_keychain := index_free_vars context.env_keychain ty_key
             env_relational := context.env_relational.insert ty_key ty_c2,
           }
+
+          ----------------------------------------------------------
+          -- TODO: above this could be refactored in to the (ty < Ty.recur) unification case
+          -- removing duplicate code of left and right existential
+          --------------------------------------------------------
 
           let (i, contexts) := (unify i context ty1 ty2) 
           let unrefined := contexts.all (fun context => 
@@ -960,6 +970,11 @@ namespace Nameless
         if !contexts.isEmpty then 
           (i, contexts)
         else (
+          ------------------------------------------
+          -- TODO: why do we need this here on the right-existential? is it safe? 
+          -- if it's safe here, then it should be safe in the more general unification case
+          -- however; left-existential relies on the unification failing in order to propagate from payload unification
+          ------------------------------------------
           -- constraint over function paramter type would prevent sound weakening of constraint
           let no_function_constraint := no_function_types ty
 
@@ -971,12 +986,13 @@ namespace Nameless
 
           let ty_key := (simplify (subst context.env_simple ty_c1))
           let rlabels := extract_record_labels ty_key
+          -- TODO: is ensuring consistent variable record to ensure resulting payload is inhabitable?
           let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
               rlabels.contains l 
             )
-          let unfounded := !(wellfounded ty_key ty_c2)
+          let irreducible := !(reducible ty_key ty_c2)
 
-          if no_function_constraint && relation_wellformed && unfounded && is_consistent_variable_record then
+          if no_function_constraint && relation_wellformed && irreducible && is_consistent_variable_record then
             let context := {context with 
               env_keychain := index_free_vars context.env_keychain ty_key
               env_relational := context.env_relational.insert ty_key ty_c2,
@@ -984,6 +1000,7 @@ namespace Nameless
             (i, [context])
           else
             (i, [])
+          --------------------------------------------------------
         ) 
       )
 
@@ -1183,7 +1200,7 @@ namespace Nameless
 
     | ty', .recur ty =>
       let ty' := (simplify (subst context.env_simple ty'))
-      if wellfounded ty' (.recur ty) then
+      if reducible ty' (.recur ty) then
         unify i context ty' (instantiate 0 [Ty.recur ty] ty) 
       else
         match context.env_relational.find? ty' with
@@ -3069,7 +3086,7 @@ namespace Nameless
   ] 
 
 
-  -- NOTE: not wellfounded
+  -- NOTE: not reducible 
   -- expected: ⊥
   #eval unify_reduce 10
   [lesstype| (α[1] * α[2]) * ?true unit ]
