@@ -856,6 +856,7 @@ namespace Nameless
         let ty_key := (simplify (subst context.env_simple ty_c1))
         let rlabels := extract_record_labels ty_key 
         -- TODO: is ensuring consistent variable record enough to ensure resulting payload is inhabitable?
+        -- TODO: need a to check that the key is structurally consistent with one of the recursive cases 
         let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
             rlabels.contains l 
           )
@@ -987,6 +988,7 @@ namespace Nameless
           let ty_key := (simplify (subst context.env_simple ty_c1))
           let rlabels := extract_record_labels ty_key
           -- TODO: is ensuring consistent variable record to ensure resulting payload is inhabitable?
+          -- TODO: need a to check that the key is structurally consistent with one of the recursive cases 
           let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
               rlabels.contains l 
             )
