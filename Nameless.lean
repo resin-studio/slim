@@ -2300,6 +2300,28 @@ namespace Nameless
 ---------------------------------------------------------------
   --------- recursive function (fix) type inference -----------
 
+  ----------------------------------
+
+  -- broken: initial parameter type not inferred properly 
+  #eval infer_reduce 0 [lessterm|
+    let y[0] = (\ y[0] => fix(\ y[0] => 
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[2], (y[1] y[0]))
+    )) in 
+    y[0]
+  ]
+
+
+  -- broken: ?thing unit is not propagated into function type 
+  #eval infer_reduce 10 [lessterm|
+    let y[0] = (\ y[0] => fix(\ y[0] => 
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[2], (y[1] y[0]))
+    )) in 
+    (y[0] #thing())
+  ]
+  ----------------------------------
+
   #eval infer_reduce 0 [lessterm|
     fix(\ y[0] => (
     \ #zero () => #nil ()
@@ -2315,6 +2337,7 @@ namespace Nameless
     y[0]
   ]
 
+  --------- relational selection -----------
   -- expected: ?cons ?nil unit
   #eval infer_reduce 10 [lessterm|
     (fix(\ y[0] => ( 
@@ -3573,6 +3596,7 @@ namespace Nameless
 
   -------- collapsing ------------
 
+  -- broken
   -- NOTE: requires collapsing to ensure what must type check, rather than what may type check 
   -- NOTE: collapsing should happen at argument site, rather than return site
     -- to ensure that contextual information is not lost
@@ -3584,6 +3608,27 @@ namespace Nameless
     let y[0] = _ in 
     let y[0] = (( \ #one() => #two() \ #three() => #four()) y[0]) in
     ((\ #two() => #thing()) y[0])
+  ]
+
+
+  --------------------------------------
+
+
+  -- expected: ((?one unit -> ?two unit) & (?three unit -> ?four unit))
+  #eval infer_reduce 0 [lessterm| 
+    ( \ #one() => #two() \ #three() => #four())
+  ]
+
+  -- broken: inferring union instead of intersection
+  -- expected: ((?one unit -> ?two unit) & (?three unit -> ?four unit))
+  #eval infer_reduce 0 [lessterm| 
+    (\y[0] => (( \ #one() => #two() \ #three() => #four()) y[0]))
+  ]
+
+  ------- path selection --------------
+  -- expected: ?two unit 
+  #eval infer_reduce 0 [lessterm| 
+    (( \ #one() => #two() \ #three() => #four()) #one()) 
   ]
 
 

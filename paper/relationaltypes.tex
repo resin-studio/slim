@@ -125,13 +125,91 @@ Thus, parametric types are extended with constraints in the form of subtyping.
 
 
 \subsection{Type inference}
-\paragraph{Refining parameter type.}
-\paragraph{Inductive typing.}
-\paragraph{Inductive subtyping.} An evenList subtypes a natList.
+\paragraph{Path selection.}
+Consider a trivial function that completes an English phrase:
+\begin{mathpar}
+\\
+  \inferrule {} {
+    trivial = 
+    \begin{array}[t]{@{} l}
+        \texttt{lam \#hello() => \#world()}
+        \arcr
+        \texttt{lam \#good() => \#morning()}
+    \end{array}
+  }
+\\
+\end{mathpar}
+
+This program is defined by cases on primitive data defined with hardcoded tags.
+The system infers the type to be an intersection of implication types:
+\begin{mathpar}
+\\
+  \inferrule {} {
+    \Delta \cdot \Gamma
+    \vdash 
+    trivial : 
+        \texttt{(?hello unit -> ?world unit) \& (?good unit -> ?morning unit)}
+  }
+\\
+\end{mathpar}
+
+Suppose the program $trivial$ is applied to a literal value $\#\text{hello}()$. 
+The system can discard the irrelevant clauses and infer the singleton type.
+\begin{mathpar}
+\\
+    \inferrule {} {
+        \Delta \cdot \Gamma
+        \vdash 
+        trivial\ \texttt{\#hello()} :\ \texttt{?world unit} 
+    }
+\\
+\end{mathpar}
+
+
+\paragraph{Relational typing.} Consider a function that takes a natural number and returns a list of that length. 
+\begin{mathpar}
+\\
+  \inferrule {} {
+    repeat = 
+    \begin{array}[t]{@{} l}
+        \texttt{lam x => fix (lam self =>}
+        \arcr
+        \hspace{4mm}\texttt{lam \#zero() => \#nil()}
+        \arcr
+        \hspace{4mm}\texttt{lam \#succ n => \#cons (x, self n))}
+    \end{array}
+  }
+\\
+\end{mathpar}
+Without specifying any requirements besides the function definition, the system 
+can infer the property that the resulting list has the length of the input number. 
+\begin{mathpar}
+\\
+  \inferrule {
+    nat = \texttt{induct N . ?zero unit | ?succ N} 
+    \\\\
+    nat\_list =  
+    \begin{array}[t]{@{} l}
+        \texttt{induct NL .} 
+        \arcr
+        \hspace{4mm} \texttt{?zero unit * ?nil unit |}
+        \arcr
+        \hspace{4mm} \texttt{\{?succ N * ?cons L with N * L <: NL\}}
+    \end{array}
+  } {
+    \Delta \cdot \Gamma
+    \vdash 
+    repeat : \texttt{forall N <:}\ nat \texttt{ . N -> \{L with N * L <:}\ nat\_list \texttt{\}} 
+  }
+\\
+\end{mathpar}
+
+\paragraph{Relational selection.}
+\paragraph{Relational subtyping.} An evenList subtypes a natList.
 \paragraph{Transposition.} a function expects a NAT. 
 But the argument type is a Nat related to a List.
 To check safety, the NatList relation must be transposed into a pair of Nat and List.
-\paragraph{Path selection.}
+\paragraph{Refining parameter type.}
 \paragraph{Path sensitivity.}
 \paragraph{List bounds.}
 \paragraph{Generalization.} This is motivated by applying the same function to multiple arguments of varying types.
