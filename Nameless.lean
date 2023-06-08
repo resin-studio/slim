@@ -841,6 +841,7 @@ namespace Nameless
       let ty1 := instantiate 0 args ty1
 
 
+      -- cannot trust a failure result; sound, but incomplete; 
       let (i, contexts) := (unify i context ty_c1 ty_c2)
       -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
       if contexts.isEmpty then (
@@ -855,6 +856,7 @@ namespace Nameless
 
         let ty_key := (simplify (subst context.env_simple ty_c1))
         let rlabels := extract_record_labels ty_key 
+        -- cannot trust a failure result; sound, but incomplete; limit to guaranteed valid results with inhabitable payloads 
         -- TODO: is ensuring consistent variable record enough to ensure resulting payload is inhabitable?
         -- TODO: need a to check that the key is structurally consistent with one of the recursive cases 
         let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
