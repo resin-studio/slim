@@ -2387,12 +2387,8 @@ namespace Nameless
 
   -- expected:
   /-
-  datatype object = (update : Data -> Object)
-  constructor : α <: ? >> Data <: ? >> Data -> μ Object . (update : α -> Object)
-  constructor : Data <: ? >> Data -> μ Object . (update : α <: ? >> α -> Object)
-  constructor : Data <: ? >> Data -> μ Object . {α // (update : α -> Object)}
-  constructor : (Data <: ?) >> Data -> {Object with Data * Object <: DO  
-        where μ DO . {D * (data : D & update : α -> O) with ?cons (α * D) <: DO}
+  constructor : (Data <: ?) >> Data -> {Object with Data * Object <: DO}
+        where μ DO . {D, α, O // D * (data : D & update : α -> O) with (?cons (α * D) * O) <: DO
   -/
   #eval infer_reduce 0 [lessterm|
     -- fix \ self \ data => 
@@ -2414,7 +2410,9 @@ namespace Nameless
 
 (β[0] ->
    {1 // β[0] with (β[1] * β[0]) <: (induct 
-      {3 // (β[2] * ((data : β[2]) & (update : (β[1] -> β[0])))) with (?cons (β[1] * β[2]) * β[0]) <: β[3]}
+      {3 // (β[2] * (
+        (data : β[2]) & (update : (β[1] -> β[0]))
+        )) with (?cons (β[1] * β[2]) * β[0]) <: β[3]}
    )}
  )
  )
