@@ -2321,6 +2321,17 @@ namespace Nameless
     (y[0] #thing())
   ]
   ----------------------------------
+  -- broken: nat should not be subbed into relational key
+  -- double
+  #eval infer_reduce 10 [lessterm|
+    let y[0] : ⟨nat_⟩ = _ in
+    let y[0] = fix(\ y[0] => (
+      \ #zero () => #zero ()
+      \ #succ y[0] => #succ #succ ((y[1] y[0]))
+    )) in
+    (y[0] y[1])
+  ]
+  ----------------------------------
 
   #eval infer_reduce 0 [lessterm|
     fix(\ y[0] => (
@@ -3630,6 +3641,10 @@ namespace Nameless
   #eval infer_reduce 0 [lessterm| 
     (( \ #one() => #two() \ #three() => #four()) #one()) 
   ]
+
+
+
+
 
 
 end Nameless 

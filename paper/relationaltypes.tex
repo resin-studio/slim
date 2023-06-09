@@ -124,8 +124,12 @@ Thus, parametric types are extended with constraints in the form of subtyping.
 
 
 
-\subsection{Type inference}
-\paragraph{Path selection.}
+\subsection{Basic Type Inference}
+
+We begin with some simple examples to illustrate the syntax and semantics of
+programs and types.
+
+\paragraph{Path typing.}
 Consider a trivial function that completes an English phrase:
 \begin{mathpar}
 \\
@@ -140,7 +144,7 @@ Consider a trivial function that completes an English phrase:
 \\
 \end{mathpar}
 
-This program is defined by cases on primitive data defined with hardcoded tags.
+This program is defined by paths over hardcoded tags.
 The system infers the type to be an intersection of implication types:
 \begin{mathpar}
 \\
@@ -152,6 +156,8 @@ The system infers the type to be an intersection of implication types:
   }
 \\
 \end{mathpar}
+
+\paragraph{Path selection.}
 
 Suppose the program $trivial$ is applied to a literal value $\#\text{hello}()$. 
 The system can discard the irrelevant clauses and infer the singleton type.
@@ -204,9 +210,78 @@ can infer the property that the resulting list has the length of the input numbe
 \\
 \end{mathpar}
 
-\paragraph{Relational selection.}
+\paragraph{Relational selection.} Suppose the program $repeat$ is applied to the hardcoded number two, 
+represented as \texttt{ \#succ \#succ \#zero ()} . The system can infer the singleton type representing a list,
+much like how Prolog evaluates logic programs.
+\begin{mathpar}
+\\
+  \inferrule {} {
+    \Delta \cdot \Gamma
+    \vdash 
+    repeat\ \texttt{()  (\#succ \#succ \#zero ())}:  \texttt{\#cons (unit * \#cons (unit * \#nil unit))}
+  }
+\\
+\end{mathpar}
+
+Path selection and relational selection demonstrate that the declarative type language is expressive enough
+to perform evaluation. However, this simply reproduces the effect of the dynamic semantics, 
+albeit in a declarative style. For types to be useful in practice, they need to offer ways to
+express properties with incomplete information.
+
+
+\subsection{Practical Type Inference}
+Next we demonstrate how types representing abstract properties compose to produce useful properties,
+which are not reproducible by dynamic semantics.
+
+\paragraph{Transposition.} Consider a function that expects a list, applied to a list that's related to a nat. 
+\begin{mathpar}
+\\
+  \inferrule {} {
+    \begin{array}[t]{@{} l}
+        \texttt{lam x n => }
+        \arcr
+        \hspace{4mm}\texttt{let repeat = } repeat \texttt{ in}
+        \arcr
+        \hspace{4mm}\texttt{let fromList = fix (lam self =>}
+        \arcr
+        \hspace{4mm}\hspace{4mm}\texttt{lam \#nil() => }\hdots
+        \arcr
+        \hspace{4mm}\hspace{4mm}\texttt{lam \#cons (x, xs) => }\hdots \texttt{) in}
+        \arcr
+        \hspace{4mm}\texttt{fromList (repeat x n)}
+    \end{array}
+  }
+\\
+\end{mathpar}
+
+The parameter type of \texttt{(fromList)} is: 
+\begin{mathpar}
+\\
+  \inferrule {} {
+    list\ \alpha = \texttt{induct L . ?nil unit | ?cons (} \alpha \texttt{ * L)} 
+  }
+\\
+\end{mathpar}
+However, the argument type of the term \texttt{(repeat x n)} is:
+\begin{mathpar}
+\\
+  \inferrule {} {
+    \texttt{\{L with X * L <:}\ nat\_list \texttt{\}}
+  }
+\\
+\end{mathpar}
+
+The types need to be fairly complex due to the abstract information available.
+Despite these complexities, the the system is able to ensure that these abstract inferred types
+can safely be composed, by transposing $nat\_list$ into the weaker pair $nat$ \texttt{*} $list \alpha$,
+and then unifying the argument's projected list type with the parameter's list type.
+
+
+
+
+
+\paragraph{Inductive subtyping.} An even number subtypes a natural number.
 \paragraph{Relational subtyping.} An evenList subtypes a natList.
-\paragraph{Transposition.} a function expects a NAT. 
 But the argument type is a Nat related to a List.
 To check safety, the NatList relation must be transposed into a pair of Nat and List.
 \paragraph{Refining parameter type.}
