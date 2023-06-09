@@ -3209,6 +3209,18 @@ namespace Nameless
     )
   ] 
 
+  /-
+
+(? >> (({3 // β[2] with ((β[1] * β[2]) * β[0]) <: LED} & 
+        {2 // β[1] with ((β[0] * β[1]) * ?true unit) <: LED}) >> β[0])) 
+        
+|
+
+ (? >> (({3 // β[1] with ((β[1] * β[2]) * β[0]) <: LED} & 
+         {2 // β[0] with ((β[0] * β[1]) * ?false unit) <: LED}) >> β[0]))
+
+-/
+
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   #eval infer_reduce 0 [lessterm| 
