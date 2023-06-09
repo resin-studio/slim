@@ -2,6 +2,7 @@
 % \documentclass[letterpaper]{llncs}
 % \usepackage[letterpaper, margin=1.5in]{geometry}
 
+
 \usepackage{mathpartir}
 \usepackage{hyperref}
 \usepackage{mathtools}
@@ -10,6 +11,8 @@
 \usepackage{stmaryrd}
 \usepackage{listings}
 
+\usepackage[scaled]{beramono}
+\usepackage[T1]{fontenc}
 
 \usepackage{graphicx}
 \graphicspath{ {./images/} }
@@ -20,18 +23,16 @@
 \def\arcr{\@arraycr}
 \makeatother
 
-% \lstset{
-%     % identifierstyle=\color{violet},
-%     % textcolor=blue,
-%     % keywordstyle=\color{blue},
-%     keywordstyle=\text,
-%     basicstyle=\ttfamily,
-%     mathescape=true,
-%     showspaces=false,
-%     morekeywords={let, fix, in}
-% }
-% \usepackage[utf8]{inputenc}
-% % \usepackage[T1]{fontenc}
+\lstset{
+    % identifierstyle=\color{violet},
+    % textcolor=blue,
+    % keywordstyle=\color{blue},
+    % keywordstyle=\text,
+    basicstyle=\ttfamily,
+    % mathescape=true,
+    % showspaces=false,
+    % morekeywords={let, fix, in}
+}
 
 
 \title{Relational Type Inference}
@@ -124,6 +125,45 @@ Thus, parametric types are extended with constraints in the form of subtyping.
 
 
 
+\begin{figure*}[h]
+
+    \begin{lstlisting}[mathescape=true]
+
+        let trivial =
+            path #hello => #world
+            path #good => #morning in
+
+        let repeat = path x => fix (path self =>
+            path #zero => #nil
+            path #succ n => #cons (x, self n)) in
+
+        let fromList = fix (path self =>
+            path #nil => $\hdots$
+            path #cons (x, xs) => $\hdots$) in
+
+        let transpose = path x n => fromList (repeat x n)
+
+        let fromUno = path (@x = #uno content) => $\hdots$ in
+        let fromDos = path (@y = #dos content) => $\hdots$ in
+        let doboth = path x => (fromUno x, fromDos, x)
+
+        let lessOrEq = fix (path self =>
+            path (#zero, _) => #true
+            path (#succ x, #succ y) => self (x, y)
+            path (#succ _, #zero) => #false) in
+
+        let max = (path (x, y) => 
+            if lessOrEq (x, y) then y else x) in
+
+        $\hdots$
+
+
+    \end{lstlisting}
+
+\caption{Example program}
+\end{figure*}
+
+
 \subsection{Basic Type Inference}
 
 We begin with some simple examples to illustrate the syntax and semantics of
@@ -131,18 +171,6 @@ programs and types.
 
 \paragraph{Path typing.}
 Consider a trivial function that completes an English phrase:
-\begin{mathpar}
-\\
-  \inferrule {} {
-    trivial = 
-    \begin{array}[t]{@{} l}
-        \texttt{lam \#hello() => \#world()}
-        \arcr
-        \texttt{lam \#good() => \#morning()}
-    \end{array}
-  }
-\\
-\end{mathpar}
 
 This program is defined by paths over hardcoded tags.
 The system infers the type to be an intersection of implication types:
@@ -173,20 +201,6 @@ The system can discard the irrelevant clauses and infer the singleton type.
 
 
 \paragraph{Relational typing.} Consider a function that takes a natural number and returns a list of that length. 
-\begin{mathpar}
-\\
-  \inferrule {} {
-    repeat = 
-    \begin{array}[t]{@{} l}
-        \texttt{lam x => fix (lam self =>}
-        \arcr
-        \hspace{4mm}\texttt{lam \#zero() => \#nil()}
-        \arcr
-        \hspace{4mm}\texttt{lam \#succ n => \#cons (x, self n))}
-    \end{array}
-  }
-\\
-\end{mathpar}
 Without specifying any requirements besides the function definition, the system 
 can infer the property that the resulting list has the length of the input number. 
 \begin{mathpar}
@@ -234,25 +248,6 @@ Next we demonstrate how types representing abstract properties compose to produc
 which are not reproducible by dynamic semantics.
 
 \paragraph{Transposition.} Consider a function that expects a list, applied to a list that's related to a nat. 
-\begin{mathpar}
-\\
-  \inferrule {} {
-    \begin{array}[t]{@{} l}
-        \texttt{lam x n => }
-        \arcr
-        \hspace{4mm}\texttt{let repeat = $repeat$ in}
-        \arcr
-        \hspace{4mm}\texttt{let fromList = fix (lam self =>}
-        \arcr
-        \hspace{4mm}\hspace{4mm}\texttt{lam \#nil() => }\hdots
-        \arcr
-        \hspace{4mm}\hspace{4mm}\texttt{lam \#cons (x, xs) => }\hdots \texttt{) in}
-        \arcr
-        \hspace{4mm}\texttt{fromList (repeat x n)}
-    \end{array}
-  }
-\\
-\end{mathpar}
 
 The argument type of the term \texttt{(repeat x n)} must be a subtype of the parameter type of \texttt{(fromList)}: 
 Since there are applications to arguments that are not hardcoded, 
@@ -288,20 +283,6 @@ To check safety, the NatList relation must be transposed into a pair of Nat and 
 
 \paragraph{Refinement.}
 Consider a program that calls two functions on some argument whose value is unknown.  
-\begin{mathpar}
-\\
-  \inferrule {} {
-    refined =
-    \begin{array}[t]{@{} l}
-        \texttt{let fromUno = lam (@x = \#uno content) => $\hdots$ in }
-        \arcr
-        \texttt{let fromDos = lam (@y = \#dos content) => $\hdots$ in }
-        \arcr
-        \texttt{lam x => (fromUno x, fromDos, x)}
-    \end{array}
-  }
-\\
-\end{mathpar}
 
 Since the arguments to both functions is just a variable, there is no particular value that must inhabit its type.
 Therefore, its type can simply be refined based on the types expected by the two functions applied to it.
@@ -316,28 +297,6 @@ Therefore, its type can simply be refined based on the types expected by the two
 
 
 \paragraph{Path sensitivity.} Consider function that chooses the maximum of two natural numbers. 
-\begin{mathpar}
-\\
-  \inferrule {} {
-    max =
-    \begin{array}[t]{@{} l}
-        \texttt{let lessOrEq = fix (lam self => }
-        \arcr
-        \hspace{4mm}\texttt{lam (\#zero(), \_) => \#true()}
-        \arcr
-        \hspace{4mm}\texttt{lam (\#succ x, \#succ y) => self (x, y)}
-        \arcr
-        \hspace{4mm}\texttt{lam (\#succ \_, \#zero()) => \#false()) in}
-        \arcr
-        \texttt{let max = (lam (x, y) => }
-        \arcr
-        \hspace{4mm}\texttt{if lessOrEq (x, y) then y else x) in}
-        \arcr
-        \texttt{max}
-    \end{array}
-  }
-\\
-\end{mathpar}
 
 The program $max$ must satisfy the property that the result is greater or equal to each of the inputs. 
 The system can infer this property by relying on multiple type inference mechanisms, including
