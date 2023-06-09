@@ -1085,10 +1085,11 @@ namespace Nameless
       | none => 
         let expandable := context.set_expandable.find? id != .none
         let (i, ty_assign) := (
-          if expandable then
-            (i + 1, Ty.union (Ty.fvar i) ty') 
-          else
-            (i, ty')
+          -- if expandable then
+          --   (i + 1, Ty.union (Ty.fvar i) ty') 
+          -- else
+          --   (i, ty')
+          (i, ty')
         )
 
         if occurs id context.env_simple ty_assign then
@@ -1694,6 +1695,7 @@ namespace Nameless
 
 
     | .fix t1 =>
+      let boundary := i
       let (i, ty_IH) := (i + 1, Ty.fvar i) 
       let (i, ty_conc) := (i + 1, Ty.fvar i) 
       bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
@@ -1730,7 +1732,7 @@ namespace Nameless
         ------------------------------------------------------
 
         let ty_content := List.foldr (fun ty_case ty_acc =>
-          let fvs := toList (Ty.free_vars ty_case)
+          let fvs := (toList (Ty.free_vars ty_case)).filter (fun fid => fid >= boundary)
           let fvs_prem := (Ty.free_vars ty_IH)
           let ty_choice := (
             if List.any fvs (fun id => fvs_prem.find? id != none) then
@@ -2263,28 +2265,6 @@ namespace Nameless
   ]
 
 ---------------------------------------------------------------
-  --------- recursive function (fix) type inference -----------
-
-  ----------------------------------
-
-  -- broken: initial parameter type not inferred properly 
-  #eval infer_reduce 0 [lessterm|
-    let y[0] = (\ y[0] => fix(\ y[0] => 
-      \ #zero () => #nil ()
-      \ #succ y[0] => #cons (y[2], (y[1] y[0]))
-    )) in 
-    y[0]
-  ]
-
-
-  -- broken: ?thing unit is not propagated into function type 
-  #eval infer_reduce 10 [lessterm|
-    let y[0] = (\ y[0] => fix(\ y[0] => 
-      \ #zero () => #nil ()
-      \ #succ y[0] => #cons (y[2], (y[1] y[0]))
-    )) in 
-    (y[0] #thing())
-  ]
   ----------------------------------
   -- broken: nat should not be subbed into relational key
   -- double
@@ -2297,6 +2277,8 @@ namespace Nameless
     (y[0] y[1])
   ]
   ----------------------------------
+
+  --------- relational typing -----------
 
   #eval infer_reduce 0 [lessterm|
     fix(\ y[0] => (
@@ -2314,6 +2296,17 @@ namespace Nameless
   ]
 
   --------- relational selection -----------
+
+  ----------------------------------
+  -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
+  #eval infer_reduce 10 [lessterm|
+    let y[0] = (\ y[0] => fix(\ y[0] => 
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[2], (y[1] y[0]))
+    )) in 
+    ((y[0] #thing()) #succ #succ #zero ())
+  ]
+
   -- expected: ?cons ?nil unit
   #eval infer_reduce 10 [lessterm|
     (fix(\ y[0] => ( 
@@ -2410,6 +2403,7 @@ namespace Nameless
   constructor : (Data <: ?) >> Data -> {Object with Data * Object <: DO}
         where μ DO . {D, α, O // D * (data : D & update : α -> O) with (?cons (α * D) * O) <: DO
   -/
+  -- broken: bound variable β[1] not introduced
   #eval infer_reduce 0 [lessterm|
     -- fix \ self \ data => 
     fix (\ y[0] => \ y[0] => 
@@ -2451,26 +2445,31 @@ namespace Nameless
     -- (((y[0] #nil()).update #hello()).update #world())
   ]
   ------------------
-  #eval infer_reduce 0 [lessterm|
-    let y[0] : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
-    ((y[0] #hello ()) #world ())
-  ]
 
-  #eval infer_reduce 0 [lessterm|
-    let y[0] = (\ y[0] => \ y[0] => (y[1], y[0])) in 
-    ((y[0] #hello ()) #world ())
-  ]
+  ----------------------------------------
+  -- expansion mechanism is deprecated
+  ----------------------------------------
+  -- #eval infer_reduce 0 [lessterm|
+  --   let y[0] : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
+  --   ((y[0] #hello ()) #world ())
+  -- ]
 
-  #eval infer_reduce 0 [lessterm|
-    (((\ y[0] => \ y[0] => (y[1], y[0])) #hello ()) #world ())
-  ]
+  -- #eval infer_reduce 0 [lessterm|
+  --   let y[0] = (\ y[0] => \ y[0] => (y[1], y[0])) in 
+  --   ((y[0] #hello ()) #world ())
+  -- ]
 
-  -- NOTE: this requires subbing in unions to maintain expansion after let-poly generalization
-  #eval infer_reduce 0 [lessterm|
-    let y[0] : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
-    let y[0] = (y[0] #hello ()) in
-    (y[0] #world())
-  ]
+  -- #eval infer_reduce 0 [lessterm|
+  --   (((\ y[0] => \ y[0] => (y[1], y[0])) #hello ()) #world ())
+  -- ]
+
+  -- -- NOTE: this requires subbing in unions to maintain expansion after let-poly generalization
+  -- #eval infer_reduce 0 [lessterm|
+  --   let y[0] : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
+  --   let y[0] = (y[0] #hello ()) in
+  --   (y[0] #world())
+  -- ]
+  ----------------------------------------
 
   ---------- refining parameter type ----------------
   #eval infer_reduce 0 [lessterm|
