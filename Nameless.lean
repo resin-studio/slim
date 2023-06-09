@@ -825,6 +825,38 @@ namespace Nameless
   --------------------------------------------------
   --------------------------------------------------
 
+    partial def save_for_later (context : Context) (payload lower upper : Ty) : Option (Context × Ty) :=
+      -- constraint over function paramter type would prevent sound weakening of constraint, needed for transposition
+      -- this check is the reason that saving cannot happen with the constraint alone
+      let no_function_constraint := no_function_types payload 
+
+      let relation_wellformed := match upper with 
+      | Ty.recur ty_body => true
+        -- free vars are fine; the packing recursively packs them
+        -- (free_vars ty_body).isEmpty 
+      | _ => false
+
+      let lower := (simplify (subst context.env_simple lower))
+      let rlabels := extract_record_labels lower 
+      -- cannot trust a failure result; sound, but incomplete; limit to guaranteed valid results with inhabitable payloads 
+      -- TODO: is ensuring consistent variable record enough to ensure resulting payload is inhabitable?
+      -- TODO: need a to check that the key is structurally consistent with one of the recursive cases 
+      let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels upper)) (fun l =>
+          rlabels.contains l 
+        )
+      let irreducible := !(reducible lower upper)
+
+      if no_function_constraint && relation_wellformed && irreducible && is_consistent_variable_record then
+
+        -- update context with relational information 
+        let context := {context with 
+          env_keychain := index_free_vars context.env_keychain lower 
+          env_relational := context.env_relational.insert lower upper,
+        }
+        some (context, lower)
+      else 
+        none
+
     partial def unify (i : Nat) (context : Context)
     : Ty -> Ty -> (Nat × List Context)
 
@@ -841,42 +873,9 @@ namespace Nameless
       let ty1 := instantiate 0 args ty1
 
 
-      -- cannot trust a failure result; sound, but incomplete; 
-      let (i, contexts) := (unify i context ty_c1 ty_c2)
-      -- vacuous truth unsafe: given P |- Q, if P is incorreclty false, then P |- Q is incorrecly true (which is unsound)
-      if contexts.isEmpty then (
-        -- constraint over function paramter type would prevent sound weakening of constraint
-        let no_function_constraint := no_function_types ty1 
-
-        let relation_wellformed := match ty_c2 with 
-        | Ty.recur ty_body => 
-          -- ensure there are no free variables
-          (free_vars ty_body).isEmpty 
-        | _ => false
-
-        let ty_key := (simplify (subst context.env_simple ty_c1))
-        let rlabels := extract_record_labels ty_key 
-        -- cannot trust a failure result; sound, but incomplete; limit to guaranteed valid results with inhabitable payloads 
-        -- TODO: is ensuring consistent variable record enough to ensure resulting payload is inhabitable?
-        -- TODO: need a to check that the key is structurally consistent with one of the recursive cases 
-        let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
-            rlabels.contains l 
-          )
-        let irreducible := !(reducible ty_key ty_c2)
-
-        if no_function_constraint && relation_wellformed && irreducible && is_consistent_variable_record then
-
-          -- update context with relational information 
-          let context := {context with 
-            env_keychain := index_free_vars context.env_keychain ty_key
-            env_relational := context.env_relational.insert ty_key ty_c2,
-          }
-
-          ----------------------------------------------------------
-          -- TODO: above this could be refactored in to the (ty < Ty.recur) unification case
-          -- removing duplicate code of left and right existential
-          --------------------------------------------------------
-
+      -------------------------
+      match save_for_later context ty1 ty_c1 ty_c2 with
+      | some (context, ty_key) => (
           let (i, contexts) := (unify i context ty1 ty2) 
           let unrefined := contexts.all (fun context => 
             bound_keys.all (fun key => !(context.env_simple.contains key))
@@ -910,9 +909,9 @@ namespace Nameless
             if true then (i, contexts) else (i, [])
             --------------
           )
-        else 
-          (i, []) 
-      ) else ( 
+      )
+      | none => ( 
+        let (i, contexts) := (unify i context ty_c1 ty_c2)
         let ty1_unioned := List.foldr (fun context ty_acc => 
           let ty1_sub := subst context.env_simple ty1 
           (.union (pack bound_start context ty1_sub) ty_acc)
@@ -968,44 +967,10 @@ namespace Nameless
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       bind_nl (unify i context ty' ty) (fun i context => 
-        let (i, contexts) := unify i context ty_c1 ty_c2
 
-        if !contexts.isEmpty then 
-          (i, contexts)
-        else (
-          ------------------------------------------
-          -- TODO: why do we need this here on the right-existential? is it safe? 
-          -- if it's safe here, then it should be safe in the more general unification case
-          -- however; left-existential relies on the unification failing in order to propagate from payload unification
-          ------------------------------------------
-          -- constraint over function paramter type would prevent sound weakening of constraint
-          let no_function_constraint := no_function_types ty
-
-          let relation_wellformed := match ty_c2 with 
-          | Ty.recur ty_body => 
-            -- ensure there are no free variables
-            (free_vars ty_body).isEmpty 
-          | _ => false
-
-          let ty_key := (simplify (subst context.env_simple ty_c1))
-          let rlabels := extract_record_labels ty_key
-          -- TODO: is ensuring consistent variable record to ensure resulting payload is inhabitable?
-          -- TODO: need a to check that the key is structurally consistent with one of the recursive cases 
-          let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels ty_c2)) (fun l =>
-              rlabels.contains l 
-            )
-          let irreducible := !(reducible ty_key ty_c2)
-
-          if no_function_constraint && relation_wellformed && irreducible && is_consistent_variable_record then
-            let context := {context with 
-              env_keychain := index_free_vars context.env_keychain ty_key
-              env_relational := context.env_relational.insert ty_key ty_c2,
-            }
-            (i, [context])
-          else
-            (i, [])
-          --------------------------------------------------------
-        ) 
+        match save_for_later context ty ty_c1 ty_c2 with
+          | some (context, _) => (i, [context]) 
+          | none => unify i context ty_c1 ty_c2
       )
 
 
