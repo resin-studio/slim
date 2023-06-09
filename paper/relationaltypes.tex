@@ -194,18 +194,18 @@ can infer the property that the resulting list has the length of the input numbe
   \inferrule {
     nat = \texttt{induct N . ?zero unit | ?succ N} 
     \\\\
-    nat\_list =  
+    nat\_list\ \alpha =  
     \begin{array}[t]{@{} l}
         \texttt{induct NL .} 
         \arcr
         \hspace{4mm} \texttt{?zero unit * ?nil unit |}
         \arcr
-        \hspace{4mm} \texttt{\{?succ N * ?cons L with N * L <: NL\}}
+        \hspace{4mm} \texttt{\{?succ N * ?cons ($\alpha$ * L) with N * L <: NL\}}
     \end{array}
   } {
     \Delta \cdot \Gamma
     \vdash 
-    repeat : \texttt{forall N <:}\ nat \texttt{ . N -> \{L with N * L <:}\ nat\_list \texttt{\}} 
+    repeat : \texttt{forall X, N <:\ $nat$ . X -> N -> \{L with N * L <:\ $nat\_list$\ X\}} 
   }
 \\
 \end{mathpar}
@@ -240,7 +240,7 @@ which are not reproducible by dynamic semantics.
     \begin{array}[t]{@{} l}
         \texttt{lam x n => }
         \arcr
-        \hspace{4mm}\texttt{let repeat = } repeat \texttt{ in}
+        \hspace{4mm}\texttt{let repeat = $repeat$ in}
         \arcr
         \hspace{4mm}\texttt{let fromList = fix (lam self =>}
         \arcr
@@ -254,27 +254,27 @@ which are not reproducible by dynamic semantics.
 \\
 \end{mathpar}
 
-The parameter type of \texttt{(fromList)} is: 
-\begin{mathpar}
-\\
-  \inferrule {} {
-    list\ \alpha = \texttt{induct L . ?nil unit | ?cons (} \alpha \texttt{ * L)} 
-  }
-\\
-\end{mathpar}
-However, the argument type of the term \texttt{(repeat x n)} is:
-\begin{mathpar}
-\\
-  \inferrule {} {
-    \texttt{\{L with X * L <:}\ nat\_list \texttt{\}}
-  }
-\\
-\end{mathpar}
-
-The types need to be fairly complex due to the abstract information available.
+The argument type of the term \texttt{(repeat x n)} must be a subtype of the parameter type of \texttt{(fromList)}: 
+Since there are applications to arguments that are not hardcoded, 
+the argument type of \texttt{(repeat x n)} is a complex type dependent on a relation
+with some abstract natural number.
+This abstract type information cannot be handled by dynamic semantics. 
 Despite these complexities, the the system is able to ensure that these abstract inferred types
-can safely be composed, by transposing $nat\_list$ into the weaker pair $nat$ \texttt{*} $list \alpha$,
+can safely be composed, by transposing $nat\_list\ \alpha$ into the weaker pair $nat$ \texttt{*} $list\ \alpha$,
 and then unifying the argument's projected list type with the parameter's list type.
+\begin{mathpar}
+\\
+  \inferrule {
+    list\ \alpha = \texttt{induct L . ?nil unit | ?cons (} \alpha \texttt{ * L)} 
+    \\\\
+    \Delta \vdash \texttt{$nat\_list$\ X} \sqsubseteq \texttt{$nat$ * $list$\ X} 
+    \\
+    \Delta \vdash \texttt{$list$\ X} \sqsubseteq \texttt{$list$ Y} 
+  } {
+    \Delta \vdash \texttt{\{L with N * L <: $nat\_list$\ X\}} \sqsubseteq \texttt{$list$ Y} 
+  }
+\\
+\end{mathpar}
 
 
 
