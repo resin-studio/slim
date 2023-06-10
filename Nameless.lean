@@ -1045,20 +1045,54 @@ namespace Nameless
     ---------------------------------------------------------------
     -- free variables
     ---------------------------------------------------------------
-    | (.fvar id1), (.fvar id2) => 
-      match (context.env_simple.find? id1, context.env_simple.find? id2) with 
-      | (.none, .none) => 
+    -- | (.fvar id1), (.fvar id2) => 
+    ----------------
+    -- -- dreprecate
+    --------------------------------
+    --   if id1 == id2 then
+    --     (i, [context])
+    --   else
+    --     -- TODO rrr: 
+    --     --- check env_relational
+    --     -- env_relational is checked in other rules; see what happens if double variable rule is removed
+    --     -- NOTE: this special rule does not leverage refinement mechanism?
+    --     -- example: {x with x * _ <: even_list} ⊆ {y with y * _ <: nat_list}
+    --     match (context.env_simple.find? id1, context.env_simple.find? id2) with 
+    --     | (.some ty', _) => unify i context ty' (.fvar id2) 
+    --     | (_, .some ty) => unify i context (.fvar id1) ty 
+    --     | (.none, .none) => 
+    --       -- NOTE: save as rhs maps to lhs. Enables freed existential vars (rhs) to map to closed existential vars (lhs). 
+    --       (i, [{context with env_simple := context.env_simple.insert id2 (Ty.fvar id1)}])
+    --------------------------------------------
+
+    | ty', .fvar id => 
+      ----------------------
+      -- NOTE: this executes before the left-variable on rule. in case where ty' is also an unassgined variable, save as rhs maps to lhs. 
+        -- Enables freed existential vars (rhs) to map to closed existential vars (lhs). 
+      -- adjustment here records observed types; based on unioning fresh variable
+      -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
+      -- when the environment is packed as a constraint; it becomes id <: ty', so we need union to make id <: ty' | Top
+      --------------------
+      match context.env_simple.find? id with 
+      | some ty => 
+        (unify i context ty' ty) 
+      | none => 
         -- TODO rrr: 
         --- check env_relational
-        -- env_relational is checked in other rules; see what happens if double variable rule is removed
-        -- example: {x with x * _ <: even_list} ⊆ {y with y * _ <: nat_list}
-        if id1 == id2 then
-          (i, [context])
+        let expandable := context.set_expandable.find? id != .none
+        let (i, ty_assign) := (
+          -- if expandable then
+          --   (i + 1, Ty.union (Ty.fvar i) ty') 
+          -- else
+          --   (i, ty')
+          (i, ty')
+        )
+
+        if occurs context id ty_assign then
+          (i, [])
         else
-          -- NOTE: save as rhs maps to lhs. Enables freed existential vars (rhs) to map to closed existential vars (lhs). 
-          (i, [{context with env_simple := context.env_simple.insert id2 (Ty.fvar id1)}])
-      | (_, .some ty) => unify i context (.fvar id1) ty 
-      | (.some ty', _) => unify i context ty' (.fvar id2) 
+          (i, [{context with env_simple := context.env_simple.insert id ty_assign}])
+      ---------------------------------------
 
     | .fvar id, ty  => 
       ----------------------------
@@ -1123,32 +1157,7 @@ namespace Nameless
             let context := {context with env_simple := context.env_simple.insert id ty}
             (i, [context])
 
-    | ty', .fvar id => 
-      ----------------------
-      -- adjustment here records observed types; based on unioning fresh variable
-      -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
-      -- when the environment is packed as a constraint; it becomes id <: ty', so we need union to make id <: ty' | Top
-      --------------------
-      match context.env_simple.find? id with 
-      | some ty => 
-        (unify i context ty' ty) 
-      | none => 
-        -- TODO rrr: 
-        --- check env_relational
-        let expandable := context.set_expandable.find? id != .none
-        let (i, ty_assign) := (
-          -- if expandable then
-          --   (i + 1, Ty.union (Ty.fvar i) ty') 
-          -- else
-          --   (i, ty')
-          (i, ty')
-        )
-
-        if occurs context id ty_assign then
-          (i, [])
-        else
-          (i, [{context with env_simple := context.env_simple.insert id ty_assign}])
-      ---------------------------------------
+    -------------------------------------
 
     | .case ty1 ty2, .case ty3 ty4 =>
 
