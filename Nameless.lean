@@ -905,10 +905,6 @@ namespace Nameless
       else 
         none
 
-    def refinable : Ty -> Bool
-    | .tag _ _ | .unit => false
-    | _ => true
-
     partial def unify (i : Nat) (context : Context)
     : Ty -> Ty -> (Nat × List Context)
 
@@ -1151,28 +1147,19 @@ namespace Nameless
         if !contexts.isEmpty then
           (i, contexts)
         else
-          -------------------------------
-          -- simple refinement
-          -------------------------------
-          -- change: rrr
-          -- we know NOT(ty' <: ty)
-          -- therefore either if ty <: ty' then ty else ty & ty'
-          -- only refine if it's refinable - i.e. not a tag or unit
-          -------------------------------
           let (i, contexts_reversed) := (unify i context ty ty')
           -- pick the simplest lower bound
-          if !contexts_reversed.isEmpty then
-            if (occurs context id ty) then
-              (i, [])
+          let ty_assign := (
+            if !contexts_reversed.isEmpty then
+              ty
             else
-              let context := {context with env_simple := context.env_simple.insert id ty}
-              (i, [context])
-          else 
-            if !refinable ty || !refinable ty' || (occurs context id (Ty.inter ty ty')) then
-              (i, [])
-            else
-              let context := {context with env_simple := context.env_simple.insert id (Ty.inter ty ty')}
-              (i, [context])
+              (Ty.inter ty ty')
+          )
+          if (occurs context id ty_assign) then
+            (i, [])
+          else
+            let context := {context with env_simple := context.env_simple.insert id ty_assign}
+            (i, [context])
       | none => 
         match context.env_keychain.find? id with
         | some keychain =>
@@ -1287,21 +1274,17 @@ namespace Nameless
     | ty', .recur ty =>
 
       -----------------------------
-      -- changed: rrr 
-      -- don't sub before unification; need unification's refinement mechanism
-      -- avoid substitution to allow refinement if possible 
-      ---------------------------
-      -- let ty' := (simplify (subst context.env_simple ty'))
+      -- TODO: rrr 
+      -- substitution prevents refinement that loses precision
+      -- however; it may also be overly strict; 
+      -- figure out how to find the stricted version that passes  
       ---------------------------
       if reducible context ty' (.recur ty) then
-        unify i context ty' (instantiate 0 [Ty.recur ty] ty) 
+        -- precise and strict
+        let ty'_sub := (simplify (subst context.env_simple ty'))
+        unify i context ty'_sub (instantiate 0 [Ty.recur ty] ty) 
       else
-        -----------------------------
-        -- changed: rrr 
-        -- substitute before lookup
-        --------------------
         let ty' := (simplify (subst context.env_simple ty'))
-        -----------------------------
         match context.env_relational.find? ty' with
         | .some ty_cache => 
           unify i context ty_cache (Ty.recur ty)
