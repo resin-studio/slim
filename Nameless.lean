@@ -969,10 +969,14 @@ namespace Nameless
                 (.union (pack bound_start context key_sub) ty_acc)
               ) Ty.bot contexts 
               let (i, contexts_oracle) := (unify i context ty_c2 ty_refined)
+              -----------
+              -- TODO: rrr 
+              -- add safety a precise safety check
               -------------- 
-              -- if !contexts_oracle.isEmpty then
-              ------ debugging
-              if true then (i, contexts) else (i, [])
+              -- if !contexts_oracle.isEmpty then (i, contexts) else (i, [])
+              -------------- 
+              ------ unsafe 
+              (i, contexts)
               --------------
             )
         )
@@ -1144,11 +1148,20 @@ namespace Nameless
           -------------------------------
           -- simple refinement
           -------------------------------
-          if (occurs context id (Ty.inter ty ty')) then
-            (i, [])
-          else
-            let context := {context with env_simple := context.env_simple.insert id (Ty.inter ty ty')}
-            (i, [context])
+          -- change: rrr
+          -- only refine if it's refinable - i.e. not a tag or unit
+          -------------------------------
+          let refinable := match ty with
+          | .tag _ _ | .unit => false
+          | _ => true
+
+          if refinable then (
+            if (occurs context id (Ty.inter ty ty')) then
+              (i, [])
+            else
+              let context := {context with env_simple := context.env_simple.insert id (Ty.inter ty ty')}
+              (i, [context])
+          ) else (i, [])
         else
           (i, contexts)
       | none => 
@@ -1265,17 +1278,20 @@ namespace Nameless
     | ty', .recur ty =>
 
       -----------------------------
-      -- TODO: rrr 
+      -- changed: rrr 
       -- don't sub before unification; need unification's refinement mechanism
+      -- avoid substitution to allow refinement if possible 
       ---------------------------
-      let ty' := (simplify (subst context.env_simple ty'))
+      -- let ty' := (simplify (subst context.env_simple ty'))
+      ---------------------------
       if reducible context ty' (.recur ty) then
         unify i context ty' (instantiate 0 [Ty.recur ty] ty) 
       else
         -----------------------------
-        -- TODO: rrr 
+        -- changed: rrr 
         -- substitute before lookup
-        -- let ty' := (simplify (subst context.env_simple ty'))
+        --------------------
+        let ty' := (simplify (subst context.env_simple ty'))
         -----------------------------
         match context.env_relational.find? ty' with
         | .some ty_cache => 
@@ -2400,6 +2416,37 @@ namespace Nameless
   ]
 
   --------- relational selection -----------
+
+#eval unify_reduce 10 
+[lesstype| (?succ ?zero unit * α[0]) ]
+[lesstype| ⟨nat_list⟩ ]
+[lesstype| α[0] ]
+
+#eval unify_reduce 10 
+[lesstype| (?succ ?succ ?zero unit * α[0]) ]
+[lesstype| ⟨nat_list⟩ ]
+[lesstype| α[0] ]
+
+#eval unify_reduce 10 
+[lesstype| ?succ ?succ ?zero unit ]
+[lesstype|
+     {1 // β[0] with (α[0] * β[0]) <: ⟨nat_list⟩}
+]
+-- [lesstype|
+--      {1 // β[0] with (α[0] * β[0]) <: (induct ((?zero unit * ?nil unit) |
+--         {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}
+-- ]
+[lesstype| α[0] ]
+
+#eval unify_reduce 10 
+[lesstype|
+   (α[0] >> (β[0] ->
+     {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
+        {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}))
+]
+[lesstype| ?succ ?succ ?zero unit -> α[7] ]
+[lesstype| α[7] ]
+
 
   ----------------------------------
   -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
