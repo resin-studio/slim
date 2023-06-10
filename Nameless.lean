@@ -905,6 +905,10 @@ namespace Nameless
       else 
         none
 
+    def refinable : Ty -> Bool
+    | .tag _ _ | .unit => false
+    | _ => true
+
     partial def unify (i : Nat) (context : Context)
     : Ty -> Ty -> (Nat × List Context)
 
@@ -1144,26 +1148,31 @@ namespace Nameless
       match context.env_simple.find? id with 
       | some ty' => 
         let (i, contexts) := (unify i context ty' ty)
-        if contexts.isEmpty then
+        if !contexts.isEmpty then
+          (i, contexts)
+        else
           -------------------------------
           -- simple refinement
           -------------------------------
           -- change: rrr
+          -- we know NOT(ty' <: ty)
+          -- therefore either if ty <: ty' then ty else ty & ty'
           -- only refine if it's refinable - i.e. not a tag or unit
           -------------------------------
-          let refinable := match ty with
-          | .tag _ _ | .unit => false
-          | _ => true
-
-          if refinable then (
-            if (occurs context id (Ty.inter ty ty')) then
+          let (i, contexts_reversed) := (unify i context ty ty')
+          -- pick the simplest lower bound
+          if !contexts_reversed.isEmpty then
+            if (occurs context id ty) then
+              (i, [])
+            else
+              let context := {context with env_simple := context.env_simple.insert id ty}
+              (i, [context])
+          else 
+            if !refinable ty || !refinable ty' || (occurs context id (Ty.inter ty ty')) then
               (i, [])
             else
               let context := {context with env_simple := context.env_simple.insert id (Ty.inter ty ty')}
               (i, [context])
-          ) else (i, [])
-        else
-          (i, contexts)
       | none => 
         match context.env_keychain.find? id with
         | some keychain =>
@@ -1798,13 +1807,22 @@ namespace Nameless
       | some ty1_expected => (i, ty1_expected)
       | none => (i + 1, Ty.fvar i)
 
-      let free_var_boundary := i
-
       if t1 == Tm.hole then
-        let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_expected)]) 
+        ------------------------
+        -- change: rrr
+        -- create variable indrection to expected type
+        -- to allow for refinement
+        ------------------------
+        let (i, id_expected) := (i + 1, i)
+        let context := {context with env_simple := context.env_simple.insert id_expected ty1_expected}
+        let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, Ty.fvar id_expected)]) 
+        ---------------------------------------------
+        -- let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_expected)]) 
+        -------------
         let t := instantiate 0 [x] t 
         (infer i context (env_tm ; env_tmx) t) 
       else
+        let free_var_boundary := i
         bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
         bind_nl (Ty.unify i context ty1 ty1_expected) (fun i context =>
           let ty1_schema := Ty.generalize free_var_boundary context ty1
@@ -2428,17 +2446,6 @@ namespace Nameless
 [lesstype| α[0] ]
 
 #eval unify_reduce 10 
-[lesstype| ?succ ?succ ?zero unit ]
-[lesstype|
-     {1 // β[0] with (α[0] * β[0]) <: ⟨nat_list⟩}
-]
--- [lesstype|
---      {1 // β[0] with (α[0] * β[0]) <: (induct ((?zero unit * ?nil unit) |
---         {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}
--- ]
-[lesstype| α[0] ]
-
-#eval unify_reduce 10 
 [lesstype|
    (α[0] >> (β[0] ->
      {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
@@ -2622,7 +2629,7 @@ namespace Nameless
   -- ]
   ----------------------------------------
 
-  ---------- refining parameter type ----------------
+  ---------- refinement ----------------
   #eval infer_reduce 0 [lessterm|
   let y[0] : ?uno unit -> unit = _ in 
   let y[0] : ?dos unit -> unit = _ in 
@@ -2649,6 +2656,7 @@ namespace Nameless
     ((y[2] y[0]), (y[1] y[0])))
   ]
 
+  -- broken; issue in simple refinement
   -- expected: ⊥ -> unit * unit
   #eval infer_reduce 0 [lessterm|
   let y[0] : ?uno unit -> unit = _ in 
