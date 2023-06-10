@@ -580,8 +580,40 @@ namespace Nameless
     | .recur ty => .recur (instantiate (start + 1) args ty)
 
 
-    partial def occurs (key : Nat) (m : PHashMap Nat Ty) (ty : Ty) : Bool :=
-      (free_vars (subst m ty)).contains key
+    partial def occurs (m : Ty.Context) (key : Nat): Ty -> Bool 
+    | .bvar id => false 
+    | .fvar id => 
+      (key == id) || 
+      (match m.env_simple.find? id with
+      | some ty => occurs m key ty 
+      | none => 
+        (match m.env_keychain.find? id with
+        | some keychain => 
+          (toList keychain).any (fun lower => 
+            (match m.env_relational.find? lower with
+            | some relation => occurs m key relation 
+            | none => false
+            )
+          )
+        | none => false
+        )
+      )
+    | .unit => false 
+
+    | .top => false 
+    | .bot => false 
+    | .tag l ty => occurs m key ty 
+    | .field l ty => occurs m key ty
+    | .union ty1 ty2 => (occurs m key ty1) || (occurs m key ty2)
+    | .inter ty1 ty2 => (occurs m key ty1) || (occurs m key ty2)
+    | .case ty1 ty2 => (occurs m key ty1) || (occurs m key ty2)
+    | .exis n ty_c1 ty_c2 ty => 
+      (occurs m key ty_c1) || (occurs m key ty_c2) || (occurs m key ty)
+    | .univ op_ty_c ty => 
+      (match op_ty_c with
+      | none => false
+      | some ty_c => (occurs m key ty_c)) || (occurs m key ty)
+    | .recur ty => (occurs m key ty)
 
     partial def subst_default (sign : Bool) : Ty -> Ty
     | .bvar id => .bvar id  
@@ -801,7 +833,8 @@ namespace Nameless
 
 
     -- check that ty_rec is wellfounded with respect to reducible column in ty_key
-    partial def reducible (ty_key ty_rec : Ty) : Bool :=
+    partial def reducible (context : Ty.Context) (ty_key ty_rec : Ty) : Bool :=
+      let ty_key := simplify (subst context.env_simple ty_key)  
       let fields := record_fields ty_key
       if fields.isEmpty then
         match ty_key with
@@ -819,7 +852,7 @@ namespace Nameless
         let ty_trans := toList (transpose_map labels ty_rec)
         ty_trans.any (fun (l, ty_rec) =>
           match fields.find? l with
-          | some ty_key => reducible ty_key ty_rec
+          | some ty_key => reducible context ty_key ty_rec
           | none => false
         )  
   --------------------------------------------------
@@ -836,17 +869,28 @@ namespace Nameless
         -- (free_vars ty_body).isEmpty 
       | _ => false
 
+
+      ----------------------------------------
+      -- TODO: rrr 
+      -- remove substitution
       let lower := (simplify (subst context.env_simple lower))
+      ---------------------------------------
       let rlabels := extract_record_labels lower 
       -- cannot trust a failure result; sound, but incomplete; limit to guaranteed valid results with inhabitable payloads 
       -- TODO: is ensuring consistent variable record enough to ensure resulting payload is inhabitable?
       -- TODO: need a to check that the key is structurally consistent with one of the recursive cases 
+
+
+
+      let occurence := (toList (free_vars lower)).any (fun key => occurs context key upper) 
+
+
       let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels upper)) (fun l =>
           rlabels.contains l 
         )
-      let irreducible := !(reducible lower upper)
+      let irreducible := !(reducible context lower upper)
 
-      if no_function_constraint && relation_wellformed && irreducible && is_consistent_variable_record then
+      if no_function_constraint && relation_wellformed && irreducible && is_consistent_variable_record && !occurence then
 
         -- update context with relational information 
         let context := {context with 
@@ -1004,6 +1048,10 @@ namespace Nameless
     | (.fvar id1), (.fvar id2) => 
       match (context.env_simple.find? id1, context.env_simple.find? id2) with 
       | (.none, .none) => 
+        -- TODO rrr: 
+        --- check env_relational
+        -- env_relational is checked in other rules; see what happens if double variable rule is removed
+        -- example: {x with x * _ <: even_list} ⊆ {y with y * _ <: nat_list}
         if id1 == id2 then
           (i, [context])
         else
@@ -1027,7 +1075,7 @@ namespace Nameless
           -------------------------------
           -- simple refinement
           -------------------------------
-          if (occurs id context.env_simple (Ty.inter ty ty')) then
+          if (occurs context id (Ty.inter ty ty')) then
             (i, [])
           else
             let context := {context with env_simple := context.env_simple.insert id (Ty.inter ty ty')}
@@ -1057,7 +1105,7 @@ namespace Nameless
               if !contexts.isEmpty then
                 (i, contexts)
               else
-                if (occurs id context.env_simple ty) then
+                if (occurs context id ty) then
                   (i, [])
                 else (
                   let context := {context with env_simple := context.env_simple.insert id ty}
@@ -1069,7 +1117,7 @@ namespace Nameless
             )
           ) (i, [context])
         | none =>
-          if (occurs id context.env_simple ty) then
+          if (occurs context id ty) then
             (i, [])
           else
             let context := {context with env_simple := context.env_simple.insert id ty}
@@ -1082,7 +1130,11 @@ namespace Nameless
       -- when the environment is packed as a constraint; it becomes id <: ty', so we need union to make id <: ty' | Top
       --------------------
       match context.env_simple.find? id with 
+      | some ty => 
+        (unify i context ty' ty) 
       | none => 
+        -- TODO rrr: 
+        --- check env_relational
         let expandable := context.set_expandable.find? id != .none
         let (i, ty_assign) := (
           -- if expandable then
@@ -1092,12 +1144,10 @@ namespace Nameless
           (i, ty')
         )
 
-        if occurs id context.env_simple ty_assign then
+        if occurs context id ty_assign then
           (i, [])
         else
           (i, [{context with env_simple := context.env_simple.insert id ty_assign}])
-      | some ty => 
-        (unify i context ty' ty) 
       ---------------------------------------
 
     | .case ty1 ty2, .case ty3 ty4 =>
@@ -1169,10 +1219,20 @@ namespace Nameless
           (i, contexts)
 
     | ty', .recur ty =>
+
+      -----------------------------
+      -- TODO: rrr 
+      -- don't sub before unification; need unification's refinement mechanism
+      ---------------------------
       let ty' := (simplify (subst context.env_simple ty'))
-      if reducible ty' (.recur ty) then
+      if reducible context ty' (.recur ty) then
         unify i context ty' (instantiate 0 [Ty.recur ty] ty) 
       else
+        -----------------------------
+        -- TODO: rrr 
+        -- substitute before lookup
+        -- let ty' := (simplify (subst context.env_simple ty'))
+        -----------------------------
         match context.env_relational.find? ty' with
         | .some ty_cache => 
           unify i context ty_cache (Ty.recur ty)
@@ -2420,7 +2480,7 @@ namespace Nameless
   /-
 (? >> 
 
-(β[1] >> -- this looks wrong; 0 should occur before 1
+(β[1] >> -- this is correct; short hand for (β[0] <: β[1] >>) 
 
 (β[0] ->
    {1 // β[0] with (β[1] * β[0]) <: (induct 
