@@ -881,16 +881,20 @@ namespace Nameless
       -- TODO: need a to check that the key is structurally consistent with one of the recursive cases 
 
 
-
       let occurence := (toList (free_vars lower)).any (fun key => occurs context key upper) 
 
 
       let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels upper)) (fun l =>
           rlabels.contains l 
         )
-      let irreducible := !(reducible context lower upper)
 
-      if no_function_constraint && relation_wellformed && irreducible && is_consistent_variable_record && !occurence then
+      -------------
+      -- irreducible check is necessary because failure of constraint does not imply irreducibility
+      -------
+      let irreducible := !(reducible context lower upper)
+      -------------
+
+      if irreducible && no_function_constraint && relation_wellformed && is_consistent_variable_record && !occurence then
 
         -- update context with relational information 
         let context := {context with 
@@ -918,44 +922,9 @@ namespace Nameless
 
 
       -------------------------
-      match save_for_later context ty1 ty_c1 ty_c2 with
-      | some (context, ty_key) => (
-          let (i, contexts) := (unify i context ty1 ty2) 
-          let unrefined := contexts.all (fun context => 
-            bound_keys.all (fun key => !(context.env_simple.contains key))
-          )
-          if unrefined then
-            (i, contexts)
-          else (
-            -- step 1: solve constraint with updated context  
-            let fids_key := toList (free_vars ty_key)
-            let (i, contexts) := bind_nl (i, contexts) (fun i context =>
-              if fids_key.any (fun fid_key => context.env_simple.contains fid_key) then
-                let (i, contexts) := (unify i context ty_c1 ty_c2)
-                if !contexts.isEmpty then
-                  (i, contexts)
-                else
-                  (i, [context])
-              else
-                (i, [context])
-            )
 
-            -- step 2: safety check
-            -- checks that constraint is weaker; only safe if there's no constraint over parameter type
-            let ty_refined := List.foldr (fun context ty_acc => 
-              let key_sub := subst context.env_simple ty_key
-              (.union (pack bound_start context key_sub) ty_acc)
-            ) Ty.bot contexts 
-            let (i, contexts_oracle) := (unify i context ty_c2 ty_refined)
-            -------------- 
-            -- if !contexts_oracle.isEmpty then
-            ------ debugging
-            if true then (i, contexts) else (i, [])
-            --------------
-          )
-      )
-      | none => ( 
-        let (i, contexts) := (unify i context ty_c1 ty_c2)
+      let (i, contexts) := (unify i context ty_c1 ty_c2)
+      if !contexts.isEmpty then (
         let ty1_unioned := List.foldr (fun context ty_acc => 
           let ty1_sub := subst context.env_simple ty1 
           (.union (pack bound_start context ty1_sub) ty_acc)
@@ -970,6 +939,44 @@ namespace Nameless
           )
         else
           (i, [])
+      ) else (
+        match save_for_later context ty1 ty_c1 ty_c2 with
+        | some (context, ty_key) => (
+            let (i, contexts) := (unify i context ty1 ty2) 
+            let unrefined := contexts.all (fun context => 
+              bound_keys.all (fun key => !(context.env_simple.contains key))
+            )
+            if unrefined then
+              (i, contexts)
+            else (
+              -- step 1: solve constraint with updated context  
+              let fids_key := toList (free_vars ty_key)
+              let (i, contexts) := bind_nl (i, contexts) (fun i context =>
+                if fids_key.any (fun fid_key => context.env_simple.contains fid_key) then
+                  let (i, contexts) := (unify i context ty_c1 ty_c2)
+                  if !contexts.isEmpty then
+                    (i, contexts)
+                  else
+                    (i, [context])
+                else
+                  (i, [context])
+              )
+
+              -- step 2: safety check
+              -- checks that constraint is weaker; only safe if there's no constraint over parameter type
+              let ty_refined := List.foldr (fun context ty_acc => 
+                let key_sub := subst context.env_simple ty_key
+                (.union (pack bound_start context key_sub) ty_acc)
+              ) Ty.bot contexts 
+              let (i, contexts_oracle) := (unify i context ty_c2 ty_refined)
+              -------------- 
+              -- if !contexts_oracle.isEmpty then
+              ------ debugging
+              if true then (i, contexts) else (i, [])
+              --------------
+            )
+        )
+        | none => (i, [])
       )
     ) 
 
@@ -1011,10 +1018,13 @@ namespace Nameless
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       bind_nl (unify i context ty' ty) (fun i context => 
-
-        match save_for_later context ty ty_c1 ty_c2 with
-          | some (context, _) => (i, [context]) 
-          | none => unify i context ty_c1 ty_c2
+        let (i, contexts) := unify i context ty_c1 ty_c2
+        if !contexts.isEmpty then
+          (i, contexts)
+        else
+          match save_for_later context ty ty_c1 ty_c2 with
+            | some (context, _) => (i, [context]) 
+            | none => (i, []) 
       )
 
 
