@@ -1052,7 +1052,7 @@ namespace Nameless
     --   if id1 == id2 then
     --     (i, [context])
     --   else
-    --     -- TODO rrr: 
+    --     -- changed: rrr: 
     --     --- check env_relational
     --     -- env_relational is checked in other rules; see what happens if double variable rule is removed
     --     -- NOTE: this special rule does not leverage refinement mechanism?
@@ -1072,26 +1072,51 @@ namespace Nameless
       -- adjustment here records observed types; based on unioning fresh variable
       -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
       -- when the environment is packed as a constraint; it becomes id <: ty', so we need union to make id <: ty' | Top
+      -- NAT <: X with X * _ <: NAT_LIST fails because NAT * _ <: NAT_LIST fails 
+      -- ?zero unit <: X with X * _ <: NAT_LIST succeeds because ?zero unit * _ <: NAT_LIST succeeds 
       --------------------
       match context.env_simple.find? id with 
       | some ty => 
         (unify i context ty' ty) 
       | none => 
-        -- TODO rrr: 
+        -- changed: rrr: 
         --- check env_relational
-        let expandable := context.set_expandable.find? id != .none
-        let (i, ty_assign) := (
-          -- if expandable then
-          --   (i + 1, Ty.union (Ty.fvar i) ty') 
-          -- else
-          --   (i, ty')
-          (i, ty')
-        )
+        match context.env_keychain.find? id with
+        | some keychain =>
+          keychain.fold (fun (i, contexts) key =>
+            bind_nl (i, contexts) (fun i context => 
+              match context.env_relational.find? key with
+              | some relation => 
+                let env_sub : PHashMap Nat Ty := empty.insert id ty'
+                let ty_sub := subst env_sub key  
+                (unify i context ty_sub relation) 
+              | none => 
+                -- invariant: this never happens
+                (i, [])
+            )
+          ) (i, [context])
+        |none => (
+          -----------------
+          -- deprecate expansion
+          -----------------
+          -- let expandable := context.set_expandable.find? id != .none
+          -- let (i, ty_assign) := (
+          --   if expandable then
+          --     (i + 1, Ty.union (Ty.fvar i) ty') 
+          --   else
+          --     (i, ty')
+          -- )
 
-        if occurs context id ty_assign then
-          (i, [])
-        else
-          (i, [{context with env_simple := context.env_simple.insert id ty_assign}])
+          -- if occurs context id ty_assign then
+          --   (i, [])
+          -- else
+          --   (i, [{context with env_simple := context.env_simple.insert id ty_assign}])
+          ------------------------------
+          if occurs context id ty' then
+            (i, [])
+          else
+            (i, [{context with env_simple := context.env_simple.insert id ty'}])
+        )
       ---------------------------------------
 
     | .fvar id, ty  => 
