@@ -28,11 +28,12 @@
     % textcolor=blue,
     % keywordstyle=\color{blue},
     % keywordstyle=\text,
-    basicstyle=\ttfamily,
+    basicstyle=\ttfamily\small,
     % mathescape=true,
     % showspaces=false,
     % morekeywords={let, fix, in}
 }
+
 
 
 \title{Relational Type Inference}
@@ -40,6 +41,9 @@
 % \date{October 2022}
 
 \begin{document}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+
 
 \maketitle
 
@@ -141,11 +145,11 @@ Thus, parametric types are extended with constraints in the form of subtyping.
             path #nil => $\hdots$
             path #cons (x, xs) => $\hdots$) in
 
-        let transpose = path x n => fromList (repeat x n)
+        let fromNat = path x n => fromList (repeat x n)
 
-        let fromUno = path (@x = #uno content) => $\hdots$ in
-        let fromDos = path (@y = #dos content) => $\hdots$ in
-        let doboth = path x => (fromUno x, fromDos, x)
+        let fromUno = path (@uno = content) => $\hdots$ in
+        let fromDos = path (@dos = content) => $\hdots$ in
+        let fromBoth = path x => (fromUno x, fromDos, x)
 
         let lessOrEq = fix (path self =>
             path (#zero, _) => #true
@@ -161,16 +165,16 @@ Thus, parametric types are extended with constraints in the form of subtyping.
     \end{lstlisting}
 
 \caption{Example program}
+\label{fig:program}
 \end{figure*}
 
 
-\subsection{Basic Type Inference}
+\subsection{Type Inference}
 
-We begin with some simple examples to illustrate the syntax and semantics of
-programs and types.
+We illustrate the syntax and semantics of programs and types with the example program shown in Figure \ref{fig:program}.
 
 \paragraph{Path typing.}
-Consider a trivial function that completes an English phrase:
+Consider the function \code{trivial} that completes an English phrase:
 
 This program is defined by paths over hardcoded tags.
 The system infers the type to be an intersection of implication types:
@@ -179,60 +183,63 @@ The system infers the type to be an intersection of implication types:
   \inferrule {} {
     \Delta \cdot \Gamma
     \vdash 
-    trivial : 
-        \texttt{(?hello unit -> ?world unit) \& (?good unit -> ?morning unit)}
+    \code{trivial} : 
+        \code{(?hello -> ?world) \& (?good -> ?morning)}
   }
 \\
 \end{mathpar}
 
 \paragraph{Path selection.}
 
-Suppose the program $trivial$ is applied to a literal value $\#\text{hello}()$. 
-The system can discard the irrelevant clauses and infer the singleton type.
+Suppose the function \code{trivial} is applied to a literal value \code{\#hello}. 
+The system can discard the irrelevant clauses and infer the singleton type \code{?world}.
 \begin{mathpar}
 \\
     \inferrule {} {
         \Delta \cdot \Gamma
         \vdash 
-        trivial\ \texttt{\#hello()} :\ \texttt{?world unit} 
+        \code{trivial \#hello} :\ \code{?world} 
     }
 \\
 \end{mathpar}
 
 
-\paragraph{Relational typing.} Consider a function that takes a natural number and returns a list of that length. 
+\paragraph{Relational typing.} 
+Consider the function \code{repeat} that takes a natural number and returns a list of that length. 
 Without specifying any requirements besides the function definition, the system 
 can infer the property that the resulting list has the length of the input number. 
 \begin{mathpar}
 \\
   \inferrule {
-    nat = \texttt{induct N . ?zero unit | ?succ N} 
+    nat = \code{induct N . ?zero | ?succ N} 
     \\\\
     nat\_list\ \alpha =  
-    \begin{array}[t]{@{} l}
-        \texttt{induct NL .} 
+    \left(
+    \begin{array}[]{@{} l}
+        \code{induct NL .} 
         \arcr
-        \hspace{4mm} \texttt{?zero unit * ?nil unit |}
+        \hspace{4mm} \code{?zero * ?nil |}
         \arcr
-        \hspace{4mm} \texttt{\{?succ N * ?cons ($\alpha$ * L) with N * L <: NL\}}
+        \hspace{4mm} \code{\{?succ N * ?cons ($\alpha$ * L) with N * L <: NL\}}
     \end{array}
+    \right)
   } {
     \Delta \cdot \Gamma
     \vdash 
-    repeat : \texttt{forall X, N <:\ $nat$ . X -> N -> \{L with N * L <:\ $nat\_list$\ X\}} 
+    \code{repeat} : \code{forall X, N <:\ $nat$ . X -> N -> \{L with N * L <:\ $nat\_list$\ X\}} 
   }
 \\
 \end{mathpar}
 
-\paragraph{Relational selection.} Suppose the program $repeat$ is applied to the hardcoded number two, 
-represented as \texttt{ \#succ \#succ \#zero ()} . The system can infer the singleton type representing a list,
+\paragraph{Relational selection.} Suppose the function \code{repeat} is applied to the hardcoded number two, 
+represented as \code{(\#succ \#succ \#zero)}. The system can infer the result to be a singleton type representing a single list,
 much like how Prolog evaluates logic programs.
 \begin{mathpar}
 \\
   \inferrule {} {
     \Delta \cdot \Gamma
     \vdash 
-    repeat\ \texttt{()  (\#succ \#succ \#zero ())}:  \texttt{\#cons (unit * \#cons (unit * \#nil unit))}
+    \code{repeat ()  (\#succ \#succ \#zero)}: \code{?cons (unit * ?cons (unit * ?nil))}
   }
 \\
 \end{mathpar}
@@ -241,71 +248,140 @@ Path selection and relational selection demonstrate that the declarative type la
 to perform evaluation. However, this simply reproduces the effect of the dynamic semantics, 
 albeit in a declarative style. For types to be useful in practice, they need to offer ways to
 express properties with incomplete information.
-
-
-\subsection{Practical Type Inference}
-Next we demonstrate how types representing abstract properties compose to produce useful properties,
+The next examples illustrate how the system can compose abstract properties to infer useful properties,
 which are not reproducible by dynamic semantics.
 
-\paragraph{Transposition.} Consider a function that expects a list, applied to a list that's related to a nat. 
 
-The argument type of the term \texttt{(repeat x n)} must be a subtype of the parameter type of \texttt{(fromList)}: 
-Since there are applications to arguments that are not hardcoded, 
-the argument type of \texttt{(repeat x n)} is a complex type projected from a relation
-with an abstract natural number.
+\paragraph{Transposition.} Suppose the function \code{fromList}, which expects a list, 
+is applied to a list that's related to a natural number, as would be the result of \code{(repeat x n)},
+illustrated in the body of \code{fromNat}.
+The system must verify that the type of \code{(repeat x n)} is a subtype of the parameter type of \code{(fromList)}.
+The argument type of \code{(repeat x n)} is a type projected from a relation with an abstract natural number,
+since its arguments are not hardcoded.
 This abstract type information cannot be handled by dynamic semantics. 
 Despite these complexities, the the system is able to ensure that these abstract inferred types
-can safely be composed, by transposing $nat\_list\ \alpha$ into the weaker pair $nat$ \texttt{*} $list\ \alpha$,
-and then unifying the argument's projected list type with the parameter's list type.
+can safely be composed, by transposing \code{($nat\_list\ \alpha$)} into the weaker pair \code{($nat$ * $list\ \alpha$)}.
+Once transposed, the list type of the argument type's relation can be projected and unified with the parameter's list type. 
 \begin{mathpar}
 \\
   \inferrule {
-    list\ \alpha = \texttt{induct L . ?nil unit | ?cons (} \alpha \texttt{ * L)} 
+    list\ \alpha = \code{induct L . ?nil | ?cons ($\alpha$ * L)} 
     \\\\
-    \Delta \vdash \texttt{$nat\_list$\ X} \sqsubseteq \texttt{$nat$ * $list$\ X} 
+    \Delta \vdash \code{$nat\_list$\ X} \sqsubseteq \code{$nat$ * $list$\ X} 
     \\
-    \Delta \vdash \texttt{$list$\ X} \sqsubseteq \texttt{$list$ Y} 
+    \Delta \vdash \code{$list$\ X} \sqsubseteq \code{$list$ Y} 
   } {
-    \Delta \vdash \texttt{\{L with N * L <: $nat\_list$\ X\}} \sqsubseteq \texttt{$list$ Y} 
+    \Delta \vdash \code{\{L with N * L <: $nat\_list$\ X\}} \sqsubseteq \code{$list$ Y} 
   }
 \\
 \end{mathpar}
-
 Note that weakening the constraint is sound because it constrains the stronger type (on the left side of subtyping),
 and it does not constrain parameter types. Weakening a parameter type of the stronger type would be unsound.  
 
 
-\paragraph{Inductive subtyping.} An even number subtypes a natural number.
-
-\paragraph{Relational subtyping.} An evenList subtypes a natList.
-But the argument type is a Nat related to a List.
-To check safety, the NatList relation must be transposed into a pair of Nat and List.
-
-\paragraph{Simple refinement.}
-Consider a program that calls two functions on some argument whose value is unknown.  
-
-Since the arguments to both functions is just a variable, there is no particular value that must inhabit its type.
-Therefore, its type can simply be refined based on the types expected by the two functions applied to it.
-
+\paragraph{Inductive subtyping.} 
+Consider applying a function that expects a natural number to an argument whose type is an even natural number.
+In order to verify that this application is allowed, the system must verify that an even number is 
+a subtype of a natural number. The system can soundly verify this subtyping by relying on an induction hypothesis.
+The induction hypothesis allows weakening the inductive component of the even type to the natural number type as it unrolls. 
 \begin{mathpar}
 \\
-  \inferrule {} {
-    \Delta \cdot \Gamma \vdash refined : \texttt{(x : ?uno X) \& (y : ?dos Y) -> $\hdots$} 
+  \inferrule {
+    \inferrule {
+      even = \code{induct N . ?zero | ?succ ?succ N} 
+      \\\\
+      \Delta \vdash \code{(?zero | ?succ ?succ $nat$)} \sqsubseteq nat 
+    } {
+      \Delta, \code{$even$ <: $nat$}  \vdash \code{(?zero | ?succ ?succ $even$)} \sqsubseteq nat 
+    }
+  } {
+    \Delta \vdash even \sqsubseteq nat 
+  }
+\\
+\end{mathpar}
+
+\paragraph{Relational subtyping.} Due to the precise relational types that the system infers, 
+it may also be necessary to verify that a relation subtypes another relation, 
+such as a list with an even length subtyping an list with a natural number length.
+This situation is similar to inductive subtyping of simple types, but it is complicated
+by relational constraints in the inductive relations, which must be added to the context.
+\begin{mathpar}
+\\
+  \inferrule {
+    \inferrule {
+      even\_list\ \alpha =  
+      \left(
+      \begin{array}[]{@{} l}
+          \code{induct EL .}
+          \arcr
+          \hspace{4mm} \code{?zero * ?nil |}
+          \arcr
+          \hspace{4mm} \code{\{?succ ?succ E * ?cons ?cons ($\alpha$ * L) with E * L <: EL\}}
+      \end{array}
+      \right)
+      \\\\
+      \Delta, \code{E * L <: $nat\_list$ unit} \vdash 
+      \left(
+      \begin{array}[]{@{} l}
+        \code{?zero * ?nil |} 
+        \arcr
+        \code{?succ ?succ E * }
+        \arcr
+        \hspace{4mm}\code{?cons (unit * ?cons (unit * L))}
+      \end{array}
+      \right)
+      \sqsubseteq nat\_list
+    } {
+      \left(
+      \Delta, 
+      \begin{array}[]{@{} l}
+        \code{$even\_list$ unit <:$nat\_list$ unit},
+        \arcr
+        \code{E * L <: $even\_list$ unit}
+      \end{array}
+      \right)
+      \vdash 
+      \left(
+      \begin{array}[]{@{} l}
+        \code{?zero * ?nil |} 
+        \arcr
+        \code{?succ ?succ E * }
+        \arcr
+        \hspace{4mm}\code{?cons (unit * ?cons (unit * L))}
+      \end{array}
+      \right)
+      \sqsubseteq nat\_list
+      % \\\\
+    }
+  } {
+    \Delta \vdash \code{($even\_list$ unit)} \sqsubseteq \code{($nat\_list$ unit)} 
   }
 \\
 \end{mathpar}
 
 
-\paragraph{Path sensitivity.} Consider function that chooses the maximum of two natural numbers. 
 
-The program $max$ must satisfy the property that the result is greater or equal to each of the inputs. 
+\paragraph{Refinement.}
+Consider the function \code{fromBoth} that calls two functions on some variable of unknown value or type.  
+The same variable is used as an argument to two separate functions that have different parameter types.
+The type of the variable can be refined by intersecting both parameter types that it must satisfy.
+\begin{mathpar}
+\\
+  \inferrule {} {
+    \Delta \cdot \Gamma \vdash \code{fromBoth} : \code{(uno : X) \& (dos : Y) -> $\hdots$} 
+  }
+\\
+\end{mathpar}
+
+\paragraph{Path sensitivity.} Consider the function \code{max} that chooses the maximum of two natural numbers. 
+The function must satisfy the property that the result is greater or equal to each of the inputs. 
 The system can infer this property by relying on multiple type inference mechanisms, including
 relational typing, path selection, refinement, and a special form of refinement that refines a type
 by specializing relations it belongs to. The \emph{if-then-else} expression is merely sugar for applying
 a function with a \emph{true} path and \emph{false} path to a boolean expression. 
 Note that the variables are used in both the condition and the bodies of the if-then-else expression.
 To infer a precise type for the if-then-else expression, the types of the variables need to be refined according to 
-each path's expected type, but without leaking the refinement it outside of that path. 
+each path's expected type, but without leaking the refinement outside of that path. 
 That is, the refinements must be local or path sensitive.
 Moreover, there must be enough paths of the applied function to handle all 
 the possible values of the argument.
@@ -313,39 +389,36 @@ the possible values of the argument.
 \\
   \inferrule {
     leq\_decide =  
-    \begin{array}[t]{@{} l}
-        \texttt{induct LED .} 
+    \left(
+    \begin{array}[]{@{} l}
+        \code{induct LED .} 
         \arcr
-        \hspace{4mm} \texttt{?zero unit * \_ * ?true unit |}
+        \hspace{4mm} \code{\{?zero * \_ * ?true\} |}
         \arcr
-        \hspace{4mm} \texttt{\{?succ X * ?succ Y * B  with X * Y * B <: LED\} |}
+        \hspace{4mm} \code{\{?succ X * ?succ Y * B  with X * Y * B <: LED\} |}
         \arcr
-        \hspace{4mm} \texttt{?succ \_ * ?zero unit * ?false unit}
+        \hspace{4mm} \code{\{?succ \_ * ?zero * ?false\}}
     \end{array}
+    \right)
     \\\\
-    geq\_both =  
-    \begin{array}[t]{@{} l}
-        \texttt{X * Y -> Y \& \{Z with (X * Z * ?true unit) <: $leq\_decide$\} |}
+    max\_spec =  
+    \left(
+    \begin{array}[]{@{} l}
+        \code{X * Y -> Y \& \{Z with (X * Z * ?true) <: $leq\_decide$\} |}
         \arcr
-        \texttt{X * Y -> X \& \{Z with (Z * Y * ?false unit) <: $leq\_decide$\}}
-    % \begin{array}[t]{@{} l}
-    %     \texttt{\{X * Y -> Y with (X * Y * ?true unit) <: $led$\} |}
-    %     \arcr
-    %     \texttt{\{X * Y -> X with (X * Y * ?false unit) <: $led$\}}
+        \code{X * Y -> X \& \{Z with (Z * Y * ?false) <: $leq\_decide$\}}
     \end{array}
+    \right)
   } {
-    \Delta \cdot \Gamma \vdash max : geq\_both 
+    \Delta \cdot \Gamma \vdash \code{max} : max\_spec 
   }
 \\
 \end{mathpar}
 
 
-\paragraph{List bounds.}
-\paragraph{Generalization.} This is motivated by applying the same function to multiple arguments of varying types.
-\paragraph{Expanding return type.}  
-This is motivated by object-oriented patterns in untyped programs.
-The expansion flag may not actually be needed, as distinct types can be handled via existential inside of inductive type,
-which results in fresh variables at the time of unification.
+% \paragraph{List bounds.}
+% \paragraph{Generalization.} This is motivated by applying the same function to multiple arguments of varying types.
+% \paragraph{Object oriented.}  
 
 \section{Related work}
 
