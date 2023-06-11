@@ -1091,7 +1091,15 @@ namespace Nameless
       --------------------
       match context.env_simple.find? id with 
       | some ty => 
-        (unify i context ty' ty) 
+        bind_nl (unify i context ty' ty) (fun i context =>
+          ---------------------------
+          -- change: rrr
+          -- refines parameter type from argument type 
+          -- this improves relational selection generated from application with a paramtere type
+          ---------------------------
+          let context := {context with env_simple := context.env_simple.insert id ty'}
+          (i, [context])
+        )
       | none => 
         -- changed: rrr: 
         --- check env_relational
@@ -1272,12 +1280,12 @@ namespace Nameless
           (i, contexts)
 
     | ty', .recur ty =>
-
       -----------------------------
       -- TODO: rrr 
-      -- substitution prevents refinement that loses precision
-      -- however; it may also be overly strict; 
-      -- figure out how to find the stricted version that passes  
+      -- substitution may cause failure 
+      -- e.g. in max example, when there's a parameter type in in the fix type
+      -- although, this might be handled when relational constraint is saved
+      -- consider steps to iteratively stregthen lhs to allow to find some version that passes.
       ---------------------------
       if reducible context ty' (.recur ty) then
         -- precise and strict
@@ -1824,28 +1832,29 @@ namespace Nameless
         let ty_IH := (Ty.subst context.env_simple ty_IH)
         let ty_conc := (Ty.subst context.env_simple ty_conc)
         ------------------------------------------------------
+        -- TODO: rrr
+        -- add parameter type once weakening with iterative strengthening is implemented 
         -- TODO: factor out this rewriting with higher order function 
-        -- TODO: need to avoid relational types in parameter
         -------------------------------------------------------
         -- let ty_param_content := List.foldr (fun ty_case ty_acc =>
-        --   let fvs := (Ty.free_vars ty_case).toList.bind (fun (k , _) => [k])
+        --   let fvs := (toList (Ty.free_vars ty_case)).filter (fun fid => fid >= boundary)
         --   let fvs_prem :=  (Ty.free_vars ty_IH)
         --   let ty_choice := (
         --     if List.any fvs (fun id => fvs_prem.find? id != none) then
         --       let fixed_point := fvs.length
         --       [lesstype|
-        --         {[⟨fvs.length⟩] ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩ with 
+        --         {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩ with 
         --           ⟨Ty.abstract fvs 0 (Ty.get_prem ty_IH)⟩ <: β[⟨fixed_point⟩] 
         --         } 
         --       ]
         --     else if fvs.length > 0 then
-        --       [lesstype| {[⟨fvs.length⟩] ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩} ]
+        --       [lesstype| {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩} ]
         --     else
         --       (Ty.get_prem ty_case)
         --   )
 
         --   (Ty.union ty_choice ty_acc) 
-        -- ) [lesstype| ⊥ ] (Ty.split_intersectionss ty_conc)
+        -- ) [lesstype| ⊥ ] (Ty.split_intersections ty_conc)
 
         -- let ty_param := [lesstype| induct ⟨ty_param_content⟩ ]
         ------------------------------------------------------
@@ -1899,6 +1908,7 @@ namespace Nameless
       let (_, context_tys) := (infer i context {} t) 
       List.foldr (fun (context, ty') ty_acc => 
         Ty.unionize (Ty.generalize boundary context ty') ty_acc
+        -- Ty.unionize (Ty.pack boundary context ty') ty_acc
       ) Ty.bot context_tys
 
 
@@ -2418,27 +2428,37 @@ namespace Nameless
 
   --------- relational selection -----------
 
-#eval unify_reduce 10 
-[lesstype| (?succ ?zero unit * α[0]) ]
-[lesstype| ⟨nat_list⟩ ]
-[lesstype| α[0] ]
+  #eval unify_reduce 10 
+  [lesstype| (?succ ?zero unit * α[0]) ]
+  [lesstype| ⟨nat_list⟩ ]
+  [lesstype| α[0] ]
 
-#eval unify_reduce 10 
-[lesstype| (?succ ?succ ?zero unit * α[0]) ]
-[lesstype| ⟨nat_list⟩ ]
-[lesstype| α[0] ]
-
-#eval unify_reduce 10 
-[lesstype|
-   (α[0] >> (β[0] ->
-     {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
-        {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}))
-]
-[lesstype| ?succ ?succ ?zero unit -> α[7] ]
-[lesstype| α[7] ]
+  #eval unify_reduce 10 
+  [lesstype| (?succ ?succ ?zero unit * α[0]) ]
+  [lesstype| ⟨nat_list⟩ ]
+  [lesstype| α[0] ]
 
 
-  ----------------------------------
+  -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
+  #eval unify_reduce 10 
+  [lesstype|
+    (α[0] >> (β[0] ->
+      {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
+          {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}))
+  ]
+  [lesstype| ?succ ?succ ?zero unit -> α[7] ]
+  [lesstype| α[7] ]
+
+  -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
+  #eval unify_reduce 10 
+  [lesstype|
+    (⟨nat_⟩ >> (β[0] ->
+      {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
+          {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}))
+  ]
+  [lesstype| ?succ ?succ ?zero unit -> α[7] ]
+  [lesstype| α[7] ]
+
   -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
   #eval infer_reduce 10 [lessterm|
     let y[0] = (\ y[0] => fix(\ y[0] => 
@@ -3347,6 +3367,7 @@ namespace Nameless
   ] 
 
   -- NOTE: max of the two inputs  
+  -- broken; this fails if there is parameter type added to fix type
   -- expected: ?succ ?succ ?succ ?zero unit   
   #eval infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
