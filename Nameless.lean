@@ -872,7 +872,7 @@ namespace Nameless
 
       ----------------------------------------
       -- TODO: rrr 
-      -- remove substitution
+      -- replace substitution with modification that only subs wellformed key
       let lower := (simplify (subst context.env_simple lower))
       ---------------------------------------
       let rlabels := extract_record_labels lower 
