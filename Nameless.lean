@@ -55,8 +55,6 @@ namespace Nameless
       env_simple : PHashMap Nat Ty
       env_keychain : PHashMap Nat (PHashSet Ty)
       env_relational : PHashMap Ty Ty
-      -- TODO: remve expandable; ill-conceived mechanism
-      set_expandable : PHashSet Nat
     deriving Repr
 
 
@@ -115,6 +113,29 @@ namespace Nameless
       | none => (free_vars ty)
     | .recur ty => (free_vars ty)
 
+    -- def neg_vars (neg : Bool) : Ty -> PHashSet Nat 
+    -- | .bvar id => empty 
+    -- | .fvar id => 
+    --   if neg then
+    --     empty.insert id
+    --   else
+    --     empty
+    -- | .unit => empty 
+    -- | .top => empty 
+    -- | .bot => empty 
+    -- | .tag l ty => (neg_vars neg ty) 
+    -- | .field l ty => (neg_vars neg ty)
+    -- | .union ty1 ty2 => (neg_vars neg ty1).fold insert (neg_vars neg ty2)
+    -- | .inter ty1 ty2 => (neg_vars neg ty1).fold insert (neg_vars neg ty2)
+    -- | .case ty1 ty2 => (neg_vars true ty1).fold insert (neg_vars neg ty2)
+    -- | .exis n ty_c1 ty_c2 ty =>
+    --   (neg_vars neg ty_c1) + (neg_vars neg ty_c2) + (neg_vars neg ty)
+    -- | .univ op_ty_c ty =>
+    --   match op_ty_c with
+    --   | some ty_c => (neg_vars neg ty_c) + (neg_vars neg ty)
+    --   | none => (neg_vars neg ty)
+    -- | .recur ty => (neg_vars neg ty)
+
     partial def abstract (fids : List Nat) (start : Nat) : Ty -> Ty
     | .bvar id => .bvar id 
     | .fvar id => 
@@ -138,8 +159,7 @@ namespace Nameless
       (.univ (Option.map (abstract fids (start + 1)) op_ty_c) (abstract fids (start + 1) ty))
     | .recur ty => .recur (abstract fids (start + 1) ty)
 
-    -- TODO: need to track observed variables to catch cycles
-    -- assuming no cycles
+    -- assuming no cycles; (assuming occurs check has been properly applied before hand) 
     partial def subst (m : PHashMap Nat Ty) : Ty -> Ty
     | .bvar id => .bvar id 
     | .fvar id => (match m.find? id with
@@ -233,6 +253,111 @@ namespace Nameless
       (constraints.foldr (fun (lhs, rhs) ty_acc =>
         intersect (f (lhs, rhs)) ty_acc 
       ) Ty.top)
+
+    partial def simplify : Ty -> Ty
+    | .bvar id => .bvar id  
+    | .fvar id => .fvar id
+    | .unit => .unit 
+    | .top => .top
+    | .bot => .bot 
+    | .tag l ty => .tag l (simplify ty) 
+    | .field l ty => .field l (simplify ty) 
+    | .union ty1 ty2 => unionize (simplify ty1) (simplify ty2)
+    | .inter ty1 ty2 => intersect (simplify ty1) (simplify ty2)
+    | .case ty1 ty2 => .case (simplify ty1) (simplify ty2)
+    | .exis n cty1 cty2 ty => 
+      .exis n (simplify cty1) (simplify cty2) (simplify ty)
+    | .univ op_ty_c ty => 
+      .univ (op_ty_c.map simplify) (simplify ty)
+    | .recur ty => .recur (simplify ty)
+
+
+    def record_fields : Ty -> PHashMap String Ty
+    | .field l ty => empty.insert l ty
+    | .inter (.field l ty1) ty2 => 
+      let linear_ty2 := (record_fields ty2) 
+      match linear_ty2.find? l with
+      | some ty_old => linear_ty2.insert l (Ty.inter ty1 ty_old)
+      | none => linear_ty2.insert l ty1
+    | .inter ty1 (.field l ty2) => 
+      let linear_ty1 := (record_fields ty1)
+      match linear_ty1.find? l with
+      | some ty_old => linear_ty1.insert l (Ty.inter ty2 ty_old)
+      | none => linear_ty1.insert l ty2
+    | _ => empty 
+
+    partial def wellformed_key : Ty -> Bool
+    | .bvar id => false 
+    | .fvar id => true 
+    | .unit => false 
+    | .top => false 
+    | .bot => false 
+    | .tag l ty => (wellformed_key ty) 
+    | .field l ty => (wellformed_key ty)
+    | .union ty1 ty2 => false 
+    | .inter ty1 ty2 => 
+      let fields := (record_fields (.inter ty1 ty2)).toList
+      fields.all (fun (l, ty) => wellformed_key ty)
+    | .case ty1 ty2 => false 
+    | .exis n ty_c1 ty_c2 ty => false
+    | .univ op_ty_c ty => false
+    | .recur ty => false
+
+    partial def subst_while (f : Ty -> Bool) (m : PHashMap Nat Ty) : Ty -> Ty
+    | .bvar id => .bvar id 
+    | .fvar id => (match m.find? id with
+      | some ty => 
+        let ty := simplify ty
+        if f ty then
+          subst_while f m ty 
+        else
+          .fvar id
+      | none => .fvar id
+    )
+    | .unit => .unit
+    | .top => .top
+    | .bot => .bot
+    | .tag l ty => .tag l (subst_while f m ty) 
+    | .field l ty => .field l (subst_while f m ty)
+    | .union ty1 ty2 => .union (subst_while f m ty1) (subst_while f m ty2)
+    | .inter ty1 ty2 => .inter (subst_while f m ty1) (subst_while f m ty2)
+    | .case ty1 ty2 => .case (subst_while f m ty1) (subst_while f m ty2)
+    | .exis n ty_c1 ty_c2 ty => (.exis n
+      (subst_while f m ty_c1) (subst_while f m ty_c2) 
+      (subst_while f m ty)
+    )
+    | .univ op_ty_c ty => 
+      (.univ (op_ty_c.map (subst_while f m)) (subst_while f m ty))
+    | .recur ty => .recur (subst_while f m ty)
+
+    partial def sub_nonneg (boundary : Nat) (m : PHashMap Nat Ty) (negs : PHashSet Nat) : Ty -> Ty
+    | .bvar id => .bvar id 
+    | .fvar id => 
+      if id >= boundary && negs.contains id then
+        (match m.find? id with
+          | some ty => 
+            sub_nonneg boundary m negs ty 
+          | none => .fvar id
+        )
+      else .fvar id 
+    | .unit => .unit
+    | .top => .top
+    | .bot => .bot
+    | .tag l ty => .tag l (sub_nonneg boundary m negs ty) 
+    | .field l ty => .field l (sub_nonneg boundary m negs ty)
+    | .union ty1 ty2 => .union (sub_nonneg boundary m negs ty1) (sub_nonneg boundary m negs ty2)
+    | .inter ty1 ty2 => .inter (sub_nonneg boundary m negs ty1) (sub_nonneg boundary m negs ty2)
+    | .case ty1 ty2 => 
+      let new_negs := free_vars ty1
+      .case ty1 (sub_nonneg boundary m (negs + new_negs) ty2)
+    | .exis n ty_c1 ty_c2 ty => (.exis n
+      (sub_nonneg boundary m negs ty_c1) (sub_nonneg boundary m negs ty_c2) 
+      (sub_nonneg boundary m negs ty)
+    )
+    | .univ op_ty_c ty => 
+      (.univ (op_ty_c.map (sub_nonneg boundary m negs)) (sub_nonneg boundary m negs ty))
+    | .recur ty => .recur (sub_nonneg boundary m negs ty)
+
 
     declare_syntax_cat lesstype
 
@@ -487,12 +612,16 @@ namespace Nameless
         constraints_acc 
       ) constraints_acc
 
-    partial def pack (boundary : Nat) (context : Context) (ty : Ty) :=
+
+    partial def pack (boundary : Nat) (context : Context) (negs : PHashSet Nat) (ty : Ty) :=
       -----------------------
       -- assumption: env_simple is cycle-free  
+      -- keep variables that exist in parameter position; substitute variables that are only in return position 
       -- avoid substitution to allow refinements
       -- recursively pack referenced variables as constraints
       -----------------------
+
+      let ty := sub_nonneg boundary context.env_simple negs ty
 
       let fids := (free_vars ty)
       if fids.isEmpty then
@@ -506,7 +635,7 @@ namespace Nameless
           if fid >= boundary then
             match context.env_simple.find? fid with
             | some ty_simple =>
-              constraints.insert (Ty.fvar fid) (pack boundary context ty_simple) 
+              constraints.insert (Ty.fvar fid) (pack boundary context (negs + fids) ty_simple) 
             | none => constraints
           else
             constraints
@@ -520,10 +649,11 @@ namespace Nameless
               keychain.fold (fun constraints key =>
                 (match context.env_relational.find? key with
                 | some relation => 
+                  let key := sub_nonneg boundary context.env_simple (negs + fids) key
                   if constraints.contains key then
                     constraints
                   else
-                    constraints.insert key (pack boundary context relation) 
+                    constraints.insert key (pack boundary context (negs + fids) relation) 
                 | none => 
                   -- invariant: this case should never happen
                   constraints 
@@ -536,10 +666,11 @@ namespace Nameless
 
 
         if constraints.isEmpty then
-          ty
+          let list_fids := toList fids
+          [lesstype| {⟨list_fids.length⟩ // ⟨abstract list_fids 0 ty⟩}  ]
         else
           intersect_over (fun (ty_lhs, ty_rhs) => 
-            let fvs_constraints := (free_vars ty_lhs)
+            let fvs_constraints := fids + (free_vars ty_lhs) + (free_vars ty_rhs)
             let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
             [lesstype|
               {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
@@ -636,24 +767,6 @@ namespace Nameless
       .univ op_ty_c ty
     | .recur ty => .recur (subst_default sign ty)
 
-    partial def simplify : Ty -> Ty
-    | .bvar id => .bvar id  
-    | .fvar id => .fvar id
-    | .unit => .unit 
-    | .top => .top
-    | .bot => .bot 
-    | .tag l ty => .tag l (simplify ty) 
-    | .field l ty => .field l (simplify ty) 
-    | .union ty1 ty2 => unionize (simplify ty1) (simplify ty2)
-    | .inter ty1 ty2 => intersect (simplify ty1) (simplify ty2)
-    | .case ty1 ty2 => .case (simplify ty1) (simplify ty2)
-    | .exis n cty1 cty2 ty => 
-      .exis n (simplify cty1) (simplify cty2) (simplify ty)
-    | .univ op_ty_c ty => 
-      .univ (op_ty_c.map simplify) (simplify ty)
-    | .recur ty => .recur (simplify ty)
-
-
     partial def equiv (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
       let ty1 := simplify (subst env_ty ty1)
       let ty2 := simplify (subst env_ty ty2)
@@ -690,19 +803,6 @@ namespace Nameless
     --   | nested_fields => nested_fields ++ (extract_nested_fields ty1)
     -- | _ => [] 
 
-    def record_fields : Ty -> PHashMap String Ty
-    | .field l ty => empty.insert l ty
-    | .inter (.field l ty1) ty2 => 
-      let linear_ty2 := (record_fields ty2) 
-      match linear_ty2.find? l with
-      | some ty_old => linear_ty2.insert l (Ty.inter ty1 ty_old)
-      | none => linear_ty2.insert l ty1
-    | .inter ty1 (.field l ty2) => 
-      let linear_ty1 := (record_fields ty1)
-      match linear_ty1.find? l with
-      | some ty_old => linear_ty1.insert l (Ty.inter ty2 ty_old)
-      | none => linear_ty1.insert l ty2
-    | _ => empty 
 
     partial def extract_record_labels : Ty -> PHashSet String
     | .field l ty => 
@@ -756,7 +856,7 @@ namespace Nameless
     | ty => extract_field label ty 
 
 
-    partial def transpose_map (labels : List String) : Ty -> PHashMap String Ty 
+    partial def factor_out_map (labels : List String) : Ty -> PHashMap String Ty 
     | Ty.recur ty =>
       let unions := split_unions ty
       labels.foldl (fun acc label =>
@@ -770,8 +870,8 @@ namespace Nameless
     | _ => 
       empty
 
-    partial def transpose_relation (labels : List String) (ty : Ty) : Ty :=
-      let fields := toList (transpose_map labels ty)
+    partial def factor_out_relation (labels : List String) (ty : Ty) : Ty :=
+      let fields := toList (factor_out_map labels ty)
       fields.foldr (fun (label, ty_rec) ty_acc =>
         Ty.inter (Ty.field label ty_rec) ty_acc 
       ) Ty.top
@@ -849,139 +949,90 @@ namespace Nameless
       else
         -- for each label in ty_rec there is a label in keys
         let labels := toList (extract_record_labels ty_rec)
-        let ty_trans := toList (transpose_map labels ty_rec)
-        ty_trans.any (fun (l, ty_rec) =>
+        let ty_factored := toList (factor_out_map labels ty_rec)
+        ty_factored.any (fun (l, ty_rec) =>
           match fields.find? l with
           | some ty_key => reducible context ty_key ty_rec
           | none => false
         )  
-  --------------------------------------------------
-  --------------------------------------------------
-
-    partial def save_for_later (context : Context) (payload lower upper : Ty) : Option (Context × Ty) :=
-      -- constraint over function paramter type would prevent sound weakening of constraint, needed for transposition
-      -- this check is the reason that saving cannot happen with the constraint alone
-      let no_function_constraint := no_function_types payload 
-
-      let relation_wellformed := match upper with 
-      | Ty.recur ty_body => true
-        -- free vars are fine; the packing recursively packs them
-        -- (free_vars ty_body).isEmpty 
-      | _ => false
 
 
-      ----------------------------------------
-      -- TODO: rrr 
-      -- replace substitution with modification that only subs wellformed key
-      let lower := (simplify (subst context.env_simple lower))
-      ---------------------------------------
-      let rlabels := extract_record_labels lower 
-      -- cannot trust a failure result; sound, but incomplete; limit to guaranteed valid results with inhabitable payloads 
-      -- TODO: is ensuring consistent variable record enough to ensure resulting payload is inhabitable?
-      -- TODO: need a to check that the key is structurally consistent with one of the recursive cases 
+    def merge_contexts (c1 c2 : Ty.Context) : Ty.Context :=
+      {
+        env_simple := c1.env_simple;c2.env_simple,
+        env_keychain := c1.env_keychain;c2.env_keychain
+        env_relational := c1.env_relational;c2.env_relational
+      }
 
-
-      let occurence := (toList (free_vars lower)).any (fun key => occurs context key upper) 
-
-
-      let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels upper)) (fun l =>
-          rlabels.contains l 
-        )
-
-      -------------
-      -- irreducible check is necessary because failure of constraint does not imply irreducibility
-      -------
-      let irreducible := !(reducible context lower upper)
-      -------------
-
-      if irreducible && no_function_constraint && relation_wellformed && is_consistent_variable_record && !occurence then
-
-        -- update context with relational information 
-        let context := {context with 
-          env_keychain := index_free_vars context.env_keychain lower 
-          env_relational := context.env_relational.insert lower upper,
-        }
-        some (context, lower)
-      else 
-        none
 
     partial def unify (i : Nat) (context : Context)
     : Ty -> Ty -> (Nat × List Context)
 
     -- existential quantifier elimination (closed variables) (proactive) 
     | .exis n ty_c1 ty_c2 ty1, ty2 => (
-      let bound_start := i
       let (i, bound_keys) := (i + n, (List.range n).map (fun j => i + j))
-      let bound_end := i
-      -- let is_bound_var := (fun i' => bound_start <= i' && i' < bound_end)
 
       let args := bound_keys.map (fun id => Ty.fvar id)
       let ty_c1 := instantiate 0 args ty_c1
       let ty_c2 := instantiate 0 args ty_c2
       let ty1 := instantiate 0 args ty1
 
+      let env_simple_unchanged : List Ty.Context -> Option Ty.Context := (fun new_contexts => 
+        match new_contexts with
+        | [new_context] => 
+          if new_context.env_simple.toList == context.env_simple.toList then
+            some new_context
+          else
+            none
+        | _ => none
+      )
 
-      -------------------------
+      let (i, contexts_constraint) := (unify i context ty_c1 ty_c2)
 
-      let (i, contexts) := (unify i context ty_c1 ty_c2)
-      if !contexts.isEmpty then (
-        let ty1_unioned := List.foldr (fun context ty_acc => 
-          let ty1_sub := subst context.env_simple ty1 
-          (.union (pack bound_start context ty1_sub) ty_acc)
-        ) Ty.bot contexts 
-        let (i, contexts_oracle) := (unify i context ty1_unioned ty2)
-        let is_safe := !contexts_oracle.isEmpty
 
-        if is_safe then
-          bind_nl (i, contexts) (fun i context =>
-            -- allow local refinements 
-            (unify i context ty1 ty2) 
+      match env_simple_unchanged contexts_constraint with 
+      | some context_constraint => 
+        let (i, contexts) := (unify i context_constraint ty1 ty2) 
+        -- ensure that opaque variables are not bound from payload unification
+        let result_safe := contexts.all (fun context =>
+          bound_keys.all (fun bound_key =>
+            !(context.env_simple.contains bound_key)
           )
+        )
+        if result_safe then
+          (i, contexts)
         else
           (i, [])
-      ) else (
-        match save_for_later context ty1 ty_c1 ty_c2 with
-        | some (context, ty_key) => (
-            let (i, contexts) := (unify i context ty1 ty2) 
-            let unrefined := contexts.all (fun context => 
-              bound_keys.all (fun key => !(context.env_simple.contains key))
-            )
-            if unrefined then
-              (i, contexts)
-            else (
-              -- step 1: solve constraint with updated context  
-              let fids_key := toList (free_vars ty_key)
-              let (i, contexts) := bind_nl (i, contexts) (fun i context =>
-                if fids_key.any (fun fid_key => context.env_simple.contains fid_key) then
-                  let (i, contexts) := (unify i context ty_c1 ty_c2)
-                  if !contexts.isEmpty then
-                    (i, contexts)
-                  else
-                    (i, [context])
-                else
-                  (i, [context])
-              )
-
-              -- step 2: safety check
-              -- checks that constraint is weaker; only safe if there's no constraint over parameter type
-              let ty_refined := List.foldr (fun context ty_acc => 
-                let key_sub := subst context.env_simple ty_key
-                (.union (pack bound_start context key_sub) ty_acc)
-              ) Ty.bot contexts 
-              let (i, contexts_oracle) := (unify i context ty_c2 ty_refined)
-              -----------
-              -- TODO: rrr 
-              -- add safety a precise safety check
-              -------------- 
-              -- if !contexts_oracle.isEmpty then (i, contexts) else (i, [])
-              -------------- 
-              ------ unsafe 
-              (i, contexts)
-              --------------
-            )
+      | none => 
+        let (i,contexts) := bind_nl (i, contexts_constraint) (fun i context_constraint =>
+          (unify i context_constraint ty1 ty2)
         )
-        | none => (i, [])
-      )
+
+        if contexts.isEmpty then
+          (i, [])
+        else
+          -- check for safety; that there's no over-refenement
+          let ty_strong := contexts_constraint.foldl (fun ty_strong context_constraint =>
+            Ty.unionize (subst context_constraint.env_simple ty_c1) ty_strong
+          ) Ty.bot
+
+          let ty_weak := contexts.foldl (fun ty_weak context =>
+            Ty.unionize (subst context.env_simple ty_c1) ty_weak
+          ) Ty.bot
+
+          let (i, contexts_oracle) := unify i context ty_strong ty_weak
+
+          let is_safe := (no_function_types ty1) && !contexts_oracle.isEmpty 
+          if is_safe then
+            (i, contexts)
+          else
+            (i, [])
+          -- --------------
+          -- let cd : Ty.Context := ⟨empty, empty, empty⟩
+          -- let cd := {cd with env_simple := cd.env_simple.insert 111 ty1_union}
+          -- let cd := {cd with env_simple := cd.env_simple.insert 222 ty2_union}
+          -- let context := cd
+          -- ---------------
     ) 
 
 
@@ -989,7 +1040,7 @@ namespace Nameless
     | ty1, .univ op_ty_c ty2  => (
       let bound_key := i
       let i := i + 1
-      let is_bound_var := (. == bound_key)
+      -- let is_bound_var := (. == bound_key)
 
       let args := [Ty.fvar bound_key]
       let op_ty_c := Option.map (instantiate 0 args) op_ty_c
@@ -997,16 +1048,22 @@ namespace Nameless
 
       let context := match op_ty_c with
       | none => context
-      | some ty_c => {context with env_simple := context.env_simple.insert bound_key ty_c}
+      | some ty_c => {context with 
+        env_simple := context.env_simple.insert bound_key ty_c
+      }
 
-      let (i, contexts) := (unify i context ty1 ty2)
-      let result_safe := op_ty_c != none ||  contexts.all (fun context => 
-        !(context.env_simple.contains bound_key)
+      let safe_binding : Ty.Context -> Bool := (fun new_context =>
+        match new_context.env_simple.find? bound_key with
+        | none => true
+        | some new_ty_c => some new_ty_c == op_ty_c
       )
+      let (i, contexts) := (unify i context ty1 ty2)
+      let result_safe := op_ty_c != none ||  contexts.all safe_binding
       if result_safe then
         (i, contexts)
       else
         (i, [])
+      -----------------------------
     )
 
     -- existential quantifier introduction (open variables) (reactive)
@@ -1022,13 +1079,7 @@ namespace Nameless
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       bind_nl (unify i context ty' ty) (fun i context => 
-        let (i, contexts) := unify i context ty_c1 ty_c2
-        if !contexts.isEmpty then
-          (i, contexts)
-        else
-          match save_for_later context ty ty_c1 ty_c2 with
-            | some (context, _) => (i, [context]) 
-            | none => (i, []) 
+        unify i context ty_c1 ty_c2
       )
 
 
@@ -1036,10 +1087,6 @@ namespace Nameless
     | .univ op_ty_c ty1, ty2 =>
       let (i, bound_key) := (i + 1, i)
       let args := [Ty.fvar bound_key]
-      let context := (match op_ty_c with
-      | none => {context with set_expandable := context.set_expandable.insert bound_key}
-      | some _ => context
-      )
 
       let op_ty_c := Option.map (instantiate 0 args) op_ty_c
       let ty1 := instantiate 0 args ty1
@@ -1059,25 +1106,6 @@ namespace Nameless
     ---------------------------------------------------------------
     -- free variables
     ---------------------------------------------------------------
-    -- | (.fvar id1), (.fvar id2) => 
-    ----------------
-    -- -- dreprecate
-    --------------------------------
-    --   if id1 == id2 then
-    --     (i, [context])
-    --   else
-    --     -- changed: rrr: 
-    --     --- check env_relational
-    --     -- env_relational is checked in other rules; see what happens if double variable rule is removed
-    --     -- NOTE: this special rule does not leverage refinement mechanism?
-    --     -- example: {x with x * _ <: even_list} ⊆ {y with y * _ <: nat_list}
-    --     match (context.env_simple.find? id1, context.env_simple.find? id2) with 
-    --     | (.some ty', _) => unify i context ty' (.fvar id2) 
-    --     | (_, .some ty) => unify i context (.fvar id1) ty 
-    --     | (.none, .none) => 
-    --       -- NOTE: save as rhs maps to lhs. Enables freed existential vars (rhs) to map to closed existential vars (lhs). 
-    --       (i, [{context with env_simple := context.env_simple.insert id2 (Ty.fvar id1)}])
-    --------------------------------------------
 
     | ty', .fvar id => 
       ----------------------
@@ -1089,19 +1117,20 @@ namespace Nameless
       -- NAT <: X with X * _ <: NAT_LIST fails because NAT * _ <: NAT_LIST fails 
       -- ?zero unit <: X with X * _ <: NAT_LIST succeeds because ?zero unit * _ <: NAT_LIST succeeds 
       --------------------
+
       match context.env_simple.find? id with 
       | some ty => 
         bind_nl (unify i context ty' ty) (fun i context =>
           ---------------------------
-          -- change: rrr
-          -- refines parameter type from argument type 
-          -- this improves relational selection generated from application with a paramtere type
+          -- this refinement allows relational selection generated from application with a paramtere type
           ---------------------------
-          let context := {context with env_simple := context.env_simple.insert id ty'}
-          (i, [context])
+          if occurs context id ty' then
+            (i, [context])
+          else
+            let context := {context with env_simple := context.env_simple.insert id ty'}
+            (i, [context])
         )
       | none => 
-        -- changed: rrr: 
         --- check env_relational
         match context.env_keychain.find? id with
         | some keychain =>
@@ -1117,7 +1146,7 @@ namespace Nameless
                 (i, [])
             )
           ) (i, [context])
-        |none => (
+        | none => (
           -----------------
           -- deprecate expansion
           -----------------
@@ -1134,7 +1163,9 @@ namespace Nameless
           -- else
           --   (i, [{context with env_simple := context.env_simple.insert id ty_assign}])
           ------------------------------
-          if occurs context id ty' then
+          if (Ty.fvar id) == ty' then
+            (i, [context])
+          else if occurs context id ty' then
             (i, [])
           else
             (i, [{context with env_simple := context.env_simple.insert id ty'}])
@@ -1154,7 +1185,7 @@ namespace Nameless
         let (i, contexts) := (unify i context ty' ty)
         if !contexts.isEmpty then
           (i, contexts)
-        else
+        else 
           let (i, contexts_reversed) := (unify i context ty ty')
           -- pick the simplest lower bound
           let ty_assign := (
@@ -1163,7 +1194,9 @@ namespace Nameless
             else
               (Ty.inter ty ty')
           )
-          if (occurs context id ty_assign) then
+          if (Ty.fvar id) == ty_assign then
+            (i, [context])
+          else if (occurs context id ty_assign) then
             (i, [])
           else
             let context := {context with env_simple := context.env_simple.insert id ty_assign}
@@ -1175,35 +1208,39 @@ namespace Nameless
             bind_nl (i, contexts) (fun i context => 
             match context.env_relational.find? key with
             | some relation =>
-              -- check that new constraint is weaker than relational constraint  
-              -- weakening is only safe if the constraint is not over parameter type 
-              -- assumption: relations do not constraintfunction parameter types
 
-              let env_sub : PHashMap Nat Ty := empty.insert id ty
-              let ty_sub := subst env_sub key  
-              let ty_weak := (
-                let fids := toList (free_vars ty_sub)
-                [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
-              )
-              -- unify relational lhs and constructed relational rhs 
-              let (i, contexts) := (unify i context relation ty_weak)
+                -- check that new constraint is weaker than relational constraint  
+                -- weakening is only safe if the constraint is not over parameter type 
+                -- assumption: relations do not constraintfunction parameter types
 
-              if !contexts.isEmpty then
-                (i, contexts)
-              else
-                if (occurs context id ty) then
-                  (i, [])
+                let env_sub : PHashMap Nat Ty := empty.insert id ty
+                let ty_sub := subst env_sub key  
+                let ty_weak := (
+                  let fids := toList (free_vars ty_sub)
+                  [lesstype| {⟨fids.length⟩ // ⟨abstract fids 0 ty_sub⟩} ] 
+                )
+                -- unify relational lhs and constructed relational rhs 
+                let (i, contexts_oracle) := (unify i context relation ty_weak)
+
+                if !contexts_oracle.isEmpty then
+                  (i, [context])
+                else if (occurs context id ty) then
+                    (i, [])
                 else (
                   let context := {context with env_simple := context.env_simple.insert id ty}
                   (i, [context])
                 )
+              -- opaque_wrap context id (fun context =>
+              -- )
             | none => 
               -- invariant: this should never happen
               (i, [])
             )
           ) (i, [context])
         | none =>
-          if (occurs context id ty) then
+          if (Ty.fvar id) == ty then
+            (i, [context])
+          else if (occurs context id ty) then
             (i, [])
           else
             let context := {context with env_simple := context.env_simple.insert id ty}
@@ -1218,29 +1255,24 @@ namespace Nameless
       ) 
 
     | ty1, .case ty2 (Ty.inter ty_u1 ty_u2) =>
-      -- NOTE: special case for implication intersection 
-      bind_nl (unify i context ty1 (Ty.case ty2 ty_u1)) (fun i context =>
-        unify i context ty1 (Ty.case ty2 ty_u2)
-      )
+       bind_nl (unify i context ty1 (Ty.case ty2 ty_u1)) (fun i context =>
+         unify i context ty1 (Ty.case ty2 ty_u2)
+       )
 
     | ty1, .case (Ty.union ty_u1 ty_u2) ty2 =>
-      -- NOTE: special case for implication union
-
       bind_nl (unify i context ty1 (Ty.case ty_u1 ty2)) (fun i context =>
         unify i context ty1 (Ty.case ty_u2 ty2)
       )
 
-    | ty1, .case (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
-      -- TODO: safety check
-      -- NOTE: special case to ensure that variables are instantiated before decomposition of lhs
-      let ty2 := (.exis n ty_c1 ty_c2 ty_pl)
-
-      let (i, ty2') := (i + 1, Ty.fvar i)
-
-      -- TODO: solve for new variable first 
-      bind_nl (unify i context ty1 (.case ty2' ty3)) (fun i context =>
-        (unify i context ty2 ty2')
-      )
+    -- | ty1, .case (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
+    --   -- TODO: reconsider if this rule is needed 
+    --   -- TODO: safety check
+    --   -- NOTE: special case to ensure that variables are instantiated before decomposition of lhs
+    --   let ty2 := (.exis n ty_c1 ty_c2 ty_pl)
+    --   let (i, ty2') := (i + 1, Ty.fvar i)
+    --   bind_nl (unify i context ty1 (.case ty2' ty3)) (fun i context =>
+    --     (unify i context ty2 ty2')
+    --   )
 
     | .bvar id1, .bvar id2  =>
       if id1 = id2 then 
@@ -1264,44 +1296,57 @@ namespace Nameless
       else
         (i, [])
 
-    | .recur ty1, ty2 =>
-      if equiv context.env_simple (.recur ty1) ty2 then
+    | .recur ty1, .recur ty2 =>
+      if equiv context.env_simple ty1 ty2 then
         (i, [context])
       else
         -- using induction hypothesis, ty1 ≤ ty2; safely unroll
-        let ty1' := instantiate 0 [ty2] ty1
-        let (i, contexts) := unify i context ty1' ty2
-        if contexts.isEmpty then
-            -- transpose to find some valid unification
-            let labels := extract_label_list ty2 
-            let ty_trans := (transpose_relation labels (.recur ty1))
-            unify i context ty_trans ty2
-        else 
-          (i, contexts)
+        let ty1' := instantiate 0 [.recur ty2] ty1
+        let ty2' := instantiate 0 [.recur ty2] ty2
+        unify i context ty1' ty2'
+
+    | .recur ty1, ty2 =>
+      let labels := extract_label_list ty2 
+      let ty_factored := (factor_out_relation labels (.recur ty1))
+      unify i context ty_factored ty2
+    --------------------------------------------------
+      -- if equiv context.env_simple (.recur ty1) ty2 then
+      --   (i, [context])
+      -- else
+      --   -- using induction hypothesis, ty1 ≤ ty2; safely unroll
+      --   let ty1' := instantiate 0 [ty2] ty1
+      --   let (i, contexts) := unify i context ty1' ty2
+      --   if contexts.isEmpty then
+      --       -- factor_out to find some valid unification
+      --       let labels := extract_label_list ty2 
+      --       let ty_factored := (factor_out_relation labels (.recur ty1))
+      --       unify i context ty_factored ty2
+      --   else 
+      --     (i, contexts)
 
     | ty', .recur ty =>
-      -----------------------------
-      -- TODO: rrr 
-      -- substitution may cause failure 
-      -- e.g. in max example, when there's a parameter type in in the fix type
-      -- although, this might be handled when relational constraint is saved
-      -- consider steps to iteratively stregthen lhs to allow to find some version that passes.
-      ---------------------------
+      let ty' := (simplify (subst context.env_simple ty'))
       if reducible context ty' (.recur ty) then
-        -- precise and strict
-        let ty'_sub := (simplify (subst context.env_simple ty'))
-        unify i context ty'_sub (instantiate 0 [Ty.recur ty] ty) 
+        unify i context ty' (instantiate 0 [Ty.recur ty] ty) 
       else
-        let ty' := (simplify (subst context.env_simple ty'))
         match context.env_relational.find? ty' with
         | .some ty_cache => 
           unify i context ty_cache (Ty.recur ty)
-        | .none =>  
-          -- NOTE: cannot save in relational type
-          -- the variables may have already be assigned in env_simple
-          -- must respect invariant that env_simple and env_relational have disjoint key variables
-          (i, []) 
-
+        | .none => (
+          let occurence := (toList (free_vars ty')).any (fun key => occurs context key (.recur ty)) 
+          let rlabels := extract_record_labels ty' 
+          let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels (.recur ty))) (fun l =>
+              rlabels.contains l 
+            )
+          if is_consistent_variable_record && !occurence && wellformed_key ty' then
+            let context := {context with 
+              env_keychain := index_free_vars context.env_keychain ty' 
+              env_relational := context.env_relational.insert ty' (.recur ty),
+            }
+            (i, [context])
+          else 
+            (i, []) 
+        )
 
     | Ty.union ty1 ty2, ty => 
       bind_nl (unify i context ty1 ty) (fun i context =>
@@ -1352,7 +1397,7 @@ namespace Nameless
                   if constraints.contains key then
                     constraints
                   else
-                    constraints.insert key (pack boundary context relation) 
+                    constraints.insert key (compress boundary context relation) 
                 | none => 
                   -- invariant: this case should never happen
                   constraints 
@@ -1375,8 +1420,8 @@ namespace Nameless
             ]
           ) constraints.toList
 
-
     def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := (
+      -- TODO: figure out way to solve relational constraints to simplify type 
       --------------------------------------
       -- boundary prevents overgeneralizing
 
@@ -1386,9 +1431,17 @@ namespace Nameless
       -- subbing does not prevent weakening, as weakining is handles adding unions of fresh variables  
       --------------------------------------
 
+      -----------------------------
+      -- TODO:
+      -- rely on pack which does not sub in for parameters
+      ---------------------------
+        -- let ty_ex := pack boundary context empty ty
+        -- [lesstype| ⟨ty_ex⟩ >> β[0]]
+      -----------------------
+      -----------------------
       let ty := simplify (subst context.env_simple ty)
       let fids_pl := List.filter (fun id => id >= boundary) (toList (free_vars ty))
-      let constrained := fids_pl.any (fun fid => context.env_keychain.contains fid)  
+      -- let constrained := fids_pl.any (fun fid => context.env_keychain.contains fid)  
 
       if fids_pl.isEmpty then
           ty
@@ -1397,11 +1450,11 @@ namespace Nameless
       --     fids.map (fun fid => (fid, Ty.bot))
       --   )
       --   simplify (subst env_sub ty)
-      else if !constrained then
-        -- NOTE: need to use universal in order to indicate expansion is allowed for unconstrained variables.
-        (List.range fids_pl.length).foldl (fun ty_acc _ =>
-          [lesstype| ? >> ⟨ty_acc⟩]
-        ) (abstract fids_pl 0 ty)
+      -- else if !constrained then
+      --   -- NOTE: need to use universal in order to indicate expansion is allowed for unconstrained variables.
+      --   (List.range fids_pl.length).foldl (fun ty_acc _ =>
+      --     [lesstype| ? >> ⟨ty_acc⟩]
+      --   ) (abstract fids_pl 0 ty)
       else (
         let ty_compressed := compress boundary context ty
         let ty_base := [lesstype| ⟨ty_compressed⟩ >> β[0]]
@@ -1409,6 +1462,7 @@ namespace Nameless
           [lesstype| ? >> ⟨ty_acc⟩]
         ) (abstract fids_pl 0 ty_base) 
       )
+      -----------------------
     )
 
 
@@ -1424,7 +1478,7 @@ namespace Nameless
           | .some t' => Ty.union t t'
 
     partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
-      let context : Context := Context.mk env_simple empty empty empty
+      let context : Context := Context.mk env_simple empty empty
       let boundary := 0 
       let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
@@ -1433,29 +1487,21 @@ namespace Nameless
 
       
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
-      let context : Context := ⟨empty, empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty⟩
       let boundary := 0 
       let (_, contexts) := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
         Ty.unionize (generalize boundary context ty_result) ty_acc
-      ) Ty.bot contexts
-
-
-    partial def unify_reduce_expand (i : Nat) (exp : List Nat) (ty1) (ty2) (ty_result) :=
-      let context : Context := ⟨empty, empty, empty, from_list exp⟩
-      let boundary := 0 
-      let (_, contexts) := (unify i context ty1 ty2)
-      List.foldr (fun context ty_acc => 
-        Ty.unionize (generalize boundary context ty_result) ty_acc
+        -- Ty.unionize (pack boundary context ty_result) ty_acc
       ) Ty.bot contexts
 
 
     partial def unify_simple (i : Nat) (ty1) (ty2) :=
-      let context : Context := ⟨empty, empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty⟩
       (unify i context ty1 ty2)
 
     partial def unify_decide (i : Nat) (ty1) (ty2) :=
-      let context : Context := ⟨empty, empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty⟩
       let (_, result) := (unify i context ty1 ty2)
       !result.isEmpty
 
@@ -1782,45 +1828,92 @@ namespace Nameless
         (i, [(context, ty)])
       ))
 
-    | .app t1 t2 =>
-      let (i, ty) := (i + 1, Ty.fvar i)
-      let boundary := i
-      bind_nl (infer i context env_tm t2) (fun i (context, ty2) =>
-      bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
-      let ty2 := Ty.pack boundary context ty2
-      bind_nl (Ty.unify i context ty1 (Ty.case ty2 ty)) (fun i context =>
-        (i, [(context, ty)])
-      )))
+    | .app t_f t_arg =>
+      let (i, ty_ret) := (i + 1, Ty.fvar i)
+      let (i, context_tys_arg) := (infer i context env_tm t_arg)
+      let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
+        Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
+      ) Ty.bot
 
-    | .letb op_ty1 t1 t => 
+      let (i, new_context_tys_arg) :=  (
+        bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
+        bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
+        bind_nl (Ty.unify i context ty_f (Ty.case ty_arg ty_ret)) (fun i context => 
+          (i, [(context, ty_arg)])
+        )))
+      )
 
-      let (i, ty1_expected) := match op_ty1 with
-      | some ty1_expected => (i, ty1_expected)
+      let ty_weak := new_context_tys_arg.foldl (fun ty_weak (context_arg, ty_arg) =>
+        Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_weak
+      ) Ty.bot
+
+      let (i, contexts_oracle) := Ty.unify i context ty_strong ty_weak
+
+      if contexts_oracle.isEmpty then
+        (i, [])
+      else
+        (i, new_context_tys_arg.map (fun (context, _) => (context, ty_ret)))
+      ----------------
+
+    | .letb op_ty_expected t_arg t => 
+
+      let (i, ty_expected) := match op_ty_expected with
+      | some ty_expected => (i, ty_expected)
       | none => (i + 1, Ty.fvar i)
 
-      if t1 == Tm.hole then
-        ------------------------
-        -- change: rrr
-        -- create variable indrection to expected type
-        -- to allow for refinement
-        ------------------------
+      if t_arg == Tm.hole then
         let (i, id_expected) := (i + 1, i)
-        let context := {context with env_simple := context.env_simple.insert id_expected ty1_expected}
+        let context := {context with env_simple := context.env_simple.insert id_expected ty_expected}
         let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, Ty.fvar id_expected)]) 
-        ---------------------------------------------
-        -- let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_expected)]) 
-        -------------
         let t := instantiate 0 [x] t 
         (infer i context (env_tm ; env_tmx) t) 
       else
         let free_var_boundary := i
-        bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
-        bind_nl (Ty.unify i context ty1 ty1_expected) (fun i context =>
-          let ty1_schema := Ty.generalize free_var_boundary context ty1
-          let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty1_schema)]) 
-          let t := instantiate 0 [x] t 
-          (infer i context (env_tm ; env_tmx) t) 
-        ))
+
+        let (i, context_tys_arg) := (infer i context env_tm t_arg)
+        let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
+          Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
+        ) Ty.bot
+
+        let (i, contexts_oracle) := Ty.unify i context ty_strong ty_expected
+        if contexts_oracle.isEmpty then
+          (i, [])
+        else
+          bind_nl (infer i context env_tm t_arg) (fun i (context, ty_arg) =>
+          bind_nl (Ty.unify i context ty_arg ty_expected) (fun i context =>
+            let ty_schema := Ty.generalize free_var_boundary context ty_arg
+            let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_schema)]) 
+            let t := instantiate 0 [x] t 
+            (infer i context (env_tm ; env_tmx) t) 
+          ))
+
+      -- let (i, ty_ret) := (i + 1, Ty.fvar i)
+      -- let (i, context_tys_arg) := (infer i context env_tm t_arg)
+      -- let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
+      --   Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
+      -- ) Ty.bot
+
+      -- let (i, new_context_tys_arg) :=  (
+      --   bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
+      --   bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
+      --   bind_nl (Ty.unify i context ty_f (Ty.case ty_arg ty_ret)) (fun i context => 
+      --     (i, [(context, ty_arg)])
+      --   )))
+      -- )
+
+      -- let ty_weak := new_context_tys_arg.foldl (fun ty_weak (context_arg, ty_arg) =>
+      --   Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_weak
+      -- ) Ty.bot
+
+      -- let (i, contexts_oracle) := Ty.unify i context ty_strong ty_weak
+
+      -- -- let m : PHashMap Nat Ty := (empty.insert 333 ty_weak).insert 111 ty_strong
+      -- -- let cd : Ty.Context := ⟨m, empty, empty⟩ 
+
+      -- if contexts_oracle.isEmpty then
+      --   (i, [])
+      -- else
+      --   (i, new_context_tys_arg.map (fun (context, _) => (context, ty_ret)))
 
 
     | .fix t1 =>
@@ -1832,33 +1925,31 @@ namespace Nameless
         let ty_IH := (Ty.subst context.env_simple ty_IH)
         let ty_conc := (Ty.subst context.env_simple ty_conc)
         ------------------------------------------------------
-        -- TODO: rrr
-        -- add parameter type once weakening with iterative strengthening is implemented 
         -- TODO: factor out this rewriting with higher order function 
         -------------------------------------------------------
-        -- let ty_param_content := List.foldr (fun ty_case ty_acc =>
-        --   let fvs := (toList (Ty.free_vars ty_case)).filter (fun fid => fid >= boundary)
-        --   let fvs_prem :=  (Ty.free_vars ty_IH)
-        --   let ty_choice := (
-        --     if List.any fvs (fun id => fvs_prem.find? id != none) then
-        --       let fixed_point := fvs.length
-        --       [lesstype|
-        --         {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩ with 
-        --           ⟨Ty.abstract fvs 0 (Ty.get_prem ty_IH)⟩ <: β[⟨fixed_point⟩] 
-        --         } 
-        --       ]
-        --     else if fvs.length > 0 then
-        --       [lesstype| {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩} ]
-        --     else
-        --       (Ty.get_prem ty_case)
-        --   )
+        let ty_param_content := List.foldr (fun ty_case ty_acc =>
+          let fvs := (toList (Ty.free_vars ty_case)).filter (fun fid => fid >= boundary)
+          let fvs_prem :=  (Ty.free_vars ty_IH)
+          let ty_choice := (
+            if List.any fvs (fun id => fvs_prem.find? id != none) then
+              let fixed_point := fvs.length
+              [lesstype|
+                {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩ with 
+                  ⟨Ty.abstract fvs 0 (Ty.get_prem ty_IH)⟩ <: β[⟨fixed_point⟩] 
+                } 
+              ]
+            else if fvs.length > 0 then
+              [lesstype| {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩} ]
+            else
+              (Ty.get_prem ty_case)
+          )
 
-        --   (Ty.union ty_choice ty_acc) 
-        -- ) [lesstype| ⊥ ] (Ty.split_intersections ty_conc)
+          (Ty.union ty_choice ty_acc) 
+        ) [lesstype| ⊥ ] (Ty.split_intersections ty_conc)
 
-        -- let ty_param := [lesstype| induct ⟨ty_param_content⟩ ]
+        let ty_param := [lesstype| induct ⟨ty_param_content⟩ ]
         ------------------------------------------------------
-        let (i, ty_param) := (i + 1, Ty.fvar i)
+        -- let (i, ty_param) := (i + 1, Ty.fvar i)
         ------------------------------------------------------
 
         let ty_content := List.foldr (fun ty_case ty_acc =>
@@ -1889,7 +1980,7 @@ namespace Nameless
 
 
     partial def infer_simple i (t : Tm) :=
-      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty⟩
       (infer (i + 1) context {} t)
       
     partial def infer_union_context (i : Nat) (context : Ty.Context) (t : Tm) : Ty :=
@@ -1900,7 +1991,7 @@ namespace Nameless
       ) Ty.bot contexts
 
     partial def infer_union (i : Nat) (t : Tm) : Ty := 
-      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty⟩
       infer_union_context (i + 1)  context t
 
     partial def infer_reduce_context (i : Nat) (context : Ty.Context) (t : Tm) : Ty :=
@@ -1909,11 +2000,12 @@ namespace Nameless
       List.foldr (fun (context, ty') ty_acc => 
         Ty.unionize (Ty.generalize boundary context ty') ty_acc
         -- Ty.unionize (Ty.pack boundary context ty') ty_acc
+        -- Ty.unionize ty' ty_acc
       ) Ty.bot context_tys
 
 
     partial def infer_reduce (i : Nat) (t : Tm) : Ty := 
-      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty⟩
       infer_reduce_context (i + 1)  context t
 
     -- structure Work where
@@ -2132,7 +2224,7 @@ namespace Nameless
       {?succ ?succ β[0] * ?cons ?cons β[1] with (β[0] * β[1]) <: β[2]}
   ]
 
-  -- broken
+
   -- affected by direction of variable assigment
   -- expected: true
   #eval unify_decide 0 even_list nat_list 
@@ -2144,6 +2236,9 @@ namespace Nameless
     induct ?zero unit | ?succ ?succ β[0]
   ]
 
+  ---------------------------------
+  #eval unify_decide 0 even nat_ 
+  #eval unify_decide 0 nat_ even
   ------------------------
 
   -- expected: true
@@ -2442,6 +2537,15 @@ namespace Nameless
   -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
   #eval unify_reduce 10 
   [lesstype|
+      {1 // β[0] with (?succ ?succ ?zero unit * β[0]) <: (induct ((?zero unit * ?nil unit) |
+          {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}
+  ]
+  [lesstype| α[7] ]
+  [lesstype| α[7] ]
+
+  -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
+  #eval unify_reduce 10 
+  [lesstype|
     (α[0] >> (β[0] ->
       {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
           {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}))
@@ -2450,7 +2554,7 @@ namespace Nameless
   [lesstype| α[7] ]
 
   -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
-  #eval unify_reduce 10 
+  #eval unify_reduce 20 
   [lesstype|
     (⟨nat_⟩ >> (β[0] ->
       {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
@@ -2459,6 +2563,8 @@ namespace Nameless
   [lesstype| ?succ ?succ ?zero unit -> α[7] ]
   [lesstype| α[7] ]
 
+  -- broken
+  -- breaks when using parameter type
   -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
   #eval infer_reduce 10 [lessterm|
     let y[0] = (\ y[0] => fix(\ y[0] => 
@@ -2466,6 +2572,8 @@ namespace Nameless
       \ #succ y[0] => #cons (y[2], (y[1] y[0]))
     )) in 
     ((y[0] #thing()) #succ #succ #zero ())
+    -- (y[0] #thing())
+    -- y[0]
   ]
 
   -- expected: ?cons ?nil unit
@@ -2651,15 +2759,14 @@ namespace Nameless
   (y[0] #uno())
   ]
 
-  -- expected: (x : ?uno unit) & (y : ?dos unit) -> unit * unit
+  -- expected: (uno : unit) & (dos : unit) -> unit * unit
   #eval infer_reduce 0 [lessterm|
-  let y[0] : (x : ?uno unit) -> unit = _ in 
-  let y[0] : (y : ?dos unit) -> unit = _ in 
+  let y[0] : (uno : unit) -> unit = _ in 
+  let y[0] : (dos : unit) -> unit = _ in 
   (\ y[0] =>
     ((y[2] y[0]), (y[1] y[0])))
   ]
 
-  -- broken; issue in simple refinement
   -- expected: ⊥ -> unit * unit
   #eval infer_reduce 0 [lessterm|
   let y[0] : ?uno unit -> unit = _ in 
@@ -2770,7 +2877,8 @@ namespace Nameless
   -- That is, whatever is learned to strengthen the conclusion 
   -- is automatically applied to preceding iterations 
   -- due to the wrapping type in inductive binding 
-  #eval infer_reduce 10 
+  -- NOTE: this may have some non-termination depending on how occurs is used 
+  #eval infer_simple 10 
   [lessterm|
   let y[0] : ⟨spec⟩ = fix(\ y[0] => ( 
     \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1]))
@@ -2906,7 +3014,7 @@ namespace Nameless
 
   ----- transposition projection ----
 
-  -- expected: false 
+  -- expected: true if alpha[0] can be anything 
   #eval unify_decide 10
   [lesstype| {β[0] -> unit with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?zero unit -> unit ]
@@ -2921,7 +3029,7 @@ namespace Nameless
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?zero unit ]
 
-  -- expected: true 
+  -- expected: true if alpha[0] can be anything 
   #eval unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ ]
@@ -2948,6 +3056,7 @@ namespace Nameless
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?succ ?zero unit ]
 
+  -- broken
   -- expected: true 
   #eval unify_decide 10
   [lesstype| ⟨nat_⟩ >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
@@ -2962,6 +3071,21 @@ namespace Nameless
   #eval unify_decide 0
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
   [lesstype| ⟨nat_⟩ >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
+  -- expected: false 
+  #eval unify_decide 10
+  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+  [lesstype| α[0] -> {β[0] with α[0] * β[0] <: ⟨nat_list⟩} ]
+
+  -- expected: false 
+  #eval unify_decide 10
+  [lesstype| ⟨list_⟩ ]
+  [lesstype| {β[0] with α[0] * β[0] <: ⟨nat_list⟩} ]
+
+  -- expected: false
+  #eval unify_decide 10
+  [lesstype| α[0] * ⟨list_⟩ ]
+  [lesstype| ⟨nat_list⟩ ]
 
   -- expected: true 
   #eval unify_decide 10
@@ -3293,29 +3417,6 @@ namespace Nameless
     )
   ]
 
-  -- check that the updated relational constraint is saved
-  -----------------
-  -- [lesstype| ?success unit ]
-
-
-  #eval infer_union 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    let y[0] = _ in
-    let y[0] = _ in
-    (
-      -- (
-      -- \ #true() => y[1]
-      -- )
-      (y[2] (y[0], y[1]))
-    )
-  ] 
-  -----------------
-
-
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   #eval infer_reduce 0 [lessterm| 
@@ -3335,18 +3436,56 @@ namespace Nameless
     )
   ] 
 
+
+
+  -- expected: 
   /-
+  (? >> (? >> ({2 // (β[1] * β[0]) with (β[1] * β[0]) <: (induct ({1 // (?zero unit * β[0])} |
+        ({3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} | {1 // (?succ β[0] * ?zero unit)})))} >> β[0])))
+  -/
+  #eval unify_reduce 10 
+  [lesstype| 
+  α[0] * α[1]
+  ]
+  [lesstype| 
+  (induct (
+    {1 // (?zero unit * β[0])} | 
+    {3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} |
+    {1 // (?succ β[0] * ?zero unit)}
+  )) 
+  ]
+  [lesstype| 
+  α[0] * α[1]
+  ]
 
-(? >> (({3 // β[2] with ((β[1] * β[2]) * β[0]) <: LED} & 
-        {2 // β[1] with ((β[0] * β[1]) * ?true unit) <: LED}) >> β[0])) 
-        
-|
+  -- expected: 
+  /-
+  (? >> (? >> ({2 // (β[1] * β[0]) with (β[1] * β[0]) <: (induct ({1 // (?zero unit * β[0])} |
+        ({3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} | {1 // (?succ β[0] * ?zero unit)})))} >> β[0])))
+  -/
+  #eval unify_reduce 10 
+  [lesstype| 
+  (induct (
+    {1 // (?zero unit * β[0])} | 
+    {3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} |
+    {1 // (?succ β[0] * ?zero unit)}
+  )) >> (β[0] ->
+    {1 // β[0] with (β[1] * β[0]) <: (induct 
+      {1 // ((?zero unit * β[0]) * ?true unit)} |
+      {3 // ((?succ β[1] * ?succ β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
+      {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
+    )}
+  )
+    ]
+  [lesstype| 
+  α[0] * α[1] -> α[2]
+  ]
+  [lesstype| 
+  α[0] * α[1]
+  ]
 
- (? >> (({3 // β[1] with ((β[1] * β[2]) * β[0]) <: LED} & 
-         {2 // β[0] with ((β[0] * β[1]) * ?false unit) <: LED}) >> β[0]))
 
--/
-
+  -- broken: type is big and ugly and causes non-termination when there's a safety check in left-existential
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   #eval infer_reduce 0 [lessterm| 
@@ -3365,6 +3504,11 @@ namespace Nameless
       )
     ) 
   ] 
+  #eval (
+                      Nameless.Ty.inter
+                        (Nameless.Ty.field "l" (Nameless.Ty.fvar 20))
+                        (Nameless.Ty.inter (Nameless.Ty.field "r" (Nameless.Ty.fvar 18)) (Nameless.Ty.top)))
+
 
   -- NOTE: max of the two inputs  
   -- broken; this fails if there is parameter type added to fix type
@@ -3390,6 +3534,7 @@ namespace Nameless
 
   --------------- debugging ---------------
 
+  -- broken
   -- expected: ?false unit 
   #eval infer_reduce 0 [lessterm| 
     (
@@ -3578,7 +3723,6 @@ namespace Nameless
   [lesstype| ?unexpected unit ]
 
 
-  -- broken
   -- expected: ?one unit 
   #eval infer_reduce 0 [lessterm|
     let y[0] : {β[0] with β[0] <: ?one unit | ?three unit} = _ in
@@ -3588,7 +3732,6 @@ namespace Nameless
     )
   ]
 
-  -- broken
   -- expected: ?one unit | ?three unit 
   #eval infer_reduce 0 [lessterm|
     let y[0] : {β[0] with β[0] <: ?one unit | ?three unit} = _ in
@@ -3633,12 +3776,60 @@ namespace Nameless
   [lesstype| (?one unit -> α[7]) & (?three unit -> α[7])]
   [lesstype| α[7] ]
 
+  -- broken
   -- NOTE: requires expandable variables
   -- expected: ?two unit | ?four unit
-  #eval unify_reduce_expand 10 [7]
+  #eval unify_reduce 10
   [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
   [lesstype| (?one unit | ?three unit) -> α[7] ]
   [lesstype| α[7] ]
+
+-----------------
+
+  #eval unify_simple 10
+  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
+  [lesstype| (?one unit) -> α[6] ]
+-- might need a factoring rule for this; i.e. factor lhs, as with recursive rules 
+  #eval unify_simple 10
+  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
+  [lesstype| (?one unit | ?three unit) -> α[6] | α[7] ]
+  -- [lesstype| α[6] | α[7] ]
+
+  #eval unify_simple 10
+  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
+  [lesstype| (?one unit | ?three unit) -> (?two unit | ?four unit) ]
+  -- [lesstype| α[6] | α[7] ]
+
+  #eval unify_reduce 10
+  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
+  [lesstype| (?one unit | ?three unit) -> α[6] | α[7] ]
+  [lesstype| α[6] | α[7] ]
+
+  #eval unify_simple 10
+  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
+  [lesstype| (?one unit | ?three unit) -> {β[0] with β[0] <: α[7]} ]
+
+
+-----------------
+
+  #eval unify_simple 10
+  [lesstype| (?one unit -> ?two unit)  ]
+  [lesstype| (?one unit | ?three unit) -> {β[0]} ]
+
+  #eval unify_simple 10
+  [lesstype| (?three unit -> ?four unit) ]
+  [lesstype| (?one unit | ?three unit) -> {β[0]} ]
+
+
+---------------------------------------------------
+
+
+  -- expected: ?one unit | ?three unit
+  #eval unify_reduce 10
+  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
+  [lesstype| α[7] -> (?two unit | ?four unit) ]
+  [lesstype| α[7] ]
+
 
   -------------------------------------------
   -- broken
@@ -3680,30 +3871,38 @@ namespace Nameless
   [lesstype| {2 // (?succ β[0] * ?cons β[1]) with (β[0] * β[1]) <: ⟨nat_list⟩} ]
 
   ---------- relational propagation ---------
+  -- broken
+  -- NOTE: variables are no longer expanded; 
+  -- need a generalized disjunction elimination rule 
+  -- or some general elimination rule for intersection of implication; e.g a factoring rule.
   -- expected ?thing unit | ?other unit
   #eval unify_reduce 10 
   [lesstype| (?zero unit -> ?thing unit) & (?succ α[1] -> ?other unit)]
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
   [lesstype| α[2] ]
 
+  -- broken
   -- expected: ?other unit | ?thing unit 
   #eval unify_reduce 10 
   [lesstype| (?succ ⟨nat_⟩ -> ?other unit) & (?zero unit -> ?thing unit)]
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
   [lesstype| α[2] ]
 
+  -- broken
   -- expected: ?nil unit | ?other unit
   #eval unify_reduce 10 
   [lesstype| (?zero unit -> α[0]) & (?succ α[1] -> ?other unit)]
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
   [lesstype| α[2] ]
 
+  -- broken
   -- expected: ?nil unit | ?other unit
   #eval unify_reduce 10 
   [lesstype| (?zero unit -> α[0]) & (?succ ⟨list_⟩ -> ?other unit)]
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
   [lesstype| α[2] ]
 
+  -- broken
   -- expected: ?nil unit | ?other unit
   #eval infer_reduce 10 [lessterm|
     let y[0] : α[0] = _ in
@@ -3781,9 +3980,121 @@ namespace Nameless
     (( \ #one() => #two() \ #three() => #four()) #one()) 
   ]
 
+------------------------------
 
 
+  -- expected: false
+  #eval unify_decide 0
+  [lesstype| {β[0] with β[0] * ?cons ?cons ?nil unit <: ⟨nat_list⟩}]
+  [lesstype| ?succ ?foo ?zero unit ]
 
+  #eval unify_reduce 10
+  [lesstype| {β[0] with β[0] * ?cons ?cons ?nil unit <: ⟨nat_list⟩}]
+  [lesstype| α[0]]
+  [lesstype| α[0]]
+
+  #eval unify_reduce 10
+  [lesstype| α[0] * ?cons ?cons ?nil unit]
+  nat_list
+  [lesstype| α[0] ]
+
+  #eval unify_decide 10
+  [lesstype| ?succ ?foo ?zero unit ]
+  [lesstype| ?succ ?succ ?zero unit ]
+
+  --------- sound application --------
+
+#eval (Nameless.Ty.inter
+(Nameless.Ty.field "l" (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))
+(Nameless.Ty.field "r" (Nameless.Ty.tag "succ" (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))))
+
+#eval (
+  Nameless.Ty.union
+    (Nameless.Ty.inter
+      (Nameless.Ty.field
+        "l"
+        (Nameless.Ty.inter
+          (Nameless.Ty.tag "zero" (Nameless.Ty.unit))
+          (Nameless.Ty.tag "succ" (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))))
+      (Nameless.Ty.field
+        "r"
+        (Nameless.Ty.inter
+          (Nameless.Ty.tag "succ" (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))
+          (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))))
+    (Nameless.Ty.inter
+      (Nameless.Ty.field "l" (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))
+      (Nameless.Ty.field
+        "r"
+        (Nameless.Ty.tag "succ" (Nameless.Ty.tag "zero" (Nameless.Ty.unit))))))
+
+
+  #eval unify_decide 10
+  [lesstype| ((?zero unit * ?succ ?zero unit) | (?succ ?zero unit * ?zero unit)) ]
+  [lesstype| (?zero unit * ?succ ?zero unit) ]
+
+
+  -- broken
+  -- NOTE: in left-exisitential rule: allow all combinations for refinement, but then check for safety 
+  -- expected: false
+  #eval unify_decide 10
+  [lesstype|
+    {β[0] * β[1] with (x : β[0] & y : β[1] & z : ?succ ?zero unit ) <: ⟨plus⟩}
+  ]
+  [lesstype| (?zero unit * ?succ ?zero unit) ]
+
+  -- expected: ((?zero unit * ?succ ?zero unit) | (?succ ?zero unit * ?zero unit))
+  #eval unify_reduce 10
+  [lesstype|
+    {β[0] * β[1] with (x : β[0] & y : β[1] & z : ?succ ?zero unit ) <: ⟨plus⟩}
+  ]
+  [lesstype| α[7] ]
+  [lesstype| α[7] ]
+
+  #eval unify_reduce 10
+  [lesstype|
+    ? >> β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩}
+  ]
+  [lesstype| ?succ ?zero unit -> α[7] ]
+  [lesstype| α[7] ]
+
+  -- expected: ((?zero unit * ?succ ?zero unit) | (?succ ?zero unit * ?zero unit))
+  #eval infer_reduce 10
+  [lessterm|
+    let y[0] : ? >> β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
+    (y[0] #succ #zero ())
+  ]
+  -----------------------------------
+
+  -- expected: ⊥
+  #eval unify_reduce 10
+  [lesstype|
+    (?zero unit * ?succ ?zero unit) -> unit
+  ]
+  [lesstype| ((?zero unit * ?succ ?zero unit) | (?succ ?zero unit * ?zero unit)) -> α[7] ]
+  [lesstype| α[7] ]
+
+  -- broken
+  -- NOTE: in app rule: collapse arg's union type before applying 
+  -- expected: ⊥
+  #eval infer_reduce 10
+  [lessterm|
+    let y[0] : ? >> β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
+    let y[0] : (?zero unit * ?succ ?zero unit) -> unit = _ in 
+    (y[0] (y[1] #succ #zero ()))
+
+  ]
+
+  -------------------------------------------
+  ---------- let binding soundness -----------
+
+  -- expected: ⊥
+  #eval infer_reduce 10
+  [lessterm|
+    let y[0] : ? >> β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
+    let y[0] : (?zero unit * ?succ ?zero unit) = (y[0] #succ #zero ()) in
+    y[0]
+
+  ]
 
 
 end Nameless 

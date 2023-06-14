@@ -252,7 +252,7 @@ The next examples illustrate how the system can compose abstract properties to i
 which are not reproducible by dynamic semantics.
 
 
-\paragraph{Transposition.} Suppose the function \code{fromList}, which expects a list, 
+\paragraph{Factoring.} Suppose the function \code{fromList}, which expects a list, 
 is applied to a list that's related to a natural number, as would be the result of \code{(repeat x n)},
 illustrated in the body of \code{fromNat}.
 The system must verify that the type of \code{(repeat x n)} is a subtype of the parameter type of \code{(fromList)}.
@@ -260,8 +260,8 @@ The argument type of \code{(repeat x n)} is a type projected from a relation wit
 since its arguments are not hardcoded.
 This abstract type information cannot be handled by dynamic semantics. 
 Despite these complexities, the the system is able to ensure that these abstract inferred types
-can safely be composed, by transposing \code{($nat\_list\ \alpha$)} into the weaker pair \code{($nat$ * $list\ \alpha$)}.
-Once transposed, the list type of the argument type's relation can be projected and unified with the parameter's list type. 
+can safely be composed, by factoring \code{($nat\_list\ \alpha$)} into the weaker pair \code{($nat$ * $list\ \alpha$)}.
+Once factored out, the list type of the argument type's relation can be projected and unified with the parameter's list type. 
 \begin{mathpar}
 \\
   \inferrule {
@@ -275,9 +275,6 @@ Once transposed, the list type of the argument type's relation can be projected 
   }
 \\
 \end{mathpar}
-Note that weakening the constraint is sound because it constrains the stronger type (on the left side of subtyping),
-and it does not constrain parameter types. Weakening a parameter type of the stronger type would be unsound.  
-
 
 \paragraph{Inductive subtyping.} 
 Consider applying a function that expects a natural number to an argument whose type is an even natural number.
