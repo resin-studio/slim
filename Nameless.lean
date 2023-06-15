@@ -55,7 +55,6 @@ namespace Nameless
       env_simple : PHashMap Nat Ty
       env_keychain : PHashMap Nat (PHashSet Ty)
       env_relational : PHashMap Ty Ty
-      set_expandable : PHashSet Nat
     deriving Repr
 
 
@@ -963,7 +962,6 @@ namespace Nameless
         env_simple := c1.env_simple;c2.env_simple,
         env_keychain := c1.env_keychain;c2.env_keychain
         env_relational := c1.env_relational;c2.env_relational
-        set_expandable := c1.set_expandable + c2.set_expandable
       }
 
 
@@ -1140,20 +1138,11 @@ namespace Nameless
 
       match context.env_simple.find? id with 
       | some ty => 
-        let (i, contexts) := bind_nl (unify i context ty' ty) (fun i context =>
-          ---------------------------
-          -- this refinement allows relational selection generated from application with a paramtere type
-          ---------------------------
-          if occurs context id ty' then
-            (i, [context])
-          else
-            let context := {context with env_simple := context.env_simple.insert id ty'}
-            (i, [context])
-        )
+        let (i, contexts) := (unify i context ty' ty) 
 
         if !contexts.isEmpty then
           (i, contexts)
-        else if (context.set_expandable.contains id) && !occurs context id ty' then
+        else if !occurs context id ty' then
           let context := {context with env_simple := context.env_simple.insert id (Ty.unionize ty' ty)}
           (i, [context])
         else
@@ -1182,10 +1171,7 @@ namespace Nameless
           else if occurs context id ty' then
             (i, [])
           else
-            (i, [{context with 
-                env_simple := context.env_simple.insert id ty',
-                set_expandable := context.set_expandable.insert id
-            }])
+            (i, [{context with env_simple := context.env_simple.insert id ty' }])
         )
       ---------------------------------------
 
@@ -1264,6 +1250,25 @@ namespace Nameless
             (i, [context])
 
     -------------------------------------
+
+    | .case (Ty.fvar id) ty_body, .case ty_arg ty_res =>
+
+      -- substitution to prevent expansion
+      let (i, contexts) := unify i context ty_arg (subst context.env_simple (Ty.fvar id)) 
+      if contexts.isEmpty then
+        (i, [])
+      else
+        let contexts := contexts.map (fun context => 
+          if occurs context id ty_arg then
+            context
+          else
+            {context with env_simple := context.env_simple.insert id ty_arg }
+        )
+
+        bind_nl (i, contexts) (fun i context =>
+          (unify i context ty_body ty_res)
+        ) 
+
 
     | .case ty1 ty2, .case ty3 ty4 =>
 
@@ -1555,7 +1560,7 @@ namespace Nameless
           | .some t' => Ty.union t t'
 
     partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
-      let context : Context := Context.mk env_simple empty empty empty
+      let context : Context := Context.mk env_simple empty empty
       let boundary := 0 
       let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
@@ -1564,7 +1569,7 @@ namespace Nameless
 
       
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
-      let context : Context := ⟨empty, empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty⟩
       let boundary := 0 
       let (_, contexts) := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
@@ -1574,11 +1579,11 @@ namespace Nameless
 
 
     partial def unify_simple (i : Nat) (ty1) (ty2) :=
-      let context : Context := ⟨empty, empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty⟩
       (unify i context ty1 ty2)
 
     partial def unify_decide (i : Nat) (ty1) (ty2) :=
-      let context : Context := ⟨empty, empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty⟩
       let (_, result) := (unify i context ty1 ty2)
       !result.isEmpty
 
@@ -2057,7 +2062,7 @@ namespace Nameless
 
 
     partial def infer_simple i (t : Tm) :=
-      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty⟩
       (infer (i + 1) context {} t)
       
     partial def infer_union_context (i : Nat) (context : Ty.Context) (t : Tm) : Ty :=
@@ -2068,7 +2073,7 @@ namespace Nameless
       ) Ty.bot contexts
 
     partial def infer_union (i : Nat) (t : Tm) : Ty := 
-      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty⟩
       infer_union_context (i + 1)  context t
 
     partial def infer_reduce_context (i : Nat) (context : Ty.Context) (t : Tm) : Ty :=
@@ -2082,7 +2087,7 @@ namespace Nameless
 
 
     partial def infer_reduce (i : Nat) (t : Tm) : Ty := 
-      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty⟩
       infer_reduce_context (i + 1)  context t
 
     -- structure Work where
@@ -2836,6 +2841,7 @@ namespace Nameless
   (y[0] #uno())
   ]
 
+  -- broken
   -- expected: (uno : unit) & (dos : unit) -> unit * unit
   #eval infer_reduce 0 [lessterm|
   let y[0] : (uno : unit) -> unit = _ in 
