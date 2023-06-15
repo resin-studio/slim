@@ -171,7 +171,7 @@ Thus, parametric types are extended with constraints in the form of subtyping.
 
 \subsection{Type Inference}
 
-We illustrate the syntax and semantics of programs and types with the example program shown in Figure \ref{fig:program}.
+We illustrate the syntax and semantics of programs and types with the example program shown in Fig. \ref{fig:program}.
 
 \paragraph{Path typing.}
 Consider the function \code{trivial} that completes an English phrase:
@@ -416,6 +416,493 @@ the possible values of the argument.
 % \paragraph{List bounds.}
 % \paragraph{Generalization.} This is motivated by applying the same function to multiple arguments of varying types.
 % \paragraph{Object oriented.}  
+
+\section{Language}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Syntax %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure*}[h]
+\[
+  \begin{array}{l @{} l}
+    e 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      \code{$x$}
+      \ |\ 
+      \code{()}
+      \ |\ 
+      \code{\#$l$ $e$} 
+      \ |\ 
+      \widebar{\code{@$l$ = $e$}}
+      \ |\ 
+      \widebar{\code{path $m$ => $e$}} 
+      \ |\ 
+      \code{$e$.$l$}
+      \ |\ 
+      \code{$e$ $e$} 
+      \ |\ 
+      \code{fix $e$}
+      \ |\ 
+      \code{let $x$ : $\tau$ = $e$ in $e$}
+    \end{array}
+    \\
+    m 
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      \code{$x$}
+      \ |\ 
+      \code{()}
+      \ |\ 
+      \code{\#$l$ $e$} 
+      \ |\ 
+      \widebar{\code{@$l$ = $e$}}
+    \end{array}
+    \\
+    \tau
+    &{} ::=
+    \begin{array}[t]{@{} l}
+      \code{unit} 
+      \ |\ 
+      \code{$\alpha$} 
+      \ |\ 
+      \code{?$l$ $\tau$} 
+      \ |\ 
+      \code{$l$ : $\tau$} 
+      \ |\ 
+      \code{$\tau$ -> $\tau$} 
+      \ |\ 
+      (\code{$\tau$ | $\tau$})
+      \ |\ 
+      \code{$\tau$ \& $\tau$}
+      \ |\ 
+      \\
+      \code{\{$\widebar{\alpha}$ // $\tau$ with $\tau$ <: $\tau$\}}
+      \ |\ 
+      \code{[$\alpha$ <: $\tau$] $\tau$}
+      \ |\ 
+      \code{induct $\alpha$ . $\tau$}
+    \end{array}
+  \end{array}
+\]
+
+\caption{Syntax}
+\end{figure*}
+
+\section{Analysis}
+
+% we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
+% i.e. we don't compare current to previous, we simply look at structure of input.
+% the structure of input decreases as types widen/narrow
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Gamma \Vdash e : \tau}&
+\end{flalign*}
+
+\begin{mathpar}
+  \inferrule { 
+    (\Gamma\ x) = \tau
+  } {
+    \Delta \cdot \Gamma
+    \Vdash x : \tau
+  } 
+
+  \inferrule { 
+  } {
+    \Delta \cdot \Gamma 
+    \Vdash () : \text{unit}
+  } 
+
+  \inferrule { 
+    \Delta \cdot \Gamma
+    \Vdash e : \tau
+  } {
+    \Delta \cdot \Gamma 
+    \Vdash (l \cdot e) : (l * \tau)
+  } 
+
+  \inferrule { 
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma \Vdash e_i : \tau_i
+  } {
+    \Delta \cdot \Gamma
+    \Vdash \sigma\ \widebar{l_i = e_i}^i : 
+    \sqcap_i\ (l_i : \tau_i)
+  } 
+
+  \inferrule { 
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;\Gamma' \Vdash m_i : \tau'_i
+    \\
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;\Gamma' \Vdash e_i : \tau''_i
+  } {
+    \Delta \cdot \Gamma
+    \Vdash
+    \lambda\ \widebar{m_i \Rightarrow e_i}^i : 
+    \sqcap_i\ (\tau_i' \rightarrow \tau_i'') 
+  } 
+
+  \inferrule { 
+    \Delta \cdot \Gamma \Vdash e : \tau
+    \\
+    \Delta \cdot \oslash \Vdash \tau \sqsubseteq (l : \alpha)
+  } {
+    \Delta \cdot \Gamma \Vdash (e/l) : \alpha
+  } 
+
+  \inferrule { 
+    \\
+    \Delta \cdot \Gamma \Vdash e_1 : \tau_1
+    \\
+    \Delta \cdot \Gamma \Vdash e_2 : \tau_2
+    \\
+    \Delta \cdot \oslash \Vdash \tau_1 \sqsubseteq \tau_2 \rightarrow \alpha
+    \\
+    % need to call unification one more time to liberate existentially quantified variables 
+    \Delta \cdot \oslash \Vdash \alpha' \sqsubseteq \alpha
+  } {
+    \Delta \cdot \Gamma
+    \Vdash (e_1\ e_2) : \alpha'
+  } 
+
+  \inferrule { 
+    % TODO: define/update generalize  
+    \Delta \cdot \Gamma \Vdash e_1 : \tau_1
+    \\
+    \Delta \cdot (\Gamma, x \mapsto \text{generalize}\ \Delta\ \tau_1)  \Vdash e_2 : \tau_2
+    \\
+  } {
+    \Delta \cdot \Gamma 
+    \Vdash 
+    (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2
+  } 
+
+  \inferrule { 
+    % TODO: update inference using implication with inductive type  
+    \Delta \cdot \Gamma \Vdash e : \tau \rightarrow \tau'
+    \\
+    \tau' = \sqcap_i \tau_i'
+  } {
+    \Delta;\Delta' \cdot \Gamma  
+    \Vdash \text{fix}\ e :(\nu \alpha\ .\ \sqcap_i (\text{case}\ \alpha\ \tau\ \tau_i')) 
+  } 
+\end{mathpar}
+\caption{Type inference.
+  \newline
+  Input: $\Delta \cdot \Gamma \Vdash e : \_ $. The input is the type variable environment, typing environment, and the expression.
+  \newline
+  Output: $\Delta \cdot \_ \Vdash \_ : \tau $. The output is the type variable environment and the result type.
+}
+\end{figure*}
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+%% Subtype unification: standard rules 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule {
+  } {
+    \Delta \cdot \Omega \Vdash \text{unit} \sqsubseteq \text{unit}
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+  } {
+    \Delta \cdot \Omega \Vdash l*\tau_1 \sqsubseteq l*\tau_2
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+  } {
+    \Delta \cdot \Omega \Vdash l:\tau_1 \sqsubseteq l:\tau_2
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_1
+    \\
+    \Delta \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_4
+  } {
+    \Delta \cdot 
+      \Omega \Vdash \tau_1\rightarrow\tau_2 \sqsubseteq \tau_3\rightarrow\tau_4	
+  }
+  \\
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+    \\
+    \Delta \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_3
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqcup \tau_2 \sqsubseteq \tau_3
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \sqcup \tau_3
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \sqcup \tau_3
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2 \sqcap \tau_3
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_3
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqcap \tau_2 \sqsubseteq \tau_3
+  }
+
+  \inferrule {
+    \Delta \cdot \Omega \Vdash \tau_2 \sqsubseteq \tau_3
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqcap \tau_2 \sqsubseteq \tau_3
+  }
+\end{mathpar}
+\caption{Subtype unification: standard rules.
+  \newline
+  Input: $\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau$. The input is the type variable environment, the complex environment, the subtype, and the supertype. 
+  \newline
+  Output: $\Delta \cdot \_ \Vdash \_ \sqsubseteq \_$. The output is the type variable environment. 
+}
+\end{figure*}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+%% Subtype unification: extended rules
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+
+\begin{mathpar}
+  \inferrule {
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq 
+      \left< \exists \widebar{\alpha_i}^i\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+  }
+
+  \inferrule {
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \text{complex}\ \Delta\ \tau_3 = k
+    \\
+    \Delta;\Delta' \cdot \Omega, \downarrow k \mapsto \tau_4 \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta')
+  } {
+    \Delta \cdot \Omega \Vdash 
+      \left< \exists \widebar{\alpha_i}^i\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
+      \tau_2
+  }
+
+  \inferrule {
+    % TODO: update with union solution for constraint  
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \text{complex}\ \Delta\ \tau_3 \neq k
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta')
+  } {
+    \Delta \cdot \Omega \Vdash 
+      \left< \exists \widebar{\alpha_i}^i\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right> \sqsubseteq
+      \tau_2
+  }
+
+  \inferrule {
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
+  } {
+    \Delta \cdot \Omega \Vdash  
+      \left< \forall \widebar{\alpha_i}^i\ .\ \tau_1\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+      \sqsubseteq \tau_2
+  }
+  \\
+  \inferrule {
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \text{complex}\ \Delta\ \tau_4 = k
+    \\
+    \Delta;\Delta' \cdot \Omega, \uparrow k \mapsto \tau_3 \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta')
+  } {
+    \Delta \cdot \Omega \Vdash 
+      \tau_1
+      \sqsubseteq
+      \left< \forall \widebar{\alpha_i}^i\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+  }
+  \\
+  \inferrule {
+    % TODO: update with intersecting of solution to constraint  
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta)
+    \\
+    \text{complex}\ \Delta\ \tau_4 \neq k
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_3 \sqsubseteq \tau_4
+    \\
+    \Delta;\Delta' \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2
+    \\
+    \bigwedge\nolimits_i\ \alpha_i \not\in (\text{dom}\ \Delta')
+  } {
+    \Delta \cdot \Omega \Vdash 
+      \tau_1
+      \sqsubseteq
+      \left< \forall \widebar{\alpha_i}^i\ .\ \tau_2\ |\ \tau_3 \sqsubseteq \tau_4 \right>
+  }
+  \\
+  \\
+  %%%%%%%%%%%%%%%%%%%%%%%
+  \inferrule {
+    \alpha \not\in (\text{dom}\ \Delta)
+  } {
+    (\Delta, \alpha \mapsto \text{rolldn}\ \alpha\ \tau) \cdot \Omega 
+    \Vdash \alpha \sqsubseteq \tau
+  }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \Delta \cdot \Omega \Vdash \tau' \sqsubseteq \tau
+  } {
+    \Delta \cdot \Omega \Vdash \alpha \sqsubseteq \tau
+  }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau' \sqsubseteq \tau)
+  } {
+    (\Delta, \alpha \mapsto \text{rolldn}\ \alpha\ (\tau' \sqcap \tau)) 
+    \cdot \Omega 
+    \Vdash \alpha \sqsubseteq \tau
+  }
+
+  \inferrule {
+    \alpha \not\in (\text{dom}\ \Delta)
+  } {
+    (\Delta, \alpha \mapsto \text{rollup}\ \alpha\ \tau) 
+    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
+  }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \Delta \cdot \Omega \Vdash \tau \sqsubseteq \tau'
+  } {
+    \Delta \cdot \Omega \Vdash \tau \sqsubseteq \alpha
+  }
+
+  \inferrule {
+    (\Delta\ \alpha) = \tau'
+    \\
+    \neg (\Delta;\Delta' \cdot \Omega \Vdash \tau \sqsubseteq \tau')
+  } {
+    (\Delta, \alpha \mapsto \text{rollup}\ \alpha\ (\tau' \sqcup \tau))
+    \cdot \Omega \Vdash \tau \sqsubseteq \alpha
+  }
+  %%%%%%%%%%%%%%%%%%
+  \\
+  \\
+  \inferrule {
+    % TODO: modify to match code; no need for rhs to be inductive  
+    \Delta \cdot \Omega \Vdash 
+      \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2] % by induction hypothesis
+      \sqsubseteq 
+      \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
+  } {
+    \Delta \cdot \Omega \Vdash \mu \alpha_1 . \tau_1 \sqsubseteq \mu \alpha_2 . \tau_2
+  }
+  \\
+  \inferrule {
+    \text{complex}\ \tau_1 = k 
+    \\
+    \Delta \cdot \Omega \Vdash (\Omega\ \downarrow\ k) \sqsubseteq \mu \alpha . \tau_2
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \mu \alpha . \tau_2
+  }
+  \\
+  \inferrule {
+    \text{complex}\ \tau_1 \neq k 
+    \\
+    \text{wellfounded}\ \alpha\ \tau_2
+    \\
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \tau_2[\alpha \mapsto \mu \alpha . \tau_2]
+  } {
+    \Delta \cdot \Omega \Vdash \tau_1 \sqsubseteq \mu \alpha . \tau_2
+  }
+  \\
+  \inferrule {
+    \Delta \cdot \Omega \Vdash 
+        \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
+        \sqsubseteq 
+        \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+        % by co-induction hypothesis
+  } {
+    \Delta \cdot \Omega \Vdash \nu \alpha_1 . \tau_1 \sqsubseteq \nu \alpha_2 . \tau_2	
+  }
+  \\
+  \inferrule {
+    \text{complex}\ \tau_2 = k 
+    \\
+    \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \sqsubseteq (\Omega\ \uparrow\ k) 
+  } {
+    \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \sqsubseteq \tau_2
+  }
+  % \\
+  % \inferrule {
+  %   \text{wellroofed}\ \alpha\ \tau_1
+  %   \\
+  %   \text{complex}\ \tau_2 \neq k 
+  %   \\
+  %   \Delta \cdot \Omega \Vdash \tau_1[\alpha \mapsto \nu \alpha . \tau_1] \sqsubseteq \tau_2
+  % } {
+  %   \Delta \cdot \Omega \Vdash \nu \alpha_1 . \tau_1 \sqsubseteq \tau_2
+  % }
+  \\
+  \inferrule {
+    \text{complex}\ \tau_2 \neq k 
+    \\
+    \text{rewrite}\ \nu \alpha . \tau_1 = \tau_1'
+    \\
+    \Delta \cdot \Omega \Vdash \tau_1' \sqsubseteq \tau_2
+  } {
+    \Delta \cdot \Omega \Vdash \nu \alpha . \tau_1 \sqsubseteq \tau_2
+  }
+\end{mathpar}
+\caption{Subtype unification: extended rules}
+\end{figure*}
+
+
+
+
+\section{Properties}
 
 \section{Related work}
 
