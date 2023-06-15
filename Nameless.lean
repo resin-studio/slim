@@ -55,6 +55,7 @@ namespace Nameless
       env_simple : PHashMap Nat Ty
       env_keychain : PHashMap Nat (PHashSet Ty)
       env_relational : PHashMap Ty Ty
+      set_expandable : PHashSet Nat
     deriving Repr
 
 
@@ -962,6 +963,7 @@ namespace Nameless
         env_simple := c1.env_simple;c2.env_simple,
         env_keychain := c1.env_keychain;c2.env_keychain
         env_relational := c1.env_relational;c2.env_relational
+        set_expandable := c1.set_expandable + c2.set_expandable
       }
 
 
@@ -1120,7 +1122,7 @@ namespace Nameless
 
       match context.env_simple.find? id with 
       | some ty => 
-        bind_nl (unify i context ty' ty) (fun i context =>
+        let (i, contexts) := bind_nl (unify i context ty' ty) (fun i context =>
           ---------------------------
           -- this refinement allows relational selection generated from application with a paramtere type
           ---------------------------
@@ -1130,6 +1132,16 @@ namespace Nameless
             let context := {context with env_simple := context.env_simple.insert id ty'}
             (i, [context])
         )
+
+        if !contexts.isEmpty then
+          (i, contexts)
+        else if (context.set_expandable.contains id) && !occurs context id ty' then
+          let context := {context with env_simple := context.env_simple.insert id (Ty.unionize ty' ty)}
+          (i, [context])
+        else
+          (i, [])
+        ----------------------------------------------
+
       | none => 
         --- check env_relational
         match context.env_keychain.find? id with
@@ -1147,28 +1159,15 @@ namespace Nameless
             )
           ) (i, [context])
         | none => (
-          -----------------
-          -- deprecate expansion
-          -----------------
-          -- let expandable := context.set_expandable.find? id != .none
-          -- let (i, ty_assign) := (
-          --   if expandable then
-          --     (i + 1, Ty.union (Ty.fvar i) ty') 
-          --   else
-          --     (i, ty')
-          -- )
-
-          -- if occurs context id ty_assign then
-          --   (i, [])
-          -- else
-          --   (i, [{context with env_simple := context.env_simple.insert id ty_assign}])
-          ------------------------------
           if (Ty.fvar id) == ty' then
             (i, [context])
           else if occurs context id ty' then
             (i, [])
           else
-            (i, [{context with env_simple := context.env_simple.insert id ty'}])
+            (i, [{context with 
+                env_simple := context.env_simple.insert id ty',
+                set_expandable := context.set_expandable.insert id
+            }])
         )
       ---------------------------------------
 
@@ -1538,7 +1537,7 @@ namespace Nameless
           | .some t' => Ty.union t t'
 
     partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
-      let context : Context := Context.mk env_simple empty empty
+      let context : Context := Context.mk env_simple empty empty empty
       let boundary := 0 
       let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
@@ -1547,7 +1546,7 @@ namespace Nameless
 
       
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
-      let context : Context := ⟨empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty, empty⟩
       let boundary := 0 
       let (_, contexts) := (unify i context ty1 ty2)
       List.foldr (fun context ty_acc => 
@@ -1557,11 +1556,11 @@ namespace Nameless
 
 
     partial def unify_simple (i : Nat) (ty1) (ty2) :=
-      let context : Context := ⟨empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty, empty⟩
       (unify i context ty1 ty2)
 
     partial def unify_decide (i : Nat) (ty1) (ty2) :=
-      let context : Context := ⟨empty, empty, empty⟩
+      let context : Context := ⟨empty, empty, empty, empty⟩
       let (_, result) := (unify i context ty1 ty2)
       !result.isEmpty
 
@@ -2040,7 +2039,7 @@ namespace Nameless
 
 
     partial def infer_simple i (t : Tm) :=
-      let context : Ty.Context := ⟨empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
       (infer (i + 1) context {} t)
       
     partial def infer_union_context (i : Nat) (context : Ty.Context) (t : Tm) : Ty :=
@@ -2051,7 +2050,7 @@ namespace Nameless
       ) Ty.bot contexts
 
     partial def infer_union (i : Nat) (t : Tm) : Ty := 
-      let context : Ty.Context := ⟨empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
       infer_union_context (i + 1)  context t
 
     partial def infer_reduce_context (i : Nat) (context : Ty.Context) (t : Tm) : Ty :=
@@ -2065,7 +2064,7 @@ namespace Nameless
 
 
     partial def infer_reduce (i : Nat) (t : Tm) : Ty := 
-      let context : Ty.Context := ⟨empty, empty, empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
       infer_reduce_context (i + 1)  context t
 
     -- structure Work where
@@ -3564,10 +3563,6 @@ namespace Nameless
       )
     ) 
   ] 
-  #eval (
-                      Nameless.Ty.inter
-                        (Nameless.Ty.field "l" (Nameless.Ty.fvar 20))
-                        (Nameless.Ty.inter (Nameless.Ty.field "r" (Nameless.Ty.fvar 18)) (Nameless.Ty.top)))
 
 
   -- NOTE: max of the two inputs  
@@ -3829,20 +3824,37 @@ namespace Nameless
   [lesstype| α[7] * α[8] ]
 
 
-  -- broken
   -- expected: ?two unit | ?four unit
   #eval unify_reduce 10 
   [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
   [lesstype| (?one unit -> α[7]) & (?three unit -> α[7])]
   [lesstype| α[7] ]
 
-  -- broken
   -- NOTE: requires expandable variables
   -- expected: ?two unit | ?four unit
   #eval unify_reduce 10
   [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
   [lesstype| (?one unit | ?three unit) -> α[7] ]
   [lesstype| α[7] ]
+
+  ----------------------
+  /-
+                                                      Y <: ?'
+                                                  --------------
+                                                    Y <: B | ?'
+                                                  --------------------
+    B <: ?                                            Y <: ?
+------------------------                     ------------------------
+  (A -> B) <: (A -> ?)                         (X -> Y) <: (X -> ?) 
+---------------------------------          -----------------------------------
+  (A -> B & X -> Y) <: (A -> ?),            (A -> B & X -> Y) <: (X -> ?)
+--------------------------------------------------------------------------------
+  (A -> B & X -> Y) <: (A | X) -> ?
+
+
+  -- NOTE: requires expanding ? into B | Y
+  -- since it starts as a variable; union a variable to indicate it can expand 
+  -/
 
 -----------------
 
@@ -3865,9 +3877,14 @@ namespace Nameless
   [lesstype| (?one unit | ?three unit) -> α[6] | α[7] ]
   [lesstype| α[6] | α[7] ]
 
-  #eval unify_simple 10
+  -- broken
+  -- NOTE: variable α[7] should not be refined
+  -- it should be marked as expandable
+  -- expected: ?two | ?four
+  #eval unify_reduce 10
   [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
   [lesstype| (?one unit | ?three unit) -> {β[0] with β[0] <: α[7]} ]
+  [lesstype| α[7] ]
 
 
 -----------------
@@ -3892,8 +3909,6 @@ namespace Nameless
 
 
   -------------------------------------------
-  -- broken
-  -- sound but incomplete
   -- requires expansion of return type in app
   -- expected: ?two unit | ?four unit
   -- may be affected initial expected type in infer_reduce 
@@ -3905,7 +3920,7 @@ namespace Nameless
     )
   ]
 
-  -- expected: ?one unit | ?three unit
+  -- expected: ?one unit
   #eval infer_reduce 0 [lessterm|
     let y[0] : ?one unit | ?three unit = _ in
     (
@@ -4064,36 +4079,6 @@ namespace Nameless
 
   --------- sound application --------
 
-#eval (Nameless.Ty.inter
-(Nameless.Ty.field "l" (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))
-(Nameless.Ty.field "r" (Nameless.Ty.tag "succ" (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))))
-
-#eval (
-  Nameless.Ty.union
-    (Nameless.Ty.inter
-      (Nameless.Ty.field
-        "l"
-        (Nameless.Ty.inter
-          (Nameless.Ty.tag "zero" (Nameless.Ty.unit))
-          (Nameless.Ty.tag "succ" (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))))
-      (Nameless.Ty.field
-        "r"
-        (Nameless.Ty.inter
-          (Nameless.Ty.tag "succ" (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))
-          (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))))
-    (Nameless.Ty.inter
-      (Nameless.Ty.field "l" (Nameless.Ty.tag "zero" (Nameless.Ty.unit)))
-      (Nameless.Ty.field
-        "r"
-        (Nameless.Ty.tag "succ" (Nameless.Ty.tag "zero" (Nameless.Ty.unit))))))
-
-
-  #eval unify_decide 10
-  [lesstype| ((?zero unit * ?succ ?zero unit) | (?succ ?zero unit * ?zero unit)) ]
-  [lesstype| (?zero unit * ?succ ?zero unit) ]
-
-
-  -- broken
   -- NOTE: in left-exisitential rule: allow all combinations for refinement, but then check for safety 
   -- expected: false
   #eval unify_decide 10
