@@ -1255,14 +1255,41 @@ namespace Nameless
       ) 
 
     /-
-    Intersection-implication introduction.
+    Intersection introduction.
+
+    T ⊑ (P -> R), T ⊑ (P -> Q)
+    ---------------------------
+    T ⊑ (P -> Q & R)
+
+    T ⊑ R, T ⊑ Q
+    ---------------------------
+    T ⊑ Q & R
+
     -/
     | ty1, .case ty2 (Ty.inter ty_u1 ty_u2) =>
        bind_nl (unify i context ty1 (Ty.case ty2 ty_u1)) (fun i context =>
          unify i context ty1 (Ty.case ty2 ty_u2)
        )
+
     /-
-    Union-implication elimination.
+    Itersection elimination. 
+
+    T ⊑ (P -> R)
+    ---------------------------
+    T ⊑ (P & Q -> R)
+
+    P ⊑ T 
+    ---------------------------
+    P & Q ⊑ T 
+
+    -/
+
+
+
+
+
+    /-
+    Union elimination.
 
     P | Q, (P -> R), (Q -> R)
     ---------------------------
@@ -1272,22 +1299,30 @@ namespace Nameless
     ---------------------------
     T ⊑ (P | Q -> R)
 
-    --- comparison to other union rules: ---
 
     P ⊑ T, Q ⊑ T 
     ---------------------------
     P | Q ⊑ T 
-
-    T ⊑ P 
-    ---------------------------
-    T ⊑ P | Q  
-
     -/
 
     | ty1, .case (Ty.union ty_u1 ty_u2) ty2 =>
       bind_nl (unify i context ty1 (Ty.case ty_u1 ty2)) (fun i context =>
         unify i context ty1 (Ty.case ty_u2 ty2)
       )
+
+    /-
+    Union introduction. 
+
+    T ⊑ (P -> Q)
+    ---------------------------
+    T ⊑ (P -> Q | R)
+
+    T ⊑ Q 
+    ---------------------------
+    T ⊑ Q | R 
+
+    -/
+
 
     -- | ty1, .case (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
     --   -- TODO: reconsider if this rule is needed 
