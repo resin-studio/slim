@@ -1063,6 +1063,10 @@ namespace Nameless
         | none => true
         | some new_ty_c => some new_ty_c == op_ty_c
       )
+
+      -- TODO: important soundness consideration
+      -- consider doing substitution before unification;
+      -- in order to prevent unsafe refinements
       let (i, contexts) := (unify i context ty1 ty2)
       let result_safe := op_ty_c != none ||  contexts.all safe_binding
       if result_safe then
@@ -1106,6 +1110,12 @@ namespace Nameless
         match op_ty_c with
         | none => (i, [context])
         | some ty_c => (
+          -- TODO: important soundness consideration
+          -- consider doing substitution before unification;
+          -- in order to prevent unsafe refinements
+          ------------
+          -- (unify i context (Ty.fvar bound_key) ty_c)
+          ------------
           let op_ty_b := context.env_simple.find? bound_key
           match op_ty_b with
           | some ty_b => (unify i context ty_b ty_c)
