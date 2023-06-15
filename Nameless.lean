@@ -1254,10 +1254,35 @@ namespace Nameless
         (unify i context ty2 ty4)
       ) 
 
+    /-
+    Intersection-implication introduction.
+    -/
     | ty1, .case ty2 (Ty.inter ty_u1 ty_u2) =>
        bind_nl (unify i context ty1 (Ty.case ty2 ty_u1)) (fun i context =>
          unify i context ty1 (Ty.case ty2 ty_u2)
        )
+    /-
+    Union-implication elimination.
+
+    P | Q, (P -> R), (Q -> R)
+    ---------------------------
+    R
+
+    T ⊑ (P -> R), T ⊑ (Q -> R)
+    ---------------------------
+    T ⊑ (P | Q -> R)
+
+    --- comparison to other union rules: ---
+
+    P ⊑ T, Q ⊑ T 
+    ---------------------------
+    P | Q ⊑ T 
+
+    T ⊑ P 
+    ---------------------------
+    T ⊑ P | Q  
+
+    -/
 
     | ty1, .case (Ty.union ty_u1 ty_u2) ty2 =>
       bind_nl (unify i context ty1 (Ty.case ty_u1 ty2)) (fun i context =>
