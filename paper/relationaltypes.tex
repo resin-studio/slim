@@ -43,6 +43,7 @@
 \begin{document}
 
 \newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\hastype}{\ \uparrow\ }
 
 
 \maketitle
@@ -491,98 +492,102 @@ the possible values of the argument.
 
 \section{Analysis}
 
-% we don't have fixed point recursion, but structural recursion terminates as subtyping squeezes.
-% i.e. we don't compare current to previous, we simply look at structure of input.
-% the structure of input decreases as types widen/narrow
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Type inference 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\Delta \cdot \Gamma \Vdash e : \tau}&
+  &\boxed{\Delta \cdot \Gamma \Vdash e \hastype \tau}&
 \end{flalign*}
 
 \begin{mathpar}
   \inferrule { 
-    (\Gamma\ x) = \tau
+    (\code{$x$ : $\tau$}) \in \Gamma
   } {
     \Delta \cdot \Gamma
-    \Vdash x : \tau
+    \Vdash x \hastype \tau
   } 
 
   \inferrule { 
   } {
     \Delta \cdot \Gamma 
-    \Vdash () : \text{unit}
+    \Vdash \code{()} \hastype \code{unit}
   } 
 
   \inferrule { 
-    \Delta \cdot \Gamma
-    \Vdash e : \tau
+    \Delta \cdot \Gamma \Vdash e \hastype \tau
   } {
     \Delta \cdot \Gamma 
-    \Vdash (l \cdot e) : (l * \tau)
+    \Vdash (\code{\#$l$ $e$}) \hastype (\code{?$l$ $\tau$})
   } 
 
   \inferrule { 
-    \bigwedge\nolimits_i\ \Delta \cdot \Gamma \Vdash e_i : \tau_i
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma \Vdash e_i \hastype \tau_i
   } {
     \Delta \cdot \Gamma
-    \Vdash \sigma\ \widebar{l_i = e_i}^i : 
-    \sqcap_i\ (l_i : \tau_i)
+    \Vdash 
+    \widebar{\code{@$l_i$ = $e_i$}}^i 
+    \hastype
+    \code{\&}_i\ (\code{$l_i$ : $\tau_i$})
   } 
 
   \inferrule { 
-    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;\Gamma' \Vdash m_i : \tau'_i
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;\Gamma' \Vdash m_i \hastype \tau'_i
     \\
-    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;\Gamma' \Vdash e_i : \tau''_i
+    \bigwedge\nolimits_i\ \Delta \cdot \Gamma;\Gamma' \Vdash e_i \hastype \tau''_i
   } {
     \Delta \cdot \Gamma
     \Vdash
-    \lambda\ \widebar{m_i \Rightarrow e_i}^i : 
-    \sqcap_i\ (\tau_i' \rightarrow \tau_i'') 
+    \widebar{\code{path $m_i$ => $e_i$}}^i 
+    \hastype 
+    \code{\&}_i\ (\code{$\tau_i'$ -> $\tau_i''$}) 
   } 
 
   \inferrule { 
-    \Delta \cdot \Gamma \Vdash e : \tau
+    \Delta \cdot \Gamma \Vdash e \hastype \tau
     \\
-    \Delta \cdot \oslash \Vdash \tau \sqsubseteq (l : \alpha)
+    \Delta \Vdash \tau \sqsubseteq (\code{$l$ : $\alpha$})
   } {
-    \Delta \cdot \Gamma \Vdash (e/l) : \alpha
+    \Delta \cdot \Gamma \Vdash \code{$e$.$l$} \hastype \alpha
   } 
 
   \inferrule { 
     \\
-    \Delta \cdot \Gamma \Vdash e_1 : \tau_1
+    \Delta \cdot \Gamma \Vdash e_1 \hastype \tau_1
     \\
-    \Delta \cdot \Gamma \Vdash e_2 : \tau_2
+    \Delta \cdot \Gamma \Vdash e_2 \hastype \tau_2
     \\
-    \Delta \cdot \oslash \Vdash \tau_1 \sqsubseteq \tau_2 \rightarrow \alpha
+    \Delta \Vdash \tau_1 \sqsubseteq (\code{$\tau_2$ -> $\alpha$})
     \\
     % need to call unification one more time to liberate existentially quantified variables 
-    \Delta \cdot \oslash \Vdash \alpha' \sqsubseteq \alpha
+    \Delta \Vdash \alpha' \sqsubseteq \alpha
   } {
     \Delta \cdot \Gamma
-    \Vdash (e_1\ e_2) : \alpha'
+    \Vdash (\code{$e_1$ $e_2$}) \hastype \alpha'
   } 
 
   \inferrule { 
     % TODO: define/update generalize  
-    \Delta \cdot \Gamma \Vdash e_1 : \tau_1
+    \Delta \cdot \Gamma \Vdash e_1 \hastype \tau_1
     \\
-    \Delta \cdot (\Gamma, x \mapsto \text{generalize}\ \Delta\ \tau_1)  \Vdash e_2 : \tau_2
+    \tau_1' = \text{generalize}\ \Delta\ \tau_1
+    \\
+    \Delta \cdot (\Gamma,\ \code{x : $\tau_1'$}) \Vdash e_2 \hastype \tau_2
     \\
   } {
     \Delta \cdot \Gamma 
     \Vdash 
-    (\text{let}\ x : \tau_1 = e_1\ \text{in}\ e_2) : \tau_2
+    (\code{let $x$ : $\tau_1$ = $e_1$ in $e_2$}) \hastype \tau_2
   } 
 
   \inferrule { 
     % TODO: update inference using implication with inductive type  
-    \Delta \cdot \Gamma \Vdash e : \tau \rightarrow \tau'
+    \Delta \cdot \Gamma \Vdash e \hastype \tau \rightarrow \tau'
     \\
-    \tau' = \sqcap_i \tau_i'
+    \tau' = 
   } {
     \Delta;\Delta' \cdot \Gamma  
-    \Vdash \text{fix}\ e :(\nu \alpha\ .\ \sqcap_i (\text{case}\ \alpha\ \tau\ \tau_i')) 
+    \Vdash \code{fix $e$} \hastype (\text{extract}\ \tau\ \tau_i') 
   } 
 \end{mathpar}
 \caption{Type inference.
