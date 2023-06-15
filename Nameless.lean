@@ -1007,6 +1007,10 @@ namespace Nameless
           (i, [])
       | none => 
         let (i,contexts) := bind_nl (i, contexts_constraint) (fun i context_constraint =>
+          -- TODO: important soundness consideration
+          -- consider doing substitution before unification;
+          -- in order to prevent unsafe refinements
+          -- these are caught later, but may be better to do this eagerly
           (unify i context_constraint ty1 ty2)
         )
 
@@ -1081,6 +1085,10 @@ namespace Nameless
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       bind_nl (unify i context ty' ty) (fun i context => 
+        -- TODO: important soundness consideration
+        -- consider doing substitution before unification;
+        -- in order to prevent unsafe refinements
+        -- and then remove substitution in the relational selection rule
         unify i context ty_c1 ty_c2
       )
 
