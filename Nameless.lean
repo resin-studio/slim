@@ -1911,7 +1911,7 @@ namespace Nameless
       ))
 
     | .app t_f t_arg =>
-      let (i, ty_ret) := (i + 1, Ty.fvar i)
+      let (i, ty_res) := (i + 1, Ty.fvar i)
       let (i, context_tys_arg) := (infer i context env_tm t_arg)
       let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
         Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
@@ -1920,7 +1920,7 @@ namespace Nameless
       let (i, new_context_tys_arg) :=  (
         bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
         bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
-        bind_nl (Ty.unify i context ty_f (Ty.case ty_arg ty_ret)) (fun i context => 
+        bind_nl (Ty.unify i context ty_f (Ty.case ty_arg ty_res)) (fun i context => 
           (i, [(context, ty_arg)])
         )))
       )
@@ -1934,7 +1934,7 @@ namespace Nameless
       if contexts_oracle.isEmpty then
         (i, [])
       else
-        (i, new_context_tys_arg.map (fun (context, _) => (context, ty_ret)))
+        (i, new_context_tys_arg.map (fun (context, _) => (context, ty_res)))
       ----------------
 
     | .letb op_ty_expected t_arg t => 
