@@ -1158,6 +1158,10 @@ namespace Nameless
               match context.env_relational.find? key with
               | some relation => 
                 let env_sub : PHashMap Nat Ty := empty.insert id ty'
+                -- TODO: sub key to prevent refinement
+                -- occurs check
+                -- let context := ... with context.env_simple.insert id ty'
+                -- let ty_sub := subst context.env_simple key 
                 let ty_sub := subst env_sub key  
                 (unify i context ty_sub relation) 
               | none => 
@@ -1266,14 +1270,20 @@ namespace Nameless
         )
 
         bind_nl (i, contexts) (fun i context =>
-          (unify i context ty_body ty_res)
+          -- substitution to prevent refinement 
+          -- but still allow expansion
+          (unify i context (subst context.env_simple ty_body) ty_res)
         ) 
 
 
-    | .case ty1 ty2, .case ty3 ty4 =>
+    | .case ty_param ty_body, .case ty_arg ty_res =>
 
-      bind_nl (unify i context ty3 ty1) (fun i context =>
-        (unify i context ty2 ty4)
+      -- substitution to prevent expansion
+      -- but still allow refinement 
+      bind_nl (unify i context ty_arg (subst context.env_simple ty_param)) (fun i context =>
+          -- substitution to prevent refinement 
+          -- but still allow expansion
+        (unify i context (subst context.env_simple ty_body) ty_res)
       ) 
 
     /-
