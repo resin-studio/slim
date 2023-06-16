@@ -1543,7 +1543,7 @@ namespace Nameless
       --   )
       --   simplify (subst env_sub ty)
       -- else if !constrained then
-      --   -- NOTE: need to use universal in order to indicate expansion is allowed for unconstrained variables.
+      --   -- NOTE: need to use universal in order to indicate weakening is allowed for unconstrained variables.
       --   (List.range fids_pl.length).foldl (fun ty_acc _ =>
       --     [lesstype| ? >> ⟨ty_acc⟩]
       --   ) (abstract fids_pl 0 ty)
@@ -2301,7 +2301,7 @@ namespace Nameless
   [lesstype| α[0] ]
 
 
-  -- requires expansion to be turned off
+  -- requires weakening to be turned off
   -- expected: ⊥
   #eval unify_reduce 30
   [lesstype| ⊤ >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
@@ -2575,7 +2575,7 @@ namespace Nameless
     (y[0] (#succ #zero ()))
   ]
 
-  -- NOTE: expansion causes a fairly impprecise type  
+  -- NOTE: weakening causes a fairly impprecise type  
   -- expected:  {2 // β[1] with β[0] * β[1] <: ⟨nat_list⟩}  
   #eval infer_reduce 10 [lessterm|
     let y[0] : ? >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
@@ -2753,7 +2753,7 @@ namespace Nameless
   ]
 
   ---------- expanding return type ----------------
-  -- expansion mechanism may be superfluous; subsumed by behavior of inductive and existential types.
+  -- weakening mechanism may be superfluous; subsumed by behavior of inductive and existential types.
   ----------------------------------------------
   -- object-oriented example without type annotation ----------------
   -- a typical object-oriented pattern:
@@ -2776,7 +2776,7 @@ namespace Nameless
   ]
 
 -- NOTE: 
--- The expansion flag may not actually be needed, as distinct types can be handled via existential inside of inductive type,
+-- The weakening flag may not actually be needed, as distinct types can be handled via existential inside of inductive type,
 -- which results in fresh variables at the time of unification.
   /-
 (? >> 
@@ -2808,7 +2808,7 @@ namespace Nameless
   ------------------
 
   ----------------------------------------
-  -- expansion mechanism is deprecated
+  -- weakening mechanism is deprecated
   ----------------------------------------
   -- #eval infer_reduce 0 [lessterm|
   --   let y[0] : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
@@ -2824,7 +2824,7 @@ namespace Nameless
   --   (((\ y[0] => \ y[0] => (y[1], y[0])) #hello ()) #world ())
   -- ]
 
-  -- -- NOTE: this requires subbing in unions to maintain expansion after let-poly generalization
+  -- -- NOTE: this requires subbing in unions to maintain weakening after let-poly generalization
   -- #eval infer_reduce 0 [lessterm|
   --   let y[0] : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
   --   let y[0] = (y[0] #hello ()) in
@@ -3943,7 +3943,7 @@ namespace Nameless
 
 
   -------------------------------------------
-  -- requires expansion of return type in app
+  -- requires weakening of return type in app
   -- expected: ?two unit | ?four unit
   -- may be affected initial expected type in infer_reduce 
   #eval infer_reduce 0 [lessterm|
