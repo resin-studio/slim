@@ -41,8 +41,11 @@
 
 \begin{document}
 
-\newcommand{\code}[1]{\texttt{\small #1}}
+% \newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\code}[1]{\texttt{#1}}
 \newcommand{\hastype}{\ \uparrow\ }
+\newcommand{\I}{\hspace{6mm}}
+
 
 
 \maketitle
@@ -505,6 +508,36 @@ the possible values of the argument.
 
 \section{Analysis}
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Internal Structures %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure*}[h]
+\[
+\begin{array}{l @{} l}
+  \mathbb{D} \owns \Delta 
+  &{} ::=
+  \begin{array}[t]{@{} l}
+    \emptyset 
+    \ |\ 
+    \Delta, \code{$\tau$ <: $\tau$}
+  \end{array}
+  \\
+  \mathbb{G} \owns \Gamma 
+  &{} ::=
+  \begin{array}[t]{@{} l}
+    \emptyset 
+    \ |\ 
+    \Gamma, \code{$x$ : $\tau$}
+  \end{array}
+\end{array}
+\]
+
+\caption{Internal Structures}
+\end{figure*}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Type inference 
 
@@ -515,12 +548,42 @@ the possible values of the argument.
 \[
 \begin{array}[t]{@{} l}
     \text{infer}\ \Delta\ \Gamma\ e\ \tau = 
-    \arcr
-    \hspace{4mm}\begin{array}[t]{@{} l}
-      \text{match}\ e\ \text{with} 
-      \arcr
-      \cdot\ \hdots  \Rightarrow \hdots
-    \end{array}
+    \\
+    \I \text{match}\ e\ \text{with} 
+    %
+    \\
+    \I \cdot\ \code{()}  \Rightarrow [(\Delta, \code{unit})] 
+    \\
+    \I \cdot\ \code{$x$} \Rightarrow 
+        \text{if } (\code{$x$<:$\tau$}) \in \Gamma \text{ then } 
+        [(\Delta, \tau)] \text{ else }  []
+    %
+    \\
+    \I\cdot\ \code{\#$l$ $e$}  \Rightarrow  
+    \\
+    \I\I \text{for } (\Delta, \tau) \leftarrow (\text{infer } \Delta\ \Gamma\ e) 
+     \\
+    \I\I\I [(\Delta, \code{?$l$ $\tau$})] 
+    %
+    \\
+    \I \cdot\ \widebar{\code{@$l$ $e$}}  \Rightarrow  
+    \\
+    \I\I solution \leftarrow [(\Delta, \top)]
+    \\
+    \I\I \text{for } (\code{@$l_i$ $e_i$}) \leftarrow \widebar{\code{@$l$ $e$}} 
+    \\
+    \I\I\I solution_i \leftarrow (
+    \\
+    \I\I\I\I \text{for } (\Delta, \tau) \leftarrow solution 
+    \\
+    \I\I\I\I\I \text{for } (\Delta, \tau_i) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
+    \\
+    \I\I\I\I\I\I [(\Delta, \code{($l_i$:$\tau_i$) \& $\tau$})])
+    \\
+    \I\I\I solution \leftarrow solution \cup solution_i
+    \\
+    \I\I solution
+    %
 \end{array}
 \]
 
@@ -647,7 +710,7 @@ the possible values of the argument.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\text{unify}\ \Delta\ \tau_{l}\ \tau_{r} = \vec{\Delta}}&
+  &\boxed{\text{unify}\ \Delta\ \tau_{l}\ \tau_{r} = \widebar{\Delta}}&
 \end{flalign*}
 \[
 \begin{array}[t]{@{} l}
