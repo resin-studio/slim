@@ -1006,9 +1006,7 @@ namespace Nameless
       | none => 
         let (i,contexts) := bind_nl (i, contexts_constraint) (fun i context_constraint =>
           -- TODO: important soundness consideration
-          -- consider doing substitution before unification;
-          -- in order to prevent unsafe constraint refinements
-          -- these are caught later, but may be better to do this eagerly
+          -- would substituting eagerly prevent local refinements?
           (unify i context_constraint ty1 ty2)
         )
 
@@ -1024,6 +1022,7 @@ namespace Nameless
             Ty.unionize (subst context.env_simple ty_c1) ty_weak
           ) Ty.bot
 
+          -- TODO: also neeed to ensure weaker side does not have additional/stronger relational constraints
           let (i, contexts_oracle) := unify i context ty_strong ty_weak
 
           let is_safe := (no_function_types ty1) && !contexts_oracle.isEmpty 
@@ -1063,8 +1062,7 @@ namespace Nameless
       )
 
       -- TODO: important soundness consideration
-      -- consider doing substitution before unification;
-      -- in order to prevent unsafe constraint refinements
+      -- would substituting here prevent local refinements? 
       let (i, contexts) := (unify i context ty1 ty2)
       let result_safe := op_ty_c != none ||  contexts.all safe_binding
       if result_safe then
@@ -1939,6 +1937,7 @@ namespace Nameless
         Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_weak
       ) Ty.bot
 
+      -- TODO: also neeed to ensure weaker side does not have additional/stronger relational constraints
       let (i, contexts_oracle) := Ty.unify i context ty_strong ty_weak
 
       if contexts_oracle.isEmpty then
