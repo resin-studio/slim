@@ -549,24 +549,28 @@ the possible values of the argument.
 \begin{array}[t]{@{} l}
     \text{infer}\ \Delta\ \Gamma\ e\ \tau = 
     \\
-    \I \text{match}\ e\ \text{with} 
-    %
+    \I \text{match}\ e
+    %% variable 
     \\
-    \I \cdot\ \code{()}  \Rightarrow [(\Delta, \code{unit})] 
+    \I \text{case } \code{()}  \Rightarrow [(\Delta, \code{unit})] 
     \\
-    \I \cdot\ \code{$x$} \Rightarrow 
-        \text{if } (\code{$x$<:$\tau$}) \in \Gamma \text{ then } 
-        [(\Delta, \tau)] \text{ else }  []
-    %
+    \I \text{case } \code{$x$} \Rightarrow 
     \\
-    \I\cdot\ \code{\#$l$ $e$}  \Rightarrow  
+    \I\I \text{match } (\code{$x$<:\_} \in \Gamma)
+    \\
+    \I\I \text{case } (\text{some } \tau) \Rightarrow [(\Delta, \tau)] 
+    \\
+    \I\I \text{case } \text{none} \Rightarrow []
+    %% tag 
+    \\
+    \I \text{case } \code{\#$l$ $e$}  \Rightarrow  
     \\
     \I\I \text{for } (\Delta, \tau) \leftarrow (\text{infer } \Delta\ \Gamma\ e) 
      \\
     \I\I\I [(\Delta, \code{?$l$ $\tau$})] 
-    %
+    %% record
     \\
-    \I \cdot\ \widebar{\code{@$l$ $e$}}  \Rightarrow  
+    \I \text{case } \widebar{\code{@$l$ $e$}}  \Rightarrow  
     \\
     \I\I solution \leftarrow [(\Delta, \top)]
     \\
@@ -579,6 +583,31 @@ the possible values of the argument.
     \I\I\I\I\I \text{for } (\Delta, \tau_i) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
     \\
     \I\I\I\I\I\I [(\Delta, \code{($l_i$:$\tau_i$) \& $\tau$})])
+    \\
+    \I\I solution
+    %% function
+    \\
+    \I \text{case } (\widebar{\code{path $m$ => $e$}})  \Rightarrow  
+    \\
+    \I\I solution \leftarrow [(\Delta, \top)]
+    \\
+    \I\I \text{for } (\widebar{\code{path $m_i$ => $e_i$}}) \leftarrow (\widebar{\code{path $m$ => $e$}}) 
+    \\
+    \I\I\I \text{for } x \leftarrow (\text{freevars } m_i)
+    \\
+    \I\I\I\I \tau_m \leftarrow \text{fresh ()} 
+    \\
+    \I\I\I\I \Gamma \leftarrow \Gamma, \code{$x$<:$\tau_m$}
+    \\
+    \I\I\I solution \leftarrow (
+    \\
+    \I\I\I\I \text{for } (\Delta, \tau) \leftarrow solution 
+    \\
+    \I\I\I\I\I \text{for } (\Delta, \tau_{mi}) \leftarrow (\text{infer } \Delta\ \Gamma\ m_i) 
+    \\
+    \I\I\I\I\I\I \text{for } (\Delta, \tau_{ei}) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
+    \\
+    \I\I\I\I\I\I\I [(\Delta, \code{($\tau_{mi}$->$\tau_{ei}$) \& $\tau$})])
     \\
     \I\I solution
     %
