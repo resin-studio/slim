@@ -572,15 +572,13 @@ the possible values of the argument.
     \\
     \I\I \text{for } (\code{@$l_i$ $e_i$}) \leftarrow \widebar{\code{@$l$ $e$}} 
     \\
-    \I\I\I solution_i \leftarrow (
+    \I\I\I solution \leftarrow (
     \\
     \I\I\I\I \text{for } (\Delta, \tau) \leftarrow solution 
     \\
     \I\I\I\I\I \text{for } (\Delta, \tau_i) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
     \\
     \I\I\I\I\I\I [(\Delta, \code{($l_i$:$\tau_i$) \& $\tau$})])
-    \\
-    \I\I\I solution \leftarrow solution \cup solution_i
     \\
     \I\I solution
     %

@@ -617,7 +617,7 @@ namespace Nameless
       -----------------------
       -- assumption: env_simple is cycle-free  
       -- keep variables that exist in parameter position; substitute variables that are only in return position 
-      -- avoid substitution to allow refinements
+      -- avoid substitution to allow constraint refinements
       -- recursively pack referenced variables as constraints
       -----------------------
 
@@ -1007,7 +1007,7 @@ namespace Nameless
         let (i,contexts) := bind_nl (i, contexts_constraint) (fun i context_constraint =>
           -- TODO: important soundness consideration
           -- consider doing substitution before unification;
-          -- in order to prevent unsafe refinements
+          -- in order to prevent unsafe constraint refinements
           -- these are caught later, but may be better to do this eagerly
           (unify i context_constraint ty1 ty2)
         )
@@ -1064,7 +1064,7 @@ namespace Nameless
 
       -- TODO: important soundness consideration
       -- consider doing substitution before unification;
-      -- in order to prevent unsafe refinements
+      -- in order to prevent unsafe constraint refinements
       let (i, contexts) := (unify i context ty1 ty2)
       let result_safe := op_ty_c != none ||  contexts.all safe_binding
       if result_safe then
@@ -1089,7 +1089,7 @@ namespace Nameless
       bind_nl (unify i context ty' ty) (fun i context => 
         -- TODO: important soundness consideration
         -- consider doing substitution before unification;
-        -- in order to prevent unsafe refinements
+        -- in order to prevent unsafe constraint refinements
         -- and then remove substitution in the relational selection rule
         unify i context ty_c1 ty_c2
       )
@@ -1110,7 +1110,7 @@ namespace Nameless
         | some ty_c => (
           -- TODO: important soundness consideration
           -- consider doing substitution before unification;
-          -- in order to prevent unsafe refinements
+          -- in order to prevent unsafe constraint refinements
           ------------
           -- (unify i context (Ty.fvar bound_key) ty_c)
           ------------
@@ -1158,7 +1158,7 @@ namespace Nameless
               match context.env_relational.find? key with
               | some relation => 
                 let env_sub : PHashMap Nat Ty := empty.insert id ty'
-                -- TODO: sub key to prevent refinement
+                -- TODO: sub key and relation to prevent unsafe constraint refinements 
                 -- occurs check
                 -- let context := ... with context.env_simple.insert id ty'
                 -- let ty_sub := subst context.env_simple key 
@@ -1257,7 +1257,7 @@ namespace Nameless
 
     | .case (Ty.fvar id) ty_body, .case ty_arg ty_res =>
 
-      -- substitution to prevent expansion
+      -- substitution to prevent weakening 
       let (i, contexts) := unify i context ty_arg (subst context.env_simple (Ty.fvar id)) 
       if contexts.isEmpty then
         (i, [])
@@ -1270,19 +1270,19 @@ namespace Nameless
         )
 
         bind_nl (i, contexts) (fun i context =>
-          -- substitution to prevent refinement 
-          -- but still allow expansion
+          -- substitution to prevent strengthening 
+          -- but still allow weakening 
           (unify i context (subst context.env_simple ty_body) ty_res)
         ) 
 
 
     | .case ty_param ty_body, .case ty_arg ty_res =>
 
-      -- substitution to prevent expansion
-      -- but still allow refinement 
+      -- substitution to prevent weakening 
+      -- but still allow strengthening 
       bind_nl (unify i context ty_arg (subst context.env_simple ty_param)) (fun i context =>
-          -- substitution to prevent refinement 
-          -- but still allow expansion
+          -- substitution to prevent strengthening 
+          -- but still allow weakening 
         (unify i context (subst context.env_simple ty_body) ty_res)
       ) 
 
@@ -2832,7 +2832,7 @@ namespace Nameless
   -- ]
   ----------------------------------------
 
-  ---------- refinement ----------------
+  ---------- strengthening ----------------
   #eval infer_reduce 0 [lessterm|
   let y[0] : ?uno unit -> unit = _ in 
   let y[0] : ?dos unit -> unit = _ in 
@@ -3704,7 +3704,7 @@ namespace Nameless
     ) 
   ]
 
-  -----------  argument type refinements ----------
+  -----------  argument type strengthening ----------
 
   -- expected: ?uno unit
   #eval infer_reduce 10 [lessterm|
@@ -3734,7 +3734,7 @@ namespace Nameless
     ) 
   ]
 
-  -- requires local refinement in left-existential
+  -- requires local strengthening in left-existential
   -- expected: ?uno unit
   #eval infer_reduce 10 [lessterm|
     let y[0] : α[2] >> β[0] -> {β[0] with β[1] * β[0] <: (?uno unit * ?dos unit)} = _ in
@@ -3766,7 +3766,7 @@ namespace Nameless
   ]
 
 
-  -----------  local refinements ----------
+  -----------  local strengthening ----------
 
   -- expected: (?one unit | ?three unit) 
   #eval infer_reduce 0 [lessterm|
@@ -4026,8 +4026,8 @@ namespace Nameless
 
   -- NOTE: requires application packing an existential for return type
   -- return type should not be refined further after return
-  -- wrapping in existential is needed to prevent further refinement of return type
-  -- additionally, existential contains mechanism for safe refinement
+  -- wrapping in existential is needed to prevent further strengthening of return type
+  -- additionally, existential contains mechanism for safe strengthening 
   -- expected: ?zero unit | ?other unit
   #eval infer_reduce 10 [lessterm|
     let y[0] : α[0] >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in
@@ -4059,7 +4059,7 @@ namespace Nameless
   -- NOTE: collapsing should happen at argument site, rather than return site
     -- to ensure that contextual information is not lost
     -- e.g. learning the type of the function that is applied, whose variables may not appear in return type. 
-  -- NOTE: packing serves a similar purpose, albeit for leveraging left-existential safe refinements 
+  -- NOTE: packing serves a similar purpose, albeit for leveraging left-existential safe strengthening 
     -- therefore, it makes sense to perform packing at argument site too
   -- expected: ⊥
   #eval infer_reduce 0 [lessterm| 
@@ -4113,7 +4113,7 @@ namespace Nameless
 
   --------- sound application --------
 
-  -- NOTE: in left-exisitential rule: allow all combinations for refinement, but then check for safety 
+  -- NOTE: in left-exisitential rule: allow all combinations for strengthening, but then check for safety 
   -- expected: false
   #eval unify_decide 10
   [lesstype|
