@@ -3,6 +3,7 @@
 % \usepackage[letterpaper, margin=1.5in]{geometry}
 
 
+\usepackage{multicol}
 \usepackage{mathpartir}
 \usepackage{hyperref}
 \usepackage{mathtools}
@@ -44,7 +45,7 @@
 % \newcommand{\code}[1]{\texttt{\small #1}}
 \newcommand{\code}[1]{\texttt{#1}}
 \newcommand{\hastype}{\ \uparrow\ }
-\newcommand{\I}{\hspace{6mm}}
+\newcommand{\I}{\hspace{4mm}}
 
 
 
@@ -542,9 +543,12 @@ the possible values of the argument.
 %% Type inference 
 
 \begin{figure*}[h]
+
+
 \begin{flalign*}
   &\boxed{\text{infer}\ \Delta\ \tau_{l}\ \tau_{r} = \widebar{(\Delta, \tau)}}&
 \end{flalign*}
+
 \[
 \begin{array}[t]{@{} l}
     \text{infer}\ \Delta\ \Gamma\ e\ \tau = 
@@ -583,9 +587,9 @@ the possible values of the argument.
     \\
     \I\I\I\I \text{for } (\Delta, \tau) \leftarrow solution 
     \\
-    \I\I\I\I\I \text{for } (\Delta, \tau_i) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
+    \I\I\I\I \text{for } (\Delta, \tau_i) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
     \\
-    \I\I\I\I\I\I [(\Delta, \code{($l_i$:$\tau_i$) \& $\tau$})])
+    \I\I\I\I\I [(\Delta, \code{($l_i$:$\tau_i$) \& $\tau$})])
     \\
     \I\I solution
 
@@ -603,15 +607,15 @@ the possible values of the argument.
     \\
     \I\I\I\I \Gamma \leftarrow \Gamma, \code{$x$<:$\tau_m$}
     \\
-    \I\I\I solution \leftarrow (
+    \I\I\I solution \leftarrow
     \\
     \I\I\I\I \text{for } (\Delta, \tau) \leftarrow solution 
     \\
-    \I\I\I\I\I \text{for } (\Delta, \tau_{mi}) \leftarrow (\text{infer } \Delta\ \Gamma\ m_i) 
+    \I\I\I\I \text{for } (\Delta, \tau_{mi}) \leftarrow (\text{infer } \Delta\ \Gamma\ m_i) 
     \\
-    \I\I\I\I\I\I \text{for } (\Delta, \tau_{ei}) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
+    \I\I\I\I \text{for } (\Delta, \tau_{ei}) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
     \\
-    \I\I\I\I\I\I\I [(\Delta, \code{($\tau_{mi}$->$\tau_{ei}$) \& $\tau$})])
+    \I\I\I\I\I [(\Delta, \code{($\tau_{mi}$->$\tau_{ei}$) \& $\tau$})]
     \\
     \I\I solution
 
@@ -623,12 +627,40 @@ the possible values of the argument.
     \\
     \I\I \text{for } (\Delta, \tau_e) \leftarrow (\text{infer } \Delta\ \Gamma\ e)
     \\
-    \I\I\I \text{for } \Delta \leftarrow (\text{unify } \Delta\ \tau_e\ (\code{$l$:$\tau_l$}))
+    \I\I \text{for } \Delta \leftarrow (\text{unify } \Delta\ \tau_e\ (\code{$l$:$\tau_l$}))
     \\
-    \I\I\I\I [(\Delta, \tau_l)]
+    \I\I\I [(\Delta, \tau_l)]
+\end{array}
+\begin{array}[t]{@{} l}
+    %% application 
+    \\
+    \I \text{case } (\code{$e_f$ $e_a$}) \Rightarrow  
+    \\
+    \I\I \tau_{res} \leftarrow \text{fresh}
+    \\
+    \I\I \widebar{(\Delta_s, \tau_s)} \leftarrow (\text{infer } \Gamma\ e_a)
+    \\
+    \I\I \widebar{(\Delta_w, \tau_w)} \leftarrow
+    \\
+    \I\I\I \text{for } (\Delta, \tau_a) \leftarrow \widebar{(\Delta_s, \tau_s)}
+    \\
+    \I\I\I \text{for } (\Delta, \tau_f) \leftarrow (\text{infer } \Delta \Gamma\ e_f)
+    \\
+    \I\I\I \text{for } \Delta \leftarrow (\text{unify } \Delta\ \tau_f\ (\code{$\tau_a$->$\tau_{ret}$}))
+    \\
+    \I\I\I\I [(\Delta, \tau_a)]
+    \\
+    \I\I \text{if } (\text{safe } \widebar{(\Delta_s, \tau_s)}\ \widebar{(\Delta_w, \tau_w)} ) \text{ then }
+    \\
+    \I\I\I \text{for } (\Delta, \_) \leftarrow \widebar{(\Delta_w, \tau_w)}
+    \\
+    \I\I\I\I [(\Delta, \tau_{res})]
+    \\
+    \I\I \text{else } [] 
     % 
 \end{array}
 \]
+
 
 %%%%%%%%%%%%%%%%%%%%%%
 %% NOTE: need each rule to have a vector environments, representing possible worlds 
