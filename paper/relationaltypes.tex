@@ -550,6 +550,7 @@ the possible values of the argument.
     \text{infer}\ \Delta\ \Gamma\ e\ \tau = 
     \\
     \I \text{match}\ e
+
     %% variable 
     \\
     \I \text{case } \code{()}  \Rightarrow [(\Delta, \code{unit})] 
@@ -561,6 +562,7 @@ the possible values of the argument.
     \I\I \text{case } (\text{some } \tau) \Rightarrow [(\Delta, \tau)] 
     \\
     \I\I \text{case } \text{none} \Rightarrow []
+
     %% tag 
     \\
     \I \text{case } \code{\#$l$ $e$}  \Rightarrow  
@@ -568,6 +570,7 @@ the possible values of the argument.
     \I\I \text{for } (\Delta, \tau) \leftarrow (\text{infer } \Delta\ \Gamma\ e) 
      \\
     \I\I\I [(\Delta, \code{?$l$ $\tau$})] 
+
     %% record
     \\
     \I \text{case } \widebar{\code{@$l$ $e$}}  \Rightarrow  
@@ -585,17 +588,18 @@ the possible values of the argument.
     \I\I\I\I\I\I [(\Delta, \code{($l_i$:$\tau_i$) \& $\tau$})])
     \\
     \I\I solution
+
     %% function
     \\
     \I \text{case } (\widebar{\code{path $m$ => $e$}})  \Rightarrow  
     \\
     \I\I solution \leftarrow [(\Delta, \top)]
     \\
-    \I\I \text{for } (\widebar{\code{path $m_i$ => $e_i$}}) \leftarrow (\widebar{\code{path $m$ => $e$}}) 
+    \I\I \text{for } (\code{path $m_i$ => $e_i$}) \leftarrow (\widebar{\code{path $m$ => $e$}}) 
     \\
     \I\I\I \text{for } x \leftarrow (\text{freevars } m_i)
     \\
-    \I\I\I\I \tau_m \leftarrow \text{fresh ()} 
+    \I\I\I\I \tau_m \leftarrow \text{fresh} 
     \\
     \I\I\I\I \Gamma \leftarrow \Gamma, \code{$x$<:$\tau_m$}
     \\
@@ -610,7 +614,19 @@ the possible values of the argument.
     \I\I\I\I\I\I\I [(\Delta, \code{($\tau_{mi}$->$\tau_{ei}$) \& $\tau$})])
     \\
     \I\I solution
-    %
+
+    %% projection 
+    \\
+    \I \text{case } \code{$e$.$l$} \Rightarrow  
+    \\
+    \I\I \tau_l \leftarrow \text{fresh}
+    \\
+    \I\I \text{for } (\Delta, \tau_e) \leftarrow (\text{infer } \Delta\ \Gamma\ e)
+    \\
+    \I\I\I \text{for } \Delta \leftarrow (\text{unify } \Delta\ \tau_e\ (\code{$l$:$\tau_l$}))
+    \\
+    \I\I\I\I [(\Delta, \tau_l)]
+    % 
 \end{array}
 \]
 
