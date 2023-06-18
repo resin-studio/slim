@@ -2010,11 +2010,11 @@ namespace Nameless
     | .fix t1 =>
       let boundary := i
       let (i, ty_IH) := (i + 1, Ty.fvar i) 
-      let (i, ty_conc) := (i + 1, Ty.fvar i) 
+      let (i, ty_IC) := (i + 1, Ty.fvar i) 
       bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
-      bind_nl (Ty.unify i context ty1 (Ty.case ty_IH ty_conc)) (fun i context =>
+      bind_nl (Ty.unify i context ty1 (Ty.case ty_IH ty_IC)) (fun i context =>
         let ty_IH := (Ty.subst context.env_simple ty_IH)
-        let ty_conc := (Ty.subst context.env_simple ty_conc)
+        let ty_IC := (Ty.subst context.env_simple ty_IC)
         ------------------------------------------------------
         -- TODO: factor out this rewriting with higher order function 
         -------------------------------------------------------
@@ -2036,7 +2036,7 @@ namespace Nameless
           )
 
           (Ty.union ty_choice ty_acc) 
-        ) [lesstype| ⊥ ] (Ty.split_intersections ty_conc)
+        ) [lesstype| ⊥ ] (Ty.split_intersections ty_IC)
 
         let ty_param := [lesstype| induct ⟨ty_param_content⟩ ]
         ------------------------------------------------------
@@ -2061,7 +2061,7 @@ namespace Nameless
           )
 
           (Ty.union ty_choice ty_acc) 
-        ) [lesstype| ⊥ ] (Ty.split_intersections ty_conc)
+        ) [lesstype| ⊥ ] (Ty.split_intersections ty_IC)
 
         -- NOTE: constraint that ty' <= ty_IH is built into inductive type
         let relational_type := [lesstype| induct ⟨ty_content⟩ ]

@@ -555,9 +555,10 @@ the possible values of the argument.
     \\
     \I \text{match}\ e
 
-    %% variable 
     \\
-    \I \text{case } \code{()}  \Rightarrow [(\Delta, \code{unit})] 
+
+    %% variable 
+    \I \text{case } \code{()} \Rightarrow [(\Delta, \code{unit})] 
     \\
     \I \text{case } \code{$x$} \Rightarrow 
     \\
@@ -567,16 +568,18 @@ the possible values of the argument.
     \\
     \I\I \text{case } \text{none} \Rightarrow []
 
-    %% tag 
     \\
+
+    %% tag 
     \I \text{case } \code{\#$l$ $e$}  \Rightarrow  
     \\
     \I\I \text{for } (\Delta, \tau) \leftarrow (\text{infer } \Delta\ \Gamma\ e) 
      \\
     \I\I\I [(\Delta, \code{?$l$ $\tau$})] 
 
-    %% record
     \\
+
+    %% record
     \I \text{case } \widebar{\code{@$l$ $e$}}  \Rightarrow  
     \\
     \I\I solution \leftarrow [(\Delta, \top)]
@@ -593,8 +596,9 @@ the possible values of the argument.
     \\
     \I\I solution
 
-    %% function
     \\
+
+    %% function
     \I \text{case } (\widebar{\code{path $m$ => $e$}})  \Rightarrow  
     \\
     \I\I solution \leftarrow [(\Delta, \top)]
@@ -619,8 +623,9 @@ the possible values of the argument.
     \\
     \I\I solution
 
-    %% projection 
     \\
+
+    %% projection 
     \I \text{case } \code{$e$.$l$} \Rightarrow  
     \\
     \I\I \tau_l \leftarrow \text{fresh}
@@ -633,7 +638,6 @@ the possible values of the argument.
 \end{array}
 \begin{array}[t]{@{} l}
     %% application 
-    \\
     \I \text{case } (\code{$e_f$ $e_a$}) \Rightarrow  
     \\
     \I\I \tau_{res} \leftarrow \text{fresh}
@@ -657,9 +661,10 @@ the possible values of the argument.
     \I\I\I\I [(\Delta, \tau_{res})]
     \\
     \I\I \text{else } [] 
-    % 
-    %% let-binding 
+
     \\
+
+    %% let-binding 
     \I \text{case } (\code{let $x$ : $\tau_p$ = $e_a$ in $e_b$}) \Rightarrow  
     \\
     \I\I \widebar{x_t} \leftarrow \text{allvars}
@@ -679,7 +684,40 @@ the possible values of the argument.
     \I\I\I\I (\text{infer } \Delta\ (\Gamma,\code{$x$:$\tau_{gen}$})\ e_b)
     \\
     \I\I \text{else } [] 
+
     \\
+
+    %% let-binding 
+    \I \text{case } (\code{fix $e$}) \Rightarrow  
+    \\
+    \I\I \widebar{\alpha_{stale}} \leftarrow \text{staleTVs}
+    \\
+    \I\I \alpha_{IH} \leftarrow \text{freshTV}; \alpha_{IC} \leftarrow \text{freshTV}
+    \\
+    \I\I \text{for } (\Delta, \tau) \leftarrow (\text{infer}\ \Delta\ \Gamma\ e) 
+    \\
+    \I\I \text{for } \Delta \leftarrow (\text{unify}\ \Delta\ \tau\ (\code{$\alpha_{IH}$->$\alpha_{IC}$})) 
+    \\
+    \I\I\I \tau_{IH} \leftarrow \text{sub}\ \Delta\ \alpha_{IH}  
+    \\
+    \I\I\I \tau_{IC} \leftarrow \text{sub}\ \Delta\ \alpha_{IC}
+    \\
+    \I\I\I \tau_{par} \leftarrow \text{makeParam}\ \widebar{\alpha_{stale}}\ \tau_{IH}\ \tau_{IC}
+    \\
+    \I\I\I \tau_{rel} \leftarrow \text{makeRelation}\ \widebar{\alpha_{stale}}\ \tau_{IH}\ \tau_{IC}
+    \\
+    \I\I\I \alpha \leftarrow \text{freshTV}; \beta \leftarrow \text{freshTV}
+    \\
+    \I\I\I \tau_{sol} \leftarrow
+    \\
+    \I\I\I\I \code{[$\alpha$<:$\tau_{par}$] $\alpha$->\{$\beta$ with ($\alpha$*$\beta$)<:$\tau_{rel}$\}}
+    \\
+    \I\I\I [(\Delta, \tau_{sol})]
+
+
+
+
+
 \end{array}
 \]
 
