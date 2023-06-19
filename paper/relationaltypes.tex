@@ -582,65 +582,65 @@ the possible values of the argument.
     %% record
     \I \text{case } \widebar{\code{@$l$ $e$}}  \Rightarrow  
     \\
-    \I\I solution \leftarrow [(\Delta, \top)]
+    \I\I \widebar{(\Delta, \tau_{res})} \leftarrow [(\Delta, \top)]
     \\
     \I\I \text{for } (\code{@$l_i$ $e_i$}) \leftarrow \widebar{\code{@$l$ $e$}} 
     \\
-    \I\I\I solution \leftarrow (
+    \I\I\I \widebar{(\Delta, \tau_{res})} \leftarrow (
     \\
-    \I\I\I\I \text{for } (\Delta, \tau) \leftarrow solution 
+    \I\I\I\I \text{for } (\Delta, \tau_{res}) \leftarrow \widebar{(\Delta, \tau_{res})} 
     \\
-    \I\I\I\I \text{for } (\Delta, \tau_i) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
+    \I\I\I\I \text{for } (\Delta, \tau) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
     \\
-    \I\I\I\I\I [(\Delta, \code{($l_i$:$\tau_i$) \& $\tau$})])
+    \I\I\I\I\I [(\Delta, \code{($l$:$\tau$)\&$\tau_{res}$})])
     \\
-    \I\I solution
+    \I\I \widebar{(\Delta_{res}, \tau_{res})}
 
     \\
 
     %% function
     \I \text{case } (\widebar{\code{path $m$ => $e$}})  \Rightarrow  
     \\
-    \I\I solution \leftarrow [(\Delta, \top)]
+    \I\I \widebar{(\Delta, \tau_{res})} \leftarrow [(\Delta, \top)]
     \\
-    \I\I \text{for } (\code{path $m_i$ => $e_i$}) \leftarrow (\widebar{\code{path $m$ => $e$}}) 
+    \I\I \text{for } (\code{path $m$ => $e$}) \leftarrow (\widebar{\code{path $m$ => $e$}}) 
     \\
-    \I\I\I \text{for } x \leftarrow (\text{freevars } m_i)
+    \I\I\I \text{for } x \leftarrow (\text{freevars } m)
     \\
-    \I\I\I\I \tau_m \leftarrow \text{fresh} 
+    \I\I\I\I \alpha \leftarrow \text{freshTV} 
     \\
-    \I\I\I\I \Gamma \leftarrow \Gamma, \code{$x$<:$\tau_m$}
+    \I\I\I\I \Gamma \leftarrow \Gamma, \code{$x$:$\alpha$}
     \\
-    \I\I\I solution \leftarrow
+    \I\I\I \widebar{(\Delta, \tau_{res})} \leftarrow
     \\
-    \I\I\I\I \text{for } (\Delta, \tau) \leftarrow solution 
+    \I\I\I\I \text{for } (\Delta, \tau_{res}) \leftarrow \widebar{(\Delta, \tau_{res})} 
     \\
-    \I\I\I\I \text{for } (\Delta, \tau_{mi}) \leftarrow (\text{infer } \Delta\ \Gamma\ m_i) 
+    \I\I\I\I \text{for } (\Delta, \tau_{m}) \leftarrow (\text{infer } \Delta\ \Gamma\ m) 
     \\
-    \I\I\I\I \text{for } (\Delta, \tau_{ei}) \leftarrow (\text{infer } \Delta\ \Gamma\ e_i) 
+    \I\I\I\I \text{for } (\Delta, \tau_{e}) \leftarrow (\text{infer } \Delta\ \Gamma\ e) 
     \\
-    \I\I\I\I\I [(\Delta, \code{($\tau_{mi}$->$\tau_{ei}$) \& $\tau$})]
+    \I\I\I\I\I [(\Delta, \code{($\tau_{m}$->$\tau_{e}$)\&$\tau_{res}$})]
     \\
-    \I\I solution
+    \I\I \widebar{(\Delta, \tau_{res})}
 
     \\
 
     %% projection 
     \I \text{case } \code{$e$.$l$} \Rightarrow  
     \\
-    \I\I \tau_l \leftarrow \text{fresh}
+    \I\I \alpha \leftarrow \text{freshTV}
     \\
-    \I\I \text{for } (\Delta, \tau_e) \leftarrow (\text{infer } \Delta\ \Gamma\ e)
+    \I\I \text{for } (\Delta, \tau) \leftarrow (\text{infer } \Delta\ \Gamma\ e)
     \\
-    \I\I \text{for } \Delta \leftarrow (\text{unify } \Delta\ \tau_e\ (\code{$l$:$\tau_l$}))
+    \I\I \text{for } \Delta \leftarrow (\text{unify } \Delta\ \tau\ (\code{$l$:$\alpha$}))
     \\
-    \I\I\I [(\Delta, \tau_l)]
+    \I\I\I [(\Delta, \alpha)]
 \end{array}
 \begin{array}[t]{@{} l}
     %% application 
     \I \text{case } (\code{$e_f$ $e_a$}) \Rightarrow  
     \\
-    \I\I \tau_{res} \leftarrow \text{fresh}
+    \I\I \alpha \leftarrow \text{freshTV}
     \\
     \I\I \widebar{(\Delta_s, \tau_s)} \leftarrow (\text{infer } \Gamma\ e_a)
     \\
@@ -650,7 +650,7 @@ the possible values of the argument.
     \\
     \I\I\I \text{for } (\Delta, \tau_f) \leftarrow (\text{infer } \Delta\ \Gamma\ e_f)
     \\
-    \I\I\I \text{for } \Delta \leftarrow (\text{unify } \Delta\ \tau_f\ (\code{$\tau_a$->$\tau_{ret}$}))
+    \I\I\I \text{for } \Delta \leftarrow (\text{unify } \Delta\ \tau_f\ (\code{$\tau_a$->$\alpha$}))
     \\
     \I\I\I\I [(\Delta, \tau_a)]
     \\
@@ -658,7 +658,7 @@ the possible values of the argument.
     \\
     \I\I\I \text{for } (\Delta, \_) \leftarrow \widebar{(\Delta_w, \tau_w)}
     \\
-    \I\I\I\I [(\Delta, \tau_{res})]
+    \I\I\I\I [(\Delta, \alpha)]
     \\
     \I\I \text{else } [] 
 
@@ -667,7 +667,8 @@ the possible values of the argument.
     %% let-binding 
     \I \text{case } (\code{let $x$ : $\tau_p$ = $e_a$ in $e_b$}) \Rightarrow  
     \\
-    \I\I \widebar{x_t} \leftarrow \text{allvars}
+    % \I\I \widebar{x_t} \leftarrow \text{allvars}
+    \I\I \widebar{\alpha_{stale}} \leftarrow \text{staleTVs}
     \\
     \I\I \widebar{(\Delta_s, \tau_s)} \leftarrow (\text{infer } \Gamma\ e_a)
     \\
@@ -679,7 +680,7 @@ the possible values of the argument.
     \\
     \I\I\I \text{for } \Delta \leftarrow (\text{unify } \Delta\ \tau_a\ \tau_p)
     \\
-    \I\I\I\I \tau_{gen} \leftarrow \text{generalize } \widebar{x_t}\ \Delta\ \tau_a
+    \I\I\I\I \tau_{gen} \leftarrow \text{generalize } \widebar{\alpha_{stale}}\ \Delta\ \tau_a
     \\
     \I\I\I\I (\text{infer } \Delta\ (\Gamma,\code{$x$:$\tau_{gen}$})\ e_b)
     \\
@@ -708,15 +709,11 @@ the possible values of the argument.
     \\
     \I\I\I \alpha \leftarrow \text{freshTV}; \beta \leftarrow \text{freshTV}
     \\
-    \I\I\I \tau_{sol} \leftarrow
+    \I\I\I \tau_{res} \leftarrow
     \\
     \I\I\I\I \code{[$\alpha$<:$\tau_{par}$] $\alpha$->\{$\beta$ with ($\alpha$*$\beta$)<:$\tau_{rel}$\}}
     \\
-    \I\I\I [(\Delta, \tau_{sol})]
-
-
-
-
+    \I\I\I [(\Delta, \tau_{res})]
 
 \end{array}
 \]
