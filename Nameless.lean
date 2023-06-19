@@ -965,14 +965,25 @@ namespace Nameless
       }
 
 
+
+    def constraint_unchanged (id : Nat) (context : Ty.Context) (contexts' : List Ty.Context) : Bool :=  
+      contexts'.all (fun context' => 
+        context'.env_simple.find? id == context.env_simple.find? id &&
+        match context.env_keychain.find? id, context'.env_keychain.find? id with
+        | some kc, some kc' => kc'.fold (fun result key => result && kc.contains key) true
+        | none, none => true 
+        | _, _ => false
+      )
+
+
     partial def unify (i : Nat) (context : Context)
     : Ty -> Ty -> (Nat × List Context)
 
     -- existential quantifier elimination (closed variables) (proactive) 
     | .exis n ty_c1 ty_c2 ty1, ty2 => (
-      let (i, bound_keys) := (i + n, (List.range n).map (fun j => i + j))
+      let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
 
-      let args := bound_keys.map (fun id => Ty.fvar id)
+      let args := ids_bound.map (fun id => Ty.fvar id)
       let ty_c1 := instantiate 0 args ty_c1
       let ty_c2 := instantiate 0 args ty_c2
       let ty1 := instantiate 0 args ty1
@@ -987,84 +998,59 @@ namespace Nameless
         | _ => none
       )
 
-      let (i, contexts_constraint) := (unify i context ty_c1 ty_c2)
 
+      -- TODO: substitute in order to prevent unsafe constraint refinements
+      -- constraint is a requirement; not an observation
+      let (i, contexts_constraint) := (unify i context ty_c1 ty_c2)
 
       match env_simple_unchanged contexts_constraint with 
       | some context_constraint => 
         let (i, contexts) := (unify i context_constraint ty1 ty2) 
         -- ensure that opaque variables are not bound from payload unification
-        let result_safe := contexts.all (fun context =>
-          bound_keys.all (fun bound_key =>
-            !(context.env_simple.contains bound_key)
-          )
-        )
+        let result_safe := ids_bound.all (fun id => constraint_unchanged id context_constraint contexts)
         if result_safe then
           (i, contexts)
         else
           (i, [])
       | none => 
-        let (i,contexts) := bind_nl (i, contexts_constraint) (fun i context_constraint =>
-          -- TODO: important soundness consideration
-          -- would substituting eagerly prevent local refinements?
-          (unify i context_constraint ty1 ty2)
-        )
+        let op := contexts_constraint.foldl (fun op_i_contexts context_constraint =>
+          op_i_contexts.bind (fun (i, contexts) =>
+            let (i, contexts') := (unify i context_constraint ty1 ty2)
 
-        if contexts.isEmpty then
-          (i, [])
-        else
-          -- check for safety; that there's no over-refenement
-          let ty_strong := contexts_constraint.foldl (fun ty_strong context_constraint =>
-            Ty.unionize (subst context_constraint.env_simple ty_c1) ty_strong
-          ) Ty.bot
+            if !contexts'.isEmpty && (ids_bound.all (fun id => constraint_unchanged id context_constraint contexts')) then
+              some (i, contexts ++ contexts')
+            else
+              none
+          )
+        ) (some (i, []))
 
-          let ty_weak := contexts.foldl (fun ty_weak context =>
-            Ty.unionize (subst context.env_simple ty_c1) ty_weak
-          ) Ty.bot
-
-          -- TODO: also neeed to ensure weaker side does not have additional/stronger relational constraints
-          let (i, contexts_oracle) := unify i context ty_strong ty_weak
-
-          let is_safe := (no_function_types ty1) && !contexts_oracle.isEmpty 
-          if is_safe then
-            (i, contexts)
-          else
-            (i, [])
-          -- --------------
-          -- let cd : Ty.Context := ⟨empty, empty, empty⟩
-          -- let cd := {cd with env_simple := cd.env_simple.insert 111 ty1_union}
-          -- let cd := {cd with env_simple := cd.env_simple.insert 222 ty2_union}
-          -- let context := cd
-          -- ---------------
+        match op with
+        | some (i, contexts) => (i, contexts)
+        | none => (i, [])
     ) 
 
 
     -- universal quantifier introduction (closed variables) (proactive)
     | ty1, .univ op_ty_c ty2  => (
-      let bound_key := i
+      let id_bound := i
       let i := i + 1
-      -- let is_bound_var := (. == bound_key)
 
-      let args := [Ty.fvar bound_key]
+      let args := [Ty.fvar id_bound]
       let op_ty_c := Option.map (instantiate 0 args) op_ty_c
       let ty2 := instantiate 0 args ty2
 
+
+      -- TODO: substitute in order to prevent unsafe constraint refinements
+      -- constraint is a requirement; not an observation
+      -- CAREFUL: substitution could cause the same unification problem to repeat infinitely
       let context := match op_ty_c with
       | none => context
       | some ty_c => {context with 
-        env_simple := context.env_simple.insert bound_key ty_c
+        env_simple := context.env_simple.insert id_bound ty_c
       }
 
-      let safe_binding : Ty.Context -> Bool := (fun new_context =>
-        match new_context.env_simple.find? bound_key with
-        | none => true
-        | some new_ty_c => some new_ty_c == op_ty_c
-      )
-
-      -- TODO: important soundness consideration
-      -- would substituting here prevent local refinements? 
       let (i, contexts) := (unify i context ty1 ty2)
-      let result_safe := op_ty_c != none ||  contexts.all safe_binding
+      let result_safe := constraint_unchanged id_bound context contexts
       if result_safe then
         (i, contexts)
       else
@@ -1085,18 +1071,18 @@ namespace Nameless
 
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       bind_nl (unify i context ty' ty) (fun i context => 
-        -- TODO: important soundness consideration
-        -- consider doing substitution before unification;
-        -- in order to prevent unsafe constraint refinements
-        -- and then remove substitution in the relational selection rule
+        -- NOTE: substitute in order to prevent unsafe constraint refinements
+        -- constraint is a requirement; not an observation
+        let ty_c1 := (simplify (subst context.env_simple ty_c1))
+        let ty_c2 := (simplify (subst context.env_simple ty_c2))
         unify i context ty_c1 ty_c2
       )
 
 
     -- universal quantifier elimination (open variables) (reactive)
     | .univ op_ty_c ty1, ty2 =>
-      let (i, bound_key) := (i + 1, i)
-      let args := [Ty.fvar bound_key]
+      let (i, id_bound) := (i + 1, i)
+      let args := [Ty.fvar id_bound]
 
       let op_ty_c := Option.map (instantiate 0 args) op_ty_c
       let ty1 := instantiate 0 args ty1
@@ -1106,16 +1092,27 @@ namespace Nameless
         match op_ty_c with
         | none => (i, [context])
         | some ty_c => (
-          -- TODO: important soundness consideration
-          -- consider doing substitution before unification;
-          -- in order to prevent unsafe constraint refinements
-          ------------
-          -- (unify i context (Ty.fvar bound_key) ty_c)
-          ------------
-          let op_ty_b := context.env_simple.find? bound_key
+          -- TODO: substitute in order to prevent unsafe constraint refinements
+          -- constraint is a requirement; not an observation
+          -- CAREFUL: substitution could cause the same unification problem to repeat infinitely
+          -- must check that id_bound does not map back to lhs (.univ op_ty_c ty1)
+          -- NOTE: perhaps this could be solved using a simple equality check
+            -- at the very beginning of unification
+            -- this would prevent a variable on the mapping back to the lhs
+          -----------------------------------
+          -- subbing the id_bound causes strange non-termination
+          -- let ty_b := (simplify (subst context.env_simple (Ty.fvar id_bound)))
+          -- let ty_c := (simplify (subst context.env_simple ty_c))
+          -- unify i context ty_b ty_c
+          ----------------------------
+
+          -------------------------------------
+          let op_ty_b := context.env_simple.find? id_bound 
           match op_ty_b with
-          | some ty_b => (unify i context ty_b ty_c)
-          | none => (i, [{context with env_simple := context.env_simple.insert bound_key ty_c}])
+          | some ty_b => 
+            (unify i context ty_b ty_c)
+          | none => 
+            (i, [{context with env_simple := context.env_simple.insert id_bound ty_c}])
         )
       )
 
@@ -1415,7 +1412,7 @@ namespace Nameless
       --     (i, contexts)
 
     | ty', .recur ty =>
-      let ty' := (simplify (subst context.env_simple ty'))
+      -- let ty' := (simplify (subst context.env_simple ty'))
       if reducible context ty' (.recur ty) then
         unify i context ty' (instantiate 0 [Ty.recur ty] ty) 
       else
@@ -1583,6 +1580,7 @@ namespace Nameless
       List.foldr (fun context ty_acc => 
         Ty.unionize (generalize boundary context ty_result) ty_acc
         -- Ty.unionize (pack boundary context ty_result) ty_acc
+        -- Ty.unionize (ty_result) ty_acc
       ) Ty.bot contexts
 
 
@@ -1921,29 +1919,58 @@ namespace Nameless
     | .app t_f t_arg =>
       let (i, ty_res) := (i + 1, Ty.fvar i)
       let (i, context_tys_arg) := (infer i context env_tm t_arg)
-      let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
-        Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
-      ) Ty.bot
 
-      let (i, new_context_tys_arg) :=  (
-        bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
-        bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
-        bind_nl (Ty.unify i context ty_f (Ty.case ty_arg ty_res)) (fun i context => 
-          (i, [(context, ty_arg)])
-        )))
-      )
+------------------------------
+      --------------
+      -- this requires substitution of everything 
+      --------------
+      let op := context_tys_arg.foldl (fun op_i_context_tys (context, ty_arg) =>
+        op_i_context_tys.bind (fun (i, context_tys) =>
+          let (i, context_tys') := (
+            bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
+            bind_nl (Ty.unify i context 
+              (Ty.subst context.env_simple ty_f) 
+              (Ty.subst context.env_simple (Ty.case ty_arg ty_res))
+            ) (fun i context => 
+              (i, [(context, ty_res)])
+            ))
+          )
+          if context_tys'.isEmpty then
+            none
+          else
+            some (i, context_tys ++ context_tys')
+        )
+      ) (some (i, []))
 
-      let ty_weak := new_context_tys_arg.foldl (fun ty_weak (context_arg, ty_arg) =>
-        Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_weak
-      ) Ty.bot
+      match op with
+      | some (i, context_tys) => (i, context_tys)
+      | none => (i, [])
 
-      -- TODO: also neeed to ensure weaker side does not have additional/stronger relational constraints
-      let (i, contexts_oracle) := Ty.unify i context ty_strong ty_weak
+------------------------------
 
-      if contexts_oracle.isEmpty then
-        (i, [])
-      else
-        (i, new_context_tys_arg.map (fun (context, _) => (context, ty_res)))
+      -- let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
+      --   Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
+      -- ) Ty.bot
+
+      -- let (i, new_context_tys_arg) :=  (
+      --   bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
+      --   bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
+      --   bind_nl (Ty.unify i context ty_f (Ty.case ty_arg ty_res)) (fun i context => 
+      --     (i, [(context, ty_arg)])
+      --   )))
+      -- )
+
+      -- let ty_weak := new_context_tys_arg.foldl (fun ty_weak (context_arg, ty_arg) =>
+      --   Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_weak
+      -- ) Ty.bot
+
+      -- -- TODO: also neeed to ensure weaker side does not have additional/stronger relational constraints
+      -- let (i, contexts_oracle) := Ty.unify i context ty_strong ty_weak
+
+      -- if contexts_oracle.isEmpty then
+      --   (i, [])
+      -- else
+      --   (i, new_context_tys_arg.map (fun (context, _) => (context, ty_res)))
       ----------------
 
     | .letb op_ty_expected t_arg t => 
@@ -1962,22 +1989,47 @@ namespace Nameless
         let free_var_boundary := i
 
         let (i, context_tys_arg) := (infer i context env_tm t_arg)
-        let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
-          Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
-        ) Ty.bot
 
-        let (i, contexts_oracle) := Ty.unify i context ty_strong ty_expected
-        if contexts_oracle.isEmpty then
-          (i, [])
-        else
-          bind_nl (infer i context env_tm t_arg) (fun i (context, ty_arg) =>
+
+        -----------------------------------------------
+        let is_safe := context_tys_arg.all (fun (context, ty_arg) =>
+          let ty_arg := (Ty.subst context.env_simple ty_arg)
+          let ty_expected := (Ty.subst context.env_simple ty_expected)
+          let (i, contexts') := ( 
+            (Ty.unify i context ty_arg ty_expected)
+          )
+          !contexts'.isEmpty
+        )
+
+        if is_safe then
+          bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
           bind_nl (Ty.unify i context ty_arg ty_expected) (fun i context =>
             let ty_schema := Ty.generalize free_var_boundary context ty_arg
             let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_schema)]) 
             let t := instantiate 0 [x] t 
             (infer i context (env_tm ; env_tmx) t) 
           ))
+        else
+          (i, [])
+        ------------------------------------------------------
 
+        -- let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
+        --   Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
+        -- ) Ty.bot
+
+        -- let (i, contexts_oracle) := Ty.unify i context ty_strong ty_expected
+        -- if contexts_oracle.isEmpty then
+        --   (i, [])
+        -- else
+        --   bind_nl (infer i context env_tm t_arg) (fun i (context, ty_arg) =>
+        --   bind_nl (Ty.unify i context ty_arg ty_expected) (fun i context =>
+        --     let ty_schema := Ty.generalize free_var_boundary context ty_arg
+        --     let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_schema)]) 
+        --     let t := instantiate 0 [x] t 
+        --     (infer i context (env_tm ; env_tmx) t) 
+        --   ))
+
+      -------------------------------
       -- let (i, ty_ret) := (i + 1, Ty.fvar i)
       -- let (i, context_tys_arg) := (infer i context env_tm t_arg)
       -- let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
@@ -2366,6 +2418,8 @@ namespace Nameless
   [lesstype| α[2]]
 
 
+  -- potential CYCLE!!!!
+  -- substitution could cause the same unification problem to repeat infinitely
   -- expected: true
   #eval unify_decide 10 
   [lesstype| α[0] >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
@@ -2939,6 +2993,7 @@ namespace Nameless
   ))
   ]
 
+  -- broken
   -- expected: ?succ ?zero unit
   #eval infer_reduce 10 [lessterm|
   (fix(\ y[0] => ( 
@@ -3106,7 +3161,7 @@ namespace Nameless
 
   ----- transposition projection ----
 
-  -- expected: true if alpha[0] can be anything 
+  -- expected: false 
   #eval unify_decide 10
   [lesstype| {β[0] -> unit with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?zero unit -> unit ]
@@ -3121,7 +3176,7 @@ namespace Nameless
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?zero unit ]
 
-  -- expected: true if alpha[0] can be anything 
+  -- expected: true 
   #eval unify_decide 10
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ ]
@@ -3295,6 +3350,7 @@ namespace Nameless
 
 --------------------- universal introduction subtyping ----------------
 
+  -- broken
   -- expected: false 
   #eval unify_decide 0
   [lesstype| ?one unit  ]
@@ -3305,6 +3361,7 @@ namespace Nameless
   [lesstype| ?one unit  ]
   [lesstype| (?one unit | ?two unit) & (?three unit | ?four unit) ]
 
+  -- broken
   -- expected: false 
   #eval unify_decide 0
   [lesstype| ?one unit  ]
@@ -3479,9 +3536,7 @@ namespace Nameless
   ]
   [lesstype| (α[1] * α[2]) * ?true unit ]
 
-  -- NOTE: greatest fixed point; true unless we can determine it fails
-  -- typing will decide if there is an inhabital type with such contexts
-  -- expected: true
+  -- expected: ?? 
   #eval unify_decide 0
   [lesstype|
     ({1 // β[0] with ((α[20] * α[18]) * β[0]) <: 
@@ -3891,25 +3946,6 @@ namespace Nameless
 
 -----------------
 
-  #eval unify_simple 10
-  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
-  [lesstype| (?one unit) -> α[6] ]
--- might need a factoring rule for this; i.e. factor lhs, as with recursive rules 
-  #eval unify_simple 10
-  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
-  [lesstype| (?one unit | ?three unit) -> α[6] | α[7] ]
-  -- [lesstype| α[6] | α[7] ]
-
-  #eval unify_simple 10
-  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
-  [lesstype| (?one unit | ?three unit) -> (?two unit | ?four unit) ]
-  -- [lesstype| α[6] | α[7] ]
-
-  #eval unify_reduce 10
-  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
-  [lesstype| (?one unit | ?three unit) -> α[6] | α[7] ]
-  [lesstype| α[6] | α[7] ]
-
   -- broken
   -- NOTE: variable α[7] should not be refined
   -- it should be marked as expandable
@@ -4112,7 +4148,6 @@ namespace Nameless
 
   --------- sound application --------
 
-  -- NOTE: in left-exisitential rule: allow all combinations for strengthening, but then check for safety 
   -- expected: false
   #eval unify_decide 10
   [lesstype|
