@@ -717,120 +717,7 @@ the possible values of the argument.
 
 \end{array}
 \]
-
-
-%%%%%%%%%%%%%%%%%%%%%%
-%% NOTE: need each rule to have a vector environments, representing possible worlds 
-%% declarative inference rules can't capture the important aspects of refinement 
-%% need functional rules 
-%%%%%%%%%%%%%%%%%%%%%%
-% \begin{flalign*}
-%   &\boxed{\Delta \cdot \Gamma \Vdash e \hastype \tau}&
-% \end{flalign*}
-
-% \begin{mathpar}
-%   \inferrule { 
-%     (\code{$x$ : $\tau$}) \in \Gamma
-%   } {
-%     \Delta \cdot \Gamma
-%     \Vdash x \hastype \tau
-%   } 
-
-%   \inferrule { 
-%   } {
-%     \Delta \cdot \Gamma 
-%     \Vdash \code{()} \hastype \code{unit}
-%   } 
-
-%   \inferrule { 
-%     \Delta \cdot \Gamma \Vdash e \hastype \tau
-%   } {
-%     \Delta \cdot \Gamma 
-%     \Vdash (\code{\#$l$ $e$}) \hastype (\code{?$l$ $\tau$})
-%   } 
-
-%   \inferrule { 
-%     \bigwedge\nolimits_i\ \Delta \cdot \Gamma \Vdash e_i \hastype \tau_i
-%   } {
-%     \Delta \cdot \Gamma
-%     \Vdash 
-%     \widebar{\code{@$l_i$ = $e_i$}}^i 
-%     \hastype
-%     \code{\&}_i\ (\code{$l_i$ : $\tau_i$})
-%   } 
-
-%   \inferrule { 
-%     \bigwedge\nolimits_i\ \Delta \cdot \Gamma;\Gamma' \Vdash m_i \hastype \tau'_i
-%     \\
-%     \bigwedge\nolimits_i\ \Delta \cdot \Gamma;\Gamma' \Vdash e_i \hastype \tau''_i
-%   } {
-%     \Delta \cdot \Gamma
-%     \Vdash
-%     \widebar{\code{path $m_i$ => $e_i$}}^i 
-%     \hastype 
-%     \code{\&}_i\ (\code{$\tau_i'$ -> $\tau_i''$}) 
-%   } 
-
-%   \inferrule { 
-%     \Delta \cdot \Gamma \Vdash e \hastype \tau
-%     \\
-%     \Delta \Vdash \tau \sqsubseteq (\code{$l$ : $\alpha$})
-%   } {
-%     \Delta \cdot \Gamma \Vdash \code{$e$.$l$} \hastype \alpha
-%   } 
-
-%   \inferrule* [left=App] { 
-%     \Delta \cdot \Gamma \Vdash e_1 \hastype \tau_1
-%     \\\\
-%     \\\\
-%     \bigwedge\nolimits_{\Delta'}  \Delta;\Delta' \cdot \Gamma \Vdash e_2 \hastype \tau_2
-%     \longrightarrow
-%     \Delta \Vdash \tau_1 \sqsubseteq (\code{$\tau_2$ -> $\alpha$})
-%     \\\\
-%     \\\\
-%     \bigwedge\nolimits_{\Delta'}  
-%     \Delta \Vdash \tau_1 \sqsubseteq (\code{$\tau_2$ -> $\alpha$})
-%     \longrightarrow
-%     \Delta;\Delta' \cdot \Gamma \Vdash e_2 \hastype \tau_2
-%     \\
-%     % \text{union}\ \vec{\Delta_0}\ \tau_2 \sqsubseteq \text{union}\ \vec{\Delta}\ \tau_2
-%     % \\\\
-%     % \vdash \vec{\Delta} = \vec{\Delta_1} \times \vec{\Delta_2} \times \vec{\Delta_3}
-%   } {
-%     \Delta \cdot \Gamma
-%     \Vdash (\code{$e_1$ $e_2$}) \hastype \alpha
-%   } 
-
-%   \inferrule { 
-%     % TODO: define/update generalize  
-%     \Delta \cdot \Gamma \Vdash e_1 \hastype \tau_1
-%     \\
-%     \tau_1' = \text{generalize}\ \Delta\ \tau_1
-%     \\
-%     \Delta \cdot (\Gamma,\ \code{x : $\tau_1'$}) \Vdash e_2 \hastype \tau_2
-%     \\
-%   } {
-%     \Delta \cdot \Gamma 
-%     \Vdash 
-%     (\code{let $x$ : $\tau_1$ = $e_1$ in $e_2$}) \hastype \tau_2
-%   } 
-
-%   \inferrule { 
-%     % TODO: update inference using implication with inductive type  
-%     \Delta \cdot \Gamma \Vdash e \hastype \tau \rightarrow \tau'
-%     \\
-%     \tau' = 
-%   } {
-%     \Delta;\Delta' \cdot \Gamma  
-%     \Vdash \code{fix $e$} \hastype (\text{extract}\ \tau\ \tau_i') 
-%   } 
-% \end{mathpar}
-\caption{Type inference.
-  \newline
-  Input: $\Delta \cdot \Gamma \Vdash e : \_ $. The input is the type variable environment, typing environment, and the expression.
-  \newline
-  Output: $\Delta \cdot \_ \Vdash \_ : \tau $. The output is the type variable environment and the result type.
-}
+\caption{Type inference.}
 \end{figure*}
 
 
@@ -851,8 +738,11 @@ the possible values of the argument.
     \\
     \I \text{match}\ \tau_{l}, \tau_{r}\ \text{with} 
     \\
+
     %% left-existential 
     \I \text{case } \code{\{$\widebar{\alpha}$ // $\tau$ with $\tau_k$<:$\tau_b$\}}, \tau_r \Rightarrow 
+    \\
+    \I\I (\widebar{\alpha}, [\tau, \tau_k]) \leftarrow (\text{rename } \widebar{\alpha}\ [\tau, \tau_k])
     \\
     \I\I \tau_k \leftarrow (\text{sub}\ \Delta\ \tau_k); \tau_b \leftarrow (\text{sub}\ \Delta\ \tau_b);
     \\
@@ -869,16 +759,30 @@ the possible values of the argument.
     \\
     \I\I \text{case } \text{none} \Rightarrow
     \\
-    \I\I\I solution \leftarrow (
+    \I\I\I \text{for } \Delta_c \leftarrow \widebar{\Delta_c} 
     \\
-    \I\I\I\I \text{for } \Delta_c \leftarrow \widebar{\Delta_c} 
+    \I\I\I\I \widebar{\Delta} \leftarrow (\text{unify}\ \Delta_c\ \tau\ \tau_r)
     \\
-    \I\I\I\I\I \widebar{\Delta} \leftarrow (\text{unify}\ \Delta_c\ \tau\ \tau_r)
+    \I\I\I\I \text{if } (\text{empty } \widebar{\Delta'}) \text{ then } 
+    \text{break} \text{ else } \widebar{\Delta}
+
     \\
-    \I\I\I\I\I \text{if } (\text{empty } \Delta) \text{ then } 
-    \text{break} \text{ else } \widebar{\Delta})
+
+    %% right-universal 
+    \I \text{case } \tau_l, (\code{[$\alpha$<:$\tau_{par}$]$\tau$}) \Rightarrow 
     \\
-    \I\I\I solution 
+    \I\I ([\alpha], [\tau]) \leftarrow (\text{rename } [\alpha]\ [\tau])
+    \\
+    \I\I \tau_{par} \leftarrow (\text{sub } \Delta\ \tau_{par})
+    \\
+    \I\I \Delta \leftarrow \Delta,\code{$\alpha$<:$\tau_{par}$}
+    \\
+    \I\I \widebar{\Delta} \leftarrow (\text{unify } \Delta\ \tau_l\ \tau)
+    \\
+    \I\I \text{if } (\text{safe } [\alpha]\ \Delta\ \widebar{\Delta}) \text{ then } \widebar{\Delta} \text{ else } [] 
+
+
+
 \end{array}
 \begin{array}[t]{@{} l}
     \I \text{case } \tau_l, \tau_r \Rightarrow  \hdots
