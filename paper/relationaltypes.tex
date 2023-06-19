@@ -546,12 +546,12 @@ the possible values of the argument.
 
 
 \begin{flalign*}
-  &\boxed{\text{infer}\ \Delta\ \tau_{l}\ \tau_{r} = \widebar{(\Delta, \tau)}}&
+  &\boxed{\text{infer}\ \Delta\ \Gamma e\ \tau = \widebar{(\Delta, \tau)}}&
 \end{flalign*}
 
 \[
 \begin{array}[t]{@{} l}
-    \text{infer}\ \Delta\ \Gamma\ e\ \tau = 
+    \text{infer}\ \Delta\ \Gamma\ e\ \tau \triangleq 
     \\
     \I \text{match}\ e
 
@@ -849,13 +849,42 @@ the possible values of the argument.
 \end{flalign*}
 \[
 \begin{array}[t]{@{} l}
-    \text{unify}\ \Delta\ \tau_{l}\ \tau_{r} = 
-    \arcr
-    \hspace{4mm}\begin{array}[t]{@{} l}
-      \text{match}\ \tau_{l}, \tau_{r}\ \text{with} 
-      \arcr
-      \cdot\ \hdots, \hdots  \Rightarrow \hdots
-    \end{array}
+    \text{unify}\ \Delta\ \tau_{l}\ \tau_{r} \triangleq 
+    \text{if}\ \tau_l = \tau_r \text{ then } [\Delta] \text{ else }
+    \\
+    \I \text{match}\ \tau_{l}, \tau_{r}\ \text{with} 
+    \\
+    %% left-existential 
+    \I \text{case } \code{\{$\widebar{\alpha}$ // $\tau$ with $\tau_k$<:$\tau_b$\}}, \tau_r \Rightarrow 
+    \\
+    \I\I \tau_k \leftarrow (\text{sub}\ \Delta\ \tau_k); \tau_b \leftarrow (\text{sub}\ \Delta\ \tau_b);
+    \\
+    \I\I \widebar{\Delta_c} \leftarrow (\text{unify}\ \Delta\ \tau_k\ \tau_b)
+    \\
+    \I\I \text{match } (\text{unsolved } \widebar{\Delta_c})
+    \\
+    \I\I \text{case } (\text{some } \Delta_c) \Rightarrow
+    \\
+    \I\I\I \widebar{\Delta} \leftarrow (\text{unify}\ \Delta_c\ \tau\ \tau_r)
+    \\
+    \I\I\I \text{if } (\text{safe } \widebar{\alpha}\ \Delta_c\ \widebar{\Delta}) \text{ then }
+    \widebar{\Delta} \text{ else } [] 
+    \\
+    \I\I \text{case } \text{none} \Rightarrow
+    \\
+    \I\I\I solution \leftarrow (
+    \\
+    \I\I\I\I \text{for } \Delta_c \leftarrow \widebar{\Delta_c} 
+    \\
+    \I\I\I\I\I \widebar{\Delta} \leftarrow (\text{unify}\ \Delta_c\ \tau\ \tau_r)
+    \\
+    \I\I\I\I\I \text{if } (\text{empty } \Delta) \text{ then } 
+    \text{break} \text{ else } \widebar{\Delta})
+    \\
+    \I\I\I solution 
+\end{array}
+\begin{array}[t]{@{} l}
+    \I \text{case } \tau_l, \tau_r \Rightarrow  \hdots
 \end{array}
 \]
 
