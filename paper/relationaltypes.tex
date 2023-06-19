@@ -562,7 +562,7 @@ the possible values of the argument.
     \\
     \I \text{case } \code{$x$} \Rightarrow 
     \\
-    \I\I \text{match } (\code{$x$<:\_} \in \Gamma)
+    \I\I \text{match } (\code{$x$:\_} \in \Gamma)
     \\
     \I\I \text{case } (\text{some } \tau) \Rightarrow [(\Delta, \tau)] 
     \\
@@ -815,7 +815,38 @@ the possible values of the argument.
 
 \end{array}
 \begin{array}[t]{@{} l}
-    \I \text{case } \tau_l, \tau_r \Rightarrow  \hdots
+    %% right-variable 
+    \I \text{case } \tau_l, \alpha \Rightarrow 
+    \\
+    \I\I \text{match } (\code{$\alpha$<:\_} \in \Delta)
+    \\
+    \I\I \text{case } (\text{some } \tau) \Rightarrow
+    \\
+    \I\I\I \widebar{\Delta} \leftarrow (\text{unify } \Delta\ \tau_l\ \tau)
+    \\
+    \I\I\I \text{if } (\neg \text{empty } \widebar{\Delta}) \text{ then }
+    \\
+    \I\I\I\I \widebar{\Delta}
+    \\
+    \I\I\I \text{else if } (\neg \text{occurs } \Delta\ \alpha\ \tau_l) \text{ then }
+    \\
+    \I\I\I\I [\Delta,\code{$\alpha$<:($\tau_l$|$\tau$)}] 
+    \\
+    \I\I\I \text{else } [] 
+    \\
+    \I\I \text{case } \text{none} \Rightarrow
+    \\
+    \I\I\I \widebar{cs} \leftarrow (\text{relCons } \alpha\ \Delta)  
+    \\
+    \I\I\I \text{if } (\neg \text{empty } \widebar{cs}) \text{ then }
+    \\
+    \I\I\I\I \text{strongEnough } \alpha\ \tau_l\ \widebar{cs}  
+    \\
+    \I\I\I \text{else if } (\neg \text{occurs } \alpha\ \tau_l) \text{ then }
+    \\
+    \I\I\I\I [\Delta,\code{$\alpha$<:$\tau_l$}] 
+    \\
+    \I\I\I \text{else } []
 \end{array}
 \]
 
