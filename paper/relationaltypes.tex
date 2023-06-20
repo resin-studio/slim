@@ -922,9 +922,9 @@ the possible values of the argument.
     \\
     \I\I\I \B{for } \Delta \leftarrow \widebar{\Delta}
     \\
-    \I\I\I\I \tau_{body} \leftarrow (\text{sub } \Delta\ \tau_{body}) 
+    \I\I\I\I \tau_{body} \leftarrow (\F{sub } \Delta\ \tau_{body}) 
     \\
-    \I\I\I\I (\text{unify } (\Delta;\code{$\alpha$<:$\tau_{arg}$})\ \tau_{body}\ \tau_{res})
+    \I\I\I\I (\F{unify } (\Delta;\code{$\alpha$<:$\tau_{arg}$})\ \tau_{body}\ \tau_{res})
     \\
     \I\I \B{else } []
 
@@ -937,12 +937,106 @@ the possible values of the argument.
     \\
     \I\I \B{for } \Delta \leftarrow (\F{unify } \Delta \tau_{arg}\ \tau_{par} )
     \\
-    \I\I\I \tau_{body} \leftarrow (\text{sub } \Delta\ \tau_{body}) 
+    \I\I\I \tau_{body} \leftarrow (\F{sub } \Delta\ \tau_{body}) 
     \\
-    \I\I\I (\text{unify } \Delta\ \tau_{body}\ \tau_{res})
+    \I\I\I (\F{unify } \Delta\ \tau_{body}\ \tau_{res})
 
+    \\
+
+    %% right-implication-intersection 
+    \I \B{case } \tau_l, (\code{$\tau_{arg}$->($\tau_1$\&$\tau_2$)}) \Rightarrow 
+    \\
+    \I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau_l\ (\code{$\tau_{arg}$->$\tau_1$})) 
+    \\
+    \I\I\I (\F{unify } \Delta\ \tau_l (\code{$\tau_{arg}$->$\tau_2$}))
+
+    \\
+
+    %% left-implication-union
+    \I \B{case } \tau_l, (\code{($\tau_1$|$\tau_2$)->$\tau_{res}$}) \Rightarrow 
+    \\
+    \I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau_l\ (\code{$\tau_1$->$\tau_{res}$}))
+    \\
+    \I\I\I (\F{unify } \Delta\ \tau_l (\code{$\tau_2$->$\tau_{res}$})) 
+
+    \\
+
+    %% bottom 
+    \I \B{case } \bot, \_ \Rightarrow [\Delta]
+
+    \\
+
+    %% top 
+    \I \B{case } \_, \top \Rightarrow [\Delta]
+
+    \\
+
+    %% field 
+    \I \B{case } (\code{$l_1$:$\tau_1$}), (\code{$l_2$:$\tau_2$}) \Rightarrow
+    \\
+    \I\I \B{if } l_1 = l_2 \B{ then }
+    \\
+    \I\I\I (\F{unify } \Delta\ \tau_1\ \tau_2)
+    \\
+    \I\I \B{else } []
+
+    \\
+
+    %% tag 
+    \I \B{case } (\code{?$l_1$ $\tau_1$}), (\code{?$l_2$ $\tau_2$}) \Rightarrow
+    \\
+    \I\I \B{if } l_1 = l_2 \B{ then }
+    \\
+    \I\I\I (\F{unify } \Delta\ \tau_1\ \tau_2)
+    \\
+    \I\I \B{else } []
+
+    \\
+
+    %% induction 
+    \I \B{case } (\code{induct $\alpha_1$.$\tau_1$}), (\code{induct $\alpha_2$.$\tau_2$}) \Rightarrow
+    \\
+    \I\I \tau_1 \leftarrow (\text{sub } (\code{$\alpha_1$<:$\tau_2$})\ \tau_1) 
+    \\
+    \I\I \tau_2 \leftarrow (\text{sub } (\code{$\alpha_2$<:$\tau_2$})\ \tau_2) 
+    \\
+    \I\I (\F{unify } \Delta\ \tau_1\ \tau_2)
 \end{array}
 \begin{array}[t]{@{} l}
+    %% left-induction
+    \I \B{case } (\code{induct $\alpha$.$\tau$}), \tau_r \Rightarrow
+    \\
+    \I\I \tau_{fac} \leftarrow (\text{factor } (\code{induct $\alpha$.$\tau$})) 
+    \\
+    \I\I (\F{unify } \Delta\ \tau_{fac}\ \tau_r)
+
+    \\
+
+    %% right-induction
+    \I \B{case } \tau_l, (\code{induct $\alpha$.$\tau$}) \Rightarrow
+    \\
+    \I\I \B{if } (\F{reducible } \Delta\ \tau_l\ \tau_r) \B{ then }
+    \\
+    \I\I\I \tau \leftarrow (\text{sub } (\code{$\alpha$<:$\tau_r$})\ \tau) 
+    \\
+    \I\I\I (\F{unify } \Delta\ \tau_l\ \tau)
+    \\
+    \I\I \B{else }
+    \\
+    \I\I\I \B{match } (\code{$\tau_l$<:\_} \in \Delta)
+    \\
+    \I\I\I \B{case } (\B{some } \tau_{cache}) \Rightarrow
+    \\
+    \I\I\I\I (\F{unify } \Delta\ \tau_{cache}\ \tau_r)
+    \\
+    \I\I\I \B{case } \B{none} \Rightarrow
+    \\
+    \I\I\I\I \B{if } (\F{constraintWF } \tau_l\ \tau_r) \B{ then }
+    \\
+    \I\I\I\I\I [\Delta;\code{$\tau_l$<:$\tau_r$}]
+    \\
+    \I\I\I\I \B{else } [] 
+
 \end{array}
 \]
 
