@@ -1282,23 +1282,6 @@ namespace Nameless
       ) 
 
     /-
-    Intersection introduction.
-
-    T ⊑ (P -> R), T ⊑ (P -> Q)
-    ---------------------------
-    T ⊑ (P -> Q & R)
-
-    T ⊑ R, T ⊑ Q
-    ---------------------------
-    T ⊑ Q & R
-
-    -/
-    | ty1, .impli ty2 (Ty.inter ty_u1 ty_u2) =>
-       bind_nl (unify i context ty1 (Ty.impli ty2 ty_u1)) (fun i context =>
-         unify i context ty1 (Ty.impli ty2 ty_u2)
-       )
-
-    /-
     Itersection elimination. 
 
     T ⊑ (P -> R)
@@ -1311,44 +1294,6 @@ namespace Nameless
 
     -/
 
-
-
-
-
-    /-
-    Union elimination.
-
-    P | Q, (P -> R), (Q -> R)
-    ---------------------------
-    R
-
-    T ⊑ (P -> R), T ⊑ (Q -> R)
-    ---------------------------
-    T ⊑ (P | Q -> R)
-
-
-    P ⊑ T, Q ⊑ T 
-    ---------------------------
-    P | Q ⊑ T 
-    -/
-
-    | ty1, .impli (Ty.union ty_u1 ty_u2) ty2 =>
-      bind_nl (unify i context ty1 (Ty.impli ty_u1 ty2)) (fun i context =>
-        unify i context ty1 (Ty.impli ty_u2 ty2)
-      )
-
-    /-
-    Union introduction. 
-
-    T ⊑ (P -> Q)
-    ---------------------------
-    T ⊑ (P -> Q | R)
-
-    T ⊑ Q 
-    ---------------------------
-    T ⊑ Q | R 
-
-    -/
 
 
     -- | ty1, .impli (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
@@ -1435,22 +1380,37 @@ namespace Nameless
             (i, []) 
         )
 
+    -- left-implication-union 
+    | ty1, .impli (Ty.union ty_u1 ty_u2) ty2 =>
+      bind_nl (unify i context ty1 (Ty.impli ty_u1 ty2)) (fun i context =>
+        unify i context ty1 (Ty.impli ty_u2 ty2)
+      )
+
+    -- left-union
     | Ty.union ty1 ty2, ty => 
       bind_nl (unify i context ty1 ty) (fun i context =>
         (unify i context ty2 ty)
       )
 
+    -- right-union
     | ty, .union ty1 ty2 => 
       let (i, contexts_ty1) := (unify i context ty ty1)
       let (i, contexts_ty2) := (unify i context ty ty2)
       (i, contexts_ty1 ++ contexts_ty2)
 
+    -- right-implication-intersection
+    | ty1, .impli ty2 (Ty.inter ty_u1 ty_u2) =>
+       bind_nl (unify i context ty1 (Ty.impli ty2 ty_u1)) (fun i context =>
+         unify i context ty1 (Ty.impli ty2 ty_u2)
+       )
 
+    -- right-intersection
     | ty, .inter ty1 ty2 => 
       bind_nl (unify i context ty ty1) (fun i context =>
         (unify i context ty ty2)
       )
 
+    -- left-intersection
     | .inter ty1 ty2, ty => 
       let (i, contexts_ty1) := (unify i context ty1 ty)
       let (i, contexts_ty2) := (unify i context ty2 ty)
@@ -3875,6 +3835,7 @@ namespace Nameless
     )
   ]
 
+  -- broken
   -- expected: ?one unit | ?three unit 
   #eval infer_reduce 0 [lessterm|
     let y[0] : {β[0] with β[0] <: ?one unit | ?three unit} = _ in
@@ -3989,6 +3950,7 @@ namespace Nameless
     )
   ]
 
+  -- broken
   -- expected: ?one unit
   #eval infer_reduce 0 [lessterm|
     let y[0] : ?one unit | ?three unit = _ in
@@ -4126,7 +4088,7 @@ namespace Nameless
 
 ------------------------------
 
-
+  -- broken
   -- expected: false
   #eval unify_decide 0
   [lesstype| {β[0] with β[0] * ?cons ?cons ?nil unit <: ⟨nat_list⟩}]
