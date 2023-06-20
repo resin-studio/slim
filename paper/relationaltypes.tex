@@ -738,7 +738,7 @@ the possible values of the argument.
     \F{unify}\ \Delta\ \tau_{l}\ \tau_{r} \triangleq 
     \B{if}\ \tau_l = \tau_r \B{ then } [\Delta] \B{ else }
     \\
-    \I \B{match}\ \tau_{l}, \tau_{r}\ \F{with} 
+    \I \B{match}\ \tau_{l}, \tau_{r} 
     \\
 
     %% left-existential 
@@ -887,11 +887,38 @@ the possible values of the argument.
     \\
     \I\I\I \B{else } []
 
+    \\
+
+    %% delegate 
+    \I \B{case } \tau_l, \tau_r \Rightarrow (\text{unifyContd } \Delta\ \tau_l\ \tau_r)
+
 
 \end{array}
 \]
 
 \caption{Subtype unification.}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\F{unifyContd}\ \Delta\ \tau_{l}\ \tau_{r} = \widebar{\Delta}}&
+\end{flalign*}
+\[
+\begin{array}[t]{@{} l}
+    \F{unifyContd}\ \Delta\ \tau_{l}\ \tau_{r} \triangleq 
+    \\
+    \I \B{match}\ \tau_{l}, \tau_{r} 
+    \\
+
+    %% variable-implication 
+    \I \B{case } (\code{$\alpha$->$\tau_{body}$}), (\code{$\tau_{arg}$->$\tau_{res}$}) \Rightarrow 
+
+\end{array}
+\begin{array}[t]{@{} l}
+\end{array}
+\]
+
+\caption{Subtype unification continued.}
 \end{figure*}
 
 

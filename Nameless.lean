@@ -40,10 +40,10 @@ namespace Nameless
   | field : String -> Ty -> Ty
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
-  | case : Ty -> Ty -> Ty
+  | impli : Ty -> Ty -> Ty
   | exis : Nat -> Ty -> Ty -> Ty -> Ty
   | univ : Option Ty -> Ty -> Ty
-  | recur : Ty -> Ty
+  | induc : Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
   -- #check List.repr
 
@@ -76,7 +76,7 @@ namespace Nameless
       let n1 := infer_abstraction start ty1 
       let n2 := infer_abstraction start ty2
       if n1 > n2 then n1 else n2 
-    | .case ty1 ty2 =>
+    | .impli ty1 ty2 =>
       let n1 := infer_abstraction start ty1 
       let n2 := infer_abstraction start ty2
       if n1 > n2 then n1 else n2 
@@ -91,7 +91,7 @@ namespace Nameless
       | none => 0
       let n_pl := infer_abstraction (start + 1) ty_pl  
       Nat.max n_c n_pl
-    | .recur content =>
+    | .induc content =>
       infer_abstraction (start + 1) content 
 
     partial def free_vars: Ty -> PHashSet Nat 
@@ -104,14 +104,14 @@ namespace Nameless
     | .field l ty => (free_vars ty)
     | .union ty1 ty2 => (free_vars ty1).fold insert (free_vars ty2)
     | .inter ty1 ty2 => (free_vars ty1).fold insert (free_vars ty2)
-    | .case ty1 ty2 => (free_vars ty1).fold insert (free_vars ty2)
+    | .impli ty1 ty2 => (free_vars ty1).fold insert (free_vars ty2)
     | .exis n ty_c1 ty_c2 ty =>
       (free_vars ty_c1) + (free_vars ty_c2) + (free_vars ty)
     | .univ op_ty_c ty =>
       match op_ty_c with
       | some ty_c => (free_vars ty_c) + (free_vars ty)
       | none => (free_vars ty)
-    | .recur ty => (free_vars ty)
+    | .induc ty => (free_vars ty)
 
     -- def neg_vars (neg : Bool) : Ty -> PHashSet Nat 
     -- | .bvar id => empty 
@@ -127,14 +127,14 @@ namespace Nameless
     -- | .field l ty => (neg_vars neg ty)
     -- | .union ty1 ty2 => (neg_vars neg ty1).fold insert (neg_vars neg ty2)
     -- | .inter ty1 ty2 => (neg_vars neg ty1).fold insert (neg_vars neg ty2)
-    -- | .case ty1 ty2 => (neg_vars true ty1).fold insert (neg_vars neg ty2)
+    -- | .impli ty1 ty2 => (neg_vars true ty1).fold insert (neg_vars neg ty2)
     -- | .exis n ty_c1 ty_c2 ty =>
     --   (neg_vars neg ty_c1) + (neg_vars neg ty_c2) + (neg_vars neg ty)
     -- | .univ op_ty_c ty =>
     --   match op_ty_c with
     --   | some ty_c => (neg_vars neg ty_c) + (neg_vars neg ty)
     --   | none => (neg_vars neg ty)
-    -- | .recur ty => (neg_vars neg ty)
+    -- | .induc ty => (neg_vars neg ty)
 
     partial def abstract (fids : List Nat) (start : Nat) : Ty -> Ty
     | .bvar id => .bvar id 
@@ -149,7 +149,7 @@ namespace Nameless
     | .field l ty => .field l (abstract fids start ty)
     | .union ty1 ty2 => .union (abstract fids start ty1) (abstract fids start ty2)
     | .inter ty1 ty2 => .inter (abstract fids start ty1) (abstract fids start ty2)
-    | .case ty1 ty2 => .case (abstract fids start ty1) (abstract fids start ty2)
+    | .impli ty1 ty2 => .impli (abstract fids start ty1) (abstract fids start ty2)
     | .exis n ty_c1 ty_c2 ty => 
       (.exis n
         (abstract fids (start + n) ty_c1) (abstract fids (start + n) ty_c2)
@@ -157,7 +157,7 @@ namespace Nameless
       )
     | .univ op_ty_c ty => 
       (.univ (Option.map (abstract fids (start + 1)) op_ty_c) (abstract fids (start + 1) ty))
-    | .recur ty => .recur (abstract fids (start + 1) ty)
+    | .induc ty => .induc (abstract fids (start + 1) ty)
 
     -- assuming no cycles; (assuming occurs check has been properly applied before hand) 
     partial def subst (m : PHashMap Nat Ty) : Ty -> Ty
@@ -174,14 +174,14 @@ namespace Nameless
     | .field l ty => .field l (subst m ty)
     | .union ty1 ty2 => .union (subst m ty1) (subst m ty2)
     | .inter ty1 ty2 => .inter (subst m ty1) (subst m ty2)
-    | .case ty1 ty2 => .case (subst m ty1) (subst m ty2)
+    | .impli ty1 ty2 => .impli (subst m ty1) (subst m ty2)
     | .exis n ty_c1 ty_c2 ty => (.exis n
       (subst m ty_c1) (subst m ty_c2) 
       (subst m ty)
     )
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (subst m)) (subst m ty))
-    | .recur ty => .recur (subst m ty)
+    | .induc ty => .induc (subst m ty)
 
     -- assume assoc right
     def inter_contains : Ty -> Ty -> Bool 
@@ -264,12 +264,12 @@ namespace Nameless
     | .field l ty => .field l (simplify ty) 
     | .union ty1 ty2 => unionize (simplify ty1) (simplify ty2)
     | .inter ty1 ty2 => intersect (simplify ty1) (simplify ty2)
-    | .case ty1 ty2 => .case (simplify ty1) (simplify ty2)
+    | .impli ty1 ty2 => .impli (simplify ty1) (simplify ty2)
     | .exis n cty1 cty2 ty => 
       .exis n (simplify cty1) (simplify cty2) (simplify ty)
     | .univ op_ty_c ty => 
       .univ (op_ty_c.map simplify) (simplify ty)
-    | .recur ty => .recur (simplify ty)
+    | .induc ty => .induc (simplify ty)
 
 
     def record_fields : Ty -> PHashMap String Ty
@@ -298,10 +298,10 @@ namespace Nameless
     | .inter ty1 ty2 => 
       let fields := (record_fields (.inter ty1 ty2)).toList
       fields.all (fun (l, ty) => wellformed_key ty)
-    | .case ty1 ty2 => false 
+    | .impli ty1 ty2 => false 
     | .exis n ty_c1 ty_c2 ty => false
     | .univ op_ty_c ty => false
-    | .recur ty => false
+    | .induc ty => false
 
     partial def subst_while (f : Ty -> Bool) (m : PHashMap Nat Ty) : Ty -> Ty
     | .bvar id => .bvar id 
@@ -321,14 +321,14 @@ namespace Nameless
     | .field l ty => .field l (subst_while f m ty)
     | .union ty1 ty2 => .union (subst_while f m ty1) (subst_while f m ty2)
     | .inter ty1 ty2 => .inter (subst_while f m ty1) (subst_while f m ty2)
-    | .case ty1 ty2 => .case (subst_while f m ty1) (subst_while f m ty2)
+    | .impli ty1 ty2 => .impli (subst_while f m ty1) (subst_while f m ty2)
     | .exis n ty_c1 ty_c2 ty => (.exis n
       (subst_while f m ty_c1) (subst_while f m ty_c2) 
       (subst_while f m ty)
     )
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (subst_while f m)) (subst_while f m ty))
-    | .recur ty => .recur (subst_while f m ty)
+    | .induc ty => .induc (subst_while f m ty)
 
     partial def sub_nonneg (boundary : Nat) (m : PHashMap Nat Ty) (negs : PHashSet Nat) : Ty -> Ty
     | .bvar id => .bvar id 
@@ -347,16 +347,16 @@ namespace Nameless
     | .field l ty => .field l (sub_nonneg boundary m negs ty)
     | .union ty1 ty2 => .union (sub_nonneg boundary m negs ty1) (sub_nonneg boundary m negs ty2)
     | .inter ty1 ty2 => .inter (sub_nonneg boundary m negs ty1) (sub_nonneg boundary m negs ty2)
-    | .case ty1 ty2 => 
+    | .impli ty1 ty2 => 
       let new_negs := free_vars ty1
-      .case ty1 (sub_nonneg boundary m (negs + new_negs) ty2)
+      .impli ty1 (sub_nonneg boundary m (negs + new_negs) ty2)
     | .exis n ty_c1 ty_c2 ty => (.exis n
       (sub_nonneg boundary m negs ty_c1) (sub_nonneg boundary m negs ty_c2) 
       (sub_nonneg boundary m negs ty)
     )
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (sub_nonneg boundary m negs)) (sub_nonneg boundary m negs ty))
-    | .recur ty => .recur (sub_nonneg boundary m negs ty)
+    | .induc ty => .induc (sub_nonneg boundary m negs ty)
 
 
     declare_syntax_cat lesstype
@@ -411,7 +411,7 @@ namespace Nameless
     | `([lesstype| ⊥ ]) => `(Ty.bot)
     | `([lesstype| ? $a $b:lesstype ]) => `(Ty.tag [lesstype| $a ] [lesstype| $b ])
     | `([lesstype| $a : $b:lesstype ]) => `(Ty.field [lesstype| $a ] [lesstype| $b ])
-    | `([lesstype| $a -> $b ]) => `(Ty.case [lesstype| $a ] [lesstype| $b ])
+    | `([lesstype| $a -> $b ]) => `(Ty.impli [lesstype| $a ] [lesstype| $b ])
     | `([lesstype| $a | $b ]) => `(Ty.union [lesstype| $a ] [lesstype| $b ])
     | `([lesstype| $a & $b ]) => `(Ty.inter [lesstype| $a ] [lesstype| $b ])
     | `([lesstype| $a * $b ]) => `(Ty.inter (Ty.field "l" [lesstype| $a ]) (Ty.field "r" [lesstype| $b ]))
@@ -442,7 +442,7 @@ namespace Nameless
     | `([lesstype| $a >> $d  ]) => 
       `(Ty.univ (some [lesstype| $a ]) [lesstype| $d ])
 
-    | `([lesstype| induct $a ]) => `(Ty.recur [lesstype| $a ])
+    | `([lesstype| induct $a ]) => `(Ty.induc [lesstype| $a ])
 
     | `([lesstype| ($a) ]) => `([lesstype| $a ])
 
@@ -474,7 +474,7 @@ namespace Nameless
       Format.bracket "(" ((repr l n) ++ " * " ++ (repr r n)) ")"
     | .inter ty1 ty2 =>
       Format.bracket "(" ((repr ty1 n) ++ " & " ++ (repr ty2 n)) ")"
-    | .case ty1 ty2 =>
+    | .impli ty1 ty2 =>
       Format.bracket "(" ((repr ty1 n) ++ " ->" ++ Format.line ++ (repr ty2 n)) ")"
     | .exis var_count ty_c1 ty_c2 ty_pl =>
       if (ty_c1, ty_c2) == (.unit, .unit) then
@@ -496,7 +496,7 @@ namespace Nameless
         Format.bracket "(" (
           (repr ty_c n) ++ " >> " ++ (repr ty_pl n)
         ) ")"
-    | .recur ty1 =>
+    | .induc ty1 =>
       Format.bracket "(" (
         "induct " ++ (repr ty1 n)
       ) ")"
@@ -550,7 +550,7 @@ namespace Nameless
     | .inter ty1 ty2 => 
       no_function_types ty1 && 
       no_function_types ty2
-    | .case _ _ => false
+    | .impli _ _ => false
     | .exis n ty_c1 ty_c2 ty_pl =>
       no_function_types ty_c1 && 
       no_function_types ty_c2 && 
@@ -561,7 +561,7 @@ namespace Nameless
       | some ty_c => no_function_types ty_c
       ) && 
       no_function_types ty_pl
-    | .recur content => no_function_types content 
+    | .induc content => no_function_types content 
 
     partial def index_free_vars (initial : PHashMap Nat (PHashSet Ty)) (ty : Ty) : PHashMap Nat (PHashSet Ty) :=
       let fids := toList (free_vars ty)
@@ -603,7 +603,7 @@ namespace Nameless
                   let constraints_acc := constraints_acc.insert key relation 
                   (reachable_constraints context relation constraints_acc)
                 | none => 
-                  -- invariant: this case should never happen
+                  -- invariant: this impli should never happen
                   constraints_acc 
                 )
             ) constraints_acc
@@ -655,7 +655,7 @@ namespace Nameless
                   else
                     constraints.insert key (pack boundary context (negs + fids) relation) 
                 | none => 
-                  -- invariant: this case should never happen
+                  -- invariant: this impli should never happen
                   constraints 
                 )
               ) constraints
@@ -699,7 +699,7 @@ namespace Nameless
     | .field l ty => .field l (instantiate start args ty)
     | .union ty1 ty2 => .union (instantiate start args ty1) (instantiate start args ty2)
     | .inter ty1 ty2 => .inter (instantiate start args ty1) (instantiate start args ty2)
-    | .case ty1 ty2 => .case (instantiate start args ty1) (instantiate start args ty2)
+    | .impli ty1 ty2 => .impli (instantiate start args ty1) (instantiate start args ty2)
     | .exis n ty_c1 ty_c2 ty => 
       (.exis n
         (instantiate (start + n) args ty_c1) (instantiate (start + n) args ty_c2)
@@ -708,7 +708,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       (.univ (Option.map (instantiate (start + 1) args) op_ty_c) (instantiate (start + 1) args ty)
       )
-    | .recur ty => .recur (instantiate (start + 1) args ty)
+    | .induc ty => .induc (instantiate (start + 1) args ty)
 
 
     partial def occurs (m : Ty.Context) (key : Nat): Ty -> Bool 
@@ -737,14 +737,14 @@ namespace Nameless
     | .field l ty => occurs m key ty
     | .union ty1 ty2 => (occurs m key ty1) || (occurs m key ty2)
     | .inter ty1 ty2 => (occurs m key ty1) || (occurs m key ty2)
-    | .case ty1 ty2 => (occurs m key ty1) || (occurs m key ty2)
+    | .impli ty1 ty2 => (occurs m key ty1) || (occurs m key ty2)
     | .exis n ty_c1 ty_c2 ty => 
       (occurs m key ty_c1) || (occurs m key ty_c2) || (occurs m key ty)
     | .univ op_ty_c ty => 
       (match op_ty_c with
       | none => false
       | some ty_c => (occurs m key ty_c)) || (occurs m key ty)
-    | .recur ty => (occurs m key ty)
+    | .induc ty => (occurs m key ty)
 
     partial def subst_default (sign : Bool) : Ty -> Ty
     | .bvar id => .bvar id  
@@ -758,14 +758,14 @@ namespace Nameless
       .union (subst_default sign ty1) (subst_default sign ty2)
     | .inter ty1 ty2 =>
       .inter (subst_default sign ty1) (subst_default sign ty2)
-    | .case ty1 ty2 => .case (subst_default (!sign) ty1) (subst_default sign ty2)
+    | .impli ty1 ty2 => .impli (subst_default (!sign) ty1) (subst_default sign ty2)
     | .exis n cty1 cty2 ty => 
       -- can't sub away if constrained
       .exis n cty1 cty2 ty
     | .univ op_ty_c ty => 
       -- can't sub away if constrained
       .univ op_ty_c ty
-    | .recur ty => .recur (subst_default sign ty)
+    | .induc ty => .induc (subst_default sign ty)
 
     partial def equiv (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
       let ty1 := simplify (subst env_ty ty1)
@@ -813,7 +813,7 @@ namespace Nameless
       let fields := toList (record_fields (Ty.inter ty1 ty2))
       from_list (fields.map (fun (l, _) => l))
     | .exis n ty_c1 ty_c2 ty => (extract_record_labels ty)
-    | .recur ty => extract_record_labels ty
+    | .induc ty => extract_record_labels ty
     | _ => {} 
 
     partial def extract_label_list (ty : Ty) : List String :=
@@ -857,7 +857,7 @@ namespace Nameless
 
 
     partial def factor_out_map (labels : List String) : Ty -> PHashMap String Ty 
-    | Ty.recur ty =>
+    | Ty.induc ty =>
       let unions := split_unions ty
       labels.foldl (fun acc label =>
         let ty_col := unions.foldr (fun ty_row ty_col =>
@@ -865,7 +865,7 @@ namespace Nameless
           | some ty_field => Ty.union ty_field ty_col 
           | none => Ty.top
         ) Ty.bot 
-        acc.insert label (Ty.recur (Ty.simplify ty_col))
+        acc.insert label (Ty.induc (Ty.simplify ty_col))
       ) empty 
     | _ => 
       empty
@@ -876,7 +876,7 @@ namespace Nameless
         Ty.inter (Ty.field label ty_rec) ty_acc 
       ) Ty.top
 
-    -- | Ty.recur ty =>
+    -- | Ty.induc ty =>
     --   let unions := split_unions ty
     --   labels.foldr (fun label ty_acc =>
     --     let ty_col := unions.foldr (fun ty_row ty_col =>
@@ -884,7 +884,7 @@ namespace Nameless
     --       | some ty_field => Ty.union ty_field ty_col 
     --       | none => Ty.top
     --     ) Ty.bot 
-    --     Ty.inter (Ty.field label (Ty.recur ty_col)) ty_acc 
+    --     Ty.inter (Ty.field label (Ty.induc ty_col)) ty_acc 
     --   ) Ty.top
     -- | ty => 
     --   Ty.top
@@ -912,7 +912,7 @@ namespace Nameless
       decreasing id_induct ty1 && decreasing id_induct ty2
     | .inter ty1 ty2 =>
       decreasing id_induct ty1 && decreasing id_induct ty2
-    | .case _ _ => false
+    | .impli _ _ => false
     | .exis n' ty_c1 ty_c2 ty' => 
       match ty' with 
       | .tag _ _ => 
@@ -922,7 +922,7 @@ namespace Nameless
         decreasing (id_induct + n') ty_c2 && 
         decreasing (id_induct + n') ty'
     | .univ _ _ => false 
-    | .recur _ => false 
+    | .induc _ => false 
 
     -- (fun ty_u => 
     --   match ty_u with
@@ -941,7 +941,7 @@ namespace Nameless
         | Ty.fvar _ => false
         | Ty.tag _ _ =>
           match ty_rec with
-          | Ty.recur ty_body =>
+          | Ty.induc ty_body =>
             let unions := split_unions ty_body
             unions.all (decreasing 0)
           | _ => false 
@@ -1122,7 +1122,7 @@ namespace Nameless
 
     | ty', .fvar id => 
       ----------------------
-      -- NOTE: this executes before the left-variable on rule. in case where ty' is also an unassgined variable, save as rhs maps to lhs. 
+      -- NOTE: this executes before the left-variable on rule. in impli where ty' is also an unassgined variable, save as rhs maps to lhs. 
         -- Enables freed existential vars (rhs) to map to closed existential vars (lhs). 
       -- adjustment here records observed types; based on unioning fresh variable
       -- assymetrical mechanism, since free variables have the meaning of Top, and environment tracks upper bounds
@@ -1250,7 +1250,7 @@ namespace Nameless
 
     -------------------------------------
 
-    | .case (Ty.fvar id) ty_body, .case ty_arg ty_res =>
+    | .impli (Ty.fvar id) ty_body, .impli ty_arg ty_res =>
 
       -- substitution to prevent weakening 
       let (i, contexts) := unify i context ty_arg (subst context.env_simple (Ty.fvar id)) 
@@ -1271,7 +1271,7 @@ namespace Nameless
         ) 
 
 
-    | .case ty_param ty_body, .case ty_arg ty_res =>
+    | .impli ty_param ty_body, .impli ty_arg ty_res =>
 
       -- substitution to prevent weakening 
       -- but still allow strengthening 
@@ -1293,9 +1293,9 @@ namespace Nameless
     T ⊑ Q & R
 
     -/
-    | ty1, .case ty2 (Ty.inter ty_u1 ty_u2) =>
-       bind_nl (unify i context ty1 (Ty.case ty2 ty_u1)) (fun i context =>
-         unify i context ty1 (Ty.case ty2 ty_u2)
+    | ty1, .impli ty2 (Ty.inter ty_u1 ty_u2) =>
+       bind_nl (unify i context ty1 (Ty.impli ty2 ty_u1)) (fun i context =>
+         unify i context ty1 (Ty.impli ty2 ty_u2)
        )
 
     /-
@@ -1332,9 +1332,9 @@ namespace Nameless
     P | Q ⊑ T 
     -/
 
-    | ty1, .case (Ty.union ty_u1 ty_u2) ty2 =>
-      bind_nl (unify i context ty1 (Ty.case ty_u1 ty2)) (fun i context =>
-        unify i context ty1 (Ty.case ty_u2 ty2)
+    | ty1, .impli (Ty.union ty_u1 ty_u2) ty2 =>
+      bind_nl (unify i context ty1 (Ty.impli ty_u1 ty2)) (fun i context =>
+        unify i context ty1 (Ty.impli ty_u2 ty2)
       )
 
     /-
@@ -1351,13 +1351,13 @@ namespace Nameless
     -/
 
 
-    -- | ty1, .case (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
+    -- | ty1, .impli (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
     --   -- TODO: reconsider if this rule is needed 
     --   -- TODO: safety check
-    --   -- NOTE: special case to ensure that variables are instantiated before decomposition of lhs
+    --   -- NOTE: special impli to ensure that variables are instantiated before decomposition of lhs
     --   let ty2 := (.exis n ty_c1 ty_c2 ty_pl)
     --   let (i, ty2') := (i + 1, Ty.fvar i)
-    --   bind_nl (unify i context ty1 (.case ty2' ty3)) (fun i context =>
+    --   bind_nl (unify i context ty1 (.impli ty2' ty3)) (fun i context =>
     --     (unify i context ty2 ty2')
     --   )
 
@@ -1383,21 +1383,21 @@ namespace Nameless
       else
         (i, [])
 
-    | .recur ty1, .recur ty2 =>
+    | .induc ty1, .induc ty2 =>
       if equiv context.env_simple ty1 ty2 then
         (i, [context])
       else
         -- using induction hypothesis, ty1 ≤ ty2; safely unroll
-        let ty1' := instantiate 0 [.recur ty2] ty1
-        let ty2' := instantiate 0 [.recur ty2] ty2
+        let ty1' := instantiate 0 [.induc ty2] ty1
+        let ty2' := instantiate 0 [.induc ty2] ty2
         unify i context ty1' ty2'
 
-    | .recur ty1, ty2 =>
+    | .induc ty1, ty2 =>
       let labels := extract_label_list ty2 
-      let ty_factored := (factor_out_relation labels (.recur ty1))
+      let ty_factored := (factor_out_relation labels (.induc ty1))
       unify i context ty_factored ty2
     --------------------------------------------------
-      -- if equiv context.env_simple (.recur ty1) ty2 then
+      -- if equiv context.env_simple (.induc ty1) ty2 then
       --   (i, [context])
       -- else
       --   -- using induction hypothesis, ty1 ≤ ty2; safely unroll
@@ -1406,29 +1406,29 @@ namespace Nameless
       --   if contexts.isEmpty then
       --       -- factor_out to find some valid unification
       --       let labels := extract_label_list ty2 
-      --       let ty_factored := (factor_out_relation labels (.recur ty1))
+      --       let ty_factored := (factor_out_relation labels (.induc ty1))
       --       unify i context ty_factored ty2
       --   else 
       --     (i, contexts)
 
-    | ty', .recur ty =>
+    | ty', .induc ty =>
       -- let ty' := (simplify (subst context.env_simple ty'))
-      if reducible context ty' (.recur ty) then
-        unify i context ty' (instantiate 0 [Ty.recur ty] ty) 
+      if reducible context ty' (.induc ty) then
+        unify i context ty' (instantiate 0 [Ty.induc ty] ty) 
       else
         match context.env_relational.find? ty' with
         | .some ty_cache => 
-          unify i context ty_cache (Ty.recur ty)
+          unify i context ty_cache (Ty.induc ty)
         | .none => (
-          let occurence := (toList (free_vars ty')).any (fun key => occurs context key (.recur ty)) 
+          let occurence := (toList (free_vars ty')).any (fun key => occurs context key (.induc ty)) 
           let rlabels := extract_record_labels ty' 
-          let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels (.recur ty))) (fun l =>
+          let is_consistent_variable_record := !rlabels.isEmpty && List.all (toList (extract_record_labels (.induc ty))) (fun l =>
               rlabels.contains l 
             )
           if is_consistent_variable_record && !occurence && wellformed_key ty' then
             let context := {context with 
               env_keychain := index_free_vars context.env_keychain ty' 
-              env_relational := context.env_relational.insert ty' (.recur ty),
+              env_relational := context.env_relational.insert ty' (.induc ty),
             }
             (i, [context])
           else 
@@ -1486,7 +1486,7 @@ namespace Nameless
                   else
                     constraints.insert key (compress boundary context relation) 
                 | none => 
-                  -- invariant: this case should never happen
+                  -- invariant: this impli should never happen
                   constraints 
                 )
               ) constraints
@@ -1598,13 +1598,13 @@ namespace Nameless
       (i, contexts.map fun context => (context, ty))
 
     def to_pair_type : Ty -> Ty 
-    | .case ty1 ty2 => 
+    | .impli ty1 ty2 => 
       [lesstype| ⟨ty1⟩ * ⟨ty2⟩ ] 
     | [lesstype| ⊤ ] =>  [lesstype| ⊥ ]
     | _ =>  [lesstype| ⊤ ]
 
     def get_prem : Ty -> Ty 
-    | .case ty1 _ => ty1 
+    | .impli ty1 _ => ty1 
     | [lesstype| ⊤ ] =>  [lesstype| ⊥ ]
     | _ =>  [lesstype| ⊤ ]
 
@@ -1662,8 +1662,8 @@ namespace Nameless
     | record fields => fields
     | _ =>  []
 
-    def function_cases : Tm -> List (Tm × Tm)
-    | func cases => cases 
+    def function_implis : Tm -> List (Tm × Tm)
+    | func implis => implis 
     | _ =>  []
 
     macro_rules
@@ -1681,7 +1681,7 @@ namespace Nameless
     | `([lessterm| ( $a , $b ) ]) => `(Tm.record [("l", [lessterm| $a ]), ("r", [lessterm|$b ])])
 
     | `([lessterm| \ $b => $d ]) => `(Tm.func [([lessterm| $b ], [lessterm| $d ])])
-    | `([lessterm| \ $b => $d $xs ]) => `( Tm.func (([lessterm| $b ], [lessterm| $d ]) :: (Tm.function_cases [lessterm| $xs ])))
+    | `([lessterm| \ $b => $d $xs ]) => `( Tm.func (([lessterm| $b ], [lessterm| $d ]) :: (Tm.function_implis [lessterm| $xs ])))
 
 
     | `([lessterm| $a . $b ]) => `(Tm.proj [lessterm| $a ] [lessterm| $b ])
@@ -1903,7 +1903,7 @@ namespace Nameless
           let b := instantiate 0 list_tm_x b  
           bind_nl (infer i context (env_tm ; env_pat) p) (fun i (context, ty_p) =>
           bind_nl (infer i context (env_tm ; env_pat) b) (fun i (context, ty_b) =>
-              (i, [(context, Ty.simplify (Ty.inter (Ty.case ty_p ty_b) ty_acc))])
+              (i, [(context, Ty.simplify (Ty.inter (Ty.impli ty_p ty_b) ty_acc))])
           )))
         )
 
@@ -1930,7 +1930,7 @@ namespace Nameless
             bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
             bind_nl (Ty.unify i context 
               (Ty.subst context.env_simple ty_f) 
-              (Ty.subst context.env_simple (Ty.case ty_arg ty_res))
+              (Ty.subst context.env_simple (Ty.impli ty_arg ty_res))
             ) (fun i context => 
               (i, [(context, ty_res)])
             ))
@@ -1955,7 +1955,7 @@ namespace Nameless
       -- let (i, new_context_tys_arg) :=  (
       --   bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
       --   bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
-      --   bind_nl (Ty.unify i context ty_f (Ty.case ty_arg ty_res)) (fun i context => 
+      --   bind_nl (Ty.unify i context ty_f (Ty.impli ty_arg ty_res)) (fun i context => 
       --     (i, [(context, ty_arg)])
       --   )))
       -- )
@@ -2039,7 +2039,7 @@ namespace Nameless
       -- let (i, new_context_tys_arg) :=  (
       --   bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
       --   bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
-      --   bind_nl (Ty.unify i context ty_f (Ty.case ty_arg ty_ret)) (fun i context => 
+      --   bind_nl (Ty.unify i context ty_f (Ty.impli ty_arg ty_ret)) (fun i context => 
       --     (i, [(context, ty_arg)])
       --   )))
       -- )
@@ -2064,27 +2064,27 @@ namespace Nameless
       let (i, ty_IH) := (i + 1, Ty.fvar i) 
       let (i, ty_IC) := (i + 1, Ty.fvar i) 
       bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
-      bind_nl (Ty.unify i context ty1 (Ty.case ty_IH ty_IC)) (fun i context =>
+      bind_nl (Ty.unify i context ty1 (Ty.impli ty_IH ty_IC)) (fun i context =>
         let ty_IH := (Ty.subst context.env_simple ty_IH)
         let ty_IC := (Ty.subst context.env_simple ty_IC)
         ------------------------------------------------------
         -- TODO: factor out this rewriting with higher order function 
         -------------------------------------------------------
-        let ty_param_content := List.foldr (fun ty_case ty_acc =>
-          let fvs := (toList (Ty.free_vars ty_case)).filter (fun fid => fid >= boundary)
+        let ty_param_content := List.foldr (fun ty_impli ty_acc =>
+          let fvs := (toList (Ty.free_vars ty_impli)).filter (fun fid => fid >= boundary)
           let fvs_prem :=  (Ty.free_vars ty_IH)
           let ty_choice := (
             if List.any fvs (fun id => fvs_prem.find? id != none) then
               let fixed_point := fvs.length
               [lesstype|
-                {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩ with 
+                {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_impli)⟩ with 
                   ⟨Ty.abstract fvs 0 (Ty.get_prem ty_IH)⟩ <: β[⟨fixed_point⟩] 
                 } 
               ]
             else if fvs.length > 0 then
-              [lesstype| {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_case)⟩} ]
+              [lesstype| {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_impli)⟩} ]
             else
-              (Ty.get_prem ty_case)
+              (Ty.get_prem ty_impli)
           )
 
           (Ty.union ty_choice ty_acc) 
@@ -2095,21 +2095,21 @@ namespace Nameless
         -- let (i, ty_param) := (i + 1, Ty.fvar i)
         ------------------------------------------------------
 
-        let ty_content := List.foldr (fun ty_case ty_acc =>
-          let fvs := (toList (Ty.free_vars ty_case)).filter (fun fid => fid >= boundary)
+        let ty_content := List.foldr (fun ty_impli ty_acc =>
+          let fvs := (toList (Ty.free_vars ty_impli)).filter (fun fid => fid >= boundary)
           let fvs_prem := (Ty.free_vars ty_IH)
           let ty_choice := (
             if List.any fvs (fun id => fvs_prem.find? id != none) then
               let fixed_point := fvs.length
               [lesstype|
-                {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.to_pair_type ty_case)⟩ with 
+                {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.to_pair_type ty_impli)⟩ with 
                   ⟨Ty.abstract fvs 0 (Ty.to_pair_type ty_IH)⟩ <: β[⟨fixed_point⟩] 
                 } 
               ]
             else if fvs.length > 0 then
-              [lesstype| {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.to_pair_type ty_case)⟩} ]
+              [lesstype| {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.to_pair_type ty_impli)⟩} ]
             else
-              (Ty.to_pair_type ty_case)
+              (Ty.to_pair_type ty_impli)
           )
 
           (Ty.union ty_choice ty_acc) 
@@ -2173,8 +2173,8 @@ namespace Nameless
     -- | tag l t => 1 + (cost t)
     -- | record entries => 
     --   List.foldl (fun cost' (l, t) => cost' + (cost t)) 1 entries
-    -- | func cases =>
-    --   List.foldl (fun cost' (p, t_b) => cost' + (cost t_b)) 1 cases
+    -- | func implis =>
+    --   List.foldl (fun cost' (p, t_b) => cost' + (cost t_b)) 1 implis
     -- | proj t l => 1 + (cost t)
     -- | app t1 t2 => 1 + (cost t1) + (cost t2)
     -- | letb ty t1 t2 => 1 + (cost t1) + (cost t2)
@@ -2192,11 +2192,11 @@ namespace Nameless
     -- | record entries => 
     --   let entries' := List.map (fun (l, t) => (l, subst m t)) entries 
     --   record entries'
-    -- | func cases =>
-    --   let cases' := List.map (fun (p, t_b) => 
+    -- | func implis =>
+    --   let implis' := List.map (fun (p, t_b) => 
     --     (p, subst m t_b)
-    --   ) cases 
-    --   func cases'
+    --   ) implis 
+    --   func implis'
     -- | proj t l => proj (subst m t) l
     -- | app t1 t2 => app (subst m t1) (subst m t2)
     -- | letb ty t1 t2 => letb ty (subst m t1) (subst m t2)
@@ -2223,7 +2223,7 @@ namespace Nameless
       let (ls_t1, ls_f1) := extract_labels ty1
       let (ls_t2, ls_f2) := extract_labels ty2
       (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
-    | .case ty1 ty2 => 
+    | .impli ty1 ty2 => 
       let (ls_t1, ls_f1) := extract_labels ty1
       let (ls_t2, ls_f2) := extract_labels ty2
       (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
@@ -2239,7 +2239,7 @@ namespace Nameless
       )
       let (ls_t, ls_f) := extract_labels ty
       (ls_tc ++ ls_t, ls_fc ++ ls_f) 
-    | .recur ty =>
+    | .induc ty =>
       extract_labels ty
 
 
@@ -2248,13 +2248,13 @@ namespace Nameless
     | l :: ls =>
       (enumerate_fields ls).map (fun fields => (l, hole) :: fields)
 
-    partial def enumerate_cases : List String -> List (List (Tm × Tm))
+    partial def enumerate_implis : List String -> List (List (Tm × Tm))
     | [] => []
     | l :: ls =>
-      (enumerate_cases ls).map (fun cases => ([lessterm| #⟨l⟩ y[0] ], [lessterm| _ ]) :: cases)
+      (enumerate_implis ls).map (fun implis => ([lessterm| #⟨l⟩ y[0] ], [lessterm| _ ]) :: implis)
 
     partial def join_functions (t1 : Tm) (t2 : Tm) : List Tm := match t1, t2 with
-    | func cases1, func cases2 => [func (cases1 ++ cases2)]
+    | func implis1, func implis2 => [func (implis1 ++ implis2)]
     | _, _ => []
 
     partial def enumerate (i : Nat) (env_tm : PHashMap Nat Ty) (ty : Ty) : List Tm :=
@@ -2264,10 +2264,10 @@ namespace Nameless
       let fields := enumerate_fields ls_f
       let records := fields.map (fun fds => record fds)
 
-      let cases := enumerate_cases ls_t
+      let implis := enumerate_implis ls_t
       let functions := (
         [lessterm| \ y[0] => _ ] :: 
-        (cases.map (fun cases => func cases))
+        (implis.map (fun implis => func implis))
       )
 
       [lessterm| () ] ::
