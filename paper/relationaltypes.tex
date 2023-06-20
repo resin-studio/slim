@@ -644,39 +644,48 @@ the possible values of the argument.
     \\
     \I\I \alpha \leftarrow \F{freshTV}
     \\
-    \I\I \widebar{(\Delta_s, \tau_s)} \leftarrow (\F{infer } \Gamma\ e_a)
+    \I\I \B{for } (\Delta, \tau_a) \leftarrow (\F{infer } \Gamma\ e_a):
     \\
-    \I\I \widebar{(\Delta_w, \tau_w)} \leftarrow
+    \I\I \B{for } (\Delta, \tau_f) \leftarrow (\F{infer } \Delta\ \Gamma\ e_f):
     \\
-    \I\I\I \B{for } (\Delta, \tau_a) \leftarrow \widebar{(\Delta_s, \tau_s)}:
+    \I\I\I \tau_a \leftarrow (\text{sub } \Delta\ \tau_a)
     \\
-    \I\I\I \B{for } (\Delta, \tau_f) \leftarrow (\F{infer } \Delta\ \Gamma\ e_f):
+    \I\I\I \tau_f \leftarrow (\text{sub } \Delta\ \tau_f)
     \\
-    \I\I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau_f\ (\code{$\tau_a$->$\alpha$})):
+    \I\I\I \widebar{\Delta} \leftarrow (\F{unify } \Delta\ \tau_f\ (\code{$\tau_a$->$\alpha$}))
     \\
-    \I\I\I\I [(\Delta, \tau_a)]
+    \I\I\I \B{if } (\F{empty } \widebar{\Delta}) \B{ then } \B{break} \B{ else }
     \\
-    \I\I \B{if } (\F{safe } \widebar{(\Delta_s, \tau_s)}\ \widebar{(\Delta_w, \tau_w)} ) \B{ then }
+    \I\I\I\I \B{for } \Delta \leftarrow \widebar{\Delta}:
     \\
-    \I\I\I \B{for } (\Delta, \_) \leftarrow \widebar{(\Delta_w, \tau_w)}:
-    \\
-    \I\I\I\I [(\Delta, \alpha)]
-    \\
-    \I\I \B{else } [] 
+    \I\I\I\I\I [(\Delta, \alpha)]
 
     \\
 
     %% let-binding 
     \I \B{case } (\code{let $x$ : $\tau_p$ = $e_a$ in $e_b$}) :  
     \\
-    % \I\I \widebar{x_t} \leftarrow \F{allvars}
     \I\I \widebar{\alpha_{stale}} \leftarrow \F{staleTVs}
     \\
-    \I\I \widebar{(\Delta_s, \tau_s)} \leftarrow (\F{infer } \Gamma\ e_a)
+    \I\I \widebar{(\Delta, \tau_a)} \leftarrow (\F{infer } \Gamma\ e_a)
     \\
-    \I\I \widebar{(\Delta_w, \tau_w)} \leftarrow [(\Delta, \tau_p)]
+    \I\I allowed \leftarrow \F{true}
     \\
-    \I\I \B{if } (\F{safe } \widebar{(\Delta_s, \tau_s)}\ \widebar{(\Delta_w, \tau_w)} ) \B{ then }
+    \I\I \B{for } (\Delta, \tau_a) \leftarrow \widebar{(\Delta, \tau_a)}:
+    \\
+    \I\I\I \tau_a \leftarrow (\text{sub } \Delta\ \tau_a)
+    \\
+    \I\I\I \tau_p \leftarrow (\text{sub } \Delta\ \tau_p)
+    \\
+    \I\I\I \B{if } (\F{empty } (\F{unify } \Delta\ \tau_a\ \tau_p)) \B{ then }
+    \\
+    \I\I\I\I allowed \leftarrow \F{false}
+    \\
+    \I\I\I\I \B{break}
+    \\
+    \I\I\I \B{else } \B{pass}
+    \\
+    \I\I \B{if } allowed \B{ then }
     \\
     \I\I\I \B{for } (\Delta, \tau_a) \leftarrow (\F{infer } \Delta\ \Gamma\ e_a):
     \\
@@ -690,7 +699,7 @@ the possible values of the argument.
 
     \\
 
-    %% let-binding 
+    %% fix 
     \I \B{case } (\code{fix $e$}) :  
     \\
     \I\I \widebar{\alpha_{stale}} \leftarrow \F{staleTVs}
@@ -772,7 +781,7 @@ the possible values of the argument.
     \I\I\I\I \widebar{\Delta} \leftarrow (\F{unify}\ \Delta_c\ \tau\ \tau_r)
     \\
     \I\I\I\I \B{if } (\F{empty } \widebar{\Delta'}) \B{ then } 
-    \F{break} \B{ else } \widebar{\Delta}
+    \B{break} \B{ else } \widebar{\Delta}
 
     \\
 
