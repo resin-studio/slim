@@ -524,7 +524,7 @@ the possible values of the argument.
   \begin{array}[t]{@{} l}
     \emptyset 
     \ |\ 
-    \Delta, \code{$\tau$ <: $\tau$}
+    \Delta; \code{$\tau$<:$\tau$}
   \end{array}
   \\
   \mathbb{G} \owns \Gamma 
@@ -532,7 +532,7 @@ the possible values of the argument.
   \begin{array}[t]{@{} l}
     \emptyset 
     \ |\ 
-    \Gamma, \code{$x$ : $\tau$}
+    \Gamma; \code{$x$:$\tau$}
   \end{array}
 \end{array}
 \]
@@ -611,7 +611,7 @@ the possible values of the argument.
     \\
     \I\I\I\I \alpha \leftarrow \F{freshTV} 
     \\
-    \I\I\I\I \Gamma \leftarrow \Gamma, \code{$x$:$\alpha$}
+    \I\I\I\I \Gamma \leftarrow \Gamma;\code{$x$:$\alpha$}
     \\
     \I\I\I \widebar{(\Delta, \tau_{res})} \leftarrow
     \\
@@ -684,7 +684,7 @@ the possible values of the argument.
     \\
     \I\I\I\I \tau_{gen} \leftarrow \F{generalize } \widebar{\alpha_{stale}}\ \Delta\ \tau_a
     \\
-    \I\I\I\I (\F{infer } \Delta\ (\Gamma,\code{$x$:$\tau_{gen}$})\ e_b)
+    \I\I\I\I (\F{infer } \Delta\ (\Gamma;\code{$x$:$\tau_{gen}$})\ e_b)
     \\
     \I\I \B{else } [] 
 
@@ -777,7 +777,7 @@ the possible values of the argument.
     \\
     \I\I \tau_b \leftarrow (\F{sub } \Delta\ \tau_b)
     \\
-    \I\I \Delta \leftarrow \Delta,\code{$\alpha$<:$\tau_b$}
+    \I\I \Delta \leftarrow \Delta;\code{$\alpha$<:$\tau_b$}
     \\
     \I\I \widebar{\Delta} \leftarrow (\F{unify } \Delta\ \tau_l\ \tau)
     \\
@@ -832,7 +832,7 @@ the possible values of the argument.
     \\
     \I\I\I \B{else if } (\neg \F{occurs } \Delta\ \alpha\ \tau_l) \B{ then }
     \\
-    \I\I\I\I [\Delta,\code{$\alpha$<:($\tau_l$|$\tau$)}] 
+    \I\I\I\I [\Delta;\code{$\alpha$<:($\tau_l$|$\tau$)}] 
     \\
     \I\I\I \B{else } [] 
     \\
@@ -847,7 +847,7 @@ the possible values of the argument.
     \\
     \I\I\I \B{else if } (\neg \F{occurs } \Delta\ \alpha\ \tau_l) \B{ then }
     \\
-    \I\I\I\I [\Delta,\code{$\alpha$<:$\tau_l$}] 
+    \I\I\I\I [\Delta;\code{$\alpha$<:$\tau_l$}] 
     \\
     \I\I\I \B{else } []
 
@@ -868,7 +868,7 @@ the possible values of the argument.
     \\
     \I\I\I \B{else if } (\neg \F{occurs } \Delta\ \alpha\ \tau_r) \B{ then }
     \\
-    \I\I\I\I [\Delta, \code{$\alpha$<:($\tau_r$\&$\tau$)}]
+    \I\I\I\I [\Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)}]
     \\
     \I\I\I \B{else } [] 
     \\
@@ -883,7 +883,7 @@ the possible values of the argument.
     \\
     \I\I\I \B{else if } (\neg \F{occurs } \Delta\ \alpha\ \tau_r) \B{ then }
     \\
-    \I\I\I\I [\Delta,\code{$\alpha$<:$\tau_r$}] 
+    \I\I\I\I [\Delta;\code{$\alpha$<:$\tau_r$}] 
     \\
     \I\I\I \B{else } []
 
@@ -912,6 +912,34 @@ the possible values of the argument.
 
     %% variable-implication 
     \I \B{case } (\code{$\alpha$->$\tau_{body}$}), (\code{$\tau_{arg}$->$\tau_{res}$}) \Rightarrow 
+    \\
+    \I\I \tau_{par} \leftarrow (\F{sub } \Delta\ \alpha)
+    \\
+    \I\I \widebar{\Delta} \leftarrow (\F{unify } \Delta \tau_{arg}\ \tau_{par} )
+    \\
+    \I\I \B{if } (\neg \F{empty } \Delta) \B{ and } 
+    (\neg \F{occurs } \Delta\ \alpha\ \tau_{arg})\B{ then }
+    \\
+    \I\I\I \B{for } \Delta \leftarrow \widebar{\Delta}
+    \\
+    \I\I\I\I \tau_{body} \leftarrow (\text{sub } \Delta\ \tau_{body}) 
+    \\
+    \I\I\I\I (\text{unify } (\Delta;\code{$\alpha$<:$\tau_{arg}$})\ \tau_{body}\ \tau_{res})
+    \\
+    \I\I \B{else } []
+
+    \\
+
+    %% implication 
+    \I \B{case } (\code{$\tau_{par}$->$\tau_{body}$}), (\code{$\tau_{arg}$->$\tau_{res}$}) \Rightarrow 
+    \\
+    \I\I \tau_{par} \leftarrow (\F{sub } \Delta\ \tau_{par})
+    \\
+    \I\I \B{for } \Delta \leftarrow (\F{unify } \Delta \tau_{arg}\ \tau_{par} )
+    \\
+    \I\I\I \tau_{body} \leftarrow (\text{sub } \Delta\ \tau_{body}) 
+    \\
+    \I\I\I (\text{unify } \Delta\ \tau_{body}\ \tau_{res})
 
 \end{array}
 \begin{array}[t]{@{} l}
