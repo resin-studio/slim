@@ -1879,59 +1879,69 @@ namespace Nameless
     | .app t_f t_arg =>
       let (i, ty_res) := (i + 1, Ty.fvar i)
       let (i, context_tys_arg) := (infer i context env_tm t_arg)
+------------------------------
 
+      -- TODO: modify to bypass union
+      -- for each context_s in T_s, there is a context_w for T_w, such that T_s <: T_w 
+
+      let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
+        Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
+      ) Ty.bot
+
+      let (i, new_context_tys_arg) :=  (
+        bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
+        bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
+        bind_nl (Ty.unify i context ty_f (Ty.impli ty_arg ty_res)) (fun i context => 
+          (i, [(context, ty_arg)])
+        )))
+      )
+
+      let ty_weak := new_context_tys_arg.foldl (fun ty_weak (context_arg, ty_arg) =>
+        Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_weak
+      ) Ty.bot
+
+      -- TODO: also neeed to ensure weaker side does not have additional/stronger relational constraints
+      let (i, contexts_oracle) := Ty.unify i context ty_strong ty_weak
+
+      if contexts_oracle.isEmpty then
+        (i, [])
+      else
+        (i, new_context_tys_arg.map (fun (context, _) => (context, ty_res)))
+      ----------------
 ------------------------------
       --------------
       -- this requires substitution of everything 
       --------------
-      let op := context_tys_arg.foldl (fun op_i_context_tys (context, ty_arg) =>
-        op_i_context_tys.bind (fun (i, context_tys) =>
-          let (i, context_tys') := (
-            bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
-            bind_nl (Ty.unify i context 
-              (Ty.subst context.env_simple ty_f) 
-              (Ty.subst context.env_simple (Ty.impli ty_arg ty_res))
-            ) (fun i context => 
-              (i, [(context, ty_res)])
-            ))
-          )
-          if context_tys'.isEmpty then
-            none
-          else
-            some (i, context_tys ++ context_tys')
-        )
-      ) (some (i, []))
+      -- let op := context_tys_arg.foldl (fun op_i_context_tys (context, ty_arg) =>
+      --   op_i_context_tys.bind (fun (i, context_tys) =>
+      --     let (i, context_tys') := (
+      --       bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
+      --       bind_nl (Ty.unify i context 
+      --         -- TODO:
+      --         -- subbing breaks safe refinement of parameter 
+      --         -- but is necessary for soundness
+      --         -- (Ty.subst context.env_simple ty_f) 
+      --         ty_f
+      --         -- (Ty.subst context.env_simple (Ty.impli ty_arg ty_res))
+      --         (Ty.impli ty_arg ty_res)
+      --       ) (fun i context => 
+      --         (i, [(context, ty_res)])
+      --       ))
+      --     )
+      --     if context_tys'.isEmpty then
+      --       none
+      --     else
+      --       some (i, context_tys ++ context_tys')
+      --   )
+      -- ) (some (i, []))
 
-      match op with
-      | some (i, context_tys) => (i, context_tys)
-      | none => (i, [])
+      -- match op with
+      -- | some (i, context_tys) => (i, context_tys)
+      -- | none => (i, [])
 
 ------------------------------
 
-      -- let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
-      --   Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
-      -- ) Ty.bot
 
-      -- let (i, new_context_tys_arg) :=  (
-      --   bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
-      --   bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
-      --   bind_nl (Ty.unify i context ty_f (Ty.impli ty_arg ty_res)) (fun i context => 
-      --     (i, [(context, ty_arg)])
-      --   )))
-      -- )
-
-      -- let ty_weak := new_context_tys_arg.foldl (fun ty_weak (context_arg, ty_arg) =>
-      --   Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_weak
-      -- ) Ty.bot
-
-      -- -- TODO: also neeed to ensure weaker side does not have additional/stronger relational constraints
-      -- let (i, contexts_oracle) := Ty.unify i context ty_strong ty_weak
-
-      -- if contexts_oracle.isEmpty then
-      --   (i, [])
-      -- else
-      --   (i, new_context_tys_arg.map (fun (context, _) => (context, ty_res)))
-      ----------------
 
     | .letb op_ty_expected t_arg t => 
 
@@ -1964,7 +1974,8 @@ namespace Nameless
         if is_safe then
           bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
           bind_nl (Ty.unify i context ty_arg ty_expected) (fun i context =>
-            let ty_schema := Ty.generalize free_var_boundary context ty_arg
+            -- let ty_schema := Ty.generalize free_var_boundary context ty_arg
+            let ty_schema := ty_arg
             let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_schema)]) 
             let t := instantiate 0 [x] t 
             (infer i context (env_tm ; env_tmx) t) 
@@ -4156,7 +4167,8 @@ namespace Nameless
     let y[0] : ? >> β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
     let y[0] : (?zero unit * ?succ ?zero unit) -> unit = _ in 
     (y[0] (y[1] #succ #zero ()))
-
+    -- y[0]
+    -- ((y[1] #succ #zero ()))
   ]
 
   -------------------------------------------
