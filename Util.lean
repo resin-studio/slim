@@ -82,7 +82,10 @@ namespace PHashSet
     reprPrec := repr
 
   instance [BEq α] [Hashable α] : Add (PHashSet α) where
-    add x y := x.fold insert y 
+    add x y := y.fold insert x 
+
+  instance [BEq α] [Hashable α] : Sub (PHashSet α) where
+    sub x y := y.fold erase x 
 
 end PHashSet
 
