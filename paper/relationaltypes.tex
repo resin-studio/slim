@@ -587,94 +587,91 @@ the possible values of the argument.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Subtyping 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% NOTE: need rule to lift object constraint to meta constraint
-%%      T1 <: T2  in Delta
-%%  ---------------------------
-%%    Delta |- T1 subtypes T2 
 
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
+  &\boxed{\Delta \claim \tau \subtypes \tau}&
 \end{flalign*}
 
 \begin{mathpar}
+
   \inferrule {
   } {
-    \Delta \vdash \text{unit} \sqsubseteq \text{unit}
+    \Delta \claim \code{unit} \subtypes \code{unit}
   }
 
   \inferrule {
-    \Delta \vdash \tau_1
-    \sqsubseteq \tau_2
+    \Delta \claim \tau_1 \subtypes \tau_2
   } {
-    \Delta \vdash l*\tau_1
-    \sqsubseteq l*\tau_2
+    \Delta \claim (\code{?$l$ $\tau_1$}) \subtypes (\code{?$l$ $\tau_2$})
   } 
 
   \inferrule {
-    \Delta \vdash \tau_1
-    \sqsubseteq \tau_2
+    \Delta \claim \tau_1 \subtypes \tau_2
   } {
-    \Delta \vdash l:\tau_1
-    \sqsubseteq l:\tau_2
+    \Delta \claim \code{$l$:$\tau_1$} \subtypes \code{$l$:$\tau_2$}
   } 
 
   \inferrule {
-    \Delta \vdash \tau_3
-    \sqsubseteq \tau_1
+    \Delta \claim \tau_3 \subtypes \tau_1 
     \\
-    \Delta \vdash \tau_2
-    \sqsubseteq \tau_4
+    \Delta \claim \tau_2 \subtypes \tau_4
   } {
-    \Delta \vdash \tau_1 \rightarrow \tau_2
-    \sqsubseteq \tau_3 \rightarrow \tau_4
+    \Delta \claim \code{$\tau_1$->$\tau_2$} \subtypes \code{$\tau_3$->$\tau_4$}
   } 
-  \\
+
   \inferrule {
-    \Delta \vdash \tau_1
-    \sqsubseteq \tau_3
+    \Delta \claim \tau_l \subtypes \code{$\tau_1$->$\tau_3$}
     \\
-    \Delta \vdash \tau_2
-    \sqsubseteq \tau_3
+    \Delta \claim \tau_l \subtypes \code{$\tau_2$->$\tau_3$}
   } {
-    \Delta \vdash \tau_1 \sqcup \tau_2
-    \sqsubseteq \tau_3
+    \Delta \claim \tau_l \subtypes \code{($\tau_1$|$\tau_2$)->$\tau_3$}
   }
 
   \inferrule {
-  } {
-    \Delta \vdash \tau_1
-    \sqsubseteq \tau_1 \sqcup \tau_2
-  }
-
-  \inferrule {
-  } {
-    \Delta \vdash \tau_2
-    \sqsubseteq \tau_1 \sqcup \tau_2
-  }
-  \\
-  \inferrule {
-    \Delta \vdash \tau
-    \sqsubseteq \tau_1
+    \Delta \claim \tau_1 \subtypes \tau_r
     \\
-    \Delta \vdash \tau
-    \sqsubseteq \tau_2
+    \Delta \claim \tau_2 \subtypes \tau_r
   } {
-    \Delta \vdash \tau
-    \sqsubseteq \tau_1 \sqcap \tau_2
+    \Delta \claim \code{$\tau_1$|$\tau_2$} \subtypes \tau_r
   }
 
   \inferrule {
   } {
-    \Delta \vdash \tau_1 \sqcap \tau_2
-    \sqsubseteq \tau_1
+    \Delta \claim \tau_l \subtypes \code{$\tau_l$|$\tau$}
   }
 
   \inferrule {
   } {
-    \Delta \vdash \tau_1 \sqcap \tau_2
-    \sqsubseteq \tau_2
+    \Delta \claim \tau_l \subtypes \code{$\tau$|$\tau_l$}
   }
+
+  \inferrule {
+    \Delta \claim \tau_l \subtypes \code{$\tau_1$->$\tau_2$}
+    \\
+    \Delta \claim \tau_l \subtypes \code{$\tau_1$->$\tau_3$}
+  } {
+    \Delta \claim \tau_l \subtypes \code{$\tau_1$->($\tau_2$\&$\tau_3$)}
+  }
+
+  \inferrule {
+    \Delta \claim \tau_l \subtypes \tau_1
+    \\
+    \Delta \claim \tau_l \subtypes \tau_2
+  } {
+    \Delta \claim \tau_l \subtypes \code{$\tau_1$\&$\tau_2$}
+  }
+
+  \inferrule {
+  } {
+    \Delta \claim \code{$\tau$\&$\tau_r$} \subtypes \tau_r
+  }
+
+  \inferrule {
+  } {
+    \Delta \claim \code{$\tau_r$\&$\tau$} \subtypes \tau_r
+  }
+
 \end{mathpar}
 \caption{Subtyping: standard rules}
 \end{figure*}
@@ -685,98 +682,105 @@ the possible values of the argument.
 
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
+  &\boxed{\Delta \claim \tau \subtypes \tau}&
 \end{flalign*}
 
 \begin{mathpar}
-  \inferrule { 
-    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
-    \\\\
-    \bigwedge\nolimits_{\Delta'}
-    (\Delta;\Delta' \vdash \tau_1 \sqsubseteq \tau_2)
-    \longrightarrow
-    (\Delta;\Delta' \vdash \tau_3 \sqsubseteq \tau_4)
-  } { 
-    \Delta \vdash \left<\exists \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \sqsubseteq \tau_2\right>
-    \sqsubseteq \tau_4
-  }
 
-  \inferrule { 
-    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
-    \\\\
-    \Delta;\Delta' \vdash \tau_1
-    \sqsubseteq \tau_4
-    \\
-    \Delta;\Delta' \vdash \tau_2
-    \sqsubseteq \tau_3
-  } { 
-    \Delta \vdash \tau_1
-    \sqsubseteq \left<\exists \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \sqsubseteq \tau_3\right>
+  \inferrule {
+    \code{$\tau_l$<:$\tau_r$} \in \Delta
+  } {
+    \Delta \claim \tau_l \subtypes \tau_r
   }
 
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
     \bigwedge\nolimits_{\Delta'}
-    (\Delta;\Delta' \vdash \tau_2 \sqsubseteq \tau_3)
+    (\Delta;\Delta' \claim \tau_1 \subtypes \tau_2)
     \longrightarrow
-    (\Delta;\Delta' \vdash \tau_1 \sqsubseteq \tau_4)
+    (\Delta;\Delta' \claim \tau_3 \subtypes \tau_4)
   } { 
-    \Delta \vdash \tau_1
-    \sqsubseteq \left<\forall \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \sqsubseteq \tau_3\right>
+    \Delta \claim \left<\exists \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \subtypes \tau_2\right>
+    \subtypes \tau_4
   }
 
   \inferrule { 
     (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
     \\\\
-    \Delta;\Delta' \vdash \tau_3
-    \sqsubseteq \tau_4
+    \Delta;\Delta' \claim \tau_1
+    \subtypes \tau_4
     \\
-    \Delta;\Delta' \vdash \tau_1
-    \sqsubseteq \tau_2
+    \Delta;\Delta' \claim \tau_2
+    \subtypes \tau_3
   } { 
-    \Delta \vdash \left<\forall \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \sqsubseteq \tau_2\right>
-    \sqsubseteq \tau_4
+    \Delta \claim \tau_1
+    \subtypes \left<\exists \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \subtypes \tau_3\right>
+  }
+
+  \inferrule { 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
+    \\\\
+    \bigwedge\nolimits_{\Delta'}
+    (\Delta;\Delta' \claim \tau_2 \subtypes \tau_3)
+    \longrightarrow
+    (\Delta;\Delta' \claim \tau_1 \subtypes \tau_4)
+  } { 
+    \Delta \claim \tau_1
+    \subtypes \left<\forall \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \subtypes \tau_3\right>
+  }
+
+  \inferrule { 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
+    \\\\
+    \Delta;\Delta' \claim \tau_3
+    \subtypes \tau_4
+    \\
+    \Delta;\Delta' \claim \tau_1
+    \subtypes \tau_2
+  } { 
+    \Delta \claim \left<\forall \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \subtypes \tau_2\right>
+    \subtypes \tau_4
   }
   \\
   \inferrule { 
-    \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
-    \sqsubseteq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
+    \Delta \claim \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
+    \subtypes \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
   } { 
-    \Delta \vdash \mu \alpha_1 . \tau_1
-    \sqsubseteq \mu \alpha_2 . \tau_2
+    \Delta \claim \mu \alpha_1 . \tau_1
+    \subtypes \mu \alpha_2 . \tau_2
   }
 
   \inferrule {
   } {
-    \Delta \vdash \tau[\alpha\mapsto\mu \alpha . \tau]
-    \sqsubseteq \mu \alpha . \tau
+    \Delta \claim \tau[\alpha\mapsto\mu \alpha . \tau]
+    \subtypes \mu \alpha . \tau
   }
 
   \inferrule {
   } {
-    \Delta \vdash \mu\alpha.\tau
-    \sqsubseteq \tau[\alpha\mapsto\mu \alpha . \tau]
+    \Delta \claim \mu\alpha.\tau
+    \subtypes \tau[\alpha\mapsto\mu \alpha . \tau]
   }
 
   \inferrule { 
-    \Delta \vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
-    \sqsubseteq \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+    \Delta \claim \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
+    \subtypes \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
   } {
-    \Delta \vdash \nu \alpha_1 . \tau_1 
-    \sqsubseteq \nu \alpha_2 . \tau_2
+    \Delta \claim \nu \alpha_1 . \tau_1 
+    \subtypes \nu \alpha_2 . \tau_2
   }
 
   \inferrule {
   } {
-    \Delta \vdash \tau[\alpha\mapsto\nu \alpha . \tau]
-    \sqsubseteq \nu \alpha . \tau
+    \Delta \claim \tau[\alpha\mapsto\nu \alpha . \tau]
+    \subtypes \nu \alpha . \tau
   }
 
   \inferrule {
   } {
-    \Delta \vdash \nu\alpha.\tau
-    \sqsubseteq \tau[\alpha\mapsto\nu \alpha . \tau]
+    \Delta \claim \nu\alpha.\tau
+    \subtypes \tau[\alpha\mapsto\nu \alpha . \tau]
   }
 \end{mathpar}
 \caption{Subtyping: extended rules}
