@@ -519,18 +519,21 @@ the possible values of the argument.
 \begin{figure*}[h]
 \[
 \begin{array}{l @{} l}
-  \mathbb{D} \owns \Delta 
+  \Omega 
+  &{} \owns \alpha 
+  \\
+  \Delta 
   &{} ::=
   \begin{array}[t]{@{} l}
-    \emptyset 
+    \bullet 
     \ |\ 
     \Delta; \code{$\tau$<:$\tau$}
   \end{array}
   \\
-  \mathbb{G} \owns \Gamma 
+  \Gamma 
   &{} ::=
   \begin{array}[t]{@{} l}
-    \emptyset 
+    \bullet 
     \ |\ 
     \Gamma; \code{$x$:$\tau$}
   \end{array}
@@ -548,25 +551,25 @@ the possible values of the argument.
 
 
 \begin{flalign*}
-  &\boxed{\F{infer}\ \Delta\ \Gamma e\ \tau = \widebar{(\Delta, \tau)}}&
+  &\boxed{\F{infer}\ \Omega\ \Delta\ \Gamma e\ \tau = \widebar{(\Omega, \Delta, \tau)}}&
 \end{flalign*}
 
 \[
 \begin{array}[t]{@{} l}
-    \F{infer}\ \Delta\ \Gamma\ e\ \tau \triangleq 
+    \F{infer}\ \Omega\ \Delta\ \Gamma\ e\ \tau \triangleq 
     \\
     \I \B{match}\ e
 
     \\
 
     %% variable 
-    \I \B{case } \code{()} : [(\Delta, \code{unit})] 
+    \I \B{case } \code{()} : [(\Omega, \Delta, \code{unit})] 
     \\
     \I \B{case } \code{$x$} : 
     \\
     \I\I \B{match } (\code{$x$:\_} \in \Gamma)
     \\
-    \I\I \B{case } (\F{some } \tau) : [(\Delta, \tau)] 
+    \I\I \B{case } (\F{some } \tau) : [(\Omega, \Delta, \tau)] 
     \\
     \I\I \B{case } \F{none} : []
 
@@ -575,55 +578,65 @@ the possible values of the argument.
     %% tag 
     \I \B{case } \code{\#$l$ $e$}  :  
     \\
-    \I\I \B{for } (\Delta, \tau) \leftarrow (\F{infer } \Delta\ \Gamma\ e): 
+    \I\I \B{for } (\Omega, \Delta, \tau) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e): 
      \\
-    \I\I\I [(\Delta, \code{?$l$ $\tau$})] 
+    \I\I\I [(\Omega, \Delta, \code{?$l$ $\tau$})] 
 
     \\
 
     %% record
     \I \B{case } \widebar{\code{@$l$ $e$}}  :  
     \\
-    \I\I \widebar{(\Delta, \tau_{res})} \leftarrow [(\Delta, \top)]
+    \I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow [(\Omega, \Delta, \top)]
     \\
-    \I\I \B{for } (\code{@$l_i$ $e_i$}) \leftarrow \widebar{\code{@$l$ $e$}}:
+    \I\I \B{for } (\code{@$l$ $e$}) \leftarrow \widebar{\code{@$l$ $e$}}:
     \\
-    \I\I\I \widebar{(\Delta, \tau_{res})} \leftarrow (
+    \I\I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow (
     \\
-    \I\I\I\I \B{for } (\Delta, \tau_{res}) \leftarrow \widebar{(\Delta, \tau_{res})}:
+    \I\I\I\I \B{for } (\Omega, \Delta, \tau_{res}) \leftarrow \widebar{(\Omega, \Delta, \tau_{res})}:
     \\
-    \I\I\I\I \B{for } (\Delta, \tau) \leftarrow (\F{infer } \Delta\ \Gamma\ e_i): 
+    \I\I\I\I \B{for } (\Omega, \Delta, \tau) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e): 
     \\
-    \I\I\I\I\I [(\Delta, \code{($l$:$\tau$)\&$\tau_{res}$})])
+    \I\I\I\I\I [(\Omega, \Delta, \code{($l$:$\tau$)\&$\tau_{res}$})])
     \\
-    \I\I \widebar{(\Delta_{res}, \tau_{res})}
+    \I\I \widebar{(\Omega, \Delta_{res}, \tau_{res})}
 
     \\
 
     %% function
     \I \B{case } (\widebar{\code{path $m$ => $e$}})  :  
     \\
-    \I\I \widebar{(\Delta, \tau_{res})} \leftarrow [(\Delta, \top)]
+    \I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow [(\Omega, \Delta, \top)]
     \\
     \I\I \B{for } (\code{path $m$ => $e$}) \leftarrow (\widebar{\code{path $m$ => $e$}}): 
+    \\
+    \I\I\I \Omega' \leftarrow \emptyset
+    \\
+    \I\I\I \Gamma' \leftarrow \bullet
     \\
     \I\I\I \B{for } x \leftarrow (\F{freevars } m):
     \\
     \I\I\I\I \alpha \leftarrow \F{freshTV} 
     \\
-    \I\I\I\I \Gamma \leftarrow \Gamma;\code{$x$:$\alpha$}
+    \I\I\I\I \Omega' \leftarrow \Omega' \cup \{\alpha\} 
     \\
-    \I\I\I \widebar{(\Delta, \tau_{res})} \leftarrow
+    \I\I\I\I \Gamma' \leftarrow \Gamma';\code{$x$:$\alpha$}
     \\
-    \I\I\I\I \B{for } (\Delta, \tau_{res}) \leftarrow \widebar{(\Delta, \tau_{res})}: 
+    \I\I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow
     \\
-    \I\I\I\I \B{for } (\Delta, \tau_{m}) \leftarrow (\F{infer } \Delta\ \Gamma\ m): 
+    \I\I\I\I \B{for } (\Omega, \Delta, \tau_{res}) \leftarrow \widebar{(\Omega, \Delta, \tau_{res})}: 
     \\
-    \I\I\I\I \B{for } (\Delta, \tau_{e}) \leftarrow (\F{infer } \Delta\ \Gamma\ e): 
+    \I\I\I\I\I \Omega \leftarrow \Omega \cup \Omega'
     \\
-    \I\I\I\I\I [(\Delta, \code{($\tau_{m}$->$\tau_{e}$)\&$\tau_{res}$})]
+    \I\I\I\I\I \B{for } (\Omega, \Delta, \tau_{m}) \leftarrow (\F{infer } \Omega\ \Delta\ (\Gamma;\Gamma')\ m): 
     \\
-    \I\I \widebar{(\Delta, \tau_{res})}
+    \I\I\I\I\I \B{for } (\Omega, \Delta, \tau_{e}) \leftarrow (\F{infer } \Omega\ \Delta\ (\Gamma;\Gamma')\ e): 
+    \\
+    \I\I\I\I\I\I \Omega \leftarrow \Omega \backslash \Omega'
+    \\
+    \I\I\I\I\I\I [(\Omega, \Delta, \code{($\tau_{m}$->$\tau_{e}$)\&$\tau_{res}$})]
+    \\
+    \I\I\I \widebar{(\Omega, \Delta, \tau_{res})}
 
     \\
 
@@ -632,11 +645,11 @@ the possible values of the argument.
     \\
     \I\I \alpha \leftarrow \F{freshTV}
     \\
-    \I\I \B{for } (\Delta, \tau) \leftarrow (\F{infer } \Delta\ \Gamma\ e):
+    \I\I \B{for } (\Omega, \Delta, \tau) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e):
     \\
-    \I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau\ (\code{$l$:$\alpha$})):
+    \I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta\ \tau\ (\code{$l$:$\alpha$})):
     \\
-    \I\I\I [(\Delta, \alpha)]
+    \I\I\I [(\Omega, \Delta, \alpha)]
 \end{array}
 \begin{array}[t]{@{} l}
     %% application 
@@ -644,21 +657,21 @@ the possible values of the argument.
     \\
     \I\I \alpha \leftarrow \F{freshTV}
     \\
-    \I\I \B{for } (\Delta, \tau_a) \leftarrow (\F{infer } \Gamma\ e_a):
+    \I\I \Omega \leftarrow \Omega \cup \{\alpha\}
     \\
-    \I\I \B{for } (\Delta, \tau_f) \leftarrow (\F{infer } \Delta\ \Gamma\ e_f):
+    \I\I \B{for } (\Omega, \Delta, \tau_a) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e_a):
     \\
-    \I\I\I \tau_a \leftarrow (\text{sub } \Delta\ \tau_a)
+    \I\I \B{for } (\Omega, \Delta, \tau_f) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e_f):
     \\
-    \I\I\I \tau_f \leftarrow (\text{sub } \Delta\ \tau_f)
+    \I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify } \Omega\ \Delta\ \tau_f\ (\code{$\tau_a$->$\alpha$}))
     \\
-    \I\I\I \widebar{\Delta} \leftarrow (\F{unify } \Delta\ \tau_f\ (\code{$\tau_a$->$\alpha$}))
+    \I\I\I \B{if } (\F{empty } \widebar{(\Omega, \Delta)}) \B{ then } \B{break} \B{ else }
     \\
-    \I\I\I \B{if } (\F{empty } \widebar{\Delta}) \B{ then } \B{break} \B{ else }
+    \I\I\I\I \B{for } (\Omega, \Delta) \leftarrow \widebar{(\Omega, \Delta)}:
     \\
-    \I\I\I\I \B{for } \Delta \leftarrow \widebar{\Delta}:
+    \I\I\I\I\I \Omega \leftarrow \Omega \backslash \{\alpha\}
     \\
-    \I\I\I\I\I [(\Delta, \alpha)]
+    \I\I\I\I\I [(\Omega, \Delta, \alpha)]
 
     \\
 
@@ -667,17 +680,13 @@ the possible values of the argument.
     \\
     \I\I \widebar{\alpha_{stale}} \leftarrow \F{staleTVs}
     \\
-    \I\I \widebar{(\Delta, \tau_a)} \leftarrow (\F{infer } \Gamma\ e_a)
+    \I\I \widebar{(\Omega, \Delta, \tau_a)} \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e_a)
     \\
     \I\I allowed \leftarrow \F{true}
     \\
-    \I\I \B{for } (\Delta, \tau_a) \leftarrow \widebar{(\Delta, \tau_a)}:
+    \I\I \B{for } (\Omega, \Delta, \tau_a) \leftarrow \widebar{(\Omega, \Delta, \tau_a)}:
     \\
-    \I\I\I \tau_a \leftarrow (\text{sub } \Delta\ \tau_a)
-    \\
-    \I\I\I \tau_p \leftarrow (\text{sub } \Delta\ \tau_p)
-    \\
-    \I\I\I \B{if } (\F{empty } (\F{unify } \Delta\ \tau_a\ \tau_p)) \B{ then }
+    \I\I\I \B{if } (\F{empty } (\F{unify } \Omega\ \Delta\ \tau_a\ \tau_p)) \B{ then }
     \\
     \I\I\I\I allowed \leftarrow \F{false}
     \\
@@ -687,13 +696,13 @@ the possible values of the argument.
     \\
     \I\I \B{if } allowed \B{ then }
     \\
-    \I\I\I \B{for } (\Delta, \tau_a) \leftarrow (\F{infer } \Delta\ \Gamma\ e_a):
+    \I\I\I \B{for } (\Omega, \Delta, \tau_a) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e_a):
     \\
-    \I\I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau_a\ \tau_p):
+    \I\I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta\ \tau_a\ \tau_p):
     \\
     \I\I\I\I \tau_{gen} \leftarrow \F{generalize } \widebar{\alpha_{stale}}\ \Delta\ \tau_a
     \\
-    \I\I\I\I (\F{infer } \Delta\ (\Gamma;\code{$x$:$\tau_{gen}$})\ e_b)
+    \I\I\I\I (\F{infer } \Omega\ \Delta\ (\Gamma;\code{$x$:$\tau_{gen}$})\ e_b)
     \\
     \I\I \B{else } [] 
 
@@ -708,17 +717,13 @@ the possible values of the argument.
     \\
     \I\I \alpha_{IC} \leftarrow \F{freshTV}
     \\
-    \I\I \B{for } (\Delta, \tau) \leftarrow (\F{infer}\ \Delta\ \Gamma\ e):
+    \I\I \B{for } (\Omega, \Delta, \tau) \leftarrow (\F{infer}\ \Omega\ \Delta\ \Gamma\ e):
     \\
-    \I\I \B{for } \Delta \leftarrow (\F{unify}\ \Delta\ \tau\ (\code{$\alpha_{IH}$->$\alpha_{IC}$})): 
+    \I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify}\ \Omega\ \Delta\ \tau\ (\code{$\alpha_{IH}$->$\alpha_{IC}$})): 
     \\
-    \I\I\I \tau_{IH} \leftarrow \F{sub}\ \Delta\ \alpha_{IH}  
+    \I\I\I \tau_{par} \leftarrow \F{makeParam}\ \widebar{\alpha_{stale}}\ \Delta\ \tau_{IH}\ \tau_{IC}
     \\
-    \I\I\I \tau_{IC} \leftarrow \F{sub}\ \Delta\ \alpha_{IC}
-    \\
-    \I\I\I \tau_{par} \leftarrow \F{makeParam}\ \widebar{\alpha_{stale}}\ \tau_{IH}\ \tau_{IC}
-    \\
-    \I\I\I \tau_{rel} \leftarrow \F{makeRelation}\ \widebar{\alpha_{stale}}\ \tau_{IH}\ \tau_{IC}
+    \I\I\I \tau_{rel} \leftarrow \F{makeRelation}\ \widebar{\alpha_{stale}}\ \Delta\ \tau_{IH}\ \tau_{IC}
     \\
     \I\I\I \alpha \leftarrow \F{freshTV}
     \\
@@ -728,7 +733,7 @@ the possible values of the argument.
     \\
     \I\I\I\I \code{[$\alpha$<:$\tau_{par}$] $\alpha$->\{$\beta$ with ($\alpha$*$\beta$)<:$\tau_{rel}$\}}
     \\
-    \I\I\I [(\Delta, \tau_{res})]
+    \I\I\I [(\Omega, \Delta, \tau_{res})]
 
 \end{array}
 \]
@@ -744,12 +749,12 @@ the possible values of the argument.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\F{unify}\ \Delta\ \tau_{l}\ \tau_{r} = \widebar{\Delta}}&
+  &\boxed{\F{unify}\ \Omega\ \Delta\ \tau_{l}\ \tau_{r} = \widebar{(\Omega, \Delta)}}&
 \end{flalign*}
 \[
 \begin{array}[t]{@{} l}
-    \F{unify}\ \Delta\ \tau_{l}\ \tau_{r} \triangleq 
-    \B{if}\ \tau_l = \tau_r \B{ then } [\Delta] \B{ else }
+    \F{unify}\ \Omega\ \Delta\ \tau_{l}\ \tau_{r} \triangleq 
+    \B{if}\ \tau_l = \tau_r \B{ then } [(\Omega, \Delta)] \B{ else }
     \\
     \I \B{match}\ \tau_{l}, \tau_{r} 
     \\
@@ -759,29 +764,25 @@ the possible values of the argument.
     \\
     \I\I (\widebar{\alpha}, [\tau, \tau_k]) \leftarrow (\F{rename } \widebar{\alpha}\ [\tau, \tau_k])
     \\
-    \I\I \tau_k \leftarrow (\F{sub}\ \Delta\ \tau_k)
+    \I\I \widebar{(\Omega_c, \Delta_c)} \leftarrow (\F{unify}\ \Delta\ \tau_k\ \tau_b)
     \\
-    \I\I \tau_b \leftarrow (\F{sub}\ \Delta\ \tau_b)
+    \I\I \B{match } (\F{unsolved } \widebar{(\Omega_c, \Delta_c)})
     \\
-    \I\I \widebar{\Delta_c} \leftarrow (\F{unify}\ \Delta\ \tau_k\ \tau_b)
+    \I\I \B{case } (\F{some } (\Omega_c, \Delta_c)) :
     \\
-    \I\I \B{match } (\F{unsolved } \widebar{\Delta_c})
-    \\
-    \I\I \B{case } (\F{some } \Delta_c) :
-    \\
-    \I\I\I \widebar{\Delta} \leftarrow (\F{unify}\ \Delta_c\ \tau\ \tau_r)
+    \I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify}\ \Omega_c\ \Delta_c\ \tau\ \tau_r)
     \\
     \I\I\I \B{if } (\F{safe } \widebar{\alpha}\ \Delta_c\ \widebar{\Delta}) \B{ then }
-    \widebar{\Delta} \B{ else } [] 
+    \widebar{(\Omega, \Delta)} \B{ else } [] 
     \\
     \I\I \B{case } \F{none} :
     \\
-    \I\I\I \B{for } \Delta_c \leftarrow \widebar{\Delta_c}:
+    \I\I\I \B{for } (\Omega_c, \Delta_c) \leftarrow \widebar{(\Omega_c, \Delta_c)}:
     \\
-    \I\I\I\I \widebar{\Delta} \leftarrow (\F{unify}\ \Delta_c\ \tau\ \tau_r)
+    \I\I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify}\ \Omega_c\ \Delta_c\ \tau\ \tau_r)
     \\
-    \I\I\I\I \B{if } (\F{empty } \widebar{\Delta'}) \B{ then } 
-    \B{break} \B{ else } \widebar{\Delta}
+    \I\I\I\I \B{if } (\F{empty } \widebar{(\Omega, \Delta)}) \B{ then } 
+    \B{break} \B{ else } \widebar{(\Omega, \Delta)}
 
     \\
 
@@ -790,13 +791,11 @@ the possible values of the argument.
     \\
     \I\I ([\alpha], [\tau]) \leftarrow (\F{rename } [\alpha]\ [\tau])
     \\
-    \I\I \tau_b \leftarrow (\F{sub } \Delta\ \tau_b)
-    \\
     \I\I \Delta \leftarrow \Delta;\code{$\alpha$<:$\tau_b$}
     \\
-    \I\I \widebar{\Delta} \leftarrow (\F{unify } \Delta\ \tau_l\ \tau)
+    \I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ \tau)
     \\
-    \I\I \B{if } (\F{safe } [\alpha]\ \Delta\ \widebar{\Delta}) \B{ then } \widebar{\Delta} \B{ else } [] 
+    \I\I \B{if } (\F{safe } [\alpha]\ \Delta\ \widebar{\Delta}) \B{ then } \widebar{(\Omega, \Delta)} \B{ else } [] 
 
     \\
 
@@ -805,13 +804,9 @@ the possible values of the argument.
     \\
     \I\I (\widebar{\alpha}, [\tau, \tau_k]) \leftarrow (\F{rename } \widebar{\alpha}\ [\tau, \tau_k])
     \\
-    \I\I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau_l\ \tau):
+    \I\I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ \tau):
     \\
-    \I\I\I\I \tau_k \leftarrow (\F{sub } \Delta\ \tau_k)
-    \\
-    \I\I\I\I \tau_b \leftarrow (\F{sub } \Delta\ \tau_b)
-    \\
-    \I\I\I\I \F{unify } \Delta\ \tau_k\ \tau_b
+    \I\I\I\I \F{unify } \Omega\ \Delta\ \tau_k\ \tau_b
 
     \\
 
@@ -820,13 +815,9 @@ the possible values of the argument.
     \\
     \I\I ([\alpha], [\tau]) \leftarrow (\F{rename } [\alpha]\ [\tau])
     \\
-    \I\I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau\ \tau_r):
+    \I\I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta\ \tau\ \tau_r):
     \\
-    \I\I\I\I \tau_k \leftarrow (\F{sub } \Delta\ \alpha)
-    \\
-    \I\I\I\I \tau_b \leftarrow (\F{sub } \Delta\ \tau_b)
-    \\
-    \I\I\I\I \F{unify } \Delta\ \tau_k\ \tau_b
+    \I\I\I\I \F{unify } \Omega\ \Delta\ \tau_k\ \tau_b
 
 
 
@@ -839,15 +830,23 @@ the possible values of the argument.
     \\
     \I\I \B{case } (\F{some } \tau) :
     \\
-    \I\I\I \widebar{\Delta} \leftarrow (\F{unify } \Delta\ \tau_l\ \tau)
+    \I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ \tau)
     \\
-    \I\I\I \B{if } (\F{not } \F{empty } \widebar{\Delta}) \B{ then }
+    \I\I\I \B{if } (\alpha \in \Omega) \B{ then }
     \\
-    \I\I\I\I \widebar{\Delta}
+    \I\I\I\I \B{if } (\F{not } \F{empty } \widebar{(\Omega, \Delta)}) \B{ then }
     \\
-    \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ (\code{$\tau_l$|$\tau$})) \B{ then }
+    \I\I\I\I\I \widebar{(\Omega, \Delta)}
     \\
-    \I\I\I\I [\Delta;\code{$\alpha$<:($\tau_l$|$\tau$)}] 
+    \I\I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ (\code{$\tau_l$|$\tau$})) \B{ then }
+    \\
+    \I\I\I\I\I [(\Omega, \Delta;\code{$\alpha$<:($\tau_l$|$\tau$)})] 
+    \\
+    \I\I\I\I \B{else } [] 
+    \\
+    \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ \tau_l) \B{ then }
+    \\
+    \I\I\I\I [(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})] 
     \\
     \I\I\I \B{else } [] 
     \\
@@ -858,11 +857,11 @@ the possible values of the argument.
     \I\I\I \B{if } (\F{not } \F{empty } \widebar{cs}) \F{ and } 
     (\F{strongEnough } \alpha\ \tau_l\ \widebar{cs}) \B{ then }
     \\
-    \I\I\I\I [\Delta]
+    \I\I\I\I [(\Omega, \Delta)]
     \\
     \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ \tau_l) \B{ then }
     \\
-    \I\I\I\I [\Delta;\code{$\alpha$<:$\tau_l$}] 
+    \I\I\I\I [(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})] 
     \\
     \I\I\I \B{else } []
 
@@ -875,15 +874,15 @@ the possible values of the argument.
     \\
     \I\I \B{case } (\F{some } \tau) :
     \\
-    \I\I\I \widebar{\Delta} \leftarrow (\F{unify } \Delta\ \tau\ \tau_r)
+    \I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify } \Omega\ \Delta\ \tau\ \tau_r)
     \\
-    \I\I\I \B{if } (\F{not } \F{empty } \widebar{\Delta}) \B{ then }
+    \I\I\I \B{if } (\F{not } \F{empty } \widebar{(\Omega, \Delta)}) \B{ then }
     \\
-    \I\I\I\I \widebar{\Delta}
+    \I\I\I\I \widebar{(\Omega, \Delta)}
     \\
-    \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ (\code{$\tau_r$\&$\tau$})) \B{ then }
+    \I\I\I \B{else if } (\alpha \in \Omega) \F{ and } (\F{constraintWF } \Delta\ \alpha\ (\code{$\tau_r$\&$\tau$})) \B{ then }
     \\
-    \I\I\I\I [\Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)}]
+    \I\I\I\I [(\Omega, \Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)})]
     \\
     \I\I\I \B{else } [] 
     \\
@@ -894,18 +893,18 @@ the possible values of the argument.
     \I\I\I \B{if } (\F{not } \F{empty } \widebar{cs}) \F{ and } 
     (\F{weakEnough } \alpha\ \widebar{cs}\ \tau_r) \B{ then }
     \\
-    \I\I\I\I [\Delta]
+    \I\I\I\I [(\Omega, \Delta)]
     \\
     \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ \tau_r) \B{ then }
     \\
-    \I\I\I\I [\Delta;\code{$\alpha$<:$\tau_r$}] 
+    \I\I\I\I [(\Omega, \Delta;\code{$\alpha$<:$\tau_r$})] 
     \\
     \I\I\I \B{else } []
 
     \\
 
     %% delegate 
-    \I \B{case } \tau_l, \tau_r : (\text{unifyContd } \Delta\ \tau_l\ \tau_r)
+    \I \B{case } \tau_l, \tau_r : (\text{unifyContd } \Omega\ \Delta\ \tau_l\ \tau_r)
 
 
 \end{array}
@@ -916,82 +915,87 @@ the possible values of the argument.
 
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\F{unifyContd}\ \Delta\ \tau_{l}\ \tau_{r} = \widebar{\Delta}}&
+  &\boxed{\F{unifyContd}\ \Omega\ \Delta\ \tau_{l}\ \tau_{r} = \widebar{(\Omega, \Delta)}}&
 \end{flalign*}
 \[
 \begin{array}[t]{@{} l}
-    \F{unifyContd}\ \Delta\ \tau_{l}\ \tau_{r} \triangleq 
+    \F{unifyContd}\ \Omega\ \Delta\ \tau_{l}\ \tau_{r} \triangleq 
     \\
     \I \B{match}\ \tau_{l}, \tau_{r} 
     \\
+    %% induction 
+    \I \B{case } (\code{induct $\alpha_1$.$\tau_1$}), (\code{induct $\alpha_2$.$\tau_2$}) :
+    \\
+    \I\I \tau_1 \leftarrow (\text{sub } (\code{$\alpha_1$<:$\tau_2$})\ \tau_1) 
+    \\
+    \I\I \tau_2 \leftarrow (\text{sub } (\code{$\alpha_2$<:$\tau_2$})\ \tau_2) 
+    \\
+    \I\I (\F{unify } \Omega\ \Delta\ \tau_1\ \tau_2)
 
-    %% variable-implication 
-    \I \B{case } (\code{$\alpha$->$\tau_{body}$}), (\code{$\tau_{arg}$->$\tau_{res}$}) : 
     \\
-    \I\I \tau_{par} \leftarrow (\F{sub } \Delta\ \alpha)
+
+    %% left-induction
+    \I \B{case } (\code{induct $\alpha$.$\tau$}), \tau_r :
     \\
-    \I\I \widebar{\Delta} \leftarrow (\F{unify } \Delta \tau_{arg}\ \tau_{par} )
+    \I\I \tau_{fac} \leftarrow (\text{factor } (\code{induct $\alpha$.$\tau$})) 
     \\
-    \I\I \B{if } (\F{not } \F{empty } \Delta) \F{ and } 
-    (\F{constraintWF } \Delta\ \alpha\ \tau_{arg})\B{ then }
+    \I\I (\F{unify } \Omega\ \Delta\ \tau_{fac}\ \tau_r)
+
     \\
-    \I\I\I \B{for } \Delta \leftarrow \widebar{\Delta}:
+
+    %% right-induction
+    \I \B{case } \tau_l, (\code{induct $\alpha$.$\tau$}) :
     \\
-    \I\I\I\I \tau_{body} \leftarrow (\F{sub } \Delta\ \tau_{body}) 
+    \I\I \tau_l \leftarrow (\F{sub } \Delta\ \tau_l)
     \\
-    \I\I\I\I (\F{unify } (\Delta;\code{$\alpha$<:$\tau_{arg}$})\ \tau_{body}\ \tau_{res})
+    \I\I \B{if } (\F{reducible } \tau_l\ \tau_r) \B{ then }
     \\
-    \I\I \B{else } []
+    \I\I\I \tau \leftarrow (\text{sub } (\code{$\alpha$<:$\tau_r$})\ \tau) 
+    \\
+    \I\I\I (\F{unify } \Omega\ \Delta\ \tau_l\ \tau)
+    \\
+    \I\I \B{else }
+    \\
+    \I\I\I \B{match } (\code{$\tau_l$<:\_} \in \Delta)
+    \\
+    \I\I\I \B{case } (\F{some } \tau_{cache}) :
+    \\
+    \I\I\I\I (\F{unify } \Omega\ \Delta\ \tau_{cache}\ \tau_r)
+    \\
+    \I\I\I \B{case } \F{none} :
+    \\
+    \I\I\I\I \B{if } (\F{constraintWF } \Delta\ \tau_l\ \tau_r) \B{ then }
+    \\
+    \I\I\I\I\I [(\Omega, \Delta;\code{$\tau_l$<:$\tau_r$})]
+    \\
+    \I\I\I\I \B{else } [] 
 
     \\
 
     %% implication 
     \I \B{case } (\code{$\tau_{par}$->$\tau_{body}$}), (\code{$\tau_{arg}$->$\tau_{res}$}) : 
     \\
-    \I\I \tau_{par} \leftarrow (\F{sub } \Delta\ \tau_{par})
+    \I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta \tau_{arg}\ \tau_{par} ):
     \\
-    \I\I \B{for } \Delta \leftarrow (\F{unify } \Delta \tau_{arg}\ \tau_{par} ):
-    \\
-    \I\I\I \tau_{body} \leftarrow (\F{sub } \Delta\ \tau_{body}) 
-    \\
-    \I\I\I (\F{unify } \Delta\ \tau_{body}\ \tau_{res})
-
-    \\
-
-    %% right-implication-intersection 
-    \I \B{case } \tau_l, (\code{$\tau_{arg}$->($\tau_1$\&$\tau_2$)}) : 
-    \\
-    \I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau_l\ (\code{$\tau_{arg}$->$\tau_1$})):
-    \\
-    \I\I\I (\F{unify } \Delta\ \tau_l (\code{$\tau_{arg}$->$\tau_2$}))
-
-    \\
-
-    %% left-implication-union
-    \I \B{case } \tau_l, (\code{($\tau_1$|$\tau_2$)->$\tau_{res}$}) : 
-    \\
-    \I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau_l\ (\code{$\tau_1$->$\tau_{res}$})):
-    \\
-    \I\I\I (\F{unify } \Delta\ \tau_l (\code{$\tau_2$->$\tau_{res}$})) 
+    \I\I\I (\F{unify } \Omega\ \Delta\ \tau_{body}\ \tau_{res})
 
     \\
 
     %% bottom 
-    \I \B{case } \bot, \_ : [\Delta]
+    \I \B{case } \bot, \_ : [(\Omega, \Delta)]
 
     \\
 
     %% top 
-    \I \B{case } \_, \top : [\Delta]
-
-    \\
-
+    \I \B{case } \_, \top : [(\Omega, \Delta)]
+\end{array}
+\begin{array}[t]{@{} l}
     %% field 
     \I \B{case } (\code{$l_1$:$\tau_1$}), (\code{$l_2$:$\tau_2$}) :
     \\
     \I\I \B{if } l_1 = l_2 \B{ then }
     \\
-    \I\I\I (\F{unify } \Delta\ \tau_1\ \tau_2)
+    \I\I\I (\F{unify } \Omega\ \Delta\ \tau_1\ \tau_2)
     \\
     \I\I \B{else } []
 
@@ -1002,88 +1006,59 @@ the possible values of the argument.
     \\
     \I\I \B{if } l_1 = l_2 \B{ then }
     \\
-    \I\I\I (\F{unify } \Delta\ \tau_1\ \tau_2)
+    \I\I\I (\F{unify } \Omega\ \Delta\ \tau_1\ \tau_2)
     \\
     \I\I \B{else } []
 
-\end{array}
-\begin{array}[t]{@{} l}
-    %% induction 
-    \I \B{case } (\code{induct $\alpha_1$.$\tau_1$}), (\code{induct $\alpha_2$.$\tau_2$}) :
-    \\
-    \I\I \tau_1 \leftarrow (\text{sub } (\code{$\alpha_1$<:$\tau_2$})\ \tau_1) 
-    \\
-    \I\I \tau_2 \leftarrow (\text{sub } (\code{$\alpha_2$<:$\tau_2$})\ \tau_2) 
-    \\
-    \I\I (\F{unify } \Delta\ \tau_1\ \tau_2)
-
     \\
 
-    %% left-induction
-    \I \B{case } (\code{induct $\alpha$.$\tau$}), \tau_r :
+    %% left-implication-union
+    \I \B{case } \tau_l, (\code{($\tau_1$|$\tau_2$)->$\tau_{res}$}) : 
     \\
-    \I\I \tau_{fac} \leftarrow (\text{factor } (\code{induct $\alpha$.$\tau$})) 
+    \I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ (\code{$\tau_1$->$\tau_{res}$})):
     \\
-    \I\I (\F{unify } \Delta\ \tau_{fac}\ \tau_r)
-
-    \\
-
-    %% right-induction
-    \I \B{case } \tau_l, (\code{induct $\alpha$.$\tau$}) :
-    \\
-    \I\I \B{if } (\F{reducible } \Delta\ \tau_l\ \tau_r) \B{ then }
-    \\
-    \I\I\I \tau \leftarrow (\text{sub } (\code{$\alpha$<:$\tau_r$})\ \tau) 
-    \\
-    \I\I\I (\F{unify } \Delta\ \tau_l\ \tau)
-    \\
-    \I\I \B{else }
-    \\
-    \I\I\I \B{match } (\code{$\tau_l$<:\_} \in \Delta)
-    \\
-    \I\I\I \B{case } (\F{some } \tau_{cache}) :
-    \\
-    \I\I\I\I (\F{unify } \Delta\ \tau_{cache}\ \tau_r)
-    \\
-    \I\I\I \B{case } \F{none} :
-    \\
-    \I\I\I\I \B{if } (\F{constraintWF } \Delta\ \tau_l\ \tau_r) \B{ then }
-    \\
-    \I\I\I\I\I [\Delta;\code{$\tau_l$<:$\tau_r$}]
-    \\
-    \I\I\I\I \B{else } [] 
+    \I\I\I (\F{unify } \Omega\ \Delta\ \tau_l (\code{$\tau_2$->$\tau_{res}$})) 
 
     \\
 
     %% left-union
     \I \B{case } (\code{$\tau_1$|$\tau_2$}), \tau_r : 
     \\
-    \I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau_1\ \tau_r):
+    \I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta\ \tau_1\ \tau_r):
     \\
-    \I\I\I (\F{unify } \Delta\ \tau_2\ \tau_r) 
+    \I\I\I (\F{unify } \Omega\ \Delta\ \tau_2\ \tau_r) 
 
     \\
 
     %% right-union
     \I \B{case } \tau_l, (\code{$\tau_1$|$\tau_2$}) : 
     \\
-    \I\I (\F{unify } \Delta\ \tau_l\ \tau_1) + (\F{unify } \Delta\ \tau_l\ \tau_2) 
+    \I\I (\F{unify } \Omega\ \Delta\ \tau_l\ \tau_1) + (\F{unify } \Omega\ \Delta\ \tau_l\ \tau_2) 
+
+    \\
+
+    %% right-implication-intersection 
+    \I \B{case } \tau_l, (\code{$\tau_{arg}$->($\tau_1$\&$\tau_2$)}) : 
+    \\
+    \I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ (\code{$\tau_{arg}$->$\tau_1$})):
+    \\
+    \I\I\I (\F{unify } \Omega\ \Delta\ \tau_l (\code{$\tau_{arg}$->$\tau_2$}))
 
     \\
 
     %% right-intersection
     \I \B{case } \tau_l, (\code{$\tau_1$\&$\tau_2$}) : 
     \\
-    \I\I \B{for } \Delta \leftarrow (\F{unify } \Delta\ \tau_l\ \tau_1):
+    \I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ \tau_1):
     \\
-    \I\I\I (\F{unify } \Delta\ \tau_l\ \tau_2) 
+    \I\I\I (\F{unify } \Omega\ \Delta\ \tau_l\ \tau_2) 
 
     \\
 
     %% left_intersection 
     \I \B{case } (\code{$\tau_1$\&$\tau_2$}), \tau_r : 
     \\
-    \I\I (\F{unify } \Delta\ \tau_1\ \tau_r) + (\F{unify } \Delta\ \tau_2\ \tau_r) 
+    \I\I (\F{unify } \Omega\ \Delta\ \tau_1\ \tau_r) + (\F{unify } \Omega\ \Delta\ \tau_2\ \tau_r) 
 \end{array}
 \]
 
