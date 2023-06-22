@@ -444,9 +444,9 @@ the possible values of the argument.
       \ |\ 
       \code{\#$l$ $e$} 
       \ |\ 
-      \widebar{\code{@$l$ = $e$}}
+      \widebar{\code{@$l$=$e$}}
       \ |\ 
-      \widebar{\code{path $m$ => $e$}} 
+      \widebar{\code{path $m$=>$e$}} 
       \ |\ 
       \code{$e$.$l$}
       \ |\ 
@@ -466,7 +466,7 @@ the possible values of the argument.
       \ |\ 
       \code{\#$l$ $e$} 
       \ |\ 
-      \widebar{\code{@$l$ = $e$}}
+      \widebar{\code{@$l$=$e$}}
     \end{array}
     \\
     \tau
@@ -478,20 +478,20 @@ the possible values of the argument.
       \ |\ 
       \code{?$l$ $\tau$} 
       \ |\ 
-      \code{$l$ : $\tau$} 
+      \code{$l$:$\tau$} 
       \ |\ 
-      \code{$\tau$ -> $\tau$} 
+      \code{$\tau$->$\tau$} 
       \ |\ 
-      (\code{$\tau$ | $\tau$})
+      (\code{$\tau$|$\tau$})
       \ |\ 
-      \code{$\tau$ \& $\tau$}
+      \code{$\tau$\&$\tau$}
       \ |\ 
       \\
-      \code{\{$\widebar{\alpha}$ // $\tau$ with $\tau$ <: $\tau$\}}
+      \code{\{$\widebar{\alpha}$//$\tau$ with $\tau$<:$\tau$\}}
       \ |\ 
-      \code{[$\alpha$ <: $\tau$] $\tau$}
+      \code{[$\alpha$<:$\tau$]$\tau$}
       \ |\ 
-      \code{induct $\alpha$ . $\tau$}
+      \code{induct $\alpha$.$\tau$}
     \end{array}
   \end{array}
 \]
@@ -529,7 +529,7 @@ the possible values of the argument.
   \inferrule { 
     \bigand_i \Gamma \claim e_i \hastype  \tau_i  
   } {
-    \Gamma \claim (\widebar{\code{@$l_i$ $e_i$}}^i)
+    \Gamma \claim (\widebar{\code{@$l_i$=$e_i$}}^i)
     \hastype \code{\&}_i({\code{$l_i$:$\tau_i$}})
   } 
 
@@ -686,101 +686,73 @@ the possible values of the argument.
 \end{flalign*}
 
 \begin{mathpar}
+  \inferrule { 
+    (\text{freeTVs}\ \Delta) \cap \widebar{\alpha} \subseteq \emptyset 
+    \\\\
+    \bigand_{\Delta'}
+    (\Delta;\Delta' \claim \tau_1 \subtypes \tau_2)
+    \longrightarrow
+    (\Delta;\Delta' \claim \tau \subtypes \tau_r)
+  } { 
+    \Delta \claim \code{\{$\widebar{\alpha}$//$\tau$ with $\tau_1$<:$\tau_2$\}}
+    \subtypes \tau_r
+  }
+
+  \inferrule { 
+    (\text{freeTVs}\ \Delta) \cap \widebar{\alpha} \subseteq \emptyset 
+    \\\\
+    \Delta;\Delta' \claim \tau_l \subtypes \tau
+    \\
+    \Delta;\Delta' \claim \tau_1 \subtypes \tau_2
+  } { 
+    \Delta \claim \tau_l
+    \subtypes \code{\{$\widebar{\alpha}$//$\tau$ with $\tau_1$<:$\tau_2$\}}
+  }
+
+  \inferrule { 
+    \alpha \not\in (\text{freeTVs}\ \Delta)
+    \\\\
+    \Delta;\code{$\alpha$<:$\tau'$} \claim \tau_l \subtypes \tau
+  } { 
+    \Delta \claim \tau_l
+    \subtypes \code{[$\alpha$<:$\tau'$]$\tau$}
+  }
+
+  \inferrule { 
+    \alpha \not\in (\text{freeTVs}\ \Delta)
+    \\\\
+    \Delta;\Delta' \claim \tau \subtypes \tau_r
+    \\
+    \Delta;\Delta' \claim \alpha \subtypes \tau'
+  } { 
+    \Delta \claim \subtypes \code{[$\alpha$<:$\tau'$]$\tau$}
+    \subtypes \tau_r
+  }
+  \\
+  \inferrule { 
+    \Delta \claim \tau_1[\alpha_1 \mapsto (\code{indu $\alpha_2$.$\tau_2$})]
+    \subtypes \tau_2[\alpha_2 \mapsto (\code{indu $\alpha_2$.$\tau_2$})]
+  } { 
+    \Delta \claim (\code{indu $\alpha_1$.$\tau_1$})
+    \subtypes \mu (\code{indu $\alpha_2$.$\tau_2$})
+  }
+
+  \inferrule {
+  } {
+    \Delta \claim \tau[\alpha \mapsto (\code{indu $\alpha$.$\tau$})]
+    \subtypes (\code{indu $\alpha$.$\tau$})
+  }
+
+  \inferrule {
+  } {
+    \Delta \claim (\code{indu $\alpha$.$\tau$})
+    \subtypes \tau[\alpha \mapsto (\code{indu $\alpha$.$\tau$})]
+  }
 
   \inferrule {
     \code{$\tau_l$<:$\tau_r$} \in \Delta
   } {
     \Delta \claim \tau_l \subtypes \tau_r
-  }
-
-  \inferrule { 
-    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
-    \\\\
-    \bigwedge\nolimits_{\Delta'}
-    (\Delta;\Delta' \claim \tau_1 \subtypes \tau_2)
-    \longrightarrow
-    (\Delta;\Delta' \claim \tau_3 \subtypes \tau_4)
-  } { 
-    \Delta \claim \left<\exists \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \subtypes \tau_2\right>
-    \subtypes \tau_4
-  }
-
-  \inferrule { 
-    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
-    \\\\
-    \Delta;\Delta' \claim \tau_1
-    \subtypes \tau_4
-    \\
-    \Delta;\Delta' \claim \tau_2
-    \subtypes \tau_3
-  } { 
-    \Delta \claim \tau_1
-    \subtypes \left<\exists \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \subtypes \tau_3\right>
-  }
-
-  \inferrule { 
-    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
-    \\\\
-    \bigwedge\nolimits_{\Delta'}
-    (\Delta;\Delta' \claim \tau_2 \subtypes \tau_3)
-    \longrightarrow
-    (\Delta;\Delta' \claim \tau_1 \subtypes \tau_4)
-  } { 
-    \Delta \claim \tau_1
-    \subtypes \left<\forall \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \subtypes \tau_3\right>
-  }
-
-  \inferrule { 
-    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
-    \\\\
-    \Delta;\Delta' \claim \tau_3
-    \subtypes \tau_4
-    \\
-    \Delta;\Delta' \claim \tau_1
-    \subtypes \tau_2
-  } { 
-    \Delta \claim \left<\forall \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \subtypes \tau_2\right>
-    \subtypes \tau_4
-  }
-  \\
-  \inferrule { 
-    \Delta \claim \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
-    \subtypes \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
-  } { 
-    \Delta \claim \mu \alpha_1 . \tau_1
-    \subtypes \mu \alpha_2 . \tau_2
-  }
-
-  \inferrule {
-  } {
-    \Delta \claim \tau[\alpha\mapsto\mu \alpha . \tau]
-    \subtypes \mu \alpha . \tau
-  }
-
-  \inferrule {
-  } {
-    \Delta \claim \mu\alpha.\tau
-    \subtypes \tau[\alpha\mapsto\mu \alpha . \tau]
-  }
-
-  \inferrule { 
-    \Delta \claim \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
-    \subtypes \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
-  } {
-    \Delta \claim \nu \alpha_1 . \tau_1 
-    \subtypes \nu \alpha_2 . \tau_2
-  }
-
-  \inferrule {
-  } {
-    \Delta \claim \tau[\alpha\mapsto\nu \alpha . \tau]
-    \subtypes \nu \alpha . \tau
-  }
-
-  \inferrule {
-  } {
-    \Delta \claim \nu\alpha.\tau
-    \subtypes \tau[\alpha\mapsto\nu \alpha . \tau]
   }
 \end{mathpar}
 \caption{Subtyping: extended rules}
@@ -841,15 +813,15 @@ the possible values of the argument.
     \\
 
     %% variable 
-    \I \B{case } \code{()} : [(\Omega, \Delta, \code{unit})] 
+    \I \B{case } \code{()} : \{(\Omega, \Delta, \code{unit})\}
     \\
     \I \B{case } \code{$x$} : 
     \\
     \I\I \B{match } (\code{$x$:\_} \in \Gamma)
     \\
-    \I\I \B{case } (\F{some } \tau) : [(\Omega, \Delta, \tau)] 
+    \I\I \B{case } (\F{some } \tau) : \{(\Omega, \Delta, \tau)\}
     \\
-    \I\I \B{case } \F{none} : []
+    \I\I \B{case } \F{none} : \emptyset 
 
     \\
 
@@ -858,16 +830,16 @@ the possible values of the argument.
     \\
     \I\I \B{for } (\Omega, \Delta, \tau) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e): 
      \\
-    \I\I\I [(\Omega, \Delta, \code{?$l$ $\tau$})] 
+    \I\I\I \{(\Omega, \Delta, \code{?$l$ $\tau$})\}
 
     \\
 
     %% record
-    \I \B{case } \widebar{\code{@$l$ $e$}}  :  
+    \I \B{case } \widebar{\code{@$l$=$e$}}  :  
     \\
-    \I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow [(\Omega, \Delta, \top)]
+    \I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow \{(\Omega, \Delta, \top)\}
     \\
-    \I\I \B{for } (\code{@$l$ $e$}) \leftarrow \widebar{\code{@$l$ $e$}}:
+    \I\I \B{for } (\code{@$l$=$e$}) \leftarrow \widebar{\code{@$l$=$e$}}:
     \\
     \I\I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow (
     \\
@@ -875,18 +847,18 @@ the possible values of the argument.
     \\
     \I\I\I\I \B{for } (\Omega, \Delta, \tau) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e): 
     \\
-    \I\I\I\I\I [(\Omega, \Delta, \code{($l$:$\tau$)\&$\tau_{res}$})])
+    \I\I\I\I\I \{(\Omega, \Delta, \code{($l$:$\tau$)\&$\tau_{res}$})\})
     \\
     \I\I \widebar{(\Omega, \Delta_{res}, \tau_{res})}
 
     \\
 
     %% function
-    \I \B{case } (\widebar{\code{path $m$ => $e$}})  :  
+    \I \B{case } (\widebar{\code{path $m$=>$e$}})  :  
     \\
-    \I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow [(\Omega, \Delta, \top)]
+    \I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow \{(\Omega, \Delta, \top)\}
     \\
-    \I\I \B{for } (\code{path $m$ => $e$}) \leftarrow (\widebar{\code{path $m$ => $e$}}): 
+    \I\I \B{for } (\code{path $m$=>$e$}) \leftarrow (\widebar{\code{path $m$=>$e$}}): 
     \\
     \I\I\I \Omega' \leftarrow \emptyset
     \\
@@ -912,7 +884,7 @@ the possible values of the argument.
     \\
     \I\I\I\I\I\I \Omega \leftarrow \Omega \backslash \Omega'
     \\
-    \I\I\I\I\I\I [(\Omega, \Delta, \code{($\tau_{m}$->$\tau_{e}$)\&$\tau_{res}$})]
+    \I\I\I\I\I\I \{(\Omega, \Delta, \code{($\tau_{m}$->$\tau_{e}$)\&$\tau_{res}$})\}
     \\
     \I\I\I \widebar{(\Omega, \Delta, \tau_{res})}
 
@@ -927,7 +899,7 @@ the possible values of the argument.
     \\
     \I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta\ \tau\ (\code{$l$:$\alpha$})):
     \\
-    \I\I\I [(\Omega, \Delta, \alpha)]
+    \I\I\I \{(\Omega, \Delta, \alpha)\}
 \end{array}
 \begin{array}[t]{@{} l}
     %% application 
@@ -949,7 +921,7 @@ the possible values of the argument.
     \\
     \I\I\I\I\I \Omega \leftarrow \Omega \backslash \{\alpha\}
     \\
-    \I\I\I\I\I [(\Omega, \Delta, \alpha)]
+    \I\I\I\I\I \{(\Omega, \Delta, \alpha)\}
 
     \\
 
@@ -982,7 +954,7 @@ the possible values of the argument.
     \\
     \I\I\I\I (\F{infer } \Omega\ \Delta\ (\Gamma;\code{$x$:$\tau_{gen}$})\ e_b)
     \\
-    \I\I \B{else } [] 
+    \I\I \B{else } \emptyset 
 
     \\
 
@@ -1007,11 +979,11 @@ the possible values of the argument.
     \\
     \I\I\I \beta \leftarrow \F{freshTV}
     \\
-    \I\I\I \tau_{res} \leftarrow
+    \I\I\I \tau_{res} \leftarrow (
     \\
-    \I\I\I\I \code{[$\alpha$<:$\tau_{par}$] $\alpha$->\{$\beta$ with ($\alpha$*$\beta$)<:$\tau_{rel}$\}}
+    \I\I\I\I \code{[$\alpha$<:$\tau_{par}$] $\alpha$->\{$\beta$ with ($\alpha$*$\beta$)<:$\tau_{rel}$\}})
     \\
-    \I\I\I [(\Omega, \Delta, \tau_{res})]
+    \I\I\I \{(\Omega, \Delta, \tau_{res})\}
 
 \end{array}
 \]
@@ -1032,13 +1004,13 @@ the possible values of the argument.
 \[
 \begin{array}[t]{@{} l}
     \F{unify}\ \Omega\ \Delta\ \tau_{l}\ \tau_{r} \triangleq 
-    \B{if}\ \tau_l = \tau_r \B{ then } [(\Omega, \Delta)] \B{ else }
+    \B{if}\ \tau_l = \tau_r \B{ then } \{(\Omega, \Delta)\} \B{ else }
     \\
     \I \B{match}\ \tau_{l}, \tau_{r} 
     \\
 
     %% left-existential 
-    \I \B{case } \code{\{$\widebar{\alpha}$ // $\tau$ with $\tau_k$<:$\tau_b$\}}, \tau_r : 
+    \I \B{case } \code{\{$\widebar{\alpha}$//$\tau$ with $\tau_k$<:$\tau_b$\}}, \tau_r : 
     \\
     \I\I (\widebar{\alpha}, [\tau, \tau_k]) \leftarrow (\F{rename } \widebar{\alpha}\ [\tau, \tau_k])
     \\
@@ -1051,7 +1023,7 @@ the possible values of the argument.
     \I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify}\ \Omega_c\ \Delta_c\ \tau\ \tau_r)
     \\
     \I\I\I \B{if } (\F{safe } \widebar{\alpha}\ \Delta_c\ \widebar{\Delta}) \B{ then }
-    \widebar{(\Omega, \Delta)} \B{ else } [] 
+    \widebar{(\Omega, \Delta)} \B{ else } \emptyset 
     \\
     \I\I \B{case } \F{none} :
     \\
@@ -1073,12 +1045,12 @@ the possible values of the argument.
     \\
     \I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ \tau)
     \\
-    \I\I \B{if } (\F{safe } [\alpha]\ \Delta\ \widebar{\Delta}) \B{ then } \widebar{(\Omega, \Delta)} \B{ else } [] 
+    \I\I \B{if } (\F{safe } \{\alpha\}\ \Delta\ \widebar{\Delta}) \B{ then } \widebar{(\Omega, \Delta)} \B{ else } \emptyset 
 
     \\
 
     %% right-existential
-    \I \B{case } \tau_l, \code{\{$\widebar{\alpha}$ // $\tau$ with $\tau_k$<:$\tau_b$\}} : 
+    \I \B{case } \tau_l, \code{\{$\widebar{\alpha}$//$\tau$ with $\tau_k$<:$\tau_b$\}} : 
     \\
     \I\I (\widebar{\alpha}, [\tau, \tau_k]) \leftarrow (\F{rename } \widebar{\alpha}\ [\tau, \tau_k])
     \\
@@ -1118,30 +1090,31 @@ the possible values of the argument.
     \\
     \I\I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ (\code{$\tau_l$|$\tau$})) \B{ then }
     \\
-    \I\I\I\I\I [(\Omega, \Delta;\code{$\alpha$<:($\tau_l$|$\tau$)})] 
+    \I\I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:($\tau_l$|$\tau$)})\}
     \\
-    \I\I\I\I \B{else } [] 
+    \I\I\I\I \B{else } \emptyset 
     \\
     \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ \tau_l) \B{ then }
     \\
-    \I\I\I\I [(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})] 
+    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})\}
     \\
-    \I\I\I \B{else } [] 
+    \I\I\I \B{else } \emptyset 
     \\
     \I\I \B{case } \F{none} :
     \\
     \I\I\I \widebar{cs} \leftarrow (\F{relCons } \alpha\ \Delta)  
     \\
     \I\I\I \B{if } (\F{not } \F{empty } \widebar{cs}) \F{ and } 
-    (\F{strongEnough } \alpha\ \tau_l\ \widebar{cs}) \B{ then }
     \\
-    \I\I\I\I [(\Omega, \Delta)]
+    \I\I\I\I (\F{strongEnough } \alpha\ \tau_l\ \widebar{cs}) \B{ then }
+    \\
+    \I\I\I\I \{(\Omega, \Delta)\}
     \\
     \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ \tau_l) \B{ then }
     \\
-    \I\I\I\I [(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})] 
+    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})\}
     \\
-    \I\I\I \B{else } []
+    \I\I\I \B{else } \emptyset 
 
     \\
 
@@ -1158,26 +1131,29 @@ the possible values of the argument.
     \\
     \I\I\I\I \widebar{(\Omega, \Delta)}
     \\
-    \I\I\I \B{else if } (\alpha \in \Omega) \F{ and } (\F{constraintWF } \Delta\ \alpha\ (\code{$\tau_r$\&$\tau$})) \B{ then }
+    \I\I\I \B{else if } (\alpha \in \Omega) \F{ and } 
     \\
-    \I\I\I\I [(\Omega, \Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)})]
+    \I\I\I\I (\F{constraintWF } \Delta\ \alpha\ (\code{$\tau_r$\&$\tau$})) \B{ then }
     \\
-    \I\I\I \B{else } [] 
+    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)})\}
+    \\
+    \I\I\I \B{else } \emptyset 
     \\
     \I\I \B{case } \F{none} :
     \\
     \I\I\I \widebar{cs} \leftarrow (\F{relCons } \alpha\ \Delta)  
     \\
     \I\I\I \B{if } (\F{not } \F{empty } \widebar{cs}) \F{ and } 
-    (\F{weakEnough } \alpha\ \widebar{cs}\ \tau_r) \B{ then }
     \\
-    \I\I\I\I [(\Omega, \Delta)]
+    \I\I\I\I (\F{weakEnough } \alpha\ \widebar{cs}\ \tau_r) \B{ then }
+    \\
+    \I\I\I\I \{(\Omega, \Delta)\}
     \\
     \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ \tau_r) \B{ then }
     \\
-    \I\I\I\I [(\Omega, \Delta;\code{$\alpha$<:$\tau_r$})] 
+    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_r$})\}
     \\
-    \I\I\I \B{else } []
+    \I\I\I \B{else } \emptyset 
 
     \\
 
@@ -1244,9 +1220,9 @@ the possible values of the argument.
     \\
     \I\I\I\I \B{if } (\F{constraintWF } \Delta\ \tau_l\ \tau_r) \B{ then }
     \\
-    \I\I\I\I\I [(\Omega, \Delta;\code{$\tau_l$<:$\tau_r$})]
+    \I\I\I\I\I \{(\Omega, \Delta;\code{$\tau_l$<:$\tau_r$})\}
     \\
-    \I\I\I\I \B{else } [] 
+    \I\I\I\I \B{else } \emptyset 
 
     \\
 
@@ -1260,12 +1236,12 @@ the possible values of the argument.
     \\
 
     %% bottom 
-    \I \B{case } \bot, \_ : [(\Omega, \Delta)]
+    \I \B{case } \bot, \_ : \{(\Omega, \Delta)\}
 
     \\
 
     %% top 
-    \I \B{case } \_, \top : [(\Omega, \Delta)]
+    \I \B{case } \_, \top : \{(\Omega, \Delta)\}
 \end{array}
 \begin{array}[t]{@{} l}
     %% field 
@@ -1275,7 +1251,7 @@ the possible values of the argument.
     \\
     \I\I\I (\F{unify } \Omega\ \Delta\ \tau_1\ \tau_2)
     \\
-    \I\I \B{else } []
+    \I\I \B{else } \emptyset 
 
     \\
 
@@ -1286,7 +1262,7 @@ the possible values of the argument.
     \\
     \I\I\I (\F{unify } \Omega\ \Delta\ \tau_1\ \tau_2)
     \\
-    \I\I \B{else } []
+    \I\I \B{else } \emptyset 
 
     \\
 
@@ -1311,7 +1287,7 @@ the possible values of the argument.
     %% right-union
     \I \B{case } \tau_l, (\code{$\tau_1$|$\tau_2$}) : 
     \\
-    \I\I (\F{unify } \Omega\ \Delta\ \tau_l\ \tau_1) + (\F{unify } \Omega\ \Delta\ \tau_l\ \tau_2) 
+    \I\I (\F{unify } \Omega\ \Delta\ \tau_l\ \tau_1) \cup (\F{unify } \Omega\ \Delta\ \tau_l\ \tau_2) 
 
     \\
 
@@ -1336,7 +1312,7 @@ the possible values of the argument.
     %% left_intersection 
     \I \B{case } (\code{$\tau_1$\&$\tau_2$}), \tau_r : 
     \\
-    \I\I (\F{unify } \Omega\ \Delta\ \tau_1\ \tau_r) + (\F{unify } \Omega\ \Delta\ \tau_2\ \tau_r) 
+    \I\I (\F{unify } \Omega\ \Delta\ \tau_1\ \tau_r) \cup (\F{unify } \Omega\ \Delta\ \tau_2\ \tau_r) 
 \end{array}
 \]
 
