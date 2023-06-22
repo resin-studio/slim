@@ -44,10 +44,14 @@
 
 % \newcommand{\code}[1]{\texttt{\small #1}}
 \newcommand{\code}[1]{\texttt{#1}}
-\newcommand{\hastype}{\ \uparrow\ }
+\newcommand{\claim}{\ \vdash\ }
+\newcommand{\hastype}{\ \ddagger\ }
+\newcommand{\subtypes}{\ \sqsubseteq\ }
 \newcommand{\I}{\hspace{4mm}}
 \newcommand{\B}[1]{\textbf{#1}}
 \newcommand{\F}[1]{\text{#1}}
+\newcommand{\bigand}{\bigwedge\nolimits}
+     
 
 
 
@@ -500,6 +504,86 @@ the possible values of the argument.
 %% Typing 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Gamma \claim e \hastype \tau}&
+\end{flalign*}
+\begin{mathpar}
+  \inferrule { 
+  } {
+    \Gamma \claim \code{()} \hastype \code{unit}
+  } 
+
+  \inferrule { 
+    \code{$x$:$\tau$} \in \Gamma
+  } {
+    \Gamma \claim x \hastype \tau 
+  } 
+
+  \inferrule { 
+    \Gamma \claim e \hastype \tau 
+  } {
+     \Gamma \claim (\code{@$l$ $e$}) \hastype (\code{$l$:$\tau$})
+  }
+
+  \inferrule { 
+    \bigand_i \Gamma \claim e_i \hastype  \tau_i  
+  } {
+    \Gamma \claim (\widebar{\code{@$l_i$ $e_i$}}^i)
+    \hastype \code{\&}_i({\code{$l_i$:$\tau_i$}})
+  } 
+
+  \inferrule {
+    \bigand_i \Gamma_i \claim m_i \hastype \tau_i
+    \\
+    \bigand_i \Gamma;\Gamma_i \claim e_i \hastype \tau'_i
+  } {
+    \Gamma \claim (\widebar{\code{path $m_i$=>$e_i$}}^i)
+    : \code{\&}_i(\code{$\tau_i$->$\tau'_i$})  
+  } 
+
+  \inferrule {
+    \Gamma \claim e \hastype \code{$l$:$\tau$}
+  } {
+    \Gamma \claim \code{$e$.$l$} \hastype \tau
+  } 
+
+  \inferrule { 
+    \Gamma \claim e_f \hastype \code{$\tau'$->$\tau$}
+    \\
+    \Gamma \claim e_a \hastype \tau'
+  } {
+    \Gamma \claim (\code{$e_f$ $e_a$}) \hastype \tau
+  } 
+
+  \inferrule { 
+    \Gamma \claim e_a \hastype \tau_a
+    \\
+    \bullet \claim  \tau_a \subtypes \tau'
+    \\
+    \Gamma;\code{$x$:$\tau_a$} \claim e_b \hastype \tau
+  } {
+    \Gamma \claim (\code{let $x$:$\tau'$ = $e_a$ in $e_b$}) 
+    \hastype \tau
+  } 
+
+  \inferrule { 
+    \Gamma \claim e \hastype \code{$\tau$->$\tau$}
+  } {
+    \Gamma \claim (\code{fix $e$}) \hastype \tau
+  } 
+
+  \inferrule { 
+    \Gamma \claim e \hastype \tau' 
+    \\
+    \bullet \claim \tau' \subtypes \tau
+  } {
+    \Gamma \claim e \hastype \tau
+  } 
+\end{mathpar}
+\caption{Typing}
+\end{figure*}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Subtyping 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -507,6 +591,196 @@ the possible values of the argument.
 %%      T1 <: T2  in Delta
 %%  ---------------------------
 %%    Delta |- T1 subtypes T2 
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+
+\begin{mathpar}
+  \inferrule {
+  } {
+    \Delta \vdash \text{unit} \sqsubseteq \text{unit}
+  }
+
+  \inferrule {
+    \Delta \vdash \tau_1
+    \sqsubseteq \tau_2
+  } {
+    \Delta \vdash l*\tau_1
+    \sqsubseteq l*\tau_2
+  } 
+
+  \inferrule {
+    \Delta \vdash \tau_1
+    \sqsubseteq \tau_2
+  } {
+    \Delta \vdash l:\tau_1
+    \sqsubseteq l:\tau_2
+  } 
+
+  \inferrule {
+    \Delta \vdash \tau_3
+    \sqsubseteq \tau_1
+    \\
+    \Delta \vdash \tau_2
+    \sqsubseteq \tau_4
+  } {
+    \Delta \vdash \tau_1 \rightarrow \tau_2
+    \sqsubseteq \tau_3 \rightarrow \tau_4
+  } 
+  \\
+  \inferrule {
+    \Delta \vdash \tau_1
+    \sqsubseteq \tau_3
+    \\
+    \Delta \vdash \tau_2
+    \sqsubseteq \tau_3
+  } {
+    \Delta \vdash \tau_1 \sqcup \tau_2
+    \sqsubseteq \tau_3
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \tau_1
+    \sqsubseteq \tau_1 \sqcup \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \tau_2
+    \sqsubseteq \tau_1 \sqcup \tau_2
+  }
+  \\
+  \inferrule {
+    \Delta \vdash \tau
+    \sqsubseteq \tau_1
+    \\
+    \Delta \vdash \tau
+    \sqsubseteq \tau_2
+  } {
+    \Delta \vdash \tau
+    \sqsubseteq \tau_1 \sqcap \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \tau_1 \sqcap \tau_2
+    \sqsubseteq \tau_1
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \tau_1 \sqcap \tau_2
+    \sqsubseteq \tau_2
+  }
+\end{mathpar}
+\caption{Subtyping: standard rules}
+\end{figure*}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Subtyping: extended
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\Delta \vdash \tau \sqsubseteq \tau}&
+\end{flalign*}
+
+\begin{mathpar}
+  \inferrule { 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
+    \\\\
+    \bigwedge\nolimits_{\Delta'}
+    (\Delta;\Delta' \vdash \tau_1 \sqsubseteq \tau_2)
+    \longrightarrow
+    (\Delta;\Delta' \vdash \tau_3 \sqsubseteq \tau_4)
+  } { 
+    \Delta \vdash \left<\exists \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \sqsubseteq \tau_2\right>
+    \sqsubseteq \tau_4
+  }
+
+  \inferrule { 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
+    \\\\
+    \Delta;\Delta' \vdash \tau_1
+    \sqsubseteq \tau_4
+    \\
+    \Delta;\Delta' \vdash \tau_2
+    \sqsubseteq \tau_3
+  } { 
+    \Delta \vdash \tau_1
+    \sqsubseteq \left<\exists \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \sqsubseteq \tau_3\right>
+  }
+
+  \inferrule { 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
+    \\\\
+    \bigwedge\nolimits_{\Delta'}
+    (\Delta;\Delta' \vdash \tau_2 \sqsubseteq \tau_3)
+    \longrightarrow
+    (\Delta;\Delta' \vdash \tau_1 \sqsubseteq \tau_4)
+  } { 
+    \Delta \vdash \tau_1
+    \sqsubseteq \left<\forall \widebar{\alpha_i}\ .\ \tau_4\ |\ \tau_2 \sqsubseteq \tau_3\right>
+  }
+
+  \inferrule { 
+    (\text{freevars}\ \Delta) \cap \widebar{\alpha_i} \subseteq \emptyset 
+    \\\\
+    \Delta;\Delta' \vdash \tau_3
+    \sqsubseteq \tau_4
+    \\
+    \Delta;\Delta' \vdash \tau_1
+    \sqsubseteq \tau_2
+  } { 
+    \Delta \vdash \left<\forall \widebar{\alpha_i}\ .\ \tau_3\ |\ \tau_1 \sqsubseteq \tau_2\right>
+    \sqsubseteq \tau_4
+  }
+  \\
+  \inferrule { 
+    \Delta \vdash \tau_1[\alpha_1\mapsto\mu\alpha_2.\tau_2]
+    \sqsubseteq \tau_2[\alpha_2\mapsto\mu\alpha_2.\tau_2]
+  } { 
+    \Delta \vdash \mu \alpha_1 . \tau_1
+    \sqsubseteq \mu \alpha_2 . \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \tau[\alpha\mapsto\mu \alpha . \tau]
+    \sqsubseteq \mu \alpha . \tau
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \mu\alpha.\tau
+    \sqsubseteq \tau[\alpha\mapsto\mu \alpha . \tau]
+  }
+
+  \inferrule { 
+    \Delta \vdash \tau_1[\alpha_1\mapsto\nu\alpha_1.\tau_1] 
+    \sqsubseteq \tau_2[\alpha_2\mapsto\nu\alpha_1.\tau_1]
+  } {
+    \Delta \vdash \nu \alpha_1 . \tau_1 
+    \sqsubseteq \nu \alpha_2 . \tau_2
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \tau[\alpha\mapsto\nu \alpha . \tau]
+    \sqsubseteq \nu \alpha . \tau
+  }
+
+  \inferrule {
+  } {
+    \Delta \vdash \nu\alpha.\tau
+    \sqsubseteq \tau[\alpha\mapsto\nu \alpha . \tau]
+  }
+\end{mathpar}
+\caption{Subtyping: extended rules}
+\end{figure*}
 
 
 \section{Analysis}
