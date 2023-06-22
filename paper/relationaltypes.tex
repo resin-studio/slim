@@ -147,11 +147,11 @@ Thus, parametric types are extended with constraints in the form of subtyping.
             path #hello => #world
             path #good => #morning in
 
-        let repeat = path x => fix (path self =>
+        let repeat = path x => fix(path self =>
             path #zero => #nil
             path #succ n => #cons (x, self n)) in
 
-        let fromList = fix (path self =>
+        let fromList = fix(path self =>
             path #nil => $\hdots$
             path #cons (x, xs) => $\hdots$) in
 
@@ -161,7 +161,7 @@ Thus, parametric types are extended with constraints in the form of subtyping.
         let fromDos = path (@dos = content) => $\hdots$ in
         let fromBoth = path x => (fromUno x, fromDos, x)
 
-        let lessOrEq = fix (path self =>
+        let lessOrEq = fix(path self =>
             path (#zero, _) => #true
             path (#succ x, #succ y) => self (x, y)
             path (#succ _, #zero) => #false) in
@@ -719,7 +719,7 @@ the possible values of the argument.
   }
 
   \inferrule { 
-    \alpha \not\in (\text{freeTVs}\ \Delta)
+    \alpha \not\in \F{freeTVs}(\Delta)
     \\\\
     \Delta;\Delta' \claim \tau \subtypes \tau_r
     \\
@@ -966,7 +966,7 @@ the possible values of the argument.
     \\
 
     %% fix 
-    \I \B{case } (\code{fix $e$}) :  
+    \I \B{case } \code{fix($e$)} :  
     \\
     \I\I \Omega_{stale} \leftarrow \F{staleTVs}()
     \\
@@ -1162,7 +1162,7 @@ the possible values of the argument.
     \\
 
     %% delegate 
-    \I \B{case } \tau_l, \tau_r : (\text{unifyContd } \Omega\ \Delta\ \tau_l\ \tau_r)
+    \I \B{case } \tau_l, \tau_r : \F{unifyContd}(\Omega, \Delta, \tau_l, \tau_r)
 
 
 \end{array}
@@ -1184,9 +1184,9 @@ the possible values of the argument.
     %% induction 
     \I \B{case } \code{indu[$\alpha_1$]$\tau_1$}, \code{indu[$\alpha_2$]$\tau_2$} :
     \\
-    \I\I \tau_1 \leftarrow (\text{sub } (\code{$\alpha_1$<:$\tau_2$})\ \tau_1) 
+    \I\I \tau_1 \leftarrow \F{sub}(\bullet;\code{$\alpha_1$<:$\tau_2$}, \tau_1) 
     \\
-    \I\I \tau_2 \leftarrow (\text{sub } (\code{$\alpha_2$<:$\tau_2$})\ \tau_2) 
+    \I\I \tau_2 \leftarrow \F{sub}(\bullet;\code{$\alpha_2$<:$\tau_2$}, \tau_2) 
     \\
     \I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_2)
 
@@ -1195,7 +1195,7 @@ the possible values of the argument.
     %% left-induction
     \I \B{case } \code{indu[$\alpha$]$\tau$}, \tau_r :
     \\
-    \I\I \tau_{fac} \leftarrow \text{factor}(\code{indu[$\alpha$]$\tau$})
+    \I\I \tau_{fac} \leftarrow \F{factor}(\code{indu[$\alpha$]$\tau$})
     \\
     \I\I \F{unify}(\Omega, \Delta, \tau_{fac}, \tau_r)
 
