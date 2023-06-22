@@ -787,6 +787,13 @@ the possible values of the argument.
     \ |\ 
     \Gamma; \code{$x$:$\tau$}
   \end{array}
+  \\
+  T 
+  &{} \owns (\Omega, \Delta, \tau)
+  \\
+  C 
+  &{} \owns (\Omega, \Delta)
+  \\
 \end{array}
 \]
 
@@ -801,7 +808,7 @@ the possible values of the argument.
 
 
 \begin{flalign*}
-  &\boxed{\F{infer}\ \Omega\ \Delta\ \Gamma e\ \tau = \widebar{(\Omega, \Delta, \tau)}}&
+  &\boxed{\F{infer}\ \Omega\ \Delta\ \Gamma e\ \tau = T}&
 \end{flalign*}
 
 \[
@@ -837,26 +844,26 @@ the possible values of the argument.
     %% record
     \I \B{case } \widebar{\code{@$l$=$e$}}  :  
     \\
-    \I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow \{(\Omega, \Delta, \top)\}
+    \I\I T \leftarrow \{(\Omega, \Delta, \top)\}
     \\
     \I\I \B{for } (\code{@$l$=$e$}) \leftarrow \widebar{\code{@$l$=$e$}}:
     \\
-    \I\I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow (
+    \I\I\I T \leftarrow (
     \\
-    \I\I\I\I \B{for } (\Omega, \Delta, \tau_{res}) \leftarrow \widebar{(\Omega, \Delta, \tau_{res})}:
+    \I\I\I\I \B{for } (\Omega, \Delta, \tau_{res}) \leftarrow T:
     \\
     \I\I\I\I \B{for } (\Omega, \Delta, \tau) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e): 
     \\
     \I\I\I\I\I \{(\Omega, \Delta, \code{($l$:$\tau$)\&$\tau_{res}$})\})
     \\
-    \I\I \widebar{(\Omega, \Delta_{res}, \tau_{res})}
+    \I\I T
 
     \\
 
     %% function
     \I \B{case } (\widebar{\code{path $m$=>$e$}})  :  
     \\
-    \I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow \{(\Omega, \Delta, \top)\}
+    \I\I T \leftarrow \{(\Omega, \Delta, \top)\}
     \\
     \I\I \B{for } (\code{path $m$=>$e$}) \leftarrow (\widebar{\code{path $m$=>$e$}}): 
     \\
@@ -872,9 +879,9 @@ the possible values of the argument.
     \\
     \I\I\I\I \Gamma' \leftarrow \Gamma';\code{$x$:$\alpha$}
     \\
-    \I\I\I \widebar{(\Omega, \Delta, \tau_{res})} \leftarrow
+    \I\I\I T \leftarrow (
     \\
-    \I\I\I\I \B{for } (\Omega, \Delta, \tau_{res}) \leftarrow \widebar{(\Omega, \Delta, \tau_{res})}: 
+    \I\I\I\I \B{for } (\Omega, \Delta, \tau_{res}) \leftarrow T: 
     \\
     \I\I\I\I\I \Omega \leftarrow \Omega \cup \Omega'
     \\
@@ -884,9 +891,9 @@ the possible values of the argument.
     \\
     \I\I\I\I\I\I \Omega \leftarrow \Omega \backslash \Omega'
     \\
-    \I\I\I\I\I\I \{(\Omega, \Delta, \code{($\tau_{m}$->$\tau_{e}$)\&$\tau_{res}$})\}
+    \I\I\I\I\I\I \{(\Omega, \Delta, \code{($\tau_{m}$->$\tau_{e}$)\&$\tau_{res}$})\})
     \\
-    \I\I\I \widebar{(\Omega, \Delta, \tau_{res})}
+    \I\I T
 
     \\
 
@@ -913,11 +920,11 @@ the possible values of the argument.
     \\
     \I\I \B{for } (\Omega, \Delta, \tau_f) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e_f):
     \\
-    \I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify } \Omega\ \Delta\ \tau_f\ (\code{$\tau_a$->$\alpha$}))
+    \I\I\I C \leftarrow (\F{unify } \Omega\ \Delta\ \tau_f\ (\code{$\tau_a$->$\alpha$}))
     \\
-    \I\I\I \B{if } (\F{empty } \widebar{(\Omega, \Delta)}) \B{ then } \B{break} \B{ else }
+    \I\I\I \B{if } \F{empty}(C) \B{ then } \B{break} \B{ else }
     \\
-    \I\I\I\I \B{for } (\Omega, \Delta) \leftarrow \widebar{(\Omega, \Delta)}:
+    \I\I\I\I \B{for } (\Omega, \Delta) \leftarrow C:
     \\
     \I\I\I\I\I \Omega \leftarrow \Omega \backslash \{\alpha\}
     \\
@@ -930,13 +937,13 @@ the possible values of the argument.
     \\
     \I\I \widebar{\alpha_{stale}} \leftarrow \F{staleTVs}
     \\
-    \I\I \widebar{(\Omega, \Delta, \tau_a)} \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e_a)
+    \I\I T \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e_a)
     \\
     \I\I allowed \leftarrow \F{true}
     \\
-    \I\I \B{for } (\Omega, \Delta, \tau_a) \leftarrow \widebar{(\Omega, \Delta, \tau_a)}:
+    \I\I \B{for } (\Omega, \Delta, \tau_a) \leftarrow T:
     \\
-    \I\I\I \B{if } (\F{empty } (\F{unify } \Omega\ \Delta\ \tau_a\ \tau_p)) \B{ then }
+    \I\I\I \B{if } \F{empty}(\F{unify}(\Omega, \Delta, \tau_a, \tau_p)) \B{ then }
     \\
     \I\I\I\I allowed \leftarrow \F{false}
     \\
@@ -946,7 +953,7 @@ the possible values of the argument.
     \\
     \I\I \B{if } allowed \B{ then }
     \\
-    \I\I\I \B{for } (\Omega, \Delta, \tau_a) \leftarrow (\F{infer } \Omega\ \Delta\ \Gamma\ e_a):
+    \I\I\I \B{for } (\Omega, \Delta, \tau_a) \leftarrow T:
     \\
     \I\I\I \B{for } (\Omega, \Delta) \leftarrow (\F{unify } \Omega\ \Delta\ \tau_a\ \tau_p):
     \\
@@ -999,7 +1006,7 @@ the possible values of the argument.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\F{unify}\ \Omega\ \Delta\ \tau_{l}\ \tau_{r} = \widebar{(\Omega, \Delta)}}&
+  &\boxed{\F{unify}\ \Omega\ \Delta\ \tau_{l}\ \tau_{r} = C}&
 \end{flalign*}
 \[
 \begin{array}[t]{@{} l}
@@ -1014,25 +1021,25 @@ the possible values of the argument.
     \\
     \I\I (\widebar{\alpha}, [\tau, \tau_k]) \leftarrow (\F{rename } \widebar{\alpha}\ [\tau, \tau_k])
     \\
-    \I\I \widebar{(\Omega_c, \Delta_c)} \leftarrow (\F{unify}\ \Delta\ \tau_k\ \tau_b)
+    \I\I C \leftarrow (\F{unify}\ \Delta\ \tau_k\ \tau_b)
     \\
-    \I\I \B{match } (\F{unsolved } \widebar{(\Omega_c, \Delta_c)})
+    \I\I \B{match } \F{unsolved}(C)
     \\
-    \I\I \B{case } (\F{some } (\Omega_c, \Delta_c)) :
+    \I\I \B{case } \F{some}(\Omega, \Delta) :
     \\
-    \I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify}\ \Omega_c\ \Delta_c\ \tau\ \tau_r)
+    \I\I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r)
     \\
-    \I\I\I \B{if } (\F{safe } \widebar{\alpha}\ \Delta_c\ \widebar{\Delta}) \B{ then }
-    \widebar{(\Omega, \Delta)} \B{ else } \emptyset 
+    \I\I\I \B{if } \F{safe}(\widebar{\alpha}, \Delta, C) \B{ then }
+    C \B{ else } \emptyset 
     \\
     \I\I \B{case } \F{none} :
     \\
-    \I\I\I \B{for } (\Omega_c, \Delta_c) \leftarrow \widebar{(\Omega_c, \Delta_c)}:
+    \I\I\I \B{for } (\Omega, \Delta) \leftarrow C:
     \\
-    \I\I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify}\ \Omega_c\ \Delta_c\ \tau\ \tau_r)
+    \I\I\I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r)
     \\
-    \I\I\I\I \B{if } (\F{empty } \widebar{(\Omega, \Delta)}) \B{ then } 
-    \B{break} \B{ else } \widebar{(\Omega, \Delta)}
+    \I\I\I\I \B{if } \F{empty}(C) \B{ then } 
+    \B{break} \B{ else } C 
 
     \\
 
@@ -1043,9 +1050,9 @@ the possible values of the argument.
     \\
     \I\I \Delta \leftarrow \Delta;\code{$\alpha$<:$\tau_b$}
     \\
-    \I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ \tau)
+    \I\I C \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ \tau)
     \\
-    \I\I \B{if } (\F{safe } \{\alpha\}\ \Delta\ \widebar{\Delta}) \B{ then } \widebar{(\Omega, \Delta)} \B{ else } \emptyset 
+    \I\I \B{if } \F{safe}(\{\alpha\}, \Delta, C) \B{ then } C \B{ else } \emptyset 
 
     \\
 
@@ -1080,21 +1087,21 @@ the possible values of the argument.
     \\
     \I\I \B{case } (\F{some } \tau) :
     \\
-    \I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ \tau)
+    \I\I\I C \leftarrow (\F{unify } \Omega\ \Delta\ \tau_l\ \tau)
     \\
-    \I\I\I \B{if } (\alpha \in \Omega) \B{ then }
+    \I\I\I \B{if } \alpha \in \Omega \B{ then }
     \\
-    \I\I\I\I \B{if } (\F{not } \F{empty } \widebar{(\Omega, \Delta)}) \B{ then }
+    \I\I\I\I \B{if } \neg \F{empty}(C) \B{ then }
     \\
-    \I\I\I\I\I \widebar{(\Omega, \Delta)}
+    \I\I\I\I\I C
     \\
-    \I\I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ (\code{$\tau_l$|$\tau$})) \B{ then }
+    \I\I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, (\code{$\tau_l$|$\tau$})) \B{ then }
     \\
     \I\I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:($\tau_l$|$\tau$)})\}
     \\
     \I\I\I\I \B{else } \emptyset 
     \\
-    \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ \tau_l) \B{ then }
+    \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_l) \B{ then }
     \\
     \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})\}
     \\
@@ -1102,15 +1109,15 @@ the possible values of the argument.
     \\
     \I\I \B{case } \F{none} :
     \\
-    \I\I\I \widebar{cs} \leftarrow (\F{relCons } \alpha\ \Delta)  
+    \I\I\I \Delta_{rel} \leftarrow \F{relCons}(\alpha, \Delta)  
     \\
-    \I\I\I \B{if } (\F{not } \F{empty } \widebar{cs}) \F{ and } 
+    \I\I\I \B{if } \neg \F{empty}(\Delta_{rel}) \wedge 
     \\
-    \I\I\I\I (\F{strongEnough } \alpha\ \tau_l\ \widebar{cs}) \B{ then }
+    \I\I\I\I \F{strongEnough}(\alpha, \tau_l, \Delta_{rel}) \B{ then }
     \\
     \I\I\I\I \{(\Omega, \Delta)\}
     \\
-    \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ \tau_l) \B{ then }
+    \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_l) \B{ then }
     \\
     \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})\}
     \\
@@ -1123,17 +1130,17 @@ the possible values of the argument.
     \\
     \I\I \B{match } (\code{$\alpha$<:\_} \in \Delta)
     \\
-    \I\I \B{case } (\F{some } \tau) :
+    \I\I \B{case } \F{some}(\tau) :
     \\
-    \I\I\I \widebar{(\Omega, \Delta)} \leftarrow (\F{unify } \Omega\ \Delta\ \tau\ \tau_r)
+    \I\I\I C \leftarrow (\F{unify } \Omega\ \Delta\ \tau\ \tau_r)
     \\
-    \I\I\I \B{if } (\F{not } \F{empty } \widebar{(\Omega, \Delta)}) \B{ then }
+    \I\I\I \B{if } \neg \F{empty}(C) \B{ then }
     \\
-    \I\I\I\I \widebar{(\Omega, \Delta)}
+    \I\I\I\I C
     \\
-    \I\I\I \B{else if } (\alpha \in \Omega) \F{ and } 
+    \I\I\I \B{else if } (\alpha \in \Omega) \wedge 
     \\
-    \I\I\I\I (\F{constraintWF } \Delta\ \alpha\ (\code{$\tau_r$\&$\tau$})) \B{ then }
+    \I\I\I\I \F{constraintWF}(\Delta, \alpha, (\code{$\tau_r$\&$\tau$})) \B{ then }
     \\
     \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)})\}
     \\
@@ -1141,15 +1148,15 @@ the possible values of the argument.
     \\
     \I\I \B{case } \F{none} :
     \\
-    \I\I\I \widebar{cs} \leftarrow (\F{relCons } \alpha\ \Delta)  
+    \I\I\I \Delta_{rel} \leftarrow (\F{relCons } \alpha\ \Delta)  
     \\
-    \I\I\I \B{if } (\F{not } \F{empty } \widebar{cs}) \F{ and } 
+    \I\I\I \B{if } \neg \F{empty}(\Delta_{rel}) \wedge 
     \\
-    \I\I\I\I (\F{weakEnough } \alpha\ \widebar{cs}\ \tau_r) \B{ then }
+    \I\I\I\I \F{weakEnough}(\alpha, \Delta_{rel}, \tau_r) \B{ then }
     \\
     \I\I\I\I \{(\Omega, \Delta)\}
     \\
-    \I\I\I \B{else if } (\F{constraintWF } \Delta\ \alpha\ \tau_r) \B{ then }
+    \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_r) \B{ then }
     \\
     \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_r$})\}
     \\
@@ -1169,7 +1176,7 @@ the possible values of the argument.
 
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\F{unifyContd}\ \Omega\ \Delta\ \tau_{l}\ \tau_{r} = \widebar{(\Omega, \Delta)}}&
+  &\boxed{\F{unifyContd}\ \Omega\ \Delta\ \tau_{l}\ \tau_{r} = C}&
 \end{flalign*}
 \[
 \begin{array}[t]{@{} l}
