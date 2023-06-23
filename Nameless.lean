@@ -1263,6 +1263,7 @@ namespace Nameless
         (i, [])
 
     | .induc ty1, .induc ty2 =>
+      -- TODO: modify and move this into left-induc rule
       if equiv context.env_simple ty1 ty2 then
         (i, [context])
       else
@@ -1272,23 +1273,22 @@ namespace Nameless
         unify i context ty1' ty2'
 
     | .induc ty1, ty2 =>
+      -- TODO: create left-reducible funtion 
+      -- left reducible says that the lhs is wellfounded
+      -- maybe rename leftReducible to leftUnrollable 
+      -- and the rhs is a union of cases with reducible columns matching wellfounded columns
+      --------------
+      -- let ty2 := (simplify (subst context.env_simple ty2))
+      -- if leftReducible context (.induc ty1) ty2 then
+      --   unify i context (instantiate 0 [Ty.induc ty1] ty1) ty2
+      -- else
+      -------------------------------
+      -- TODO: is factoring derivable from declarative subtyping semantics?
+      -- seems like NO; this would require replacing symmetrical induct rule with left-induct unrolling using rhs
+      ---------------------------
       let labels := extract_label_list ty2 
       let ty_factored := (factor_out_relation labels (.induc ty1))
       unify i context ty_factored ty2
-    --------------------------------------------------
-      -- if equiv context.env_simple (.induc ty1) ty2 then
-      --   (i, [context])
-      -- else
-      --   -- using induction hypothesis, ty1 ≤ ty2; safely unroll
-      --   let ty1' := instantiate 0 [ty2] ty1
-      --   let (i, contexts) := unify i context ty1' ty2
-      --   if contexts.isEmpty then
-      --       -- factor_out to find some valid unification
-      --       let labels := extract_label_list ty2 
-      --       let ty_factored := (factor_out_relation labels (.induc ty1))
-      --       unify i context ty_factored ty2
-      --   else 
-      --     (i, contexts)
 
     | ty', .induc ty =>
       -- NOTE: substitution is necessary to ensure constraint key contains the unsolved variables
@@ -4141,6 +4141,23 @@ namespace Nameless
     y[0]
 
   ]
+
+--   ----------- left-inductive -----------------
+
+  -- broken
+  -- expected: true
+  #eval unify_decide 30
+  [lesstype| ⟨nat_⟩ ] 
+  [lesstype| (?zero unit | ?succ ⟨nat_⟩) ]
+
+  #eval nat_
+
+  -- expected: true 
+  #eval unify_decide 0
+  [lesstype| ⟨nat_list⟩ ]
+  [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+
+  #eval nat_list
 
 
 end Nameless 
