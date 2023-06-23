@@ -221,12 +221,12 @@ can infer the property that the resulting list has the length of the input numbe
 \begin{mathpar}
 \\
   \inferrule {
-    nat = \code{indu[N] ?zero | ?succ N} 
+    nat = \code{induc[N] ?zero | ?succ N} 
     \\\\
     nat\_list\ \alpha =  
     \left(
     \begin{array}[]{@{} l}
-        \code{indu[NL]} 
+        \code{induc[NL]} 
         \arcr
         \hspace{4mm} \code{?zero * ?nil |}
         \arcr
@@ -275,7 +275,7 @@ Once factored out, the list type of the argument type's relation can be projecte
 \begin{mathpar}
 \\
   \inferrule {
-    list\ \alpha = \code{indu[L] ?nil | ?cons ($\alpha$ * L)} 
+    list\ \alpha = \code{induc[L] ?nil | ?cons ($\alpha$ * L)} 
     \\\\
     \Delta \vdash \code{$nat\_list$\ X} \sqsubseteq \code{$nat$ * $list$\ X} 
     \\
@@ -295,7 +295,7 @@ The induction hypothesis allows weakening the inductive component of the even ty
 \\
   \inferrule {
     \inferrule {
-      even = \code{indu[N] ?zero | ?succ ?succ N} 
+      even = \code{induc[N] ?zero | ?succ ?succ N} 
       \\\\
       \Delta \vdash \code{(?zero | ?succ ?succ $nat$)} \sqsubseteq nat 
     } {
@@ -319,7 +319,7 @@ by relational constraints in the inductive relations, which must be added to the
       even\_list\ \alpha =  
       \left(
       \begin{array}[]{@{} l}
-          \code{indu[EL]}
+          \code{induc[EL]}
           \arcr
           \hspace{4mm} \code{?zero * ?nil |}
           \arcr
@@ -398,7 +398,7 @@ the possible values of the argument.
     leq\_decide =  
     \left(
     \begin{array}[]{@{} l}
-        \code{indu[LED]} 
+        \code{induc[LED]} 
         \arcr
         \hspace{4mm} \code{\{?zero * \_ * ?true\} |}
         \arcr
@@ -491,7 +491,7 @@ the possible values of the argument.
       \ |\ 
       \code{[$\alpha$<:$\tau$]$\tau$}
       \ |\ 
-      \code{indu[$\alpha$]$\tau$}
+      \code{induc[$\alpha$]$\tau$}
     \end{array}
   \end{array}
 \]
@@ -728,25 +728,24 @@ the possible values of the argument.
     \Delta \claim \subtypes \code{[$\alpha$<:$\tau'$]$\tau$}
     \subtypes \tau_r
   }
-  \\
+
+  % left-induc
+  % NOTE: this is usable due to subsumption rule in typing
   \inferrule { 
-    \Delta \claim \tau_1[\alpha_1 \mapsto \code{indu[$\alpha_2$]$\tau_2$}]
-    \subtypes \tau_2[\alpha_2 \mapsto \code{indu[$\alpha_2$]$\tau_2$}]
+    \alpha \not\in \F{freeTVs}(\Delta)
+    \\
+    \Delta;\code{$\alpha$<:$\tau_r$} \claim \tau 
+    \subtypes \tau_r
   } { 
-    \Delta \claim \code{indu[$\alpha_1$]$\tau_1$}
-    \subtypes \code{indu[$\alpha_2$]$\tau_2$}
+    \Delta \claim \code{induc[$\alpha$]$\tau$}
+    \subtypes \tau_r
   }
 
+  % right-induc
   \inferrule {
   } {
-    \Delta \claim \tau[\alpha \mapsto \code{indu[$\alpha$]$\tau$}]
-    \subtypes \code{indu[$\alpha$]$\tau$}
-  }
-
-  \inferrule {
-  } {
-    \Delta \claim \code{indu[$\alpha$]$\tau$}
-    \subtypes \tau[\alpha \mapsto \code{indu[$\alpha$]$\tau$}]
+    \Delta \claim \tau[\alpha \mapsto \code{induc[$\alpha$]$\tau$}]
+    \subtypes \code{induc[$\alpha$]$\tau$}
   }
 
   \inferrule {
@@ -1182,7 +1181,7 @@ the possible values of the argument.
     \I \B{match}\ \tau_{l}, \tau_{r} 
     \\
     %% induction 
-    \I \B{case } \code{indu[$\alpha_1$]$\tau_1$}, \code{indu[$\alpha_2$]$\tau_2$} :
+    \I \B{case } \code{induc[$\alpha_1$]$\tau_1$}, \code{induc[$\alpha_2$]$\tau_2$} :
     \\
     \I\I \tau_1 \leftarrow \F{sub}(\bullet;\code{$\alpha_1$<:$\tau_2$}, \tau_1) 
     \\
@@ -1193,16 +1192,16 @@ the possible values of the argument.
     \\
 
     %% left-induction
-    \I \B{case } \code{indu[$\alpha$]$\tau$}, \tau_r :
+    \I \B{case } \code{induc[$\alpha$]$\tau$}, \tau_r :
     \\
-    \I\I \tau_{fac} \leftarrow \F{factor}(\code{indu[$\alpha$]$\tau$})
+    \I\I \tau_{fac} \leftarrow \F{factor}(\code{induc[$\alpha$]$\tau$})
     \\
     \I\I \F{unify}(\Omega, \Delta, \tau_{fac}, \tau_r)
 
     \\
 
     %% right-induction
-    \I \B{case } \tau_l, \code{indu[$\alpha$]$\tau$} :
+    \I \B{case } \tau_l, \code{induc[$\alpha$]$\tau$} :
     \\
     \I\I \tau_l \leftarrow \F{sub}(\Delta, \tau_l)
     \\
