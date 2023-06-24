@@ -1262,33 +1262,45 @@ namespace Nameless
       else
         (i, [])
 
-    | .induc ty1, .induc ty2 =>
-      -- TODO: modify and move this into left-induc rule
-      if equiv context.env_simple ty1 ty2 then
+    -- TODO: organize rules such that that weakening constraint happens before strengthening constraint
+    -- e.g. strengthening lhs happens before strengthening rhs
+    -- e.g. weakening rhs happens before weakening lhs 
+      -- e.g. left-exis,left-union,left-induc happen before right-exis,right-union,right-induc
+
+    -- left-implication-union 
+    | ty1, .impli (Ty.union ty_u1 ty_u2) ty2 =>
+      bind_nl (unify i context ty1 (Ty.impli ty_u1 ty2)) (fun i context =>
+        unify i context ty1 (Ty.impli ty_u2 ty2)
+      )
+
+    -- left-union
+    | Ty.union ty1 ty2, ty => 
+      bind_nl (unify i context ty1 ty) (fun i context =>
+        (unify i context ty2 ty)
+      )
+
+    -- left-induc
+    | .induc ty, ty_r => 
+      if equiv context.env_simple (.induc ty) (ty_r) then
         (i, [context])
       else
-        -- using induction hypothesis, ty1 ≤ ty2; safely unroll
-        let ty1' := instantiate 0 [.induc ty2] ty1
-        let ty2' := instantiate 0 [.induc ty2] ty2
-        unify i context ty1' ty2'
 
-    | .induc ty1, ty2 =>
-      -- TODO: create left-reducible funtion 
-      -- left reducible says that the lhs is wellfounded
-      -- maybe rename leftReducible to leftUnrollable 
-      -- and the rhs is a union of cases with reducible columns matching wellfounded columns
-      --------------
-      -- let ty2 := (simplify (subst context.env_simple ty2))
-      -- if leftReducible context (.induc ty1) ty2 then
-      --   unify i context (instantiate 0 [Ty.induc ty1] ty1) ty2
-      -- else
-      -------------------------------
-      -- TODO: is factoring derivable from declarative subtyping semantics?
-      -- seems like NO; this would require replacing symmetrical induct rule with left-induct unrolling using rhs
-      ---------------------------
-      let labels := extract_label_list ty2 
-      let ty_factored := (factor_out_relation labels (.induc ty1))
-      unify i context ty_factored ty2
+        let labels := extract_label_list ty_r
+        let ty_factored := (factor_out_relation labels (.induc ty))
+        let (i, contexts) := unify i context ty_factored ty_r
+        if !contexts.isEmpty then
+          (i, contexts)
+        else
+          -- using induction hypothesis, ty1 ≤ ty2; safely unroll
+          let ty := instantiate 0 [ty_r] ty
+          unify i context ty ty_r
+
+    -- right-union
+    | ty, .union ty1 ty2 => 
+      let (i, contexts_ty1) := (unify i context ty ty1)
+      let (i, contexts_ty2) := (unify i context ty ty2)
+      (i, contexts_ty1 ++ contexts_ty2)
+
 
     | ty', .induc ty =>
       -- NOTE: substitution is necessary to ensure constraint key contains the unsolved variables
@@ -1314,24 +1326,6 @@ namespace Nameless
           else 
             (i, []) 
         )
-
-    -- left-implication-union 
-    | ty1, .impli (Ty.union ty_u1 ty_u2) ty2 =>
-      bind_nl (unify i context ty1 (Ty.impli ty_u1 ty2)) (fun i context =>
-        unify i context ty1 (Ty.impli ty_u2 ty2)
-      )
-
-    -- left-union
-    | Ty.union ty1 ty2, ty => 
-      bind_nl (unify i context ty1 ty) (fun i context =>
-        (unify i context ty2 ty)
-      )
-
-    -- right-union
-    | ty, .union ty1 ty2 => 
-      let (i, contexts_ty1) := (unify i context ty ty1)
-      let (i, contexts_ty2) := (unify i context ty ty2)
-      (i, contexts_ty1 ++ contexts_ty2)
 
     -- right-implication-intersection
     | ty1, .impli ty2 (Ty.inter ty_u1 ty_u2) =>
@@ -2305,6 +2299,8 @@ namespace Nameless
   #eval unify_decide 0 nat_ even
   ------------------------
 
+  -- broken
+  -- TODO: add equality check to unify before pattern matching
   -- expected: true
   #eval unify_decide 0
   [lesstype| ? >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
@@ -4142,15 +4138,17 @@ namespace Nameless
 
   ]
 
---   ----------- left-inductive -----------------
+  ----------- left-inductive -----------------
 
-  -- broken
   -- expected: true
   #eval unify_decide 30
   [lesstype| ⟨nat_⟩ ] 
   [lesstype| (?zero unit | ?succ ⟨nat_⟩) ]
 
-  #eval nat_
+  -- expected: true
+  #eval unify_decide 30
+  [lesstype| ((?zero unit | ?succ ⟨nat_⟩)) ] 
+  [lesstype| (⟨nat_⟩) ]
 
   -- expected: true 
   #eval unify_decide 0
