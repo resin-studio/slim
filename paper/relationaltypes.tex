@@ -1016,6 +1016,29 @@ the possible values of the argument.
 \caption{Type inference}
 \end{figure*}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+%% Subtype unification 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\F{unify}(\Omega, \Delta, \tau_{l}, \tau_{r}) = C}&
+\end{flalign*}
+\[
+\begin{array}[t]{@{} l}
+    \F{unify}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
+    \B{if}\ \tau_l = \tau_r \B{ then } 
+    \\
+    \I \{(\Omega, \Delta)\} 
+    \\
+    \B{ else } 
+    \\
+    \I \F{unifyDecomp}(\Omega, \Delta, \tau_{l}, \tau_{r})
+\end{array}
+\]
+
+\caption{Subtype unification}
+\end{figure*}
+
 
 
 
@@ -1025,13 +1048,11 @@ the possible values of the argument.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\F{unify}(\Omega, \Delta, \tau_{l}, \tau_{r}) = C}&
+  &\boxed{\F{unifyDecomp}(\Omega, \Delta, \tau_{l}, \tau_{r}) = C}&
 \end{flalign*}
 \[
 \begin{array}[t]{@{} l}
-    \F{unify}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
-    \\
-    \I \B{if}\ \tau_l = \tau_r \B{ then } \{(\Omega, \Delta)\} \B{ else }
+    \F{unifyDecomp}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
     \\
     \I \B{match}\ \tau_{l}, \tau_{r} 
     \\
@@ -1075,8 +1096,111 @@ the possible values of the argument.
     \I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau)
     \\
     \I\I \B{if } \F{safe}(\{\alpha\}, \Delta, C) \B{ then } C \B{ else } \emptyset 
+
+    \\
+
+    \I \C{antecedent union}
+    \\
+    \I \B{case } \tau_l, (\code{($\tau_1$|$\tau_2$)->$\tau_{res}$}) : 
+    \\
+    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_1$->$\tau_{res}$})):
+    \\
+    \I\I\I \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_2$->$\tau_{res}$})) 
 \end{array}
 \begin{array}[t]{@{} l}
+    \I \C{consequent intersection}
+    \\
+    \I \B{case } \tau_l, (\code{$\tau_{arg}$->($\tau_1$\&$\tau_2$)}) : 
+    \\
+    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_{arg}$->$\tau_1$})):
+    \\
+    \I\I\I \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_{arg}$->$\tau_2$}))
+
+    \\
+
+    \I \C{left union}
+    \\
+    \I \B{case } (\code{$\tau_1$|$\tau_2$}), \tau_r : 
+    \\
+    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_1, \tau_r):
+    \\
+    \I\I\I \F{unify}(\Omega, \Delta, \tau_2, \tau_r) 
+
+    \\
+
+    \I \C{right intersection}
+    \\
+    \I \B{case } \tau_l, (\code{$\tau_1$\&$\tau_2$}) : 
+    \\
+    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau_1):
+    \\
+    \I\I\I \F{unify}(\Omega, \Delta, \tau_l, \tau_2) 
+
+    \\
+
+    \I \C{left induction}
+    \\
+    \I \B{case } \code{induc[$\alpha$]$\tau$}, \tau_r :
+    \\
+    \I\I \tau_{fac} \leftarrow \F{factor}(\code{induc[$\alpha$]$\tau$})
+    \\
+    \I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau_{fac}, \tau_r)
+    \\
+    \I\I \B{if } \neg \F{empty}(C) \B{ then } C
+    \\
+    \I\I \B{else }
+    \\
+    \I\I\I \tau \leftarrow \F{sub}(\bullet;\code{$\alpha$<:$\tau_r$}, \tau) 
+    \\
+    \I\I\I \F{unify}(\Omega, \Delta, \tau, \tau_r)
+
+    \\
+
+    \I \C{Continue}
+    \\
+    \I \B{case } \tau_l, \tau_r : \F{unifyContd}(\Omega, \Delta, \tau_l, \tau_r)
+\end{array}
+\]
+
+\caption{Subtype unification}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\F{unifyContd}(\Omega, \Delta, \tau_{l}, \tau_{r}) = C}&
+\end{flalign*}
+\[
+\begin{array}[t]{@{} l}
+    \F{unifyContd}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
+    \\
+    \I \B{match}\ \tau_{l}, \tau_{r} 
+
+    \\
+
+    \I \C{right existential}
+    \\
+    \I \B{case } \tau_l, \code{\{$\widebar{\alpha}$//$\tau$ with $\tau_1$<:$\tau_2$\}} : 
+    \\
+    \I\I (\widebar{\alpha}, [\tau, \tau_1]) \leftarrow \F{rename}(\widebar{\alpha}, [\tau, \tau_1])
+    \\
+    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau):
+    \\
+    \I\I\I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_2)
+
+
+    \\
+    \I \C{left universal}
+    \\
+    \I \B{case } (\code{[$\alpha$<:$\tau'$]$\tau$}), \tau_r : 
+    \\
+    \I\I ([\alpha], [\tau]) \leftarrow \F{rename}([\alpha], [\tau])
+    \\
+    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r):
+    \\
+    \I\I\I\I \F{unify}(\Omega, \Delta, \alpha, \tau')
+
+    \\
+
     \I \C{right variable}
     \\
     \I \B{case } \tau_l, \alpha : 
@@ -1121,6 +1245,23 @@ the possible values of the argument.
 
     \\
 
+    \I \C{right union}
+    \\
+    \I \B{case } \tau_l, (\code{$\tau_1$|$\tau_2$}) : 
+    \\
+    \I\I \F{unify}(\Omega, \Delta, \tau_l, \tau_1) \cup \F{unify}(\Omega, \Delta, \tau_l, \tau_2) 
+
+    \\
+
+    \I \C{left intersection}
+    \\
+    \I \B{case } (\code{$\tau_1$\&$\tau_2$}), \tau_r : 
+    \\
+    \I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_r) \cup \F{unify}(\Omega, \Delta, \tau_2\ \tau_r) 
+
+\end{array}
+\begin{array}[t]{@{} l}
+
     \I \C{left variable}
     \\
     \I \B{case } \alpha, \tau_r : 
@@ -1159,69 +1300,6 @@ the possible values of the argument.
 
     \\
 
-    \I \C{Conintue}
-    \\
-    \I \B{case } \tau_l, \tau_r : \F{unifyContd}(\Omega, \Delta, \tau_l, \tau_r)
-
-
-\end{array}
-\]
-
-\caption{Subtype unification}
-\end{figure*}
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\F{unifyContd}(\Omega, \Delta, \tau_{l}, \tau_{r}) = C}&
-\end{flalign*}
-\[
-\begin{array}[t]{@{} l}
-    \F{unifyContd}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
-    \\
-    \I \B{match}\ \tau_{l}, \tau_{r} 
-
-    \\
-    \I \C{right existential}
-    \\
-    \I \B{case } \tau_l, \code{\{$\widebar{\alpha}$//$\tau$ with $\tau_1$<:$\tau_2$\}} : 
-    \\
-    \I\I (\widebar{\alpha}, [\tau, \tau_1]) \leftarrow \F{rename}(\widebar{\alpha}, [\tau, \tau_1])
-    \\
-    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau):
-    \\
-    \I\I\I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_2)
-
-
-    \\
-    \I \C{left universal}
-    \\
-    \I \B{case } (\code{[$\alpha$<:$\tau'$]$\tau$}), \tau_r : 
-    \\
-    \I\I ([\alpha], [\tau]) \leftarrow \F{rename}([\alpha], [\tau])
-    \\
-    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r):
-    \\
-    \I\I\I\I \F{unify}(\Omega, \Delta, \alpha, \tau')
-
-    \\
-    \I \C{left induction}
-    \\
-    \I \B{case } \code{induc[$\alpha$]$\tau$}, \tau_r :
-    \\
-    \I\I \tau_{fac} \leftarrow \F{factor}(\code{induc[$\alpha$]$\tau$})
-    \\
-    \I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau_{fac}, \tau_r)
-    \\
-    \I\I \B{if } \neg \F{empty}(C) \B{ then } C
-    \\
-    \I\I \B{else }
-    \\
-    \I\I\I \tau \leftarrow \F{sub}(\bullet;\code{$\alpha$<:$\tau_r$}, \tau) 
-    \\
-    \I\I\I \F{unify}(\Omega, \Delta, \tau, \tau_r)
-
-    \\
-
     \I \C{right induction}
     \\
     \I \B{case } \tau_l, \code{induc[$\alpha$]$\tau$} :
@@ -1252,6 +1330,39 @@ the possible values of the argument.
 
     \\
 
+    \I \C{top}
+    \\
+    \I \B{case } \_, \code{top} : \{(\Omega, \Delta)\}
+
+    \\
+
+    \I \C{bottom}
+    \\
+    \I \B{case } \code{bot}, \_ : \{(\Omega, \Delta)\}
+
+    \\
+
+    \I \C{final}
+    \\
+    \I \B{case } \tau_l, \tau_r : \F{unifyFinal}(\Omega, \Delta, \tau_l, \tau_r)
+\end{array}
+\]
+
+\caption{Subtype unification continued.}
+\end{figure*}
+
+\begin{figure*}[h]
+\begin{flalign*}
+  &\boxed{\F{unifyFinal}(\Omega, \Delta, \tau_{l}, \tau_{r}) = C}&
+\end{flalign*}
+\[
+\begin{array}[t]{@{} l}
+    \F{unifyFinal}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
+    \\
+    \I \B{match}\ \tau_{l}, \tau_{r} 
+
+    \\
+
     \I \C{implication}
     \\
     \I \B{case } (\code{$\tau_{par}$->$\tau_{body}$}), (\code{$\tau_{arg}$->$\tau_{res}$}) : 
@@ -1259,61 +1370,6 @@ the possible values of the argument.
     \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_{arg}, \tau_{par}):
     \\
     \I\I\I \F{unify}(\Omega, \Delta, \tau_{body}, \tau_{res})
-\end{array}
-\begin{array}[t]{@{} l}
-    \I \C{antecedant union}
-    \\
-    \I \B{case } \tau_l, (\code{($\tau_1$|$\tau_2$)->$\tau_{res}$}) : 
-    \\
-    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_1$->$\tau_{res}$})):
-    \\
-    \I\I\I \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_2$->$\tau_{res}$})) 
-
-    \\
-
-    \I \C{left union}
-    \\
-    \I \B{case } (\code{$\tau_1$|$\tau_2$}), \tau_r : 
-    \\
-    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_1, \tau_r):
-    \\
-    \I\I\I \F{unify}(\Omega, \Delta, \tau_2, \tau_r) 
-
-    \\
-
-    \I \C{right union}
-    \\
-    \I \B{case } \tau_l, (\code{$\tau_1$|$\tau_2$}) : 
-    \\
-    \I\I \F{unify}(\Omega, \Delta, \tau_l, \tau_1) \cup \F{unify}(\Omega, \Delta, \tau_l, \tau_2) 
-
-    \\
-
-    \I \C{consequent intersection}
-    \\
-    \I \B{case } \tau_l, (\code{$\tau_{arg}$->($\tau_1$\&$\tau_2$)}) : 
-    \\
-    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_{arg}$->$\tau_1$})):
-    \\
-    \I\I\I \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_{arg}$->$\tau_2$}))
-
-    \\
-
-    \I \C{right intersection}
-    \\
-    \I \B{case } \tau_l, (\code{$\tau_1$\&$\tau_2$}) : 
-    \\
-    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau_1):
-    \\
-    \I\I\I \F{unify}(\Omega, \Delta, \tau_l, \tau_2) 
-
-    \\
-
-    \I \C{left intersection}
-    \\
-    \I \B{case } (\code{$\tau_1$\&$\tau_2$}), \tau_r : 
-    \\
-    \I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_r) \cup \F{unify}(\Omega, \Delta, \tau_2\ \tau_r) 
 
     \\
 
@@ -1335,21 +1391,10 @@ the possible values of the argument.
     \\
     \I\I \B{else } \emptyset 
 
-    \\
-
-    \I \C{bottom}
-    \\
-    \I \B{case } \code{bot}, \_ : \{(\Omega, \Delta)\}
-
-    \\
-
-    \I \C{top}
-    \\
-    \I \B{case } \_, \code{top} : \{(\Omega, \Delta)\}
 \end{array}
 \]
 
-\caption{Subtype unification continued.}
+\caption{Subtype unification final}
 \end{figure*}
 
 
