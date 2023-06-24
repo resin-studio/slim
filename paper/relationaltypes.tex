@@ -691,7 +691,7 @@ the possible values of the argument.
 
 \begin{mathpar}
   \inferrule { 
-    \F{freeTVs}(\Delta) \cap \widebar{\alpha} \subseteq \emptyset 
+    \F{freeTVs}(\tau_r) \cap \widebar{\alpha} \subseteq \emptyset 
     \\\\
     \bigand_{\Delta'}
     (\Delta;\Delta' \claim \tau_1 \subtypes \tau_2)
@@ -703,7 +703,7 @@ the possible values of the argument.
   }
 
   \inferrule { 
-    \F{freeTVs}(\Delta) \cap \widebar{\alpha} \subseteq \emptyset 
+    \F{freeTVs}(\tau_l) \cap \widebar{\alpha} \subseteq \emptyset 
     \\\\
     \Delta;\Delta' \claim \tau_l \subtypes \tau
     \\
@@ -714,7 +714,7 @@ the possible values of the argument.
   }
 
   \inferrule { 
-    \alpha \not\in \F{freeTVs}(\Delta)
+    \alpha \not\in \F{freeTVs}(\tau_l)
     \\\\
     \Delta;\code{$\alpha$<:$\tau'$} \claim \tau_l \subtypes \tau
   } { 
@@ -723,7 +723,7 @@ the possible values of the argument.
   }
 
   \inferrule { 
-    \alpha \not\in \F{freeTVs}(\Delta)
+    \alpha \not\in \F{freeTVs}(\tau_r)
     \\\\
     \Delta;\Delta' \claim \tau \subtypes \tau_r
     \\
@@ -735,7 +735,7 @@ the possible values of the argument.
 
   % left-induc
   \inferrule { 
-    \alpha \not\in \F{freeTVs}(\Delta)
+    \alpha \not\in \F{freeTVs}(\tau_r)
     \\
     \Delta;\code{$\alpha$<:$\tau_r$} \claim \tau 
     \subtypes \tau_r
@@ -746,8 +746,10 @@ the possible values of the argument.
 
   % right-induc
   \inferrule {
-    \Delta \claim 
-    \tau_l \subtypes \tau[\alpha \mapsto \code{induc[$\alpha$]$\tau$}]
+    \alpha \not\in \F{freeTVs}(\tau_l)
+    \\
+    \Delta;\code{$\alpha$<:induc[$\alpha$]$\tau$} \claim 
+    \tau_l \subtypes \tau
   } {
     \Delta \claim \tau_l
     \subtypes \code{induc[$\alpha$]$\tau$}
