@@ -51,6 +51,7 @@
 \newcommand{\B}[1]{\textbf{#1}}
 \newcommand{\F}[1]{\text{#1}}
 \newcommand{\bigand}{\bigwedge\nolimits}
+\newcommand{\C}[1]{\color{teal} \rhd\ \emph{#1}}
      
 
 
@@ -825,8 +826,13 @@ the possible values of the argument.
 
     \\
 
-    %% variable 
+    \I \C{unit}
+    \\
     \I \B{case } \code{()} : \{(\Omega, \Delta, \code{unit})\}
+
+    \\
+
+    \I \C{variable}
     \\
     \I \B{case } \code{$x$} : 
     \\
@@ -838,7 +844,8 @@ the possible values of the argument.
 
     \\
 
-    %% tag 
+    \I \C{tag}
+    \\
     \I \B{case } \code{\#$l$ $e$}  :  
     \\
     \I\I \B{for } (\Omega, \Delta, \tau) \leftarrow \F{infer}(\Omega, \Delta, \Gamma, e): 
@@ -847,7 +854,8 @@ the possible values of the argument.
 
     \\
 
-    %% record
+    \I \C{record}
+    \\
     \I \B{case } \widebar{\code{@$l$=$e$}}  :  
     \\
     \I\I T \leftarrow \{(\Omega, \Delta, \top)\}
@@ -866,7 +874,8 @@ the possible values of the argument.
 
     \\
 
-    %% function
+    \I \C{function}
+    \\
     \I \B{case } (\widebar{\code{path $m$=>$e$}})  :  
     \\
     \I\I T \leftarrow \{(\Omega, \Delta, \top)\}
@@ -903,7 +912,8 @@ the possible values of the argument.
 
     \\
 
-    %% projection 
+    \I \C{projection}
+    \\
     \I \B{case } \code{$e$.$l$} :  
     \\
     \I\I \alpha \leftarrow \F{freshTV}()
@@ -915,7 +925,8 @@ the possible values of the argument.
     \I\I\I \{(\Omega, \Delta, \alpha)\}
 \end{array}
 \begin{array}[t]{@{} l}
-    %% application 
+    \I \C{application}
+    \\
     \I \B{case } \code{$e_f$($e_a$)} :  
     \\
     \I\I \alpha \leftarrow \F{freshTV}()
@@ -938,7 +949,8 @@ the possible values of the argument.
 
     \\
 
-    %% let-binding 
+    \I \C{let}
+    \\
     \I \B{case } (\code{let $x$ : $\tau_p$ = $e_a$ in $e_b$}) :  
     \\
     \I\I \Omega_{stale} \leftarrow \F{staleTVs}()
@@ -971,7 +983,8 @@ the possible values of the argument.
 
     \\
 
-    %% fix 
+    \I \C{fix}
+    \\
     \I \B{case } \code{fix($e$)} :  
     \\
     \I\I \Omega_{stale} \leftarrow \F{staleTVs}()
@@ -1023,7 +1036,8 @@ the possible values of the argument.
     \I \B{match}\ \tau_{l}, \tau_{r} 
     \\
 
-    %% left-existential 
+    \I \C{left existential}
+    \\
     \I \B{case } \code{\{$\widebar{\alpha}$//$\tau$ with $\tau_1$<:$\tau_2$\}}, \tau_r : 
     \\
     \I\I (\widebar{\alpha}, [\tau, \tau_1]) \leftarrow \F{rename}(\widebar{\alpha}, [\tau, \tau_1])
@@ -1050,7 +1064,8 @@ the possible values of the argument.
 
     \\
 
-    %% right-universal 
+    \I \C{right universal}
+    \\
     \I \B{case } \tau_l, (\code{[$\alpha$<:$\tau'$]$\tau$}) : 
     \\
     \I\I ([\alpha], [\tau]) \leftarrow \F{rename}([\alpha], [\tau])
@@ -1060,34 +1075,10 @@ the possible values of the argument.
     \I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau)
     \\
     \I\I \B{if } \F{safe}(\{\alpha\}, \Delta, C) \B{ then } C \B{ else } \emptyset 
-
-    \\
-
-    %% right-existential
-    \I \B{case } \tau_l, \code{\{$\widebar{\alpha}$//$\tau$ with $\tau_1$<:$\tau_2$\}} : 
-    \\
-    \I\I (\widebar{\alpha}, [\tau, \tau_1]) \leftarrow \F{rename}(\widebar{\alpha}, [\tau, \tau_1])
-    \\
-    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau):
-    \\
-    \I\I\I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_2)
-
-    \\
-
-    %% left-universal
-    \I \B{case } (\code{[$\alpha$<:$\tau'$]$\tau$}), \tau_r : 
-    \\
-    \I\I ([\alpha], [\tau]) \leftarrow \F{rename}([\alpha], [\tau])
-    \\
-    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r):
-    \\
-    \I\I\I\I \F{unify}(\Omega, \Delta, \alpha, \tau')
-
-
-
 \end{array}
 \begin{array}[t]{@{} l}
-    %% right-variable 
+    \I \C{right variable}
+    \\
     \I \B{case } \tau_l, \alpha : 
     \\
     \I\I \B{match } (\code{$\alpha$<:\_} \in \Delta)
@@ -1130,7 +1121,8 @@ the possible values of the argument.
 
     \\
 
-    %% left-variable 
+    \I \C{left variable}
+    \\
     \I \B{case } \alpha, \tau_r : 
     \\
     \I\I \B{match } (\code{$\alpha$<:\_} \in \Delta)
@@ -1167,7 +1159,8 @@ the possible values of the argument.
 
     \\
 
-    %% delegate 
+    \I \C{Conintue}
+    \\
     \I \B{case } \tau_l, \tau_r : \F{unifyContd}(\Omega, \Delta, \tau_l, \tau_r)
 
 
@@ -1186,28 +1179,51 @@ the possible values of the argument.
     \F{unifyContd}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
     \\
     \I \B{match}\ \tau_{l}, \tau_{r} 
-    \\
-    %% induction 
-    \I \B{case } \code{induc[$\alpha_1$]$\tau_1$}, \code{induc[$\alpha_2$]$\tau_2$} :
-    \\
-    \I\I \tau_1 \leftarrow \F{sub}(\bullet;\code{$\alpha_1$<:$\tau_2$}, \tau_1) 
-    \\
-    \I\I \tau_2 \leftarrow \F{sub}(\bullet;\code{$\alpha_2$<:$\tau_2$}, \tau_2) 
-    \\
-    \I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_2)
 
     \\
+    \I \C{right existential}
+    \\
+    \I \B{case } \tau_l, \code{\{$\widebar{\alpha}$//$\tau$ with $\tau_1$<:$\tau_2$\}} : 
+    \\
+    \I\I (\widebar{\alpha}, [\tau, \tau_1]) \leftarrow \F{rename}(\widebar{\alpha}, [\tau, \tau_1])
+    \\
+    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau):
+    \\
+    \I\I\I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_2)
 
-    %% left-induction
+
+    \\
+    \I \C{left universal}
+    \\
+    \I \B{case } (\code{[$\alpha$<:$\tau'$]$\tau$}), \tau_r : 
+    \\
+    \I\I ([\alpha], [\tau]) \leftarrow \F{rename}([\alpha], [\tau])
+    \\
+    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r):
+    \\
+    \I\I\I\I \F{unify}(\Omega, \Delta, \alpha, \tau')
+
+    \\
+    \I \C{left induction}
+    \\
     \I \B{case } \code{induc[$\alpha$]$\tau$}, \tau_r :
     \\
     \I\I \tau_{fac} \leftarrow \F{factor}(\code{induc[$\alpha$]$\tau$})
     \\
-    \I\I \F{unify}(\Omega, \Delta, \tau_{fac}, \tau_r)
+    \I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau_{fac}, \tau_r)
+    \\
+    \I\I \B{if } \neg \F{empty}(C) \B{ then } C
+    \\
+    \I\I \B{else }
+    \\
+    \I\I\I \tau \leftarrow \F{sub}(\bullet;\code{$\alpha$<:$\tau_r$}, \tau) 
+    \\
+    \I\I\I \F{unify}(\Omega, \Delta, \tau, \tau_r)
 
     \\
 
-    %% right-induction
+    \I \C{right induction}
+    \\
     \I \B{case } \tau_l, \code{induc[$\alpha$]$\tau$} :
     \\
     \I\I \tau_l \leftarrow \F{sub}(\Delta, \tau_l)
@@ -1236,7 +1252,8 @@ the possible values of the argument.
 
     \\
 
-    %% implication 
+    \I \C{implication}
+    \\
     \I \B{case } (\code{$\tau_{par}$->$\tau_{body}$}), (\code{$\tau_{arg}$->$\tau_{res}$}) : 
     \\
     \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_{arg}, \tau_{par}):
@@ -1244,7 +1261,8 @@ the possible values of the argument.
     \I\I\I \F{unify}(\Omega, \Delta, \tau_{body}, \tau_{res})
 \end{array}
 \begin{array}[t]{@{} l}
-    %% left-implication-union
+    \I \C{antecedant union}
+    \\
     \I \B{case } \tau_l, (\code{($\tau_1$|$\tau_2$)->$\tau_{res}$}) : 
     \\
     \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_1$->$\tau_{res}$})):
@@ -1253,7 +1271,8 @@ the possible values of the argument.
 
     \\
 
-    %% left-union
+    \I \C{left union}
+    \\
     \I \B{case } (\code{$\tau_1$|$\tau_2$}), \tau_r : 
     \\
     \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_1, \tau_r):
@@ -1262,14 +1281,16 @@ the possible values of the argument.
 
     \\
 
-    %% right-union
+    \I \C{right union}
+    \\
     \I \B{case } \tau_l, (\code{$\tau_1$|$\tau_2$}) : 
     \\
     \I\I \F{unify}(\Omega, \Delta, \tau_l, \tau_1) \cup \F{unify}(\Omega, \Delta, \tau_l, \tau_2) 
 
     \\
 
-    %% right-implication-intersection 
+    \I \C{consequent intersection}
+    \\
     \I \B{case } \tau_l, (\code{$\tau_{arg}$->($\tau_1$\&$\tau_2$)}) : 
     \\
     \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_{arg}$->$\tau_1$})):
@@ -1278,7 +1299,8 @@ the possible values of the argument.
 
     \\
 
-    %% right-intersection
+    \I \C{right intersection}
+    \\
     \I \B{case } \tau_l, (\code{$\tau_1$\&$\tau_2$}) : 
     \\
     \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau_1):
@@ -1287,14 +1309,16 @@ the possible values of the argument.
 
     \\
 
-    %% left_intersection 
+    \I \C{left intersection}
+    \\
     \I \B{case } (\code{$\tau_1$\&$\tau_2$}), \tau_r : 
     \\
     \I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_r) \cup \F{unify}(\Omega, \Delta, \tau_2\ \tau_r) 
 
     \\
 
-    %% field 
+    \I \C{field}
+    \\
     \I \B{case } (\code{$l_1$:$\tau_1$}), (\code{$l_2$:$\tau_2$}) :
     \\
     \I\I \B{if } l_1 = l_2 \B{ then } \F{unify}(\Omega, \Delta, \tau_1, \tau_2)
@@ -1303,7 +1327,8 @@ the possible values of the argument.
 
     \\
 
-    %% tag 
+    \I \C{tag}
+    \\
     \I \B{case } (\code{?$l_1$ $\tau_1$}), (\code{?$l_2$ $\tau_2$}) :
     \\
     \I\I \B{if } l_1 = l_2 \B{ then } \F{unify}(\Omega, \Delta, \tau_1, \tau_2)
@@ -1312,12 +1337,14 @@ the possible values of the argument.
 
     \\
 
-    %% bottom 
+    \I \C{bottom}
+    \\
     \I \B{case } \code{bot}, \_ : \{(\Omega, \Delta)\}
 
     \\
 
-    %% top 
+    \I \C{top}
+    \\
     \I \B{case } \_, \code{top} : \{(\Omega, \Delta)\}
 \end{array}
 \]
