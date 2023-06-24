@@ -597,7 +597,7 @@ the possible values of the argument.
 
   \inferrule {
   } {
-    \Delta \claim \code{unit} \subtypes \code{unit}
+    \Delta \claim \tau \subtypes \tau 
   }
 
   \inferrule {
@@ -637,13 +637,15 @@ the possible values of the argument.
   }
 
   \inferrule {
+    \Delta \claim \tau_l \subtypes \tau_1
   } {
-    \Delta \claim \tau_l \subtypes \code{$\tau_l$|$\tau$}
+    \Delta \claim \tau_l \subtypes \code{$\tau_1$|$\tau_2$}
   }
 
   \inferrule {
+    \Delta \claim \tau_l \subtypes \tau_2
   } {
-    \Delta \claim \tau_l \subtypes \code{$\tau$|$\tau_l$}
+    \Delta \claim \tau_l \subtypes \code{$\tau_1$|$\tau_2$}
   }
 
   \inferrule {
@@ -663,13 +665,15 @@ the possible values of the argument.
   }
 
   \inferrule {
+    \Delta \claim \tau_1 \subtypes \tau_r
   } {
-    \Delta \claim \code{$\tau$\&$\tau_r$} \subtypes \tau_r
+    \Delta \claim \code{$\tau_1$\&$\tau_2$} \subtypes \tau_r
   }
 
   \inferrule {
+    \Delta \claim \tau_2 \subtypes \tau_r
   } {
-    \Delta \claim \code{$\tau_r$\&$\tau$} \subtypes \tau_r
+    \Delta \claim \code{$\tau_1$\&$\tau_2$} \subtypes \tau_r
   }
 
 \end{mathpar}
@@ -725,12 +729,11 @@ the possible values of the argument.
     \\
     \Delta;\Delta' \claim \alpha \subtypes \tau'
   } { 
-    \Delta \claim \subtypes \code{[$\alpha$<:$\tau'$]$\tau$}
+    \Delta \claim \code{[$\alpha$<:$\tau'$]$\tau$}
     \subtypes \tau_r
   }
 
   % left-induc
-  % NOTE: this is usable due to subsumption rule in typing
   \inferrule { 
     \alpha \not\in \F{freeTVs}(\Delta)
     \\
@@ -743,8 +746,10 @@ the possible values of the argument.
 
   % right-induc
   \inferrule {
+    \Delta \claim 
+    \tau_l \subtypes \tau[\alpha \mapsto \code{induc[$\alpha$]$\tau$}]
   } {
-    \Delta \claim \tau[\alpha \mapsto \code{induc[$\alpha$]$\tau$}]
+    \Delta \claim \tau_l
     \subtypes \code{induc[$\alpha$]$\tau$}
   }
 
