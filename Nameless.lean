@@ -2617,6 +2617,15 @@ namespace Nameless
     (y[0] (#succ #zero ()))
   ]
 
+  -- expected: ?cons ?cons ?nil unit
+  #eval infer_reduce 10 [lessterm|
+    let y[0] = fix(\ y[0] => ( 
+      \ #zero () => #nil ()
+      \ #succ y[0] => #cons (y[1] y[0])
+    )) in 
+    (y[0] (#succ #succ #zero ()))
+  ]
+
 
   #eval unify_reduce 10 
   [lesstype|
