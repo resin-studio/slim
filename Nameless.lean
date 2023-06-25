@@ -986,123 +986,6 @@ namespace Nameless
     : Ty -> Ty -> (Nat × List Context)
     -- TODO: add equality check first, before pattern matching
 
-
-    -- left existential
-    | .exis n ty_c1 ty_c2 ty1, ty2 => (
-      let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
-
-      let args := ids_bound.map (fun id => Ty.fvar id)
-      let ty_c1 := instantiate 0 args ty_c1
-      let ty_c2 := instantiate 0 args ty_c2
-      let ty1 := instantiate 0 args ty1
-
-      let env_simple_unchanged : List Ty.Context -> Option Ty.Context := (fun new_contexts => 
-        match new_contexts with
-        | [new_context] => 
-          if new_context.env_simple.toList == context.env_simple.toList then
-            some new_context
-          else
-            none
-        | _ => none
-      )
-
-
-      let (i, contexts_constraint) := (unify i context ty_c1 ty_c2)
-
-      match env_simple_unchanged contexts_constraint with 
-      | some context_constraint => 
-        let (i, contexts) := (unify i context_constraint ty1 ty2) 
-        -- ensure that opaque variables are not bound from payload unification
-        let result_safe := ids_bound.all (fun id => constraint_unchanged id context_constraint contexts)
-        if result_safe then
-          (i, contexts)
-        else
-          (i, [])
-      | none => 
-        let op := contexts_constraint.foldl (fun op_i_contexts context_constraint =>
-          op_i_contexts.bind (fun (i, contexts) =>
-            let (i, contexts') := (unify i context_constraint ty1 ty2)
-
-            if !contexts'.isEmpty && (ids_bound.all (fun id => constraint_unchanged id context_constraint contexts')) then
-              some (i, contexts ++ contexts')
-            else
-              none
-          )
-        ) (some (i, []))
-
-        match op with
-        | some (i, contexts) => (i, contexts)
-        | none => (i, [])
-    ) 
-
-
-    -- right universal
-    | ty1, .univ op_ty_c ty2  => (
-      let id_bound := i
-      let i := i + 1
-
-      let args := [Ty.fvar id_bound]
-      let op_ty_c := Option.map (instantiate 0 args) op_ty_c
-      let ty2 := instantiate 0 args ty2
-
-
-      let context := match op_ty_c with
-      | none => context
-      | some ty_c => {context with 
-        env_simple := context.env_simple.insert id_bound ty_c
-      }
-
-      let (i, contexts) := (unify i context ty1 ty2)
-      let result_safe := constraint_unchanged id_bound context contexts
-      if result_safe then
-        (i, contexts)
-      else
-        (i, [])
-      -----------------------------
-    )
-
-    -------------------------------------------------------------------------------
-
-    -- right existential
-    | ty', .exis n ty_c1 ty_c2 ty =>
-      let (i, args) := (
-        i + n, 
-        (List.range n).map (fun j => Ty.fvar (i + j))
-      )
-
-      let ty_c1 := instantiate 0 args ty_c1
-      let ty_c2 := instantiate 0 args ty_c2
-      let ty := instantiate 0 args ty
-
-      -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
-      bind_nl (unify i context ty' ty) (fun i context => 
-        unify i context ty_c1 ty_c2
-      )
-
-
-    -- left universal
-    | .univ op_ty_c ty1, ty2 =>
-      let (i, id_bound) := (i + 1, i)
-      let args := [Ty.fvar id_bound]
-
-      let op_ty_c := Option.map (instantiate 0 args) op_ty_c
-      let ty1 := instantiate 0 args ty1
-
-      -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
-      bind_nl (unify i context ty1 ty2) (fun i context => 
-        match op_ty_c with
-        | none => (i, [context])
-        | some ty_c => (
-          -------------------------------------
-          let op_ty_b := context.env_simple.find? id_bound 
-          match op_ty_b with
-          | some ty_b => 
-            (unify i context ty_b ty_c)
-          | none => 
-            (i, [{context with env_simple := context.env_simple.insert id_bound ty_c}])
-        )
-      )
-
     -- right variable
     | ty', .fvar id => 
       ----------------------
@@ -1217,7 +1100,86 @@ namespace Nameless
             let context := {context with env_simple := context.env_simple.insert id ty}
             (i, [context])
 
-    -------------------------------------
+
+    ------------------------------------------------------------
+
+
+
+    -- left existential
+    | .exis n ty_c1 ty_c2 ty1, ty2 => (
+      let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
+
+      let args := ids_bound.map (fun id => Ty.fvar id)
+      let ty_c1 := instantiate 0 args ty_c1
+      let ty_c2 := instantiate 0 args ty_c2
+      let ty1 := instantiate 0 args ty1
+
+      let env_simple_unchanged : List Ty.Context -> Option Ty.Context := (fun new_contexts => 
+        match new_contexts with
+        | [new_context] => 
+          if new_context.env_simple.toList == context.env_simple.toList then
+            some new_context
+          else
+            none
+        | _ => none
+      )
+
+
+      let (i, contexts_constraint) := (unify i context ty_c1 ty_c2)
+
+      match env_simple_unchanged contexts_constraint with 
+      | some context_constraint => 
+        let (i, contexts) := (unify i context_constraint ty1 ty2) 
+        -- ensure that opaque variables are not bound from payload unification
+        let result_safe := ids_bound.all (fun id => constraint_unchanged id context_constraint contexts)
+        if result_safe then
+          (i, contexts)
+        else
+          (i, [])
+      | none => 
+        let op := contexts_constraint.foldl (fun op_i_contexts context_constraint =>
+          op_i_contexts.bind (fun (i, contexts) =>
+            let (i, contexts') := (unify i context_constraint ty1 ty2)
+
+            if !contexts'.isEmpty && (ids_bound.all (fun id => constraint_unchanged id context_constraint contexts')) then
+              some (i, contexts ++ contexts')
+            else
+              none
+          )
+        ) (some (i, []))
+
+        match op with
+        | some (i, contexts) => (i, contexts)
+        | none => (i, [])
+    ) 
+
+    -- right universal
+    | ty1, .univ op_ty_c ty2  => (
+      let id_bound := i
+      let i := i + 1
+
+      let args := [Ty.fvar id_bound]
+      let op_ty_c := Option.map (instantiate 0 args) op_ty_c
+      let ty2 := instantiate 0 args ty2
+
+
+      let context := match op_ty_c with
+      | none => context
+      | some ty_c => {context with 
+        env_simple := context.env_simple.insert id_bound ty_c
+      }
+
+      let (i, contexts) := (unify i context ty1 ty2)
+      let result_safe := constraint_unchanged id_bound context contexts
+      if result_safe then
+        (i, contexts)
+      else
+        (i, [])
+      -----------------------------
+    )
+
+
+    -----------------------------------------------------
 
     -- left induction
     | .induc ty, ty_r => 
@@ -1260,8 +1222,50 @@ namespace Nameless
       )
 
 
+    ---------------------------------------------------
 
-    -----------------------------------------------
+    -- right existential
+    | ty', .exis n ty_c1 ty_c2 ty =>
+      let (i, args) := (
+        i + n, 
+        (List.range n).map (fun j => Ty.fvar (i + j))
+      )
+
+      let ty_c1 := instantiate 0 args ty_c1
+      let ty_c2 := instantiate 0 args ty_c2
+      let ty := instantiate 0 args ty
+
+      -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
+      bind_nl (unify i context ty' ty) (fun i context => 
+        unify i context ty_c1 ty_c2
+      )
+
+
+    -- left universal
+    | .univ op_ty_c ty1, ty2 =>
+      let (i, id_bound) := (i + 1, i)
+      let args := [Ty.fvar id_bound]
+
+      let op_ty_c := Option.map (instantiate 0 args) op_ty_c
+      let ty1 := instantiate 0 args ty1
+
+      -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
+      bind_nl (unify i context ty1 ty2) (fun i context => 
+        match op_ty_c with
+        | none => (i, [context])
+        | some ty_c => (
+          -------------------------------------
+          let op_ty_b := context.env_simple.find? id_bound 
+          match op_ty_b with
+          | some ty_b => 
+            (unify i context ty_b ty_c)
+          | none => 
+            (i, [{context with env_simple := context.env_simple.insert id_bound ty_c}])
+        )
+      )
+
+
+    -------------------------------------
 
     -- right induction
     | ty', .induc ty =>
@@ -2422,6 +2426,7 @@ namespace Nameless
 
 
 
+  -- expected: ⊥
   #eval unify_reduce 30 
   [lesstype| (α[0] * ?zero unit) | (?zero unit * α[0]) ] 
   [lesstype| (⟨nat_⟩ * ?zero unit) ] 
@@ -2574,35 +2579,15 @@ namespace Nameless
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| α[0] ]
 
-
   -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
   #eval unify_reduce 10 
+  [lesstype| (?succ ?succ ?zero unit * α[7]) ]
   [lesstype|
-      {1 // β[0] with (?succ ?succ ?zero unit * β[0]) <: (induct ((?zero unit * ?nil unit) |
-          {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}
+      (induct ((?zero unit * ?nil unit) |
+          {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))
   ]
-  [lesstype| α[7] ]
-  [lesstype| α[7] ]
+  [lesstype| (α[7]) ]
 
-  -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
-  #eval unify_reduce 10 
-  [lesstype|
-    (α[0] >> (β[0] ->
-      {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
-          {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}))
-  ]
-  [lesstype| ?succ ?succ ?zero unit -> α[7] ]
-  [lesstype| α[7] ]
-
-  -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
-  #eval unify_reduce 20 
-  [lesstype|
-    (⟨nat_⟩ >> (β[0] ->
-      {1 // β[0] with (β[1] * β[0]) <: (induct ((?zero unit * ?nil unit) |
-          {2 // (?succ β[1] * ?cons (?thing unit * β[0])) with (β[1] * β[0]) <: β[2]}))}))
-  ]
-  [lesstype| ?succ ?succ ?zero unit -> α[7] ]
-  [lesstype| α[7] ]
 
   -- expected: ?cons (?thing unit * ?cons (?thing unit * ?nil unit))
   #eval infer_reduce 10 [lessterm|

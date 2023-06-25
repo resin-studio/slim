@@ -237,7 +237,7 @@ can infer the property that the resulting list has the length of the input numbe
   } {
     \Delta \cdot \Gamma
     \vdash 
-    \code{repeat} : \code{[X,N<:$nat$] X -> N -> \{L with N * L <:\ $nat\_list$\ X\}} 
+    \code{repeat} : \code{[X]X -> [F<:\{N -> L with N * L <:\ $nat\_list$\ X\}]F} 
   }
 \\
 \end{mathpar}
