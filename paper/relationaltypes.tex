@@ -430,111 +430,125 @@ the possible values of the argument.
 
 \section{Language}
 
+\subsection{Syntax}
+The syntax rules are given in Fig. \ref{fig:syntax}.
+The programming language includes functions, records, fix combinator, pattern matching, let binding, 
+and tags for discriminating cases in pattern matching.  
+The type language includes tag types, field types, implications, unions, intersections, 
+inductions, existentials, universals, top, and bottom. 
+The type of a function may be described as an intersection of implications, 
+where each implication represents the type of a path.
+Likewise, the type of a record may be described as an intersection of field types.
+The existential type consists of multiple bound variales, a payload containing the bound variables, 
+and a subtyping constraint over the bound variables. 
+If the bound variables aren't indicated, then all variables in the payload are
+assumed to be bound variables. If the subtyping constraint isn't indicated, then it is assumed to 
+be a tautology, such as (\code{unit<:unit}).
+The universal type consists of a bound variable, the variable's upper bound, and a payload. If the upper
+bound is not indicated, it is assumed to be the top type (\code{top}).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Syntax %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure*}[h]
 \[
-  \begin{array}{l @{} l}
-    e 
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      \code{$x$}
-      \ |\ 
-      \code{()}
-      \ |\ 
-      \code{\#$l$ $e$} 
-      \ |\ 
-      \widebar{\code{@$l$=$e$}}
-      \ |\ 
-      \widebar{\code{path $m$=>$e$}} 
-      \ |\ 
-      \code{$e$.$l$}
-      \ |\ 
-      \code{$e$($e$)} 
-      \ |\ 
-      \code{fix($e$)}
-      \ |\ 
-      \code{let $x$ : $\tau$ = $e$ in $e$}
-    \end{array}
-    \\
-    m 
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      \code{$x$}
-      \ |\ 
-      \code{()}
-      \ |\ 
-      \code{\#$l$ $e$} 
-      \ |\ 
-      \widebar{\code{@$l$=$e$}}
-    \end{array}
-    \\
-    \tau
-    &{} ::=
-    \begin{array}[t]{@{} l}
-      \code{unit} 
-      \ |\ 
-      \code{$\alpha$} 
-      \ |\ 
-      \code{?$l$ $\tau$} 
-      \ |\ 
-      \code{$l$:$\tau$} 
-      \ |\ 
-      \code{$\tau$->$\tau$} 
-      \ |\ 
-      (\code{$\tau$|$\tau$})
-      \ |\ 
-      \code{$\tau$\&$\tau$}
-      \ |\ 
-      \\
-      \code{\{$\widebar{\alpha}$//$\tau$ with $\tau$<:$\tau$\}}
-      \ |\ 
-      \code{[$\alpha$<:$\tau$]$\tau$}
-      \ |\ 
-      \code{induc[$\alpha$]$\tau$}
-    \end{array}
-  \end{array}
+\begin{array}[t]{l r}
+  e ::= &\C{expression}
+  \\
+  \I \code{$x$} &\C{variable}
+  \\
+  \I \code{()} &\C{unit}
+  \\
+  \I \code{\#$l$ $e$}  &\C{tag}
+  \\
+  \I \widebar{\code{@$l$=$e$}} &\C{record}
+  \\
+  \I \widebar{\code{path $m$=>$e$}} &\C{function}
+  \\
+  \I \code{$e$.$l$} &\C{projection}
+  \\
+  \I \code{$e$($e$)} &\C{application}
+  \\
+  \I \code{fix($e$)} &\C{fix}
+  \\
+  \I \code{let $x$ : $\tau$ = $e$ in $e$}  &\C{let}
+  \\
+m ::= &\C{pattern}
+  \\
+  \I \code{$x$} &\C{variable}
+  \\
+  \I \code{()} &\C{unit}
+  \\
+  \I \code{\#$l$ $e$}  &\C{tag}
+  \\
+  \I \widebar{\code{@$l$=$e$}} &\C{record}
+\end{array}
+\begin{array}[t]{l r}
+\tau ::= &\C{type}
+  \\
+  \I \code{$\alpha$}  &\C{variable}
+  \\
+  \I \code{unit} &\C{unit}
+  \\
+  \I \code{?$l$ $\tau$} &\C{tag}
+  \\
+  \I \code{$l$:$\tau$} &\C{field}
+  \\
+  \I \code{$\tau$->$\tau$} &\C{implication}
+  \\
+  \I \code{$\tau$|$\tau$} &\C{union}
+  \\
+  \I \code{$\tau$\&$\tau$} &\C{intersection}
+  \\
+  \I \code{\{$\widebar{\alpha}$//$\tau$ with $\tau$<:$\tau$\}} &\C{existential}
+  \\
+  \I \code{[$\alpha$<:$\tau$]$\tau$} &\C{universal}
+  \\
+  \I \code{induc[$\alpha$]$\tau$} &\C{induction}
+\end{array}
 \]
 
 \caption{Syntax}
+\label{fig:syntax}
 \end{figure*}
 
+\subsection{Typing}
+The typing rules are given in Fig. \ref{fig:typing}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Typing 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\Gamma \claim e \hastype \tau}&
 \end{flalign*}
 \begin{mathpar}
-  \inferrule { 
-  } {
-    \Gamma \claim \code{()} \hastype \code{unit}
-  } 
-
-  \inferrule { 
+  \inferrule* [left=var] { 
     \code{$x$:$\tau$} \in \Gamma
   } {
     \Gamma \claim x \hastype \tau 
   } 
 
-  \inferrule { 
+  \inferrule* [left=unit] { 
+  } {
+    \Gamma \claim \code{()} \hastype \code{unit}
+  } 
+
+
+  \inferrule* [left=tag] { 
     \Gamma \claim e \hastype \tau 
   } {
      \Gamma \claim (\code{\#$l$ $e$}) \hastype (\code{?$l$ $\tau$})
   }
 
-  \inferrule { 
+  \inferrule* [left=rec] { 
     \bigand_i \Gamma \claim e_i \hastype  \tau_i  
   } {
     \Gamma \claim (\widebar{\code{@$l_i$=$e_i$}}^i)
     \hastype \code{\&}_i({\code{$l_i$:$\tau_i$}})
   } 
 
-  \inferrule {
+  \inferrule* [left=fun] {
     \bigand_i \Gamma_i \claim m_i \hastype \tau_i
     \\
     \bigand_i \Gamma;\Gamma_i \claim e_i \hastype \tau'_i
@@ -543,13 +557,13 @@ the possible values of the argument.
     : \code{\&}_i(\code{$\tau_i$->$\tau'_i$})  
   } 
 
-  \inferrule {
+  \inferrule* [left=proj] {
     \Gamma \claim e \hastype \code{$l$:$\tau$}
   } {
     \Gamma \claim \code{$e$.$l$} \hastype \tau
   } 
 
-  \inferrule { 
+  \inferrule* [left=app] { 
     \Gamma \claim e_f \hastype \code{$\tau'$->$\tau$}
     \\
     \Gamma \claim e_a \hastype \tau'
@@ -557,7 +571,7 @@ the possible values of the argument.
     \Gamma \claim \code{$e_f$($e_a$)} \hastype \tau
   } 
 
-  \inferrule { 
+  \inferrule* [left=let] { 
     \Gamma \claim e_a \hastype \tau_a
     \\
     \bullet \claim  \tau_a \subtypes \tau'
@@ -568,13 +582,13 @@ the possible values of the argument.
     \hastype \tau
   } 
 
-  \inferrule { 
+  \inferrule* [left=fix] { 
     \Gamma \claim e \hastype \code{$\tau$->$\tau$}
   } {
     \Gamma \claim \code{fix($e$)} \hastype \tau
   } 
 
-  \inferrule { 
+  \inferrule* [left=subsump] { 
     \Gamma \claim e \hastype \tau' 
     \\
     \bullet \claim \tau' \subtypes \tau
@@ -583,12 +597,15 @@ the possible values of the argument.
   } 
 \end{mathpar}
 \caption{Typing}
+\label{fig:typing}
 \end{figure*}
+
+\subsection{Subtyping}
+The subtyping rules are given in Fig. \ref{fig:subtyping}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Subtyping 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\Delta \claim \tau \subtypes \tau}&
@@ -677,20 +694,6 @@ the possible values of the argument.
     \Delta \claim \code{$\tau_1$\&$\tau_2$} \subtypes \tau_r
   }
 
-\end{mathpar}
-\caption{Subtyping: basic rules}
-\end{figure*}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Subtyping: extended
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\Delta \claim \tau \subtypes \tau}&
-\end{flalign*}
-
-\begin{mathpar}
   \inferrule { 
     \F{freeTVs}(\tau_r) \cap \widebar{\alpha} \subseteq \emptyset 
     \\\\
@@ -763,6 +766,7 @@ the possible values of the argument.
   }
 \end{mathpar}
 \caption{Subtyping: extended rules}
+\label{fig:subtyping}
 \end{figure*}
 
 
@@ -1046,19 +1050,13 @@ the possible values of the argument.
     \\
     \I\I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau)
     \\
-    \I\I\I \B{if } \alpha \in \Omega \B{ then }
+    \I\I\I \B{if } \neg \F{empty}(C) \B{ then } C
     \\
-    \I\I\I\I \B{if } \neg \F{empty}(C) \B{ then } C
+    \I\I\I \B{else if } (\alpha \in \Omega) \wedge 
     \\
-    \I\I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, (\code{$\tau_l$|$\tau$})) \B{ then }
+    \I\I\I\I \F{constraintWF}(\Delta, \alpha, (\code{$\tau_l$|$\tau$})) 
     \\
-    \I\I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:($\tau_l$|$\tau$)})\}
-    \\
-    \I\I\I\I \B{else } \emptyset 
-    \\
-    \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_l) \B{ then }
-    \\
-    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})\}
+    \I\I\I \B{then } \{(\Omega, \Delta;\code{$\alpha$<:($\tau_l$|$\tau$)})\}
     \\
     \I\I\I \B{else } \emptyset 
     \\
@@ -1093,9 +1091,9 @@ the possible values of the argument.
   \\
   \I\I\I \B{else if } (\alpha \in \Omega) \wedge 
   \\
-  \I\I\I\I \F{constraintWF}(\Delta, \alpha, (\code{$\tau_r$\&$\tau$})) \B{ then }
+  \I\I\I\I \F{constraintWF}(\Delta, \alpha, (\code{$\tau_r$\&$\tau$})) 
   \\
-  \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)})\}
+  \I\I\I \B{then } \{(\Omega, \Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)})\}
   \\
   \I\I\I \B{else } \emptyset 
   \\
