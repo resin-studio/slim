@@ -985,7 +985,9 @@ namespace Nameless
     partial def unify (i : Nat) (context : Context)
     : Ty -> Ty -> (Nat × List Context)
     -- TODO: add equality check first, before pattern matching
-    -- existential quantifier elimination (closed variables) (proactive) 
+
+
+    -- left existential
     | .exis n ty_c1 ty_c2 ty1, ty2 => (
       let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
 
@@ -1034,7 +1036,7 @@ namespace Nameless
     ) 
 
 
-    -- universal quantifier introduction (closed variables) (proactive)
+    -- right universal
     | ty1, .univ op_ty_c ty2  => (
       let id_bound := i
       let i := i + 1
@@ -1059,7 +1061,9 @@ namespace Nameless
       -----------------------------
     )
 
-    -- existential quantifier introduction (open variables) (reactive)
+    -------------------------------------------------------------------------------
+
+    -- right existential
     | ty', .exis n ty_c1 ty_c2 ty =>
       let (i, args) := (
         i + n, 
@@ -1076,7 +1080,7 @@ namespace Nameless
       )
 
 
-    -- universal quantifier elimination (open variables) (reactive)
+    -- left universal
     | .univ op_ty_c ty1, ty2 =>
       let (i, id_bound) := (i + 1, i)
       let args := [Ty.fvar id_bound]
@@ -1099,10 +1103,7 @@ namespace Nameless
         )
       )
 
-    ---------------------------------------------------------------
-    -- free variables
-    ---------------------------------------------------------------
-
+    -- right variable
     | ty', .fvar id => 
       ----------------------
       -- NOTE: this executes before the left-variable on rule. in impli where ty' is also an unassgined variable, save as rhs maps to lhs. 
@@ -1127,6 +1128,10 @@ namespace Nameless
           else
             (i, [])
         else if (!occurs context id ty') then
+          -- UNSAFE
+          -- TODO: do NOT update variable 
+          -- must create a special implication case
+          -- if antecedent is variable, use substitution in consequent to specialize 
           (i, contexts.map (fun context =>
             {context with env_simple := context.env_simple.insert id ty'}
           ))
@@ -1161,6 +1166,7 @@ namespace Nameless
         )
       ---------------------------------------
 
+    -- left variable
     | .fvar id, ty  => 
       ----------------------------
       -- adjustment updates the variable assignment to lower the upper bound 
@@ -1224,62 +1230,7 @@ namespace Nameless
 
     -------------------------------------
 
-    | .impli ty_param ty_body, .impli ty_arg ty_res =>
-
-      bind_nl (unify i context ty_arg ty_param) (fun i context =>
-        (unify i context ty_body ty_res)
-      ) 
-
-    -- | ty1, .impli (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
-    --   -- TODO: reconsider if this rule is needed 
-    --   -- TODO: safety check
-    --   -- NOTE: special impli to ensure that variables are instantiated before decomposition of lhs
-    --   let ty2 := (.exis n ty_c1 ty_c2 ty_pl)
-    --   let (i, ty2') := (i + 1, Ty.fvar i)
-    --   bind_nl (unify i context ty1 (.impli ty2' ty3)) (fun i context =>
-    --     (unify i context ty2 ty2')
-    --   )
-
-    | .bvar id1, .bvar id2  =>
-      if id1 = id2 then 
-        (i, [context])
-      else
-        (i, [])
-
-    | .bot, _ => (i, [context])
-    | _, .top => (i, [context])
-    | .unit, .unit => (i, [context])
-
-    | .tag l' ty', .tag l ty =>
-      if l' = l then
-        unify i context ty' ty
-      else
-        (i, [])
-
-    | .field l' ty', .field l ty =>
-      if l' == l then
-        unify i context ty' ty
-      else
-        (i, [])
-
-    -- TODO: organize rules such that that weakening constraint happens before strengthening constraint
-    -- e.g. strengthening lhs happens before strengthening rhs
-    -- e.g. weakening rhs happens before weakening lhs 
-      -- e.g. left-exis,left-union,left-induc happen before right-exis,right-union,right-induc
-
-    -- left-implication-union 
-    | ty1, .impli (Ty.union ty_u1 ty_u2) ty2 =>
-      bind_nl (unify i context ty1 (Ty.impli ty_u1 ty2)) (fun i context =>
-        unify i context ty1 (Ty.impli ty_u2 ty2)
-      )
-
-    -- left-union
-    | Ty.union ty1 ty2, ty => 
-      bind_nl (unify i context ty1 ty) (fun i context =>
-        (unify i context ty2 ty)
-      )
-
-    -- left-induc
+    -- left induction
     | .induc ty, ty_r => 
       if equiv context.env_simple (.induc ty) (ty_r) then
         (i, [context])
@@ -1295,13 +1246,35 @@ namespace Nameless
           let ty := instantiate 0 [ty_r] ty
           unify i context ty ty_r
 
-    -- right-union
-    | ty, .union ty1 ty2 => 
-      let (i, contexts_ty1) := (unify i context ty ty1)
-      let (i, contexts_ty2) := (unify i context ty ty2)
-      (i, contexts_ty1 ++ contexts_ty2)
+    -- antecedent union 
+    | ty1, .impli (Ty.union ty_u1 ty_u2) ty2 =>
+      bind_nl (unify i context ty1 (Ty.impli ty_u1 ty2)) (fun i context =>
+        unify i context ty1 (Ty.impli ty_u2 ty2)
+      )
+
+    -- consequent intersection
+    | ty1, .impli ty2 (Ty.inter ty_u1 ty_u2) =>
+       bind_nl (unify i context ty1 (Ty.impli ty2 ty_u1)) (fun i context =>
+         unify i context ty1 (Ty.impli ty2 ty_u2)
+       )
+
+    -- left union
+    | Ty.union ty1 ty2, ty => 
+      bind_nl (unify i context ty1 ty) (fun i context =>
+        (unify i context ty2 ty)
+      )
+
+    -- right intersection
+    | ty, .inter ty1 ty2 => 
+      bind_nl (unify i context ty ty1) (fun i context =>
+        (unify i context ty ty2)
+      )
 
 
+
+    -----------------------------------------------
+
+    -- right induction
     | ty', .induc ty =>
       -- NOTE: substitution is necessary to ensure constraint key contains the unsolved variables
       let ty' := (simplify (subst context.env_simple ty'))
@@ -1327,23 +1300,67 @@ namespace Nameless
             (i, []) 
         )
 
-    -- right-implication-intersection
-    | ty1, .impli ty2 (Ty.inter ty_u1 ty_u2) =>
-       bind_nl (unify i context ty1 (Ty.impli ty2 ty_u1)) (fun i context =>
-         unify i context ty1 (Ty.impli ty2 ty_u2)
-       )
+    -- right union
+    | ty, .union ty1 ty2 => 
+      let (i, contexts_ty1) := (unify i context ty ty1)
+      let (i, contexts_ty2) := (unify i context ty ty2)
+      (i, contexts_ty1 ++ contexts_ty2)
 
-    -- right-intersection
-    | ty, .inter ty1 ty2 => 
-      bind_nl (unify i context ty ty1) (fun i context =>
-        (unify i context ty ty2)
-      )
-
-    -- left-intersection
+    -- left intersection
     | .inter ty1 ty2, ty => 
       let (i, contexts_ty1) := (unify i context ty1 ty)
       let (i, contexts_ty2) := (unify i context ty2 ty)
       (i, contexts_ty1 ++ contexts_ty2)
+
+    -- top
+    | _, .top => (i, [context])
+
+    -- bottom
+    | .bot, _ => (i, [context])
+
+    -------------------------------------
+
+    -- unit
+    | .unit, .unit => (i, [context])
+
+    -- implication
+    | .impli ty_param ty_body, .impli ty_arg ty_res =>
+
+      bind_nl (unify i context ty_arg ty_param) (fun i context =>
+        (unify i context ty_body ty_res)
+      ) 
+
+    -- | ty1, .impli (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
+    --   -- TODO: reconsider if this rule is needed 
+    --   -- TODO: safety check
+    --   -- NOTE: special impli to ensure that variables are instantiated before decomposition of lhs
+    --   let ty2 := (.exis n ty_c1 ty_c2 ty_pl)
+    --   let (i, ty2') := (i + 1, Ty.fvar i)
+    --   bind_nl (unify i context ty1 (.impli ty2' ty3)) (fun i context =>
+    --     (unify i context ty2 ty2')
+    --   )
+
+    -- bound variable
+    | .bvar id1, .bvar id2  =>
+      if id1 = id2 then 
+        (i, [context])
+      else
+        (i, [])
+
+    -- tag
+    | .tag l' ty', .tag l ty =>
+      if l' = l then
+        unify i context ty' ty
+      else
+        (i, [])
+
+    -- field
+    | .field l' ty', .field l ty =>
+      if l' == l then
+        unify i context ty' ty
+      else
+        (i, [])
+
 
     | _, _ => (i, []) 
 
@@ -4156,6 +4173,19 @@ namespace Nameless
   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
 
   #eval nat_list
+
+
+  ------- specialization unsafe --------------
+
+  -- unsafe!!! need a more precise way to specialize
+  -- maybe weakening with union should never happen
+  -- it could be handled simply by spawning parallel worlds
+  -- once something is specialized, then observation flag (formerly adjustment flag) is turned on.
+  #eval infer_reduce 0 [lessterm|
+  let y[0] : ⟨nat_⟩ >> β[0] * β[0] -> β[0] = _ in 
+  let y[0] : ⟨even⟩ = _ in
+  (y[1] (y[0], #zero ()))
+  ]
 
 
 end Nameless 
