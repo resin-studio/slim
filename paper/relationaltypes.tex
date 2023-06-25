@@ -431,14 +431,13 @@ the possible values of the argument.
 \section{Language}
 
 \subsection{Syntax}
-The syntax rules are given in Fig. \ref{fig:syntax}.
+The syntax is given in Fig. \ref{fig:syntax}.
 The programming language includes functions, records, fix combinator, pattern matching, let binding, 
 and tags for discriminating cases in pattern matching.  
+A function consists of a sequence of paths, where each path maps a pattern to an expression.
+A record consists of a sequence of fields, where each field maps a unique label to an expression. 
 The type language includes tag types, field types, implications, unions, intersections, 
 inductions, existentials, universals, top, and bottom. 
-The type of a function may be described as an intersection of implications, 
-where each implication represents the type of a path.
-Likewise, the type of a record may be described as an intersection of field types.
 The existential type consists of multiple bound variales, a payload containing the bound variables, 
 and a subtyping constraint over the bound variables. 
 If the bound variables aren't indicated, then all variables in the payload are
@@ -513,7 +512,14 @@ m ::= &\C{pattern}
 \end{figure*}
 
 \subsection{Typing}
-The typing rules are given in Fig. \ref{fig:typing}.
+The typing is given in Fig. \ref{fig:typing}.
+Most of the rules are fairly standard. 
+The rule for function typing is a bit special in that
+it treats a function as a list of paths whose type is an intersection of implications,
+rather than having a separate pattern matching rule. 
+Likewise, the type of a record is an intersection of field types.
+The let-binding rule allows for prenex polymorphism by generalizing via subtyping. 
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Typing 
@@ -523,32 +529,32 @@ The typing rules are given in Fig. \ref{fig:typing}.
   &\boxed{\Gamma \claim e \hastype \tau}&
 \end{flalign*}
 \begin{mathpar}
-  \inferrule* [left=var] { 
+  \inferrule[var] { 
     \code{$x$:$\tau$} \in \Gamma
   } {
     \Gamma \claim x \hastype \tau 
   } 
 
-  \inferrule* [left=unit] { 
+  \inferrule[unit] { 
   } {
     \Gamma \claim \code{()} \hastype \code{unit}
   } 
 
 
-  \inferrule* [left=tag] { 
+  \inferrule[tag] { 
     \Gamma \claim e \hastype \tau 
   } {
      \Gamma \claim (\code{\#$l$ $e$}) \hastype (\code{?$l$ $\tau$})
   }
 
-  \inferrule* [left=rec] { 
+  \inferrule[rec] { 
     \bigand_i \Gamma \claim e_i \hastype  \tau_i  
   } {
     \Gamma \claim (\widebar{\code{@$l_i$=$e_i$}}^i)
     \hastype \code{\&}_i({\code{$l_i$:$\tau_i$}})
   } 
 
-  \inferrule* [left=fun] {
+  \inferrule[fun] {
     \bigand_i \Gamma_i \claim m_i \hastype \tau_i
     \\
     \bigand_i \Gamma;\Gamma_i \claim e_i \hastype \tau'_i
@@ -557,13 +563,13 @@ The typing rules are given in Fig. \ref{fig:typing}.
     : \code{\&}_i(\code{$\tau_i$->$\tau'_i$})  
   } 
 
-  \inferrule* [left=proj] {
+  \inferrule[proj] {
     \Gamma \claim e \hastype \code{$l$:$\tau$}
   } {
     \Gamma \claim \code{$e$.$l$} \hastype \tau
   } 
 
-  \inferrule* [left=app] { 
+  \inferrule[app] { 
     \Gamma \claim e_f \hastype \code{$\tau'$->$\tau$}
     \\
     \Gamma \claim e_a \hastype \tau'
@@ -571,7 +577,7 @@ The typing rules are given in Fig. \ref{fig:typing}.
     \Gamma \claim \code{$e_f$($e_a$)} \hastype \tau
   } 
 
-  \inferrule* [left=let] { 
+  \inferrule[let] { 
     \Gamma \claim e_a \hastype \tau_a
     \\
     \bullet \claim  \tau_a \subtypes \tau'
@@ -582,13 +588,13 @@ The typing rules are given in Fig. \ref{fig:typing}.
     \hastype \tau
   } 
 
-  \inferrule* [left=fix] { 
+  \inferrule[fix] { 
     \Gamma \claim e \hastype \code{$\tau$->$\tau$}
   } {
     \Gamma \claim \code{fix($e$)} \hastype \tau
   } 
 
-  \inferrule* [left=subsump] { 
+  \inferrule[subsump] { 
     \Gamma \claim e \hastype \tau' 
     \\
     \bullet \claim \tau' \subtypes \tau
@@ -601,7 +607,7 @@ The typing rules are given in Fig. \ref{fig:typing}.
 \end{figure*}
 
 \subsection{Subtyping}
-The subtyping rules are given in Fig. \ref{fig:subtyping}.
+The subtyping is given in Fig. \ref{fig:subtyping}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Subtyping 
@@ -613,32 +619,7 @@ The subtyping rules are given in Fig. \ref{fig:subtyping}.
 
 \begin{mathpar}
 
-  \inferrule {
-  } {
-    \Delta \claim \tau \subtypes \tau 
-  }
-
-  \inferrule {
-    \Delta \claim \tau_1 \subtypes \tau_2
-  } {
-    \Delta \claim (\code{?$l$ $\tau_1$}) \subtypes (\code{?$l$ $\tau_2$})
-  } 
-
-  \inferrule {
-    \Delta \claim \tau_1 \subtypes \tau_2
-  } {
-    \Delta \claim \code{$l$:$\tau_1$} \subtypes \code{$l$:$\tau_2$}
-  } 
-
-  \inferrule {
-    \Delta \claim \tau_3 \subtypes \tau_1 
-    \\
-    \Delta \claim \tau_2 \subtypes \tau_4
-  } {
-    \Delta \claim \code{$\tau_1$->$\tau_2$} \subtypes \code{$\tau_3$->$\tau_4$}
-  } 
-
-  \inferrule {
+  \inferrule[anteUnion] {
     \Delta \claim \tau_l \subtypes \code{$\tau_1$->$\tau_3$}
     \\
     \Delta \claim \tau_l \subtypes \code{$\tau_2$->$\tau_3$}
@@ -646,7 +627,7 @@ The subtyping rules are given in Fig. \ref{fig:subtyping}.
     \Delta \claim \tau_l \subtypes \code{($\tau_1$|$\tau_2$)->$\tau_3$}
   }
 
-  \inferrule {
+  \inferrule[leftUnion] {
     \Delta \claim \tau_1 \subtypes \tau_r
     \\
     \Delta \claim \tau_2 \subtypes \tau_r
@@ -654,19 +635,19 @@ The subtyping rules are given in Fig. \ref{fig:subtyping}.
     \Delta \claim \code{$\tau_1$|$\tau_2$} \subtypes \tau_r
   }
 
-  \inferrule {
+  \inferrule[rightUnion1] {
     \Delta \claim \tau_l \subtypes \tau_1
   } {
     \Delta \claim \tau_l \subtypes \code{$\tau_1$|$\tau_2$}
   }
 
-  \inferrule {
+  \inferrule[rightUnion2] {
     \Delta \claim \tau_l \subtypes \tau_2
   } {
     \Delta \claim \tau_l \subtypes \code{$\tau_1$|$\tau_2$}
   }
 
-  \inferrule {
+  \inferrule[ConsqInter] {
     \Delta \claim \tau_l \subtypes \code{$\tau_1$->$\tau_2$}
     \\
     \Delta \claim \tau_l \subtypes \code{$\tau_1$->$\tau_3$}
@@ -674,7 +655,7 @@ The subtyping rules are given in Fig. \ref{fig:subtyping}.
     \Delta \claim \tau_l \subtypes \code{$\tau_1$->($\tau_2$\&$\tau_3$)}
   }
 
-  \inferrule {
+  \inferrule[rightInter] {
     \Delta \claim \tau_l \subtypes \tau_1
     \\
     \Delta \claim \tau_l \subtypes \tau_2
@@ -682,21 +663,21 @@ The subtyping rules are given in Fig. \ref{fig:subtyping}.
     \Delta \claim \tau_l \subtypes \code{$\tau_1$\&$\tau_2$}
   }
 
-  \inferrule {
+  \inferrule[leftInter1] {
     \Delta \claim \tau_1 \subtypes \tau_r
   } {
     \Delta \claim \code{$\tau_1$\&$\tau_2$} \subtypes \tau_r
   }
 
-  \inferrule {
+  \inferrule[leftInter2] {
     \Delta \claim \tau_2 \subtypes \tau_r
   } {
     \Delta \claim \code{$\tau_1$\&$\tau_2$} \subtypes \tau_r
   }
 
-  \inferrule { 
+  \inferrule[leftExis] { 
     \F{freeTVs}(\tau_r) \cap \widebar{\alpha} \subseteq \emptyset 
-    \\\\
+    \\
     \bigand_{\Delta'}
     (\Delta;\Delta' \claim \tau_1 \subtypes \tau_2)
     \longrightarrow
@@ -706,9 +687,9 @@ The subtyping rules are given in Fig. \ref{fig:subtyping}.
     \subtypes \tau_r
   }
 
-  \inferrule { 
+  \inferrule[rightExis] { 
     \F{freeTVs}(\tau_l) \cap \widebar{\alpha} \subseteq \emptyset 
-    \\\\
+    \\
     \Delta;\Delta' \claim \tau_l \subtypes \tau
     \\
     \Delta;\Delta' \claim \tau_1 \subtypes \tau_2
@@ -717,18 +698,32 @@ The subtyping rules are given in Fig. \ref{fig:subtyping}.
     \subtypes \code{\{$\widebar{\alpha}$//$\tau$ with $\tau_1$<:$\tau_2$\}}
   }
 
-  \inferrule { 
+  \inferrule[refl] {
+  } {
+    \Delta \claim \tau \subtypes \tau 
+  }
+
+  \inferrule[impli] {
+    \Delta \claim \tau_3 \subtypes \tau_1 
+    \\
+    \Delta \claim \tau_2 \subtypes \tau_4
+  } {
+    \Delta \claim \code{$\tau_1$->$\tau_2$} \subtypes \code{$\tau_3$->$\tau_4$}
+  } 
+
+
+  \inferrule[rightUniv] { 
     \alpha \not\in \F{freeTVs}(\tau_l)
-    \\\\
+    \\
     \Delta;\code{$\alpha$<:$\tau'$} \claim \tau_l \subtypes \tau
   } { 
     \Delta \claim \tau_l
     \subtypes \code{[$\alpha$<:$\tau'$]$\tau$}
   }
 
-  \inferrule { 
+  \inferrule[leftUniv] { 
     \alpha \not\in \F{freeTVs}(\tau_r)
-    \\\\
+    \\
     \Delta;\Delta' \claim \tau \subtypes \tau_r
     \\
     \Delta;\Delta' \claim \alpha \subtypes \tau'
@@ -737,8 +732,15 @@ The subtyping rules are given in Fig. \ref{fig:subtyping}.
     \subtypes \tau_r
   }
 
+  \inferrule[cons] {
+    \code{$\tau_l$<:$\tau_r$} \in \Delta
+  } {
+    \Delta \claim \tau_l \subtypes \tau_r
+  }
+
+
   % left-induc
-  \inferrule { 
+  \inferrule[leftInduc] { 
     \alpha \not\in \F{freeTVs}(\tau_r)
     \\
     \Delta;\code{$\alpha$<:$\tau_r$} \claim \tau 
@@ -748,8 +750,15 @@ The subtyping rules are given in Fig. \ref{fig:subtyping}.
     \subtypes \tau_r
   }
 
+  \inferrule[field] {
+    \Delta \claim \tau_1 \subtypes \tau_2
+  } {
+    \Delta \claim \code{$l$:$\tau_1$} \subtypes \code{$l$:$\tau_2$}
+  } 
+
+
   % right-induc
-  \inferrule {
+  \inferrule[rightInduc] {
     \alpha \not\in \F{freeTVs}(\tau_l)
     \\
     \Delta;\code{$\alpha$<:induc[$\alpha$]$\tau$} \claim 
@@ -759,13 +768,13 @@ The subtyping rules are given in Fig. \ref{fig:subtyping}.
     \subtypes \code{induc[$\alpha$]$\tau$}
   }
 
-  \inferrule {
-    \code{$\tau_l$<:$\tau_r$} \in \Delta
+  \inferrule[tag] {
+    \Delta \claim \tau_1 \subtypes \tau_2
   } {
-    \Delta \claim \tau_l \subtypes \tau_r
-  }
+    \Delta \claim (\code{?$l$ $\tau_1$}) \subtypes (\code{?$l$ $\tau_2$})
+  } 
 \end{mathpar}
-\caption{Subtyping: extended rules}
+\caption{Subtyping}
 \label{fig:subtyping}
 \end{figure*}
 
