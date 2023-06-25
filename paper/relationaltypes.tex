@@ -52,6 +52,8 @@
 \newcommand{\F}[1]{\text{#1}}
 \newcommand{\bigand}{\bigwedge\nolimits}
 \newcommand{\C}[1]{\color{teal} \rhd\ \emph{#1}}
+% \newcommand{\fig}[1]{Fig. {\color{red} \fig{#1}}}
+\newcommand{\FIG}[1]{Fig. {\color{red} \ref{#1}}}
      
 
 
@@ -182,7 +184,7 @@ Thus, parametric types are extended with constraints in the form of subtyping.
 
 \subsection{Type Inference}
 
-We illustrate the syntax and semantics of programs and types with the example program shown in Fig. \ref{fig:program}.
+We illustrate the syntax and semantics of programs and types with the example program shown in \FIG{fig:program}.
 
 \paragraph{Path typing.}
 Consider the function \code{trivial} that completes an English phrase:
@@ -431,7 +433,7 @@ the possible values of the argument.
 \section{Language}
 
 \subsection{Syntax}
-The syntax is given in Fig. \ref{fig:syntax}.
+The syntax is given in \FIG{fig:syntax}.
 The programming language includes functions, records, fix combinator, pattern matching, let binding, 
 and tags for discriminating cases in pattern matching.  
 A function consists of a sequence of paths, where each path maps a pattern to an expression.
@@ -504,6 +506,18 @@ m ::= &\C{pattern}
   \I \code{[$\alpha$<:$\tau$]$\tau$} &\C{universal}
   \\
   \I \code{induc[$\alpha$]$\tau$} &\C{induction}
+  \\
+  \Gamma ::= &\C{typing env}
+  \\
+  \I \bullet  &\C{empty}
+  \\
+  \I \Gamma; \code{$x$:$\tau$} &\C{extend}
+  \\
+  \Delta ::= &\C{subtyping env}
+  \\
+  \I \bullet &\C{empty}
+  \\
+  \I \Delta; \code{$\tau$<:$\tau$} &\C{extend}
 \end{array}
 \]
 
@@ -512,7 +526,7 @@ m ::= &\C{pattern}
 \end{figure*}
 
 \subsection{Typing}
-The typing is given in Fig. \ref{fig:typing}.
+The typing is given in \FIG{fig:typing}.
 Most of the rules are fairly standard. 
 The rule for function typing is a bit special in that
 it treats a function as a list of paths whose type is an intersection of implications,
@@ -607,7 +621,25 @@ The let-binding rule allows for prenex polymorphism by generalizing via subtypin
 \end{figure*}
 
 \subsection{Subtyping}
-The subtyping is given in Fig. \ref{fig:subtyping}.
+The subtyping is given in \FIG{fig:subtyping}.
+The rules depend on an environment of subtyping constraints $\Delta$.
+The constraint rule checks that a subtyping relation exists as a subtyping constraint.
+Some of the rules are fairly standard, including implication, the union rules, and intersection rules.
+Note that in addition to left and right rules, union and intersection each have rules for 
+interacting with implication's antecedent and consequent, respectively.
+The right induction rule is standard and simply unrolls the induction.
+The left induction rule relies on the induction principle to construct an 
+inductive constraint hypothesis.  
+The field and tag rules simply check that the labels match and their payloads subtype.
+The existential rules are quite special, as they involve a subtyping constraint as part of 
+a second-order comprehension. 
+The left existential rule checks subtyping holds for all variations of the payload 
+where the subtyping constraint holds. 
+The right existential rule checks that subtyping holds for some variation of the payload where the constraint holds.
+The left universal rule checks that subtyping holds for some variation of the payload consistent with
+the variable's upper bound. 
+The right universal rule checks that subtyping holds for all variations of the payload consistent with
+the variable's upper bound.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Subtyping 
@@ -781,6 +813,14 @@ The subtyping is given in Fig. \ref{fig:subtyping}.
 
 \section{Analysis}
 
+The analysis consists of two main parts. The top level is type inference, which corresponds to typing
+and generates a type for an expression. When type inference encounters constraints that its types must adhere to,
+it calls unification to solve these constraints. Note that since the types are expressive enough to represent constraints,
+an alternative approach of generating constraints and solving them in separate stages could also be designed 
+using the same structures. Additional structures for the analysis are given in \FIG{fig:internal}. 
+Inference generates a solution set $T$, which consists of triples, each with a type variable set, a subtyping environment, and a type.  
+Unification generates a solution set $C$, which consists of pairs, each with a type variable set and a subtyping environment. 
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -792,22 +832,6 @@ The subtyping is given in Fig. \ref{fig:subtyping}.
   \Omega 
   &{} \owns \alpha 
   \\
-  \Delta 
-  &{} ::=
-  \begin{array}[t]{@{} l}
-    \bullet 
-    \ |\ 
-    \Delta; \code{$\tau$<:$\tau$}
-  \end{array}
-  \\
-  \Gamma 
-  &{} ::=
-  \begin{array}[t]{@{} l}
-    \bullet 
-    \ |\ 
-    \Gamma; \code{$x$:$\tau$}
-  \end{array}
-  \\
   T 
   &{} \owns (\Omega, \Delta, \tau)
   \\
@@ -818,19 +842,18 @@ The subtyping is given in Fig. \ref{fig:subtyping}.
 \]
 
 \caption{Internal Structures}
+\label{fig:internal}
 \end{figure*}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Type inference 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{figure*}[h]
-
-
 \begin{flalign*}
   &\boxed{\F{infer}(\Omega, \Delta, \Gamma, e) = T}&
 \end{flalign*}
-
 \[
 \begin{array}[t]{@{} l}
     \F{infer}(\Omega, \Delta, \Gamma, e, \tau) \triangleq 
@@ -1027,6 +1050,7 @@ The subtyping is given in Fig. \ref{fig:subtyping}.
 \end{array}
 \]
 \caption{Type inference}
+\label{fig:infer}
 \end{figure*}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
@@ -1126,11 +1150,12 @@ The subtyping is given in Fig. \ref{fig:subtyping}.
 
   \I \B{case}\ \tau_{l}, \tau_{r}:
   \\
-  \I\I \F{decompose}(\Omega, \Delta, \tau_{l}, \tau_{r})
+  \I\I \F{unifyDecomp}(\Omega, \Delta, \tau_{l}, \tau_{r})
 \end{array}
 \]
 
 \caption{Subtype unification}
+\label{fig:unify}
 \end{figure*}
 
 \begin{figure*}[h]
@@ -1246,20 +1271,21 @@ The subtyping is given in Fig. \ref{fig:subtyping}.
 
     \I \C{Continue}
     \\
-    \I \B{case } \tau_l, \tau_r : \F{unifyContd}(\Omega, \Delta, \tau_l, \tau_r)
+    \I \B{case } \tau_l, \tau_r : \F{unifyContinue}(\Omega, \Delta, \tau_l, \tau_r)
 \end{array}
 \]
 
-\caption{Subtype unification}
+\caption{Subtype unification decomposition}
+\label{fig:unifyDecomp}
 \end{figure*}
 
 \begin{figure*}[h]
 \begin{flalign*}
-  &\boxed{\F{unifyContd}(\Omega, \Delta, \tau_{l}, \tau_{r}) = C}&
+  &\boxed{\F{unifyContinue}(\Omega, \Delta, \tau_{l}, \tau_{r}) = C}&
 \end{flalign*}
 \[
 \begin{array}[t]{@{} l}
-    \F{unifyContd}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
+    \F{unifyContinue}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
     \\
     \I \B{match}\ \tau_{l}, \tau_{r} 
 
@@ -1376,7 +1402,8 @@ The subtyping is given in Fig. \ref{fig:subtyping}.
 \end{array}
 \]
 
-\caption{Subtype unification continued}
+\caption{Subtype unification continuation}
+\label{fig:unifyContinue}
 \end{figure*}
 
 
