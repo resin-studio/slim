@@ -1032,20 +1032,100 @@ the possible values of the argument.
     \\
     \B{ else } 
     \\
-    \I \F{unifyDecomp}(\Omega, \Delta, \tau_{l}, \tau_{r})
+
+    \I \B{match}\ \tau_{l}, \tau_{r} 
+    \\
+
+    \I \C{right variable}
+    \\
+    \I \B{case } \tau_l, \alpha : 
+    \\
+    \I\I \B{match } (\code{$\alpha$<:\_} \in \Delta)
+    \\
+    \I\I \B{case } \F{some}(\tau) :
+    \\
+    \I\I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau)
+    \\
+    \I\I\I \B{if } \alpha \in \Omega \B{ then }
+    \\
+    \I\I\I\I \B{if } \neg \F{empty}(C) \B{ then } C
+    \\
+    \I\I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, (\code{$\tau_l$|$\tau$})) \B{ then }
+    \\
+    \I\I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:($\tau_l$|$\tau$)})\}
+    \\
+    \I\I\I\I \B{else } \emptyset 
+    \\
+    \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_l) \B{ then }
+    \\
+    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})\}
+    \\
+    \I\I\I \B{else } \emptyset 
+    \\
+    \I\I \B{case } \F{none} :
+    \\
+    \I\I\I \Delta_{rel} \leftarrow \F{relCons}(\Delta, \alpha)  
+    \\
+    \I\I\I \B{if } \neg \F{empty}(\Delta_{rel}) \wedge 
+    \\
+    \I\I\I\I \F{strongEnough}(\alpha, \tau_l, \Delta_{rel}) \B{ then }
+    \\
+    \I\I\I\I \{(\Omega, \Delta)\}
+    \\
+    \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_l) \B{ then }
+    \\
+    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})\}
+    \\
+    \I\I\I \B{else } \emptyset 
+\end{array}
+\begin{array}[t]{@{} l}
+  \I \C{left variable}
+  \\
+  \I \B{case } \alpha, \tau_r : 
+  \\
+  \I\I \B{match } (\code{$\alpha$<:\_} \in \Delta)
+  \\
+  \I\I \B{case } \F{some}(\tau) :
+  \\
+  \I\I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r)
+  \\
+  \I\I\I \B{if } \neg \F{empty}(C) \B{ then } C
+  \\
+  \I\I\I \B{else if } (\alpha \in \Omega) \wedge 
+  \\
+  \I\I\I\I \F{constraintWF}(\Delta, \alpha, (\code{$\tau_r$\&$\tau$})) \B{ then }
+  \\
+  \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)})\}
+  \\
+  \I\I\I \B{else } \emptyset 
+  \\
+  \I\I \B{case } \F{none} :
+  \\
+  \I\I\I \Delta_{rel} \leftarrow \F{relCons}(\Delta, \alpha)  
+  \\
+  \I\I\I \B{if } \neg \F{empty}(\Delta_{rel}) \wedge 
+  \\
+  \I\I\I\I \F{weakEnough}(\alpha, \Delta_{rel}, \tau_r) \B{ then }
+  \\
+  \I\I\I\I \{(\Omega, \Delta)\}
+  \\
+  \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_r) \B{ then }
+  \\
+  \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_r$})\}
+  \\
+  \I\I\I \B{else } \emptyset 
+
+  \\
+
+  \I \B{case}\ \tau_{l}, \tau_{r}:
+  \\
+  \I\I \F{decompose}(\Omega, \Delta, \tau_{l}, \tau_{r})
 \end{array}
 \]
 
 \caption{Subtype unification}
 \end{figure*}
 
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
-%% Subtype unification: basic rules 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 \begin{figure*}[h]
 \begin{flalign*}
   &\boxed{\F{unifyDecomp}(\Omega, \Delta, \tau_{l}, \tau_{r}) = C}&
@@ -1099,6 +1179,24 @@ the possible values of the argument.
 
     \\
 
+    \I \C{left induction}
+    \\
+    \I \B{case } \code{induc[$\alpha$]$\tau$}, \tau_r :
+    \\
+    \I\I \tau_{fac} \leftarrow \F{factor}(\code{induc[$\alpha$]$\tau$})
+    \\
+    \I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau_{fac}, \tau_r)
+    \\
+    \I\I \B{if } \neg \F{empty}(C) \B{ then } C
+    \\
+    \I\I \B{else }
+    \\
+    \I\I\I \tau \leftarrow \F{sub}(\bullet;\code{$\alpha$<:$\tau_r$}, \tau) 
+    \\
+    \I\I\I \F{unify}(\Omega, \Delta, \tau, \tau_r)
+\end{array}
+\begin{array}[t]{@{} l}
+
     \I \C{antecedent union}
     \\
     \I \B{case } \tau_l, (\code{($\tau_1$|$\tau_2$)->$\tau_{res}$}) : 
@@ -1106,8 +1204,9 @@ the possible values of the argument.
     \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_1$->$\tau_{res}$})):
     \\
     \I\I\I \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_2$->$\tau_{res}$})) 
-\end{array}
-\begin{array}[t]{@{} l}
+
+    \\
+
     \I \C{consequent intersection}
     \\
     \I \B{case } \tau_l, (\code{$\tau_{arg}$->($\tau_1$\&$\tau_2$)}) : 
@@ -1135,24 +1234,6 @@ the possible values of the argument.
     \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau_1):
     \\
     \I\I\I \F{unify}(\Omega, \Delta, \tau_l, \tau_2) 
-
-    \\
-
-    \I \C{left induction}
-    \\
-    \I \B{case } \code{induc[$\alpha$]$\tau$}, \tau_r :
-    \\
-    \I\I \tau_{fac} \leftarrow \F{factor}(\code{induc[$\alpha$]$\tau$})
-    \\
-    \I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau_{fac}, \tau_r)
-    \\
-    \I\I \B{if } \neg \F{empty}(C) \B{ then } C
-    \\
-    \I\I \B{else }
-    \\
-    \I\I\I \tau \leftarrow \F{sub}(\bullet;\code{$\alpha$<:$\tau_r$}, \tau) 
-    \\
-    \I\I\I \F{unify}(\Omega, \Delta, \tau, \tau_r)
 
     \\
 
@@ -1201,105 +1282,6 @@ the possible values of the argument.
 
     \\
 
-    \I \C{right variable}
-    \\
-    \I \B{case } \tau_l, \alpha : 
-    \\
-    \I\I \B{match } (\code{$\alpha$<:\_} \in \Delta)
-    \\
-    \I\I \B{case } \F{some}(\tau) :
-    \\
-    \I\I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau)
-    \\
-    \I\I\I \B{if } \alpha \in \Omega \B{ then }
-    \\
-    \I\I\I\I \B{if } \neg \F{empty}(C) \B{ then } C
-    \\
-    \I\I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, (\code{$\tau_l$|$\tau$})) \B{ then }
-    \\
-    \I\I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:($\tau_l$|$\tau$)})\}
-    \\
-    \I\I\I\I \B{else } \emptyset 
-    \\
-    \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_l) \B{ then }
-    \\
-    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})\}
-    \\
-    \I\I\I \B{else } \emptyset 
-    \\
-    \I\I \B{case } \F{none} :
-    \\
-    \I\I\I \Delta_{rel} \leftarrow \F{relCons}(\Delta, \alpha)  
-    \\
-    \I\I\I \B{if } \neg \F{empty}(\Delta_{rel}) \wedge 
-    \\
-    \I\I\I\I \F{strongEnough}(\alpha, \tau_l, \Delta_{rel}) \B{ then }
-    \\
-    \I\I\I\I \{(\Omega, \Delta)\}
-    \\
-    \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_l) \B{ then }
-    \\
-    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})\}
-    \\
-    \I\I\I \B{else } \emptyset 
-
-    \\
-
-    \I \C{right union}
-    \\
-    \I \B{case } \tau_l, (\code{$\tau_1$|$\tau_2$}) : 
-    \\
-    \I\I \F{unify}(\Omega, \Delta, \tau_l, \tau_1) \cup \F{unify}(\Omega, \Delta, \tau_l, \tau_2) 
-
-    \\
-
-    \I \C{left intersection}
-    \\
-    \I \B{case } (\code{$\tau_1$\&$\tau_2$}), \tau_r : 
-    \\
-    \I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_r) \cup \F{unify}(\Omega, \Delta, \tau_2\ \tau_r) 
-
-\end{array}
-\begin{array}[t]{@{} l}
-
-    \I \C{left variable}
-    \\
-    \I \B{case } \alpha, \tau_r : 
-    \\
-    \I\I \B{match } (\code{$\alpha$<:\_} \in \Delta)
-    \\
-    \I\I \B{case } \F{some}(\tau) :
-    \\
-    \I\I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r)
-    \\
-    \I\I\I \B{if } \neg \F{empty}(C) \B{ then } C
-    \\
-    \I\I\I \B{else if } (\alpha \in \Omega) \wedge 
-    \\
-    \I\I\I\I \F{constraintWF}(\Delta, \alpha, (\code{$\tau_r$\&$\tau$})) \B{ then }
-    \\
-    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)})\}
-    \\
-    \I\I\I \B{else } \emptyset 
-    \\
-    \I\I \B{case } \F{none} :
-    \\
-    \I\I\I \Delta_{rel} \leftarrow \F{relCons}(\Delta, \alpha)  
-    \\
-    \I\I\I \B{if } \neg \F{empty}(\Delta_{rel}) \wedge 
-    \\
-    \I\I\I\I \F{weakEnough}(\alpha, \Delta_{rel}, \tau_r) \B{ then }
-    \\
-    \I\I\I\I \{(\Omega, \Delta)\}
-    \\
-    \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_r) \B{ then }
-    \\
-    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_r$})\}
-    \\
-    \I\I\I \B{else } \emptyset 
-
-    \\
-
     \I \C{right induction}
     \\
     \I \B{case } \tau_l, \code{induc[$\alpha$]$\tau$} :
@@ -1327,6 +1309,21 @@ the possible values of the argument.
     \I\I\I\I\I \{(\Omega, \Delta;\code{$\tau_l$<:$\tau_r$})\}
     \\
     \I\I\I\I \B{else } \emptyset 
+\end{array}
+\begin{array}[t]{@{} l}
+    \I \C{right union}
+    \\
+    \I \B{case } \tau_l, (\code{$\tau_1$|$\tau_2$}) : 
+    \\
+    \I\I \F{unify}(\Omega, \Delta, \tau_l, \tau_1) \cup \F{unify}(\Omega, \Delta, \tau_l, \tau_2) 
+
+    \\
+
+    \I \C{left intersection}
+    \\
+    \I \B{case } (\code{$\tau_1$\&$\tau_2$}), \tau_r : 
+    \\
+    \I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_r) \cup \F{unify}(\Omega, \Delta, \tau_2\ \tau_r) 
 
     \\
 
@@ -1339,27 +1336,6 @@ the possible values of the argument.
     \I \C{bottom}
     \\
     \I \B{case } \code{bot}, \_ : \{(\Omega, \Delta)\}
-
-    \\
-
-    \I \C{final}
-    \\
-    \I \B{case } \tau_l, \tau_r : \F{unifyFinal}(\Omega, \Delta, \tau_l, \tau_r)
-\end{array}
-\]
-
-\caption{Subtype unification continued.}
-\end{figure*}
-
-\begin{figure*}[h]
-\begin{flalign*}
-  &\boxed{\F{unifyFinal}(\Omega, \Delta, \tau_{l}, \tau_{r}) = C}&
-\end{flalign*}
-\[
-\begin{array}[t]{@{} l}
-    \F{unifyFinal}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
-    \\
-    \I \B{match}\ \tau_{l}, \tau_{r} 
 
     \\
 
@@ -1390,13 +1366,11 @@ the possible values of the argument.
     \I\I \B{if } l_1 = l_2 \B{ then } \F{unify}(\Omega, \Delta, \tau_1, \tau_2)
     \\
     \I\I \B{else } \emptyset 
-
 \end{array}
 \]
 
-\caption{Subtype unification final}
+\caption{Subtype unification continued}
 \end{figure*}
-
 
 
 \section{Properties}
