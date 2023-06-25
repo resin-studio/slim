@@ -1119,22 +1119,11 @@ namespace Nameless
       | some ty => 
         let (i, contexts) := (unify i context ty' ty) 
 
-        if (context.adj.contains id) then
-          if !contexts.isEmpty then
-            (i, contexts)
-          else if (!occurs context id ty') then
-            let context := {context with env_simple := context.env_simple.insert id (Ty.unionize ty' ty)}
-            (i, [context])
-          else
-            (i, [])
-        else if (!occurs context id ty') then
-          -- UNSAFE
-          -- TODO: do NOT update variable 
-          -- must create a special implication case
-          -- if antecedent is variable, use substitution in consequent to specialize 
-          (i, contexts.map (fun context =>
-            {context with env_simple := context.env_simple.insert id ty'}
-          ))
+        if !contexts.isEmpty then
+          (i, contexts)
+        else if (context.adj.contains id) && (!occurs context id ty') then
+          let context := {context with env_simple := context.env_simple.insert id (Ty.unionize ty' ty)}
+          (i, [context])
         else
           (i, [])
 
@@ -1994,33 +1983,6 @@ namespace Nameless
       bind_nl (Ty.unify i context ty1 (Ty.impli ty_IH ty_IC)) (fun i context =>
         let ty_IH := (Ty.subst context.env_simple ty_IH)
         let ty_IC := (Ty.subst context.env_simple ty_IC)
-        ------------------------------------------------------
-        -- TODO: factor out this rewriting with higher order function 
-        -------------------------------------------------------
-        let ty_param_content := List.foldr (fun ty_impli ty_acc =>
-          let fvs := (toList (Ty.free_vars ty_impli)).filter (fun fid => fid >= boundary)
-          let fvs_prem :=  (Ty.free_vars ty_IH)
-          let ty_choice := (
-            if List.any fvs (fun id => fvs_prem.find? id != none) then
-              let fixed_point := fvs.length
-              [lesstype|
-                {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_impli)⟩ with 
-                  ⟨Ty.abstract fvs 0 (Ty.get_prem ty_IH)⟩ <: β[⟨fixed_point⟩] 
-                } 
-              ]
-            else if fvs.length > 0 then
-              [lesstype| {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.get_prem ty_impli)⟩} ]
-            else
-              (Ty.get_prem ty_impli)
-          )
-
-          (Ty.union ty_choice ty_acc) 
-        ) [lesstype| ⊥ ] (Ty.split_intersections ty_IC)
-
-        let ty_param := [lesstype| induct ⟨ty_param_content⟩ ]
-        ------------------------------------------------------
-        -- let (i, ty_param) := (i + 1, Ty.fvar i)
-        ------------------------------------------------------
 
         let ty_content := List.foldr (fun ty_impli ty_acc =>
           let fvs := (toList (Ty.free_vars ty_impli)).filter (fun fid => fid >= boundary)
@@ -2044,7 +2006,7 @@ namespace Nameless
 
         -- NOTE: constraint that ty' <= ty_IH is built into inductive type
         let relational_type := [lesstype| induct ⟨ty_content⟩ ]
-        let ty' := [lesstype| ⟨ty_param⟩ >> β[0] -> {1 // β[0] with β[1] * β[0] <: ⟨relational_type⟩} ] 
+        let ty' := [lesstype| {2 // β[1] -> β[0] with β[1] * β[0] <: ⟨relational_type⟩} >> β[0]] 
         (i, [(context, ty')])
       ))
 
@@ -4175,16 +4137,21 @@ namespace Nameless
   #eval nat_list
 
 
-  ------- specialization unsafe --------------
-
-  -- unsafe!!! need a more precise way to specialize
-  -- maybe weakening with union should never happen
-  -- it could be handled simply by spawning parallel worlds
-  -- once something is specialized, then observation flag (formerly adjustment flag) is turned on.
+  ------- specialization --------------
+  -- NOTE: this is specialized because left-universal checks constraints after unification
+  -- expected: even 
   #eval infer_reduce 0 [lessterm|
   let y[0] : ⟨nat_⟩ >> β[0] * β[0] -> β[0] = _ in 
   let y[0] : ⟨even⟩ = _ in
   (y[1] (y[0], #zero ()))
+  ]
+
+  -- NOTE: this is specialized because left-universal checks constraints after unification
+  -- expected: ⊥ 
+  #eval infer_reduce 0 [lessterm|
+  let y[0] : ⟨nat_⟩ >> β[0] * β[0] -> β[0] = _ in 
+  let y[0] : ⟨even⟩ = _ in
+  (y[1] (#zero (), y[0]))
   ]
 
 
