@@ -864,13 +864,15 @@ It returns a singleton set containing the found type along with the adjustment s
 The tag rule reconstructs the type of its payload and uses its label to construct a tag type.
 The record rule reconstructs the type its fields and intersects the constructed fields types together.
 
-The function rule is of particular importance.
+The function rule is of particular importance to type reconstruction in an untyped setting.
 For each path in the function, it extracts the term variables of the pattern and associates 
 the term variables with fresh type variables. It reconstructs the body of each path 
 with an updated variable set and an updated typing environment containing the fresh
 type variables of the pattern. By adding the pattern's type variables to the adjustment variable set,
 The rule implies that the parameter type of the path can be strengthened by applications
-occurring in the body of the path. 
+occurring in the body of the path. This enables adjusting a parameter type to reflect all of its 
+occurrences in the body, 
+rather than reflecting just its first occurrence and failing on subsequent occurrences. 
 Before returning the reconstructed implication type for the path, the rule removes
 the the pattern's type variables from the adjustment variable set, ensuring
 that those type variables cannot be strengthened or weakened from the outside. 
