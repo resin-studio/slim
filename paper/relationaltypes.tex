@@ -458,7 +458,7 @@ be a tautology, such as (\code{unit<:unit}).
 The universal type consists of a bound variable, the variable's upper bound, and a payload. If the upper
 bound is not indicated, it is assumed to be the top type (\code{top}).
 
-\TODO{update tag syntax: \code{\#cons/e:?cons/T}\ \ \code{\#nil:?nil}}
+\TODO{update tag syntax: \code{\#cons.\#cons.e:?cons.?cons.T}\ \ \code{\#nil:?nil}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Syntax %%
@@ -847,7 +847,7 @@ Unification generates a solution set $C$, which consists of pairs, each with a t
   &{} \owns (\Omega, \Delta, \tau)
   \\
   C 
-  &{} \owns (\Omega, \Delta)
+  &{} \owns \Delta
   \\
 \end{array}
 \]
@@ -1139,7 +1139,38 @@ Finally, the implication type is projected from the constructed relation and gen
 
 
 \subsection{Subtype unification}
-The subtype unification procedure is given in \FIG{fig:unify}
+The subtype unification procedure is given in \FIG{fig:unify}.
+Unification depends on four parameters: a set of type variables, a subtyping environment, and two types.
+The set of type variables indicates the type of variables that may be adjusted 
+(triggered by the function and application cases of inference). 
+The subtyping environment indicates constraints on type variables.
+the left type indicates the weaker type, and the right type indicates the stronger type.
+Both types may contain type variables that are unsolved or partially solved.
+The procedure returns a set of subtyping environments.
+
+The procedure begins by checking if the two types are syntactically equal.
+Subtyping holds but there is nothing that can be unified without circular references 
+so the assumed subtyping environment is returned in a singleton set. 
+
+The procedure then pattern matches on the left and right types. 
+The first two cases handle assigning variables to types.
+The right-variable case first looks up a solution  
+for the variable. If a solution is found the unification proceeds
+between the original left type and the solution for the right type.
+In the case where unification fails, but the type variable is adjustable,
+the procedure updates the type variable with the union of the left type
+and the found right type (assuming the constraint is well-formed, 
+which includes avoiding circular references). 
+If no solution is found for the right variable, then 
+the procedure looks for any relational constraints in the subtyping environment
+where the left side contains the type variable.
+It checks that the left type is consistent with the relational constraints. 
+If there are no relational constraints, then the variable is assigned
+to the left type (if the constraint is well-formed).
+
+\TODO{add descriptions for the remaining cases of unification}
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 %% Subtype unification 
@@ -1151,14 +1182,12 @@ The subtype unification procedure is given in \FIG{fig:unify}
 \[
 \begin{array}[t]{@{} l}
     \F{unify}(\Omega, \Delta, \tau_{l}, \tau_{r}) \triangleq 
-    \B{if}\ \tau_l = \tau_r \B{ then } 
     \\
-    \I \{(\Omega, \Delta)\} 
+    \I \B{if}\ \tau_l = \tau_r \B{ then } 
     \\
-    \B{ else } 
+    \I\I \{\Delta\} 
     \\
-
-    \I \B{match}\ \tau_{l}, \tau_{r} 
+    \I \B{else } \B{match}\ \tau_{l}, \tau_{r} 
     \\
 
     \I \C{right variable}
@@ -1177,7 +1206,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I\I\I\I \F{constraintWF}(\Delta, \alpha, (\code{$\tau_l$|$\tau$})) 
     \\
-    \I\I\I \B{then } \{(\Omega, \Delta;\code{$\alpha$<:($\tau_l$|$\tau$)})\}
+    \I\I\I \B{then } \{\Delta;\code{$\alpha$<:($\tau_l$|$\tau$)}\}
     \\
     \I\I\I \B{else } \emptyset 
     \\
@@ -1189,11 +1218,11 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I\I\I\I \F{strongEnough}(\alpha, \tau_l, \Delta_{rel}) \B{ then }
     \\
-    \I\I\I\I \{(\Omega, \Delta)\}
+    \I\I\I\I \{\Delta\}
     \\
     \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_l) \B{ then }
     \\
-    \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_l$})\}
+    \I\I\I\I \{\Delta;\code{$\alpha$<:$\tau_l$}\}
     \\
     \I\I\I \B{else } \emptyset 
 \end{array}
@@ -1214,7 +1243,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
   \\
   \I\I\I\I \F{constraintWF}(\Delta, \alpha, (\code{$\tau_r$\&$\tau$})) 
   \\
-  \I\I\I \B{then } \{(\Omega, \Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)})\}
+  \I\I\I \B{then } \{\Delta;\code{$\alpha$<:($\tau_r$\&$\tau$)}\}
   \\
   \I\I\I \B{else } \emptyset 
   \\
@@ -1226,11 +1255,11 @@ The subtype unification procedure is given in \FIG{fig:unify}
   \\
   \I\I\I\I \F{weakEnough}(\alpha, \Delta_{rel}, \tau_r) \B{ then }
   \\
-  \I\I\I\I \{(\Omega, \Delta)\}
+  \I\I\I\I \{\Delta\}
   \\
   \I\I\I \B{else if } \F{constraintWF}(\Delta, \alpha, \tau_r) \B{ then }
   \\
-  \I\I\I\I \{(\Omega, \Delta;\code{$\alpha$<:$\tau_r$})\}
+  \I\I\I\I \{\Delta;\code{$\alpha$<:$\tau_r$}\}
   \\
   \I\I\I \B{else } \emptyset 
 
@@ -1267,7 +1296,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I\I \B{match } \F{unsolved}(C)
     \\
-    \I\I \B{case } \F{some}(\Omega, \Delta) :
+    \I\I \B{case } \F{some}(\Delta) :
     \\
     \I\I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r)
     \\
@@ -1276,7 +1305,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I\I \B{case } \F{none} :
     \\
-    \I\I\I \B{for } (\Omega, \Delta) \leftarrow C:
+    \I\I\I \B{for } \Delta \leftarrow C:
     \\
     \I\I\I\I C \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r)
     \\
@@ -1321,7 +1350,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I \B{case } \tau_l, (\code{($\tau_1$|$\tau_2$)->$\tau_{res}$}) : 
     \\
-    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_1$->$\tau_{res}$})):
+    \I\I \B{for } \Delta \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_1$->$\tau_{res}$})):
     \\
     \I\I\I \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_2$->$\tau_{res}$})) 
 
@@ -1331,7 +1360,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I \B{case } \tau_l, (\code{$\tau_{arg}$->($\tau_1$\&$\tau_2$)}) : 
     \\
-    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_{arg}$->$\tau_1$})):
+    \I\I \B{for } \Delta \leftarrow \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_{arg}$->$\tau_1$})):
     \\
     \I\I\I \F{unify}(\Omega, \Delta, \tau_l, (\code{$\tau_{arg}$->$\tau_2$}))
 
@@ -1341,7 +1370,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I \B{case } (\code{$\tau_1$|$\tau_2$}), \tau_r : 
     \\
-    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_1, \tau_r):
+    \I\I \B{for } \Delta \leftarrow \F{unify}(\Omega, \Delta, \tau_1, \tau_r):
     \\
     \I\I\I \F{unify}(\Omega, \Delta, \tau_2, \tau_r) 
 
@@ -1351,7 +1380,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I \B{case } \tau_l, (\code{$\tau_1$\&$\tau_2$}) : 
     \\
-    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau_1):
+    \I\I \B{for } \Delta \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau_1):
     \\
     \I\I\I \F{unify}(\Omega, \Delta, \tau_l, \tau_2) 
 
@@ -1385,7 +1414,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I\I (\widebar{\alpha}, [\tau, \tau_1]) \leftarrow \F{rename}(\widebar{\alpha}, [\tau, \tau_1])
     \\
-    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau):
+    \I\I\I \B{for } \Delta \leftarrow \F{unify}(\Omega, \Delta, \tau_l, \tau):
     \\
     \I\I\I\I \F{unify}(\Omega, \Delta, \tau_1, \tau_2)
 
@@ -1397,7 +1426,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I\I ([\alpha], [\tau]) \leftarrow \F{rename}([\alpha], [\tau])
     \\
-    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r):
+    \I\I\I \B{for } \Delta \leftarrow \F{unify}(\Omega, \Delta, \tau, \tau_r):
     \\
     \I\I\I\I \F{unify}(\Omega, \Delta, \alpha, \tau')
 
@@ -1427,7 +1456,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I\I\I\I \B{if } \F{constraintWF}(\Delta, \tau_l, \tau_r) \B{ then }
     \\
-    \I\I\I\I\I \{(\Omega, \Delta;\code{$\tau_l$<:$\tau_r$})\}
+    \I\I\I\I\I \{\Delta;\code{$\tau_l$<:$\tau_r$}\}
     \\
     \I\I\I\I \B{else } \emptyset 
 \end{array}
@@ -1450,13 +1479,13 @@ The subtype unification procedure is given in \FIG{fig:unify}
 
     \I \C{top}
     \\
-    \I \B{case } \_, \code{top} : \{(\Omega, \Delta)\}
+    \I \B{case } \_, \code{top} : \{\Delta\}
 
     \\
 
     \I \C{bottom}
     \\
-    \I \B{case } \code{bot}, \_ : \{(\Omega, \Delta)\}
+    \I \B{case } \code{bot}, \_ : \{\Delta\}
 
     \\
 
@@ -1464,7 +1493,7 @@ The subtype unification procedure is given in \FIG{fig:unify}
     \\
     \I \B{case } (\code{$\tau_{par}$->$\tau_{body}$}), (\code{$\tau_{arg}$->$\tau_{res}$}) : 
     \\
-    \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_{arg}, \tau_{par}):
+    \I\I \B{for } \Delta \leftarrow \F{unify}(\Omega, \Delta, \tau_{arg}, \tau_{par}):
     \\
     \I\I\I \F{unify}(\Omega, \Delta, \tau_{body}, \tau_{res})
 
