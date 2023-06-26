@@ -36,7 +36,7 @@
 
 
 
-\title{Relational Type Inference}
+\title{Programming with Relational Types}
 % \author{}
 % \date{}
 
@@ -878,6 +878,10 @@ the the pattern's type variables from the adjustment variable set, ensuring
 that those type variables cannot be strengthened or weakened from the outside. 
 As with the record rule, the reconstructed implications are intersected together.
 
+The projection rule reconstructs the type of the record expression. 
+It then calls unify to solve for the projected type by finding
+a single field type that is subtyped by the record type. 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Type inference 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -936,7 +940,9 @@ As with the record rule, the reconstructed implications are intersected together
     \\
     \I\I\I\I \B{for } (\Omega, \Delta, \tau) \leftarrow \F{infer}(\Omega, \Delta, \Gamma, e): 
     \\
-    \I\I\I\I\I \{(\Omega, \Delta, \code{($l$:$\tau$)\&$\tau_{res}$})\})
+    \I\I\I\I\I \{(\Omega, \Delta, \code{($l$:$\tau$)\&$\tau_{res}$})\}
+    \\
+    \I\I\I )
     \\
     \I\I T
 
@@ -974,7 +980,9 @@ As with the record rule, the reconstructed implications are intersected together
     \\
     \I\I\I\I\I\I \Omega \leftarrow \Omega \backslash \Omega'
     \\
-    \I\I\I\I\I\I \{(\Omega, \Delta, \code{($\tau_{m}$->$\tau_{e}$)\&$\tau_{res}$})\})
+    \I\I\I\I\I\I \{(\Omega, \Delta, \code{($\tau_{m}$->$\tau_{e}$)\&$\tau_{res}$})\}
+    \\
+    \I\I\I )
     \\
     \I\I T
 
@@ -1065,17 +1073,21 @@ As with the record rule, the reconstructed implications are intersected together
     \\
     \I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau, (\code{$\alpha_{IH}$->$\alpha_{IC}$})): 
     \\
-    \I\I\I \tau_{par} \leftarrow \F{makeParam}(\Omega_{stale}, \Delta, \tau_{IH}, \tau_{IC})
-    \\
     \I\I\I \tau_{rel} \leftarrow \F{makeRelation}(\Omega_{stale}, \Delta, \tau_{IH}, \tau_{IC})
     \\
     \I\I\I \alpha \leftarrow \F{freshTV}()
     \\
-    \I\I\I \beta \leftarrow \F{freshTV}()
+    \I\I\I \alpha_1 \leftarrow \F{freshTV}()
+    \\
+    \I\I\I \alpha_2 \leftarrow \F{freshTV}()
     \\
     \I\I\I \tau_{res} \leftarrow (
     \\
-    \I\I\I\I \code{[$\alpha$<:$\tau_{par}$]$\alpha$->\{$\beta$ with ($\alpha$*$\beta$)<:$\tau_{rel}$\}})
+    \I\I\I\I \code{[$\alpha$<:\{$\alpha_1$->$\alpha_2$ with ($\alpha_1$*$\alpha_2$)<:$\tau_{rel}$\}] }
+    \\
+    \I\I\I\I \alpha
+    \\
+    \I\I\I )
     \\
     \I\I\I \{(\Omega, \Delta, \tau_{res})\}
 
