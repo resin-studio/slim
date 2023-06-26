@@ -431,16 +431,19 @@ the possible values of the argument.
 % \paragraph{Object oriented.}  
 
 \section{Language}
-
-\subsection{Syntax}
+The programming language is pure and functional. Its syntax and dynamic semantics 
+are fairly standard. The main departure from tradition is that its function
+and application rules subsume pattern matching. This departure enables a more direct  
+correspondence between the structures of programs and their types, but it is 
+not a necessary condition.
 The syntax is given in \FIG{fig:syntax}.
-The programming language includes functions, records, fix combinator, pattern matching, let binding, 
-and tags for discriminating cases in pattern matching.  
+It includes functions with pattern matching, records, fix combinator, let binding, 
+and tags for discriminating cases, and application.
 A function consists of a sequence of paths, where each path maps a pattern to an expression.
 A record consists of a sequence of fields, where each field maps a unique label to an expression. 
 The type language includes tag types, field types, implications, unions, intersections, 
 inductions, existentials, universals, top, and bottom. 
-The existential type consists of multiple bound variales, a payload containing the bound variables, 
+The existential type consists of multiple bound variables, a payload containing the bound variables, 
 and a subtyping constraint over the bound variables. 
 If the bound variables aren't indicated, then all variables in the payload are
 assumed to be bound variables. If the subtyping constraint isn't indicated, then it is assumed to 
@@ -822,7 +825,6 @@ Inference generates a solution set $T$, which consists of triples, each with a t
 Unification generates a solution set $C$, which consists of pairs, each with a type variable set and a subtyping environment. 
 
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Internal Structures %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -845,6 +847,34 @@ Unification generates a solution set $C$, which consists of pairs, each with a t
 \label{fig:internal}
 \end{figure*}
 
+\subsection{Type inference}
+The type inference procedure is given in \FIG{fig:infer}.
+The procedure depends on four parameters: an type variable set, a subtyping environment, 
+a typing environment, and an expression.
+The variable set indicates if a type variable's type is allowed to be strengthened or weakened  
+during unification.
+The subtyping environment indicates the assumed constraints on types containing type variables.
+The typing environment indicates the assumed constraints on term variables.
+The expression indicates the inhabitant of the type that is to be reconstructed.
+The procedure returns a set of triples, where each triple is a variable set, a subtyping environment,
+and a type.
+The unit rule simply returns a singleton set with the unit type and the environments unchanged. 
+The variable rule uses the variable as a key to find its type in the typing environment. 
+It returns a singleton set containing the found type along with the adjustment set and subtyping environment.
+The tag rule reconstructs the type of its payload and uses its label to construct a tag type.
+The record rule reconstructs the type its fields and intersects the constructed fields types together.
+
+The function rule is of particular importance.
+For each path in the function, it extracts the term variables of the pattern and associates 
+the term variables with fresh type variables. It reconstructs the body of each path 
+with an updated variable set and an updated typing environment containing the fresh
+type variables of the pattern. By adding the pattern's type variables to the adjustment variable set,
+The rule implies that the parameter type of the path can be strengthened by applications
+occurring in the body of the path. 
+Before returning the reconstructed implication type for the path, the rule removes
+the the pattern's type variables from the adjustment variable set, ensuring
+that those type variables cannot be strengthened or weakened from the outside. 
+As with the record rule, the reconstructed implications are intersected together.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Type inference 
@@ -856,7 +886,7 @@ Unification generates a solution set $C$, which consists of pairs, each with a t
 \end{flalign*}
 \[
 \begin{array}[t]{@{} l}
-    \F{infer}(\Omega, \Delta, \Gamma, e, \tau) \triangleq 
+    \F{infer}(\Omega, \Delta, \Gamma, e) \triangleq 
     \\
     \I \B{match}\ e
 
@@ -894,7 +924,7 @@ Unification generates a solution set $C$, which consists of pairs, each with a t
     \\
     \I \B{case } \widebar{\code{@$l$=$e$}}  :  
     \\
-    \I\I T \leftarrow \{(\Omega, \Delta, \top)\}
+    \I\I T \leftarrow \{(\Omega, \Delta, \code{top})\}
     \\
     \I\I \B{for } (\code{@$l$=$e$}) \leftarrow \widebar{\code{@$l$=$e$}}:
     \\
@@ -914,7 +944,7 @@ Unification generates a solution set $C$, which consists of pairs, each with a t
     \\
     \I \B{case } (\widebar{\code{path $m$=>$e$}})  :  
     \\
-    \I\I T \leftarrow \{(\Omega, \Delta, \top)\}
+    \I\I T \leftarrow \{(\Omega, \Delta, \code{top})\}
     \\
     \I\I \B{for } (\code{path $m$=>$e$}) \leftarrow (\widebar{\code{path $m$=>$e$}}): 
     \\
@@ -1052,6 +1082,10 @@ Unification generates a solution set $C$, which consists of pairs, each with a t
 \caption{Type inference}
 \label{fig:infer}
 \end{figure*}
+
+
+\subsection{Subtype unification}
+The subtype unification procedure is given in \FIG{fig:unify}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 %% Subtype unification 
