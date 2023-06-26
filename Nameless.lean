@@ -982,9 +982,9 @@ namespace Nameless
       )
 
 
-    partial def unify (i : Nat) (context : Context)
-    : Ty -> Ty -> (Nat × List Context)
-    -- TODO: add equality check first, before pattern matching
+    partial def unify (i : Nat) (context : Context) (ty_l ty_r : Ty) : (Nat × List Context) :=
+    if ty_l == ty_r then (i, [context]) else
+    match ty_l, ty_r with
 
     -- right variable
     | ty', .fvar id => 
@@ -1004,7 +1004,7 @@ namespace Nameless
 
         if !contexts.isEmpty then
           (i, contexts)
-        else if (context.adj.contains id) && (!occurs context id ty') then
+        else if (context.adj.contains id) && (!occurs context id (Ty.union ty' ty)) then
           let context := {context with env_simple := context.env_simple.insert id (Ty.unionize ty' ty)}
           (i, [context])
         else
@@ -1020,6 +1020,7 @@ namespace Nameless
             bind_nl (i, contexts) (fun i context => 
               match context.env_relational.find? key with
               | some relation => 
+                -- TODO: add occurs check
                 let env_sub : PHashMap Nat Ty := empty.insert id ty'
                 let ty_sub := subst env_sub key  
                 (unify i context ty_sub relation) 
@@ -1052,7 +1053,7 @@ namespace Nameless
         let (i, contexts) := (unify i context ty' ty)
         if !contexts.isEmpty then
           (i, contexts)
-        else if (!occurs context id (Ty.inter ty ty')) && (context.adj.contains id) then
+        else if (context.adj.contains id) && (!occurs context id (Ty.inter ty ty')) then
           let context := {context with env_simple := context.env_simple.insert id (Ty.inter ty ty')}
           (i, [context])
         else
@@ -1067,6 +1068,7 @@ namespace Nameless
                 -- check that new constraint is weaker than relational constraint  
                 -- weakening is only safe if the constraint is not over parameter type 
                 -- assumption: relations do not constraintfunction parameter types
+                -- TODO: add occurs check
                 let env_sub : PHashMap Nat Ty := empty.insert id ty
                 let ty_sub := subst env_sub key  
                 let ty_weak := (
@@ -1081,6 +1083,7 @@ namespace Nameless
                 else if (occurs context id ty) then
                     (i, [])
                 else (
+                  -- TODO: add occurs check
                   let context := {context with env_simple := context.env_simple.insert id ty}
                   (i, [context])
                 )
@@ -1094,11 +1097,11 @@ namespace Nameless
         | none =>
           if (Ty.fvar id) == ty then
             (i, [context])
-          else if (occurs context id ty) then
-            (i, [])
-          else
+          else if (!occurs context id ty) then
             let context := {context with env_simple := context.env_simple.insert id ty}
             (i, [context])
+          else
+            (i, [])
 
 
     ------------------------------------------------------------
@@ -1166,6 +1169,7 @@ namespace Nameless
       let context := match op_ty_c with
       | none => context
       | some ty_c => {context with 
+        -- TODO: add occurs check
         env_simple := context.env_simple.insert id_bound ty_c
       }
 
@@ -1260,6 +1264,7 @@ namespace Nameless
           | some ty_b => 
             (unify i context ty_b ty_c)
           | none => 
+            -- TODO: add occurs check
             (i, [{context with env_simple := context.env_simple.insert id_bound ty_c}])
         )
       )
@@ -3539,8 +3544,6 @@ namespace Nameless
     ) 
   ] 
 
-
-  -- TODO: figure out why new adjustment rules inhibit more precise inference
 
   -- NOTE: max of the two inputs  
   -- broken; this fails if there is parameter type added to fix type
