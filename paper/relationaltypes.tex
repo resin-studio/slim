@@ -1167,6 +1167,41 @@ where the left side contains the type variable.
 It checks that the left type is consistent with the relational constraints. 
 If there are no relational constraints, then the variable is assigned
 to the left type (if the constraint is well-formed).
+The left-variable rule follows is similar to the right-variable rule with
+the one difference being that it uses intersection to strengthen the type variable 
+in the case of adjustment. In the case of checking relational constraints, it
+ensures that the right type is weaker than what the relational constraints would allow. 
+
+The subsequent case decompose the types into subproblem. The order of the rules 
+is critical to ensure that easier constraints are generated. To that end, cases that
+that strengthen the left side or weaken the right side occur before rules that
+weaken the left side or strengthen the right side.
+
+The left existential case first tries unify the constrain. It's possible that the
+constraint cannot be solved, in which case unifying the existential type's constraint 
+simply updates the subtyping environment with the unsolved relational constraint. 
+With the updated environment it then unified the existential type's payload with the right type.
+It must do a safety check to ensure that 
+the left existential's variables are merely assumed and not witnessed. 
+If the constraint is solved then the procedure 
+checks that the payload subtypes the right type for every constraint solution.
+
+The right universal case updates the subtyping environment with the universal's variable constraint
+and unifies the left type with the payload. As with left existential, the procedure checks that
+the universal's type variable is merely assumed and not instantiated.
+
+The left induction rule first tries to factor the inductive type and unify the weakened factored type
+with the right type. For example, a relational type between a natural number and a list, can be factored into
+a cross product of a natural number type and a list type. 
+IF factoring fails the procedure leverages the induction principle and substitutes the right type 
+in for the inductive variable of the left type and unifies the new left type with the right type.    
+Note that factoring is employed for the special
+case where the right type has variables which cannot be unified 
+using induction due to our circularity restriction.  
+
+The cases for antecedent union, consequent intersection, left union, and right intersection
+decompose into sub-problems in the same way as the declarative subtyping semantics.
+
 
 \TODO{add descriptions for the remaining cases of unification}
 

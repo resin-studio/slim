@@ -1190,7 +1190,6 @@ namespace Nameless
       if equiv context.env_simple (.induc ty) (ty_r) then
         (i, [context])
       else
-
         let labels := extract_label_list ty_r
         let ty_factored := (factor_out_relation labels (.induc ty))
         let (i, contexts) := unify i context ty_factored ty_r
@@ -4131,7 +4130,10 @@ namespace Nameless
   [lesstype| ⟨nat_list⟩ ]
   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
 
-  #eval nat_list
+  -- NOTE: this requires factoring to circumvent circular variable restriction.
+  #eval unify_decide 10
+  [lesstype| ⟨nat_list⟩ ]
+  [lesstype| ⟨nat_⟩ * α[1] ]
 
 
   ------- specialization --------------
