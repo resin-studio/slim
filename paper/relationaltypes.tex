@@ -54,6 +54,7 @@
 \newcommand{\C}[1]{\color{teal} \rhd\ \emph{#1}}
 % \newcommand{\fig}[1]{Fig. {\color{red} \fig{#1}}}
 \newcommand{\FIG}[1]{Fig. {\color{red} \ref{#1}}}
+\newcommand{\TODO}[1]{\noindent \textbf{\color{red} TODO: #1}}
      
 
 
@@ -101,6 +102,10 @@ that can automatically infer expressive types from untyped programs.
 To overcome these limitations, we introduce a new system 
 that automatically infers expressive properties from untyped functional programs. 
 We introduce a new type language \textit{relational types} to represent these properties.
+
+\TODO{more detail on innovation but still at a high level}
+
+
 
 \section{Overview}
 
@@ -395,6 +400,8 @@ each path's expected type, but without leaking the refinement outside of that pa
 That is, the refinements must be local or path sensitive.
 Moreover, there must be enough paths of the applied function to handle all 
 the possible values of the argument.
+
+\TODO{make sure inductive type (LED) is explained clearly}
 \begin{mathpar}
 \\
   \inferrule {
@@ -425,7 +432,7 @@ the possible values of the argument.
 \\
 \end{mathpar}
 
-
+\TODO{more motivating and elucidating examples}
 % \paragraph{List bounds.}
 % \paragraph{Generalization.} This is motivated by applying the same function to multiple arguments of varying types.
 % \paragraph{Object oriented.}  
@@ -450,6 +457,8 @@ assumed to be bound variables. If the subtyping constraint isn't indicated, then
 be a tautology, such as (\code{unit<:unit}).
 The universal type consists of a bound variable, the variable's upper bound, and a payload. If the upper
 bound is not indicated, it is assumed to be the top type (\code{top}).
+
+\TODO{update tag syntax: \code{\#cons/e:?cons/T}\ \ \code{\#nil:?nil}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Syntax %%
@@ -858,29 +867,58 @@ The typing environment indicates the assumed constraints on term variables.
 The expression indicates the inhabitant of the type that is to be reconstructed.
 The procedure returns a set of triples, where each triple is a variable set, a subtyping environment,
 and a type.
-The unit rule simply returns a singleton set with the unit type and the environments unchanged. 
-The variable rule uses the variable as a key to find its type in the typing environment. 
+The unit case simply returns a singleton set with the unit type and the environments unchanged. 
+The variable case uses the variable as a key to find its type in the typing environment. 
 It returns a singleton set containing the found type along with the adjustment set and subtyping environment.
-The tag rule reconstructs the type of its payload and uses its label to construct a tag type.
-The record rule reconstructs the type its fields and intersects the constructed fields types together.
+The tag case reconstructs the type of its payload and uses its label to construct a tag type.
+The record case reconstructs the type its fields and intersects the constructed fields types together.
 
-The function rule is of particular importance to type reconstruction in an untyped setting.
+The function case is of particular importance to type reconstruction in an untyped setting.
 For each path in the function, it extracts the term variables of the pattern and associates 
 the term variables with fresh type variables. It reconstructs the body of each path 
 with an updated variable set and an updated typing environment containing the fresh
 type variables of the pattern. By adding the pattern's type variables to the adjustment variable set,
-The rule implies that the parameter type of the path can be strengthened by applications
+it implies that the parameter type of the path can be strengthened by applications
 occurring in the body of the path. This enables adjusting a parameter type to reflect all of its 
 occurrences in the body, 
 rather than reflecting just its first occurrence and failing on subsequent occurrences. 
-Before returning the reconstructed implication type for the path, the rule removes
+Before returning the reconstructed implication type for the path, the case removes
 the the pattern's type variables from the adjustment variable set, ensuring
 that those type variables cannot be strengthened or weakened from the outside. 
-As with the record rule, the reconstructed implications are intersected together.
+As with the record case, the reconstructed implications are intersected together.
 
-The projection rule reconstructs the type of the record expression. 
+The projection case reconstructs the type of the record expression. 
 It then calls unify to solve for the projected type by finding
 a single field type that is subtyped by the record type. 
+
+The application case also plays an important role in type reconstruction of untyped programs.
+It creates a fresh type variable as a placeholder for the reconstructed type of the application result.
+It reconstructs the type of the function and the argument, and then solves for the result type
+by unifying the function's type with an implication from the argument type to the result type.
+It adds the result type variable to the adjustment variable set when unifying to allow reconstructing 
+all types for all the paths that the function might take.
+After unifying, it removes the result type variable from the adjustment variable set to ensure
+that the type cannot be modified from the outside.
+Additionally, since inference and unification actually return sets of solutions,
+the application must type check for all function types and all argument types.
+If even one combination cannot be unified then the inference of application fails,
+indicated by breaking the for-loop, which then implicitly returns an empty set.  
+
+the let-binding case reconstructs the type of the argument and checks that
+all possible types subtype the annotation. It then generalizes 
+type variables in the reconstructed argument type while maintaining
+the constraints indicated by the subtyping environment. 
+
+The fix case reconstructs inductive types for the parameters and bodies of its
+target expression. More it inductively relates the parameter and body types to each other.
+First, it infers the type of the target and calls unify to deconstruct it into the antecedent
+and consequent of an implication type. According to the semantics of fix, the antecedent
+represents and inductive hypothesis, while the consequent represents and inductive conclusion.
+Thus, it uses the inferred structures of the antecedent and consequent to construct an 
+inductive relation by ensuring that the antecedent subtypes the inductively bound variable of 
+the resulting inductive type.
+Finally, the implication type is projected from the constructed relation and generalized with universal.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Type inference 
@@ -1051,9 +1089,11 @@ a single field type that is subtyped by the record type.
     \\
     \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_a, \tau_p):
     \\
-    \I\I\I\I \tau_{gen} \leftarrow \F{generalize}(\Omega_{stale}, \Delta, \tau_a)
+    \I\I\I\I \tau_{pack} \leftarrow \F{pack}(\Omega_{stale}, \Delta, \tau_a)
     \\
-    \I\I\I\I \F{infer}(\Omega, \Delta, (\Gamma;\code{$x$:$\tau_{gen}$}), e_b)
+    \I\I\I\I \alpha \leftarrow \F{freshTV}()
+    \\
+    \I\I\I\I \F{infer}(\Omega, \Delta, (\Gamma;\code{$x$:[$\alpha$<:$\tau_{pack}$]$\alpha$}), e_b)
     \\
     \I\I \B{else } \emptyset 
 
@@ -1455,7 +1495,9 @@ The subtype unification procedure is given in \FIG{fig:unify}
 \end{figure*}
 
 
-\section{Properties}
+\section{Experiments}
+
+\TODO{develop 12 tree/list experiments}
 
 \section{Related work}
 
