@@ -1095,11 +1095,11 @@ Finally, the implication type is projected from the constructed relation and gen
     \\
     \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_a, \tau_p):
     \\
-    \I\I\I\I \tau_{pack} \leftarrow \F{pack}(\Omega_{stale}, \Delta, \tau_a)
+    \I\I\I\I \tau_{\Delta} \leftarrow \F{pack}(\Omega_{stale}, \Delta, \tau_a)
     \\
     \I\I\I\I \alpha \leftarrow \F{freshTV}()
     \\
-    \I\I\I\I \F{infer}(\Omega, \Delta, (\Gamma;\code{$x$:[$\alpha$<:$\tau_{pack}$]$\alpha$}), e_b)
+    \I\I\I\I \F{infer}(\Omega, \Delta, (\Gamma;\code{$x$:[$\alpha$<:$\tau_{\Delta}$]$\alpha$}), e_b)
     \\
     \I\I \B{else } \emptyset 
 
