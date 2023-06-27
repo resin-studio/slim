@@ -1172,7 +1172,9 @@ the one difference being that it uses intersection to strengthen the type variab
 in the case of adjustment. In the case of checking relational constraints, it
 ensures that the right type is weaker than what the relational constraints would allow. 
 
-The subsequent case decompose the types into subproblem. The order of the rules 
+The subsequent cases decompose the types into subproblem. 
+The decomposition is given in \FIG{fig:unifyDecomp} 
+The order of the rules 
 is critical to ensure that easier constraints are generated. To that end, cases that
 that strengthen the left side or weaken the right side occur before rules that
 weaken the left side or strengthen the right side.
@@ -1202,10 +1204,30 @@ using induction due to our circularity restriction.
 The cases for antecedent union, consequent intersection, left union, and right intersection
 decompose into sub-problems in the same way as the declarative subtyping semantics.
 
+The remaining cases are continued in \FIG{fig:unifyContinue}.
+The right existential case simply unifies left type with the existential's payload
+and then unifies the existential's constraint, such that unifying the payload
+may bear witness to a type that leads to verifying the constraint. 
+The right existential case resembles the unification and backtracking approach in Prolog, 
+where unification of the payload corresponds to unification of a query with the head of a horn clause,
+and solving the existential's constraint after the payload unification corresponds to
+solving the horn clause's body after the head's unification.  
 
-\TODO{add descriptions for the remaining cases of unification}
+The left universal case also unifies in a backtracking fashion analogous to Prolog.
+The procedures unifies the universal's payload with the right type,
+which may instantiate the universal's type variable,
+which may then be used unify and check the universal's constraint.
 
+The right induction case attempts to unroll the inductive type just enough
+to unify with the left type. To avoid potential infinite unrolling
+the procedure relies on a heuristic to see if the left type's pattern
+lines up with parts of the the inductive type that are guaranteed to be well-founded. 
+If the left type is a pattern with variables that prevents it from being reduced,
+then the procedure checks if it is well-formed, meaning it could be solved 
+if more information were specified, then the unsolved relational constraint
+is added to the subtyping environment. 
 
+The remaining cases closely mirror their counterparts in the declarative subtyping rules.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 %% Subtype unification 
