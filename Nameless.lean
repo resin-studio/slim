@@ -1238,11 +1238,13 @@ namespace Nameless
       let ty_c2 := instantiate 0 args ty_c2
       let ty := instantiate 0 args ty
 
+      -------------------
+      -- try backtracking order first
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
+      -------------------
       bind_nl (unify i context ty' ty) (fun i context => 
         unify i context ty_c1 ty_c2
       )
-
 
     -- left universal
     | .univ op_ty_c ty1, ty2 =>
@@ -1252,7 +1254,10 @@ namespace Nameless
       let op_ty_c := Option.map (instantiate 0 args) op_ty_c
       let ty1 := instantiate 0 args ty1
 
+      ----------------------------
+      -- backtracking
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
+      ----------------------------
       bind_nl (unify i context ty1 ty2) (fun i context => 
         match op_ty_c with
         | none => (i, [context])
@@ -1268,6 +1273,15 @@ namespace Nameless
         )
       )
 
+      -----------------------------------------
+      -- forward tracking
+      -----------------------------------------
+      -- match op_ty_c with
+      -- | none => (unify i context ty1 ty2)
+      -- | some ty_c => (
+      --   let context := {context with env_simple := context.env_simple.insert id_bound ty_c}
+      --   (unify i context ty1 ty2)
+      -- )
 
     -------------------------------------
 
@@ -2286,8 +2300,6 @@ namespace Nameless
   #eval unify_decide 0 nat_ even
   ------------------------
 
-  -- broken
-  -- TODO: add equality check to unify before pattern matching
   -- expected: true
   #eval unify_decide 0
   [lesstype| ? >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
@@ -2542,7 +2554,7 @@ namespace Nameless
 
 ---------------------------------------------------------------
   ----------------------------------
-  -- broken: nat should not be subbed into relational key
+  -- incomplete: nat should not be subbed into relational key
   -- double
   #eval infer_reduce 10 [lessterm|
     let y[0] : ⟨nat_⟩ = _ in
@@ -2707,7 +2719,6 @@ namespace Nameless
   constructor : (Data <: ?) >> Data -> {Object with Data * Object <: DO}
         where μ DO . {D, α, O // D * (data : D & update : α -> O) with (?cons (α * D) * O) <: DO
   -/
-  -- broken: bound variable β[1] not introduced
   #eval infer_reduce 0 [lessterm|
     -- fix \ self \ data => 
     fix (\ y[0] => \ y[0] => 
@@ -2882,7 +2893,7 @@ namespace Nameless
   ))
   ]
 
-  -- broken
+  -- incomplete
   -- expected: ?succ ?zero unit
   #eval infer_reduce 10 [lessterm|
   (fix(\ y[0] => ( 
@@ -3092,11 +3103,34 @@ namespace Nameless
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
   [lesstype| ?succ ?succ ?zero unit ]
 
-  -- broken
+  -- incomplete 
   -- expected: true 
   #eval unify_decide 10
   [lesstype| ⟨nat_⟩ >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+  -- expected: true 
+  #eval unify_decide 10
+  [lesstype| ? >> β[0] -> {2//β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+  -- incomplete
+  -- expected: true 
+  #eval unify_decide 10
+  [lesstype| {2//β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩} >> β[0] ]
+  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+  -- expected: true 
+  #eval unify_decide 10
+  [lesstype| {2//β[1] * β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+
+  -- incomplete
+  -- expected: true 
+  #eval unify_decide 10
+  [lesstype| {2//β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩} >> β[0] ]
+  [lesstype| ⟨nat_⟩ >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
 
   -- expected: true 
   #eval unify_decide 10
@@ -3239,7 +3273,6 @@ namespace Nameless
 
 --------------------- universal introduction subtyping ----------------
 
-  -- broken
   -- expected: false 
   #eval unify_decide 0
   [lesstype| ?one unit  ]
@@ -3250,7 +3283,6 @@ namespace Nameless
   [lesstype| ?one unit  ]
   [lesstype| (?one unit | ?two unit) & (?three unit | ?four unit) ]
 
-  -- broken
   -- expected: false 
   #eval unify_decide 0
   [lesstype| ?one unit  ]
@@ -3340,7 +3372,6 @@ namespace Nameless
     )) (y[0])))
   ] 
 
-  -- broken
   -- expected: ?true unit
   #eval infer_reduce 0 [lessterm| 
     let y[0] = (\ (y[0]) => ((fix (\ y[0] =>
@@ -3521,9 +3552,7 @@ namespace Nameless
   ]
 
 
-  -- TODO: figure out why new adjustment rules inhibit more precise inference
-
-  -- broken: type is big and ugly and causes non-termination when there's a safety check in left-existential
+  -- NOTE: type is big and ugly and causes non-termination when there's a safety check in left-existential
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   #eval infer_reduce 0 [lessterm| 
@@ -3545,7 +3574,7 @@ namespace Nameless
 
 
   -- NOTE: max of the two inputs  
-  -- broken; this fails if there is parameter type added to fix type
+  -- NOTE: this fails if there is parameter type added to fix type
   -- expected: ?succ ?succ ?succ ?zero unit   
   #eval infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
@@ -3568,7 +3597,7 @@ namespace Nameless
 
   --------------- debugging ---------------
 
-  -- broken
+  -- incomplete
   -- expected: ?false unit 
   #eval infer_reduce 0 [lessterm| 
     (
@@ -3743,7 +3772,7 @@ namespace Nameless
 
   -----------  implication existential ----------
 
-  -- broken
+  -- incomplete
   -- expected: unit 
   #eval unify_reduce 10 
   [lesstype| (?one unit -> unit) & (?three unit -> unit) ]
@@ -3766,7 +3795,7 @@ namespace Nameless
     )
   ]
 
-  -- broken
+  -- incomplete
   -- expected: ?one unit | ?three unit 
   #eval infer_reduce 0 [lessterm|
     let y[0] : {β[0] with β[0] <: ?one unit | ?three unit} = _ in
@@ -3881,7 +3910,7 @@ namespace Nameless
     )
   ]
 
-  -- broken
+  -- incomplete
   -- expected: ?one unit
   #eval infer_reduce 0 [lessterm|
     let y[0] : ?one unit | ?three unit = _ in
@@ -3908,7 +3937,7 @@ namespace Nameless
   [lesstype| {2 // (?succ β[0] * ?cons β[1]) with (β[0] * β[1]) <: ⟨nat_list⟩} ]
 
   ---------- relational propagation ---------
-  -- broken
+  -- incomplete
   -- NOTE: variables are no longer expanded; 
   -- need a generalized disjunction elimination rule 
   -- or some general elimination rule for intersection of implication; e.g a factoring rule.
@@ -3918,28 +3947,28 @@ namespace Nameless
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
   [lesstype| α[2] ]
 
-  -- broken
+  -- incomplete
   -- expected: ?other unit | ?thing unit 
   #eval unify_reduce 10 
   [lesstype| (?succ ⟨nat_⟩ -> ?other unit) & (?zero unit -> ?thing unit)]
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
   [lesstype| α[2] ]
 
-  -- broken
+  -- incomplete
   -- expected: ?nil unit | ?other unit
   #eval unify_reduce 10 
   [lesstype| (?zero unit -> α[0]) & (?succ α[1] -> ?other unit)]
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
   [lesstype| α[2] ]
 
-  -- broken
+  -- incomplete
   -- expected: ?nil unit | ?other unit
   #eval unify_reduce 10 
   [lesstype| (?zero unit -> α[0]) & (?succ ⟨list_⟩ -> ?other unit)]
   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
   [lesstype| α[2] ]
 
-  -- broken
+  -- incomplete
   -- expected: ?nil unit | ?other unit
   #eval infer_reduce 10 [lessterm|
     let y[0] : α[0] = _ in
@@ -3981,7 +4010,7 @@ namespace Nameless
 
   -------- collapsing ------------
 
-  -- broken
+  -- unsound
   -- NOTE: requires collapsing to ensure what must type check, rather than what may type check 
   -- NOTE: collapsing should happen at argument site, rather than return site
     -- to ensure that contextual information is not lost
@@ -4004,7 +4033,7 @@ namespace Nameless
     ( \ #one() => #two() \ #three() => #four())
   ]
 
-  -- broken: inferring union instead of intersection
+  -- incomplete: inferring union instead of intersection
   -- expected: ((?one unit -> ?two unit) & (?three unit -> ?four unit))
   #eval infer_reduce 0 [lessterm| 
     (\y[0] => (( \ #one() => #two() \ #three() => #four()) y[0]))
@@ -4077,7 +4106,6 @@ namespace Nameless
   [lesstype| ((?zero unit * ?succ ?zero unit) | (?succ ?zero unit * ?zero unit)) -> α[7] ]
   [lesstype| α[7] ]
 
-  -- broken
   -- NOTE: in app rule: collapse arg's union type before applying 
   -- expected: ⊥
   #eval infer_reduce 10
