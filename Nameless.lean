@@ -1888,21 +1888,32 @@ namespace Nameless
       let ty_res := Ty.fvar id_res
       let adj : PHashSet Nat := empty.insert id_res
       let context := {context with adj := context.adj + adj}
-      let (i, context_tys_arg) := (infer i context env_tm t_arg)
-      let op := context_tys_arg.foldl (fun op_i_context_tys (context, ty_arg) =>
-        op_i_context_tys.bind (fun (i, context_tys) =>
+      let (i, context_combos) := (
+        bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
+        bind_nl (infer i context env_tm t_arg) (fun i (context, ty_arg) =>
+          (i, [(context, ty_f, ty_arg)])
+        ))
+      )
+
+      -- let combo_count := context_combos.length
+      let op := context_combos.foldl (fun op_i_context_tys (context, ty_f, ty_arg) =>
+
+        match op_i_context_tys with
+        | none => none
+        | some (i, context_tys) => (
           let (i, context_tys') := (
-            bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
             bind_nl (Ty.unify i context ty_f (Ty.impli ty_arg ty_res)) (fun i context => 
               let context := {context with adj := context.adj - adj}
+              -- let context := {context with env_simple := context.env_simple.insert 987 (Ty.tag (s!"_{combo_count}_") Ty.unit)}
               (i, [(context, ty_res)])
             )
-            ))
+          )
           if context_tys'.isEmpty then
             none
           else
             some (i, context_tys ++ context_tys')
         )
+
       ) (some (i, []))
 
       match op with
@@ -4010,13 +4021,29 @@ namespace Nameless
 
   -------- collapsing ------------
 
+  -- expected: multiple environments
+  #eval infer_envs 0 [lessterm| 
+    let y[0] = _ in 
+    (( \ #one() => #two() \ #three() => #four()) y[0])
+  ]
+
+
+  -- expected: ⊥
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = _ in 
+    ((\ #two() => #thing()) (( \ #one() => #two() \ #three() => #four()) y[0]))
+  ]
+
   -- unsound
-  -- NOTE: requires collapsing to ensure what must type check, rather than what may type check 
-  -- NOTE: collapsing should happen at argument site, rather than return site
-    -- to ensure that contextual information is not lost
-    -- e.g. learning the type of the function that is applied, whose variables may not appear in return type. 
-  -- NOTE: packing serves a similar purpose, albeit for leveraging left-existential safe strengthening 
-    -- therefore, it makes sense to perform packing at argument site too
+  -- 
+  #eval infer_envs 0 [lessterm| 
+    let y[0] = _ in 
+    let y[0] = (( \ #one() => #two() \ #three() => #four()) y[0]) in
+    ((\ y[0] => y[0]) y[0])
+  ]
+
+  -- unsound
+  -- indirection with let-binding causes problem
   -- expected: ⊥
   #eval infer_reduce 0 [lessterm| 
     let y[0] = _ in 
