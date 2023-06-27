@@ -444,8 +444,8 @@ and application rules subsume pattern matching. This departure enables a more di
 correspondence between the structures of programs and their types, but it is 
 not a necessary condition.
 The syntax is given in \FIG{fig:syntax}.
-It includes functions with pattern matching, records, fix combinator, let binding, 
-and tags for discriminating cases, and application.
+It includes functions with pattern matching, records, a fixed point combinator, let binding, 
+tags for discriminating cases, and application.
 A function consists of a sequence of paths, where each path maps a pattern to an expression.
 A record consists of a sequence of fields, where each field maps a unique label to an expression. 
 The type language includes tag types, field types, implications, unions, intersections, 
@@ -457,6 +457,11 @@ assumed to be bound variables. If the subtyping constraint isn't indicated, then
 be a tautology, such as (\code{unit<:unit}).
 The universal type consists of a bound variable, the variable's upper bound, and a payload. If the upper
 bound is not indicated, it is assumed to be the top type (\code{top}).
+The typing semantics rely on a typing environment for keeping track of typings of term variables.
+The subtyping semantics rely on subtyping environment for keeping track of and constraints on type variables. 
+Note that the syntax of the subtyping environment allows an upper bound constraint over a type
+rather than merely a type variable to allow for relational constraints. 
+
 
 \TODO{update tag syntax: \code{\#cons.\#cons.e:?cons.?cons.T}\ \ \code{\#nil:?nil}}
 
@@ -541,7 +546,7 @@ m ::= &\C{pattern}
 The typing is given in \FIG{fig:typing}.
 Most of the rules are fairly standard. 
 The rule for function typing is a bit special in that
-it treats a function as a list of paths whose type is an intersection of implications,
+it treats a function as a sequence of paths whose type is an intersection of implications,
 rather than having a separate pattern matching rule. 
 Likewise, the type of a record is an intersection of field types.
 The let-binding rule allows for prenex polymorphism by generalizing via subtyping. 
@@ -634,18 +639,17 @@ The let-binding rule allows for prenex polymorphism by generalizing via subtypin
 
 \subsection{Subtyping}
 The subtyping is given in \FIG{fig:subtyping}.
-The rules depend on an environment of subtyping constraints $\Delta$.
-The constraint rule checks that a subtyping relation exists as a subtyping constraint.
 Some of the rules are fairly standard, including implication, the union rules, and intersection rules.
 Note that in addition to left and right rules, union and intersection each have rules for 
 interacting with implication's antecedent and consequent, respectively.
+The constraint rule checks that a subtyping relation exists as a constraint in the subtyping environment.
 The right induction rule is standard and simply unrolls the induction.
 The left induction rule relies on the induction principle to construct an 
 inductive constraint hypothesis.  
-The field and tag rules simply check that the labels match and their payloads subtype.
+The field and tag rules simply check that the labels match and subtyping holds for their constituent types.
 The existential rules are quite special, as they involve a subtyping constraint as part of 
 a second-order comprehension. 
-The left existential rule checks subtyping holds for all variations of the payload 
+The left existential rule checks that subtyping holds for all variations of the payload 
 where the subtyping constraint holds. 
 The right existential rule checks that subtyping holds for some variation of the payload where the constraint holds.
 The left universal rule checks that subtyping holds for some variation of the payload consistent with
@@ -830,8 +834,8 @@ and generates a type for an expression. When type inference encounters constrain
 it calls unification to solve these constraints. Note that since the types are expressive enough to represent constraints,
 an alternative approach of generating constraints and solving them in separate stages could also be designed 
 using the same structures. Additional structures for the analysis are given in \FIG{fig:internal}. 
-Inference generates a solution set $T$, which consists of triples, each with a type variable set, a subtyping environment, and a type.  
-Unification generates a solution set $C$, which consists of pairs, each with a type variable set and a subtyping environment. 
+Inference generates a solution set $T$, which contains triples, each with a type variable set, a subtyping environment, and a type.  
+Unification generates a solution set $C$, which contains subtyping environments. 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -860,43 +864,45 @@ Unification generates a solution set $C$, which consists of pairs, each with a t
 The type inference procedure is given in \FIG{fig:infer}.
 The procedure depends on four parameters: an type variable set, a subtyping environment, 
 a typing environment, and an expression.
-The variable set indicates if a type variable's type is allowed to be strengthened or weakened  
+The variable set indicates if a type variable's assigned type is allowed to be strengthened or weakened  
 during unification.
-The subtyping environment indicates the assumed constraints on types containing type variables.
+The subtyping environment indicates the assumed constraints on types containing type variables,
+including relational constraints and constraints over single type variables, 
+which we also refer to as type assignments.
 The typing environment indicates the assumed constraints on term variables.
-The expression indicates the inhabitant of the type that is to be reconstructed.
-The procedure returns a set of triples, where each triple is a variable set, a subtyping environment,
+The expression indicates the inhabitant of the type that is to be inferred.
+The procedure returns a set of triples, where each triple consists of a variable set, a subtyping environment,
 and a type.
 The unit case simply returns a singleton set with the unit type and the environments unchanged. 
 The variable case uses the variable as a key to find its type in the typing environment. 
 It returns a singleton set containing the found type along with the adjustment set and subtyping environment.
-The tag case reconstructs the type of its payload and uses its label to construct a tag type.
-The record case reconstructs the type its fields and intersects the constructed fields types together.
+The tag case infers the type of its constituent type and uses its label to construct a tag type.
+The record case infers the type of its fields and intersects the constructed field types together.
 
-The function case is of particular importance to type reconstruction in an untyped setting.
+The function case is of particular importance to type inference in an untyped setting.
 For each path in the function, it extracts the term variables of the pattern and associates 
-the term variables with fresh type variables. It reconstructs the body of each path 
+the term variables with fresh type variables. It infers the body of each path 
 with an updated variable set and an updated typing environment containing the fresh
 type variables of the pattern. By adding the pattern's type variables to the adjustment variable set,
 it implies that the parameter type of the path can be strengthened by applications
 occurring in the body of the path. This enables adjusting a parameter type to reflect all of its 
 occurrences in the body, 
 rather than reflecting just its first occurrence and failing on subsequent occurrences. 
-Before returning the reconstructed implication type for the path, the case removes
+Before returning the inferred implication type for the path, the case removes
 the the pattern's type variables from the adjustment variable set, ensuring
 that those type variables cannot be strengthened or weakened from the outside. 
-As with the record case, the reconstructed implications are intersected together.
+As with the record case, the inferred implications are intersected together.
 
-The projection case reconstructs the type of the record expression. 
+The projection case infers the type of the record expression. 
 It then calls unify to solve for the projected type by finding
 a single field type that is subtyped by the record type. 
 
-The application case also plays an important role in type reconstruction of untyped programs.
-It creates a fresh type variable as a placeholder for the reconstructed type of the application result.
-It reconstructs the type of the function and the argument, and then solves for the result type
+The application case also plays an important role in type inference of untyped programs.
+It creates a fresh type variable as a placeholder for the inferred type of the application result.
+It infers the type of the function and the argument, and then solves for the result type
 by unifying the function's type with an implication from the argument type to the result type.
-It adds the result type variable to the adjustment variable set when unifying to allow reconstructing 
-all types for all the paths that the function might take.
+It adds the result type variable to the adjustment variable set when unifying to allow inferring 
+types accounting for all the paths that the function might take.
 After unifying, it removes the result type variable from the adjustment variable set to ensure
 that the type cannot be modified from the outside.
 Additionally, since inference and unification actually return sets of solutions,
@@ -904,13 +910,13 @@ the application must type check for all function types and all argument types.
 If even one combination cannot be unified then the inference of application fails,
 indicated by breaking the for-loop, which then implicitly returns an empty set.  
 
-the let-binding case reconstructs the type of the argument and checks that
+the let-binding case infers the type of the argument and checks that
 all possible types subtype the annotation. It then generalizes 
-type variables in the reconstructed argument type while maintaining
+type variables in the inferred argument type while maintaining
 the constraints indicated by the subtyping environment. 
 
-The fix case reconstructs inductive types for the parameters and bodies of its
-target expression. More it inductively relates the parameter and body types to each other.
+The fix case infers inductive types for the parameters and bodies of its
+target expression. Moreover, it inductively relates the parameter and body types to each other.
 First, it infers the type of the target and calls unify to deconstruct it into the antecedent
 and consequent of an implication type. According to the semantics of fix, the antecedent
 represents and inductive hypothesis, while the consequent represents and inductive conclusion.
@@ -1144,18 +1150,19 @@ Unification depends on four parameters: a set of type variables, a subtyping env
 The set of type variables indicates the type of variables that may be adjusted 
 (triggered by the function and application cases of inference). 
 The subtyping environment indicates constraints on type variables.
-the left type indicates the weaker type, and the right type indicates the stronger type.
+the left type indicates the stronger type, and the right type indicates the weaker type.
 Both types may contain type variables that are unsolved or partially solved.
 The procedure returns a set of subtyping environments.
 
 The procedure begins by checking if the two types are syntactically equal.
-Subtyping holds but there is nothing that can be unified without circular references 
-so the assumed subtyping environment is returned in a singleton set. 
+If equal then subtyping holds but there is nothing that can be unified 
+without circular references so the assumed subtyping environment is returned 
+unchanged in a singleton set. 
 
 The procedure then pattern matches on the left and right types. 
 The first two cases handle assigning variables to types.
 The right-variable case first looks up a solution  
-for the variable. If a solution is found the unification proceeds
+for the variable. If a solution is found, then unification proceeds
 between the original left type and the solution for the right type.
 In the case where unification fails, but the type variable is adjustable,
 the procedure updates the type variable with the union of the left type
@@ -1167,22 +1174,22 @@ where the left side contains the type variable.
 It checks that the left type is consistent with the relational constraints. 
 If there are no relational constraints, then the variable is assigned
 to the left type (if the constraint is well-formed).
-The left-variable rule follows is similar to the right-variable rule with
-the one difference being that it uses intersection to strengthen the type variable 
+The left-variable rule is similar to the right-variable rule with
+one difference being that it uses intersection to strengthen the type variable 
 in the case of adjustment. In the case of checking relational constraints, it
 ensures that the right type is weaker than what the relational constraints would allow. 
 
-The subsequent cases decompose the types into subproblem. 
-The decomposition is given in \FIG{fig:unifyDecomp} 
+The subsequent cases decompose the types into subproblems. 
+The decomposition is given in \FIG{fig:unifyDecomp}. 
 The order of the rules 
 is critical to ensure that easier constraints are generated. To that end, cases that
-that strengthen the left side or weaken the right side occur before rules that
+strengthen the left side or weaken the right side occur before rules that
 weaken the left side or strengthen the right side.
 
-The left existential case first tries unify the constrain. It's possible that the
-constraint cannot be solved, in which case unifying the existential type's constraint 
+The left existential case first tries to unify the constraint. It's possible that the
+constraint cannot be solved, but also isn't invalid, in which case unifying the existential type's constraint 
 simply updates the subtyping environment with the unsolved relational constraint. 
-With the updated environment it then unified the existential type's payload with the right type.
+With the updated environment, the procedure then unifies the existential type's payload with the right type.
 It must do a safety check to ensure that 
 the left existential's variables are merely assumed and not witnessed. 
 If the constraint is solved then the procedure 
@@ -1195,7 +1202,7 @@ the universal's type variable is merely assumed and not instantiated.
 The left induction rule first tries to factor the inductive type and unify the weakened factored type
 with the right type. For example, a relational type between a natural number and a list, can be factored into
 a cross product of a natural number type and a list type. 
-IF factoring fails the procedure leverages the induction principle and substitutes the right type 
+If factoring fails, then the procedure leverages the induction principle and substitutes the right type 
 in for the inductive variable of the left type and unifies the new left type with the right type.    
 Note that factoring is employed for the special
 case where the right type has variables which cannot be unified 
@@ -1205,7 +1212,7 @@ The cases for antecedent union, consequent intersection, left union, and right i
 decompose into sub-problems in the same way as the declarative subtyping semantics.
 
 The remaining cases are continued in \FIG{fig:unifyContinue}.
-The right existential case simply unifies left type with the existential's payload
+The right existential case simply unifies the left type with the existential's payload
 and then unifies the existential's constraint, such that unifying the payload
 may bear witness to a type that leads to verifying the constraint. 
 The right existential case resembles the unification and backtracking approach in Prolog, 
@@ -1214,9 +1221,9 @@ and solving the existential's constraint after the payload unification correspon
 solving the horn clause's body after the head's unification.  
 
 The left universal case also unifies in a backtracking fashion analogous to Prolog.
-The procedures unifies the universal's payload with the right type,
-which may instantiate the universal's type variable,
-which may then be used unify and check the universal's constraint.
+The procedure unifies the universal's payload with the right type,
+possibly instantiating the universal's type variable,
+which may then be used to unify and check the universal's constraint.
 
 The right induction case attempts to unroll the inductive type just enough
 to unify with the left type. To avoid potential infinite unrolling
@@ -1224,7 +1231,7 @@ the procedure relies on a heuristic to see if the left type's pattern
 lines up with parts of the the inductive type that are guaranteed to be well-founded. 
 If the left type is a pattern with variables that prevents it from being reduced,
 then the procedure checks if it is well-formed, meaning it could be solved 
-if more information were specified, then the unsolved relational constraint
+if more information were specified, and then the unsolved relational constraint
 is added to the subtyping environment. 
 
 The remaining cases closely mirror their counterparts in the declarative subtyping rules.
