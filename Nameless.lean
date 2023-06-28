@@ -1289,7 +1289,8 @@ namespace Nameless
     | ty', .induc ty =>
       -- NOTE: substitution is necessary to ensure constraint key contains the unsolved variables
       let ty' := (simplify (subst context.env_simple ty'))
-      if reducible context ty' (.induc ty) then
+      let ty_r := (simplify (subst context.env_simple (.induc ty)))
+      if reducible context ty' ty_r then
         unify i context ty' (instantiate 0 [Ty.induc ty] ty) 
       else
         match context.env_relational.find? ty' with
@@ -1910,6 +1911,7 @@ namespace Nameless
           )
           if context_tys'.isEmpty then
             none
+            -- some (i, context_tys ++ context_tys')
           else
             some (i, context_tys ++ context_tys')
         )
@@ -2043,7 +2045,7 @@ namespace Nameless
 
         -- NOTE: constraint that ty' <= ty_IH is built into inductive type
         let relational_type := [lesstype| induct ⟨ty_content⟩ ]
-        let ty' := [lesstype| {2 // β[1] -> β[0] with β[1] * β[0] <: ⟨relational_type⟩} >> β[0]] 
+        let ty' := Ty.simplify [lesstype| {2 // β[1] -> β[0] with β[1] * β[0] <: ⟨relational_type⟩} >> β[0]] 
         (i, [(context, ty')])
       ))
 
@@ -2913,15 +2915,25 @@ namespace Nameless
   ))
   ]
 
-  -- incomplete
-  -- expected: ?succ ?zero unit
+  -- NOTE: requires simplification when checking if relation is reducible 
+  -- expected: the difference: ?succ ?zero unit
   #eval infer_reduce 10 [lessterm|
-  (fix(\ y[0] => ( 
+  ((fix(\ y[0] => ( 
     \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1]))
     \ (#zero (), y[0]) => y[0]
     \ (y[0], #zero ()) => y[0] 
-  )) (#succ #succ #zero (), #succ #succ #succ #zero ()))
+  ))) (#succ #succ #zero (), #succ #succ #succ #zero ()))
   ]
+
+  -- expected: the difference: ?succ ?zero unit
+  #eval unify_reduce 10
+  [lesstype|
+  ({2 // (β[1] ->
+    β[0]) with (β[1] * β[0]) <: (induct ({3 // ((?succ β[1] * ?succ β[2]) * β[0]) with ((β[1] * β[2]) * β[0] & ⊤) <: β[3]} |
+      ({1 // ((?zero unit * β[0]) * β[0])} | {1 // ((β[0] * ?zero unit) * β[0])} | ⊥)))} >> β[0])
+  ]
+  [lesstype| ?succ ?zero unit * ?succ ?succ ?zero unit -> α[7] ]
+  [lesstype| α[7] ] 
 
   ----------------------------------
 
