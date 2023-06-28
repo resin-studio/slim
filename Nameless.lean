@@ -1936,30 +1936,34 @@ namespace Nameless
       else
         let free_var_boundary := i
 
-        let (i, context_tys_arg) := (infer i context env_tm t_arg)
-
-
         -----------------------------------------------
-        let is_safe := context_tys_arg.all (fun (context, ty_arg) =>
-          let ty_arg := (Ty.subst context.env_simple ty_arg)
-          let ty_expected := (Ty.subst context.env_simple ty_expected)
-          let (i, contexts') := ( 
-            (Ty.unify i context ty_arg ty_expected)
+        let (i, context_ty_args) := (infer i context env_tm t_arg)
+        let op := context_ty_args.foldl (fun op_i_context_tys (context, ty_arg) =>
+          let ty_schema := Ty.generalize free_var_boundary context ty_arg
+          -- let ty_schema := ty_arg
+          match op_i_context_tys with
+          | none => none
+          | some (i, context_tys) => (
+            let (i, context_tys') := (
+              bind_nl (Ty.unify i context ty_arg ty_expected) (fun i context =>
+                let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_schema)]) 
+                let t := instantiate 0 [x] t 
+                (infer i context (env_tm ; env_tmx) t) 
+              )
+            )
+            if context_tys'.isEmpty then
+              none
+              -- TODO: figure out why this breaks max path selection
+              -- unsafe fix: some (i, context_tys ++ context_tys')
+            else
+              some (i, context_tys ++ context_tys')
           )
-          !contexts'.isEmpty
-        )
 
-        if is_safe then
-          bind_nl (i, context_tys_arg) (fun i (context, ty_arg) =>
-          bind_nl (Ty.unify i context ty_arg ty_expected) (fun i context =>
-            let ty_schema := Ty.generalize free_var_boundary context ty_arg
-            -- let ty_schema := ty_arg
-            let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_schema)]) 
-            let t := instantiate 0 [x] t 
-            (infer i context (env_tm ; env_tmx) t) 
-          ))
-        else
-          (i, [])
+        ) (some (i, []))
+
+        match op with
+        | some (i, context_tys) => (i, context_tys)
+        | none => (i, [])
         ------------------------------------------------------
 
         -- let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
@@ -2760,6 +2764,9 @@ namespace Nameless
   -/
 
 
+-- diverges
+-- non-termination without let generalization
+/-
   #eval infer_reduce 0 [lessterm|
     -- fix \ self \ data => 
     let y[0] = fix (\ y[0] => \ y[0] => 
@@ -2770,7 +2777,9 @@ namespace Nameless
     (y[0] #nil())
     -- (((y[0] #nil()).update #hello()).update #world())
   ]
+-/
   ------------------
+
 
   ----------------------------------------
   -- weakening mechanism is deprecated
@@ -3584,6 +3593,7 @@ namespace Nameless
   ] 
 
 
+  -- incomplete
   -- NOTE: max of the two inputs  
   -- NOTE: this fails if there is parameter type added to fix type
   -- expected: ?succ ?succ ?succ ?zero unit   
@@ -4022,7 +4032,7 @@ namespace Nameless
   -------- collapsing ------------
 
   -- expected: multiple environments
-  #eval infer_envs 0 [lessterm| 
+  #eval infer_simple 0 [lessterm| 
     let y[0] = _ in 
     (( \ #one() => #two() \ #three() => #four()) y[0])
   ]
@@ -4034,16 +4044,12 @@ namespace Nameless
     ((\ #two() => #thing()) (( \ #one() => #two() \ #three() => #four()) y[0]))
   ]
 
-  -- unsound
-  -- 
-  #eval infer_envs 0 [lessterm| 
+  #eval infer_simple 0 [lessterm| 
     let y[0] = _ in 
     let y[0] = (( \ #one() => #two() \ #three() => #four()) y[0]) in
-    ((\ y[0] => y[0]) y[0])
+    y[0]
   ]
 
-  -- unsound
-  -- indirection with let-binding causes problem
   -- expected: ⊥
   #eval infer_reduce 0 [lessterm| 
     let y[0] = _ in 
@@ -4051,6 +4057,12 @@ namespace Nameless
     ((\ #two() => #thing()) y[0])
   ]
 
+  -- expected: ?thing unit
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = _ in 
+    let y[0] = (( \ #one() => #two()) y[0]) in
+    ((\ #two() => #thing()) y[0])
+  ]
 
   --------------------------------------
 

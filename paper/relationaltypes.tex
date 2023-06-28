@@ -911,8 +911,8 @@ If even one combination cannot be unified then the inference of application fail
 indicated by breaking the for-loop, which then implicitly returns an empty set.  
 
 the let-binding case infers the type of the argument and checks that
-all possible types subtype the annotation. It then generalizes 
-type variables in the inferred argument type while maintaining
+all possible types subtype the annotation and result in a well-typed body. 
+It generalizes type variables in the inferred argument type while maintaining
 the constraints indicated by the subtyping environment. 
 
 The fix case infers inductive types for the parameters and bodies of its
@@ -1075,33 +1075,21 @@ Finally, the implication type is projected from the constructed relation and gen
     \\
     \I\I \Omega_{stale} \leftarrow \F{staleTVs}()
     \\
-    \I\I T \leftarrow \F{infer}(\Omega, \Delta, \Gamma, e_a)
+    \I\I \B{for } (\Omega, \Delta, \tau_a) \leftarrow \F{infer}(\Omega, \Delta, \Gamma, e_a):
     \\
-    \I\I allowed \leftarrow \F{true}
+    \I\I\I C \leftarrow (
     \\
-    \I\I \B{for } (\Omega, \Delta, \tau_a) \leftarrow T:
+    \I\I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_a, \tau_p):
     \\
-    \I\I\I \B{if } \F{empty}(\F{unify}(\Omega, \Delta, \tau_a, \tau_p)) \B{ then }
+    \I\I\I\I\I \tau_{\Delta} \leftarrow \F{pack}(\Omega_{stale}, \Delta, \tau_a)
     \\
-    \I\I\I\I allowed \leftarrow \F{false}
+    \I\I\I\I\I \alpha \leftarrow \F{freshTV}()
     \\
-    \I\I\I\I \B{break}
+    \I\I\I\I\I \F{infer}(\Omega, \Delta, (\Gamma;\code{$x$:[$\alpha$<:$\tau_{\Delta}$]$\alpha$}), e_b)
     \\
-    \I\I\I \B{else } \B{pass}
+    \I\I\I ) 
     \\
-    \I\I \B{if } allowed \B{ then }
-    \\
-    \I\I\I \B{for } (\Omega, \Delta, \tau_a) \leftarrow T:
-    \\
-    \I\I\I \B{for } (\Omega, \Delta) \leftarrow \F{unify}(\Omega, \Delta, \tau_a, \tau_p):
-    \\
-    \I\I\I\I \tau_{\Delta} \leftarrow \F{pack}(\Omega_{stale}, \Delta, \tau_a)
-    \\
-    \I\I\I\I \alpha \leftarrow \F{freshTV}()
-    \\
-    \I\I\I\I \F{infer}(\Omega, \Delta, (\Gamma;\code{$x$:[$\alpha$<:$\tau_{\Delta}$]$\alpha$}), e_b)
-    \\
-    \I\I \B{else } \emptyset 
+    \I\I\I \B{if } \F{empty}(C) \B{ then } \B{break} \B{ else } C
 
     \\
 
