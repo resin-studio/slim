@@ -2594,7 +2594,7 @@ namespace Nameless
     (y[0] (#succ #zero ()))
   ]
 
-  -- NOTE: weakening causes a fairly impprecise type  
+  -- NOTE: weakening causes a fairly imprecise type  
   -- expected:  {2 // β[1] with β[0] * β[1] <: ⟨nat_list⟩}  
   #eval infer_reduce 10 [lessterm|
     let y[0] : ? >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
@@ -2603,7 +2603,8 @@ namespace Nameless
 
 ---------------------------------------------------------------
   ----------------------------------
-  -- incomplete: nat should not be subbed into relational key
+  -- complete
+  -- nat should not be subbed into relational key
   -- double
   #eval infer_reduce 10 [lessterm|
     let y[0] : ⟨nat_⟩ = _ in
@@ -4003,6 +4004,9 @@ namespace Nameless
   [lesstype| {2 // (?succ β[0] * ?cons β[1]) with (β[0] * β[1]) <: ⟨nat_list⟩} ]
 
   ---------- relational propagation ---------
+
+  -- NOTE: these are all dependent on an antecedent existential rule
+
   -- incomplete
   -- NOTE: variables are no longer expanded; 
   -- need a generalized disjunction elimination rule 
@@ -4117,7 +4121,7 @@ namespace Nameless
     ( \ #one() => #two() \ #three() => #four())
   ]
 
-  -- incomplete: inferring union instead of intersection
+  -- imprecise: inferring union instead of intersection
   -- expected: ((?one unit -> ?two unit) & (?three unit -> ?four unit))
   #eval infer_reduce 0 [lessterm| 
     (\y[0] => (( \ #one() => #two() \ #three() => #four()) y[0]))
