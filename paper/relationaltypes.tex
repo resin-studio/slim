@@ -1203,6 +1203,10 @@ The remaining cases are continued in \FIG{fig:unifyContinue}.
 The right existential case simply unifies the left type with the existential's payload
 and then unifies the existential's constraint, such that unifying the payload
 may bear witness to a type that leads to verifying the constraint. 
+
+\TODO{consider using both forward and backtracking in unification and subtyping rules. 
+Since it is not certain which constraint is stronger (in contrast to prolog). Union solutions together}
+
 The right existential case resembles the unification and backtracking approach in Prolog, 
 where unification of the payload corresponds to unification of a query with the head of a horn clause,
 and solving the existential's constraint after the payload unification corresponds to

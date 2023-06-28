@@ -1023,7 +1023,19 @@ namespace Nameless
                 -- TODO: add occurs check
                 let env_sub : PHashMap Nat Ty := empty.insert id ty'
                 let ty_sub := subst env_sub key  
-                (unify i context ty_sub relation) 
+                let (i, contexts) := (unify i context ty_sub relation) 
+                ------------
+                if !contexts.isEmpty then
+                  (i, contexts)
+                else
+                  -- check inhabitation of [id <: ty']{... * id *.... with ... * id *.... <: R}
+                  -- corresponds to factoring relation
+                  let labels := extract_label_list key 
+                  let (i, contexts_oracle) := (unify i context ty_sub (factor_out_relation labels relation))
+                  if !contexts_oracle.isEmpty then
+                    (i, [context])
+                  else
+                    (i, [])
               | none => 
                 -- invariant: this never happens
                 (i, [])
@@ -1255,33 +1267,43 @@ namespace Nameless
       let ty1 := instantiate 0 args ty1
 
       ----------------------------
+      -- try both orders: forward and backtracking;
+      -- only necessary that some solution exists 
+      ----------------------------
       -- backtracking
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       ----------------------------
-      bind_nl (unify i context ty1 ty2) (fun i context => 
-        match op_ty_c with
-        | none => (i, [context])
-        | some ty_c => (
-          -------------------------------------
-          let op_ty_b := context.env_simple.find? id_bound 
-          match op_ty_b with
-          | some ty_b => 
-            (unify i context ty_b ty_c)
-          | none => 
-            -- TODO: add occurs check
-            (i, [{context with env_simple := context.env_simple.insert id_bound ty_c}])
+      let (i, contexts) := (
+        bind_nl (unify i context ty1 ty2) (fun i context => 
+          match op_ty_c with
+          | none => (i, [context])
+          | some ty_c => (
+            -------------------------------------
+            let op_ty_b := context.env_simple.find? id_bound 
+            match op_ty_b with
+            | some ty_b => 
+              (unify i context ty_b ty_c)
+            | none => 
+              -- TODO: add occurs check
+              (i, [{context with env_simple := context.env_simple.insert id_bound ty_c}])
+          )
         )
       )
-
-      -----------------------------------------
-      -- forward tracking
-      -----------------------------------------
-      -- match op_ty_c with
-      -- | none => (unify i context ty1 ty2)
-      -- | some ty_c => (
-      --   let context := {context with env_simple := context.env_simple.insert id_bound ty_c}
-      --   (unify i context ty1 ty2)
-      -- )
+      -- TODO: could union solutions together instead of if/else
+      if !contexts.isEmpty then
+        (i, contexts)
+      else 
+        -----------------------------------------
+        -- forward tracking
+        -- This allows more complete subtyping, but breaks relational selection 
+        -- consider a mechanism that combines both directions
+        -----------------------------------------
+        match op_ty_c with
+        | none => (unify i context ty1 ty2)
+        | some ty_c => (
+          let context := {context with env_simple := context.env_simple.insert id_bound ty_c}
+          (unify i context ty1 ty2)
+        )
 
     -------------------------------------
 
@@ -3146,7 +3168,12 @@ namespace Nameless
   [lesstype| ? >> β[0] -> {2//β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
 
-  -- incomplete
+  -- NOTE: the relational constraint check should check inhabitation 
+  -- [a <: Nat]{b with a * b <: nat_list} is inhabited
+  -- this requires unifying the left universal's constraint first, rather than backwards
+  -- and also checking inhabitation, use factoring to check inhabitation
+  -- X * Y <: ⟨nat_list⟩ |-  (X -> Y) <: NAT -> LIST
+  -- complete
   -- expected: true 
   #eval unify_decide 10
   [lesstype| {2//β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩} >> β[0] ]
