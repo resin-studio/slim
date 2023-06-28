@@ -981,6 +981,24 @@ namespace Nameless
         | _, _ => false
       )
 
+    -- -- antecedent exisential
+    -- | ty1, .impli (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
+    --   -- TODO: reconsider if this rule is needed 
+    --   -- TODO: safety check
+    --   -- NOTE: special impli to ensure that variables are instantiated before decomposition of lhs
+    --   -- NOTE: this only works if variables are freed before variable assignment
+    --   ------------------
+    --   -- let ty2 := (.exis n ty_c1 ty_c2 ty_pl)
+    --   -- let (i, ty2') := (i + 1, Ty.fvar i)
+    --   -- bind_nl (unify i context ty1 (.impli ty2' ty3)) (fun i context =>
+    --   --   (unify i context ty2 ty2')
+    --   -- )
+    --   ------------------------
+    --   let ty_arg := (.exis n ty_c1 ty_c2 ty_pl)
+    --   let (i, ty_arg') := (i + 1, Ty.fvar i)
+    --   bind_nl (unify i context ty_arg ty_arg') (fun i context =>
+    --     (unify i context ty1 (.impli ty_arg' ty3))
+    --   )
 
     partial def unify (i : Nat) (context : Context) (ty_l ty_r : Ty) : (Nat × List Context) :=
     if ty_l == ty_r then (i, [context]) else
@@ -1117,8 +1135,6 @@ namespace Nameless
 
 
     ------------------------------------------------------------
-
-
 
     -- left existential
     | .exis n ty_c1 ty_c2 ty1, ty2 => (
@@ -1363,16 +1379,6 @@ namespace Nameless
       bind_nl (unify i context ty_arg ty_param) (fun i context =>
         (unify i context ty_body ty_res)
       ) 
-
-    -- | ty1, .impli (.exis n ty_c1 ty_c2 ty_pl) ty3 =>
-    --   -- TODO: reconsider if this rule is needed 
-    --   -- TODO: safety check
-    --   -- NOTE: special impli to ensure that variables are instantiated before decomposition of lhs
-    --   let ty2 := (.exis n ty_c1 ty_c2 ty_pl)
-    --   let (i, ty2') := (i + 1, Ty.fvar i)
-    --   bind_nl (unify i context ty1 (.impli ty2' ty3)) (fun i context =>
-    --     (unify i context ty2 ty2')
-    --   )
 
     -- bound variable
     | .bvar id1, .bvar id2  =>
@@ -1952,9 +1958,12 @@ namespace Nameless
       | none => (i + 1, Ty.fvar i)
 
       if t_arg == Tm.hole then
-        let (i, id_expected) := (i + 1, i)
-        let context := {context with env_simple := context.env_simple.insert id_expected ty_expected}
-        let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, Ty.fvar id_expected)]) 
+        ------- old 
+        -- let (i, id_expected) := (i + 1, i)
+        -- let context := {context with env_simple := context.env_simple.insert id_expected ty_expected}
+        -- let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, Ty.fvar id_expected)]) 
+        ----------
+        let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_expected)]) 
         let t := instantiate 0 [x] t 
         (infer i context (env_tm ; env_tmx) t) 
       else
@@ -1978,7 +1987,8 @@ namespace Nameless
             if context_tys'.isEmpty then
               none
               -- TODO: figure out why this breaks max path selection
-              -- unsafe fix: some (i, context_tys ++ context_tys')
+              -- unsafe fix: 
+              -- some (i, context_tys ++ context_tys')
             else
               some (i, context_tys ++ context_tys')
           )
@@ -3657,7 +3667,7 @@ namespace Nameless
 
   --------------- debugging ---------------
 
-  -- incomplete
+  -- complete
   -- expected: ?false unit 
   #eval infer_reduce 0 [lessterm| 
     (
@@ -3719,7 +3729,7 @@ namespace Nameless
   [lesstype| α[0] ]
 
   ----------------------------
-  -- incomplete without model-based subtyping
+  -- incomplete without model-based subtyping / semantic subtyping
   ----------------------------
   -- URL: https://pnwamk.github.io/sst-tutorial/#%28part._sec~3asemantic-subtyping%29
   #eval unify_decide 0
@@ -3846,6 +3856,7 @@ namespace Nameless
   [lesstype| ?unexpected unit ]
 
 
+  -- incomplete
   -- expected: ?one unit 
   #eval infer_reduce 0 [lessterm|
     let y[0] : {β[0] with β[0] <: ?one unit | ?three unit} = _ in
@@ -3877,6 +3888,7 @@ namespace Nameless
   [lesstype| α[7] ]
 
 
+  -- complete
   -- expected: ?four unit
   #eval infer_reduce 0 [lessterm|
     let y[0] : ?one unit | ?three unit = _ in
@@ -3892,12 +3904,6 @@ namespace Nameless
   [lesstype| (?one unit -> α[7]) & (?three unit -> α[8])]
   [lesstype| α[7] * α[8] ]
 
-
-  -- expected: ?two unit | ?four unit
-  #eval unify_reduce 10 
-  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
-  [lesstype| (?one unit -> α[7]) & (?three unit -> α[7])]
-  [lesstype| α[7] ]
 
   -- NOTE: requires adjustment to be turned on
   -- expected: ?two unit | ?four unit
@@ -3970,7 +3976,7 @@ namespace Nameless
     )
   ]
 
-  -- incomplete
+  -- imprecise 
   -- expected: ?one unit
   #eval infer_reduce 0 [lessterm|
     let y[0] : ?one unit | ?three unit = _ in
