@@ -1471,6 +1471,8 @@ namespace Nameless
           ) constraints.toList
 
     -- TODO: remove this; replace with combination of universal generaliztion and compression/packing
+    -- deprecated
+    /-
     def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := (
       -- TODO: figure out way to solve relational constraints to simplify type 
       --------------------------------------
@@ -1516,6 +1518,8 @@ namespace Nameless
       -----------------------
     )
 
+    -/
+
 
 
     partial def union_all : (List Ty) -> Option Ty
@@ -1528,35 +1532,54 @@ namespace Nameless
           | .none => .some t
           | .some t' => Ty.union t t'
 
-    partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
-      let context : Context := Context.mk env_simple empty empty empty
+
+    def functiontype : Ty -> Bool
+    | .field _ _ => true 
+    | .inter _ _ => true
+    | .impli _ _ => true 
+    | .univ _ _ => true
+    | _ => false
+
+
+    partial def unify_reduce_full (i : Nat) 
+      (env_simple : PHashMap Nat Ty) (adj : PHashSet Nat)
+      (ty1 ty2 ty_result : Ty) 
+    : Option Ty
+    :=
+      let context : Context := Context.mk env_simple empty empty adj 
       let boundary := 0 
       let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
-      List.foldr (fun context ty_acc => 
-        Ty.unionize (generalize boundary context ty_result) ty_acc
-      ) Ty.bot contexts 
 
+
+      if contexts.isEmpty then
+        none
+      else
+        let intersectable := contexts.all (fun context => 
+          functiontype (subst context.env_simple ty_result)
+        )
+
+        let result := (
+          if intersectable then
+            List.foldr (fun context ty_acc => 
+              let ty_ex := Ty.compress boundary context ty_result
+              Ty.intersect [lesstype| ⟨ty_ex⟩ >> β[0]] ty_acc
+            ) Ty.top contexts 
+          else
+            List.foldr (fun context ty_acc => 
+              let ty_ex := Ty.compress boundary context ty_result
+              Ty.unionize ty_ex ty_acc
+            ) Ty.bot contexts 
+        )
+        some result
+
+    partial def unify_reduce_env (i : Nat) (env_simple : PHashMap Nat Ty) (ty1) (ty2) (ty_result) :=
+      unify_reduce_full i env_simple empty ty1 ty2 ty_result
       
     partial def unify_reduce (i : Nat) (ty1) (ty2) (ty_result) :=
-      let context : Context := ⟨empty, empty, empty, empty⟩
-      let boundary := 0 
-      let (_, contexts) := (unify i context ty1 ty2)
-      List.foldr (fun context ty_acc => 
-        Ty.unionize (generalize boundary context ty_result) ty_acc
-        -- Ty.unionize (pack boundary context ty_result) ty_acc
-        -- Ty.unionize (ty_result) ty_acc
-      ) Ty.bot contexts
+      unify_reduce_full i empty empty ty1 ty2 ty_result
 
     partial def unify_reduce_adj (adj : PHashSet Nat) (i : Nat) (ty1) (ty2) (ty_result) :=
-      let context : Context := ⟨empty, empty, empty, adj⟩
-      let boundary := 0 
-      let (_, contexts) := (unify i context ty1 ty2)
-      List.foldr (fun context ty_acc => 
-        Ty.unionize (generalize boundary context ty_result) ty_acc
-        -- Ty.unionize (pack boundary context ty_result) ty_acc
-        -- Ty.unionize (ty_result) ty_acc
-      ) Ty.bot contexts
-
+      unify_reduce_full i empty adj ty1 ty2 ty_result
 
     partial def unify_simple (i : Nat) (ty1) (ty2) :=
       let context : Context := ⟨empty, empty, empty, empty⟩
@@ -1991,16 +2014,21 @@ namespace Nameless
         let op := context_ty_args.foldl (fun op_i_tys (context, ty_arg) =>
           -- let ty_schema := Ty.generalize free_var_boundary context ty_arg
           ----------
-          -- let ty_ex := Ty.pack free_var_boundary context empty ty_arg
           let ty_ex := Ty.compress free_var_boundary context ty_arg
-          let ty_schema := [lesstype| ⟨ty_ex⟩ >> β[0]]
+
+          let ty_slice := (
+            if Ty.functiontype (Ty.subst context.env_simple ty_arg) then
+              [lesstype| ⟨ty_ex⟩ >> β[0]]
+            else
+              ty_ex
+          )
 
           match op_i_tys with
           | none => none
           | some (i, tys) => (
             let (i, tys') := (
               bind_nl (Ty.unify i context ty_arg ty_expected) (fun i _ =>
-                (i, [ty_schema])
+                (i, [ty_slice])
               )
             )
             if tys'.isEmpty then
@@ -2012,18 +2040,32 @@ namespace Nameless
         ) (some (i, []))
 
         match op with
-        | some (i, ty_schemas) => 
+        | some (i, ty_slices) => 
 
-          let ty_schema_interection := (
-            List.foldr (fun ty_schema ty_acc => 
-              Ty.intersect ty_schema ty_acc
-            ) Ty.top ty_schemas
+            -- TODO: -- avoid unsafe intersections 
+            -- intersecting is safe if the type is a function type whose parameter patterns are disjoint
+            -- option A: generalize then intersect 
+            -- option B: union then generalize
+            -- in either case A or B:
+            -- we need an inhabital check to be safe; intersect/generalize only if inhabitable
+            -- let ty_schema := ty_collapsed -- [lesstype| ⟨ty_collapsed⟩ >> β[0]]
+            -- check if generalization is inhabiltable
+
+          let ty_param := (
+            if ty_slices.all Ty.functiontype then
+              List.foldr (fun ty_slice ty_acc => 
+                Ty.intersect ty_slice ty_acc
+              ) Ty.top ty_slices
+            else
+              List.foldr (fun ty_slice ty_acc => 
+                Ty.unionize ty_slice ty_acc
+              ) Ty.bot ty_slices
           )
 
-          let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_schema_interection)]) 
+          let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_param)]) 
           let t := instantiate 0 [x] t 
           (infer i context (env_tm ; env_tmx) t) 
-        | none => (i, [])
+          | none => (i, [])
 
         -----------------------------------------------
         -- let (i, context_ty_args) := (infer i context env_tm t_arg)
@@ -2139,7 +2181,6 @@ namespace Nameless
         (i, [(context, ty')])
       ))
 
-
     partial def infer_simple i (t : Tm) :=
       let context : Ty.Context := ⟨empty, empty, empty, empty⟩
       (infer (i + 1) context {} t)
@@ -2149,28 +2190,33 @@ namespace Nameless
       let (i, context_tys) := (infer (i + 1) context {} t)
       context_tys.map (fun (context, ty) => context.env_simple)
       
-    partial def infer_union_context (i : Nat) (context : Ty.Context) (t : Tm) : Ty :=
-      let boundary := 0
-      let (_, contexts) := (infer i context {} t)
-      List.foldr (fun (context, ty') ty_acc => 
-        (Ty.union ty' ty_acc)
-      ) Ty.bot contexts
-
-    partial def infer_union (i : Nat) (t : Tm) : Ty := 
-      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
-      infer_union_context (i + 1)  context t
-
-    partial def infer_reduce_context (i : Nat) (context : Ty.Context) (t : Tm) : Ty :=
+    partial def infer_reduce_context (i : Nat) (context : Ty.Context) (t : Tm) : Option Ty :=
       let boundary := 0
       let (_, context_tys) := (infer i context {} t) 
-      List.foldr (fun (context, ty') ty_acc => 
-        Ty.unionize (Ty.generalize boundary context ty') ty_acc
-        -- Ty.unionize (Ty.pack boundary context ty') ty_acc
-        -- Ty.unionize ty' ty_acc
-      ) Ty.bot context_tys
+
+      if context_tys.isEmpty then
+        none
+      else
+        let intersectable := context_tys.all (fun (context, ty_result) => 
+          Ty.functiontype (Ty.subst context.env_simple ty_result)
+        )
+
+        let ty_collapsed := (
+          if intersectable then
+            List.foldr (fun (context, ty') ty_acc => 
+              let ty_ex := Ty.compress boundary context ty' 
+              Ty.intersect [lesstype| ⟨ty_ex⟩ >> β[0]] ty_acc
+            ) Ty.top context_tys 
+          else
+            List.foldr (fun (context, ty') ty_acc => 
+              let ty_ex := Ty.compress boundary context ty'
+              Ty.unionize ty_ex ty_acc
+            ) Ty.bot context_tys
+        )
+        some ty_collapsed
 
 
-    partial def infer_reduce (i : Nat) (t : Tm) : Ty := 
+    partial def infer_reduce (i : Nat) (t : Tm) : Option Ty := 
       let context : Ty.Context := ⟨empty, empty, empty, empty⟩
       infer_reduce_context (i + 1)  context t
 
@@ -2375,8 +2421,9 @@ namespace Nameless
   [lesstype| α[0] ]
 
 
+  -- unsound
   -- requires weakening to be turned off
-  -- expected: ⊥
+  -- expected: none 
   #eval unify_reduce 30
   [lesstype| ⊤ >> β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ?foo ?succ ?zero unit -> α[0] ] 
@@ -2428,7 +2475,7 @@ namespace Nameless
 
   ----------------
 
-  -- expected: ⊥
+  -- expected: none 
   #eval unify_reduce 10
   [lesstype| {2 // β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩}]
   [lesstype| ?succ ?zero unit -> α[2]]
@@ -2549,7 +2596,7 @@ namespace Nameless
 
 
 
-  -- expected: ⊥
+  -- expected: none 
   #eval unify_reduce 30 
   [lesstype| (α[0] * ?zero unit) | (?zero unit * α[0]) ] 
   [lesstype| (⟨nat_⟩ * ?zero unit) ] 
@@ -2772,7 +2819,9 @@ namespace Nameless
       )))
   ] 
 
-  -- expected: ⊥  
+  -- unsound
+  -- observed error: there is a single solution containing an empty environment 
+  -- expected: none  
   #eval infer_reduce 0 [lessterm| 
     let y[0] : ?succ ?zero unit = 
     (
@@ -3442,7 +3491,7 @@ namespace Nameless
 
 --------------------------------------------------------
 
-  -- expected: ⊥
+  -- expected: none 
   #eval infer_reduce 0 [lessterm| 
     let y[0] : (? >> ? >> β[0] * β[1] -> {1 // β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩}) = 
     (\ (y[0], y[1]) => y[0]) in
@@ -3572,7 +3621,7 @@ namespace Nameless
 
 
   -- NOTE: not reducible 
-  -- expected: ⊥
+  -- expected: none 
   #eval unify_reduce 10
   [lesstype| (α[1] * α[2]) * ?true unit ]
   [lesstype|
@@ -3680,7 +3729,7 @@ namespace Nameless
   ]
 
 
-  -- incomplete: update generalize so that infer_reduce always generalizes and combines using intersection instead of union
+  -- complete
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   #eval infer_reduce 0 [lessterm| 
@@ -3808,7 +3857,7 @@ namespace Nameless
       {(?succ β[0] * ?zero unit) * ?false unit}
   ]
 
-  -- expected: ⊥ 
+  -- expected: none 
   #eval unify_reduce 10 
   [lesstype|
     (?ooga unit >>
@@ -3926,7 +3975,7 @@ namespace Nameless
     )
   ]
 
-  -- expected: ⊥ 
+  -- expected: none 
   #eval infer_reduce 0 [lessterm|
     let y[0] : ?one unit | ?two unit = _ in
     (
@@ -3944,7 +3993,7 @@ namespace Nameless
   [lesstype| {β[0] with β[0] <: (?one unit | ?three unit)} -> α[7] ]
   [lesstype| α[7] ]
 
-  -- expected: ⊥ 
+  -- expected: none 
   #eval unify_reduce 10 
   [lesstype| {β[0] with β[0] <: (?one unit | ?three unit)} ]
   [lesstype| ?one unit ]
@@ -4161,7 +4210,7 @@ namespace Nameless
 
 
   -- argument type is weaker than parameter type
-  -- expected: ⊥
+  -- expected: none 
   #eval infer_reduce 10 [lessterm|
     let y[0] : α[0] = _ in
     let y[0] : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
@@ -4181,7 +4230,7 @@ namespace Nameless
   ]
 
 
-  -- expected: ⊥
+  -- expected: none 
   #eval infer_reduce 0 [lessterm| 
     let y[0] = _ in 
     ((\ #two() => #thing()) (( \ #one() => #two() \ #three() => #four()) y[0]))
@@ -4193,12 +4242,26 @@ namespace Nameless
     y[0]
   ]
 
-  -- expected: ⊥
+  -- sound
+  -- expected: none 
   #eval infer_reduce 0 [lessterm| 
     let y[0] = _ in 
     let y[0] = (( \ #one() => #two() \ #three() => #four()) y[0]) in
     ((\ #two() => #thing()) y[0])
   ]
+
+  -----------
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = _ in 
+    let y[0] = (( \ #one() => #two() \ #three() => #four()) y[0]) in
+    y[0]
+  ]
+
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = _ in 
+    (( \ #one() => #two() \ #three() => #four()) y[0])
+  ]
+  -----------
 
   -- expected: ?thing unit
   #eval infer_reduce 0 [lessterm| 
@@ -4294,7 +4357,7 @@ namespace Nameless
   ]
   -----------------------------------
 
-  -- expected: ⊥
+  -- expected: none 
   #eval unify_reduce 10
   [lesstype|
     (?zero unit * ?succ ?zero unit) -> unit
@@ -4303,7 +4366,7 @@ namespace Nameless
   [lesstype| α[7] ]
 
   -- NOTE: in app rule: collapse arg's union type before applying 
-  -- expected: ⊥
+  -- expected: none 
   #eval infer_reduce 10
   [lessterm|
     let y[0] : ? >> β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
@@ -4318,7 +4381,7 @@ namespace Nameless
     (y[0] (#foo ()))
   ]
 
-  -- expected: ⊥
+  -- expected: none 
   #eval infer_reduce 10
   [lessterm|
     let y[0] : (?foo unit) -> unit = _ in 
@@ -4328,7 +4391,7 @@ namespace Nameless
   -------------------------------------------
   ---------- let binding soundness -----------
 
-  -- expected: ⊥
+  -- expected: none 
   #eval infer_reduce 10
   [lessterm|
     let y[0] : ? >> β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
