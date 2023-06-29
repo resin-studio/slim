@@ -402,6 +402,8 @@ Moreover, there must be enough paths of the applied function to handle all
 the possible values of the argument.
 
 \TODO{make sure inductive type (LED) is explained clearly}
+
+\TODO{max type inference is wrong; should be an intersection}
 \begin{mathpar}
 \\
   \inferrule {
@@ -914,6 +916,8 @@ the let-binding case infers the type of the argument and checks that
 all possible types subtype the annotation and result in a well-typed body. 
 It generalizes type variables in the inferred argument type while maintaining
 the constraints indicated by the subtyping environment. 
+
+\TODO{update generalization code to reflect the intersection of type schemas}
 
 The fix case infers inductive types for the parameters and bodies of its
 target expression. Moreover, it inductively relates the parameter and body types to each other.

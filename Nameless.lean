@@ -1470,6 +1470,7 @@ namespace Nameless
             ]
           ) constraints.toList
 
+    -- TODO: remove this; replace with combination of universal generaliztion and compression/packing
     def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := (
       -- TODO: figure out way to solve relational constraints to simplify type 
       --------------------------------------
@@ -1986,36 +1987,76 @@ namespace Nameless
       else
         let free_var_boundary := i
 
-        -----------------------------------------------
         let (i, context_ty_args) := (infer i context env_tm t_arg)
-        let op := context_ty_args.foldl (fun op_i_context_tys (context, ty_arg) =>
-          let ty_schema := Ty.generalize free_var_boundary context ty_arg
-          -- let ty_schema := ty_arg
-          match op_i_context_tys with
+        let op := context_ty_args.foldl (fun op_i_tys (context, ty_arg) =>
+          -- let ty_schema := Ty.generalize free_var_boundary context ty_arg
+          ----------
+          -- let ty_ex := Ty.pack free_var_boundary context empty ty_arg
+          let ty_ex := Ty.compress free_var_boundary context ty_arg
+          let ty_schema := [lesstype| ⟨ty_ex⟩ >> β[0]]
+
+          match op_i_tys with
           | none => none
-          | some (i, context_tys) => (
-            let (i, context_tys') := (
-              bind_nl (Ty.unify i context ty_arg ty_expected) (fun i context =>
-                let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_schema)]) 
-                let t := instantiate 0 [x] t 
-                (infer i context (env_tm ; env_tmx) t) 
+          | some (i, tys) => (
+            let (i, tys') := (
+              bind_nl (Ty.unify i context ty_arg ty_expected) (fun i _ =>
+                (i, [ty_schema])
               )
             )
-            if context_tys'.isEmpty then
+            if tys'.isEmpty then
               none
-              -- TODO: figure out why this breaks max path selection
-              -- unsafe fix: 
-              -- some (i, context_tys ++ context_tys')
             else
-              some (i, context_tys ++ context_tys')
+              some (i, tys ++ tys')
           )
 
         ) (some (i, []))
 
         match op with
-        | some (i, context_tys) => (i, context_tys)
+        | some (i, ty_schemas) => 
+
+          let ty_schema_interection := (
+            List.foldr (fun ty_schema ty_acc => 
+              Ty.intersect ty_schema ty_acc
+            ) Ty.top ty_schemas
+          )
+
+          let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_schema_interection)]) 
+          let t := instantiate 0 [x] t 
+          (infer i context (env_tm ; env_tmx) t) 
         | none => (i, [])
+
+        -----------------------------------------------
+        -- let (i, context_ty_args) := (infer i context env_tm t_arg)
+        -- let op := context_ty_args.foldl (fun op_i_context_tys (context, ty_arg) =>
+        --   let ty_schema := Ty.generalize free_var_boundary context ty_arg
+        --   -- let ty_schema := ty_arg
+        --   match op_i_context_tys with
+        --   | none => none
+        --   | some (i, context_tys) => (
+        --     let (i, context_tys') := (
+        --       bind_nl (Ty.unify i context ty_arg ty_expected) (fun i context =>
+        --         let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_schema)]) 
+        --         let t := instantiate 0 [x] t 
+        --         (infer i context (env_tm ; env_tmx) t) 
+        --       )
+        --     )
+        --     if context_tys'.isEmpty then
+        --       none
+        --       -- TODO: figure out why this breaks max path selection
+        --       -- unsafe fix: 
+        --       -- some (i, context_tys ++ context_tys')
+        --     else
+        --       some (i, context_tys ++ context_tys')
+        --   )
+
+        -- ) (some (i, []))
+
+        -- match op with
+        -- | some (i, context_tys) => (i, context_tys)
+        -- | none => (i, [])
         ------------------------------------------------------
+
+        -------------------------------------
 
         -- let ty_strong := context_tys_arg.foldl (fun ty_strong (context_arg, ty_arg) =>
         --   Ty.unionize (Ty.subst context_arg.env_simple ty_arg) ty_strong
@@ -3639,7 +3680,7 @@ namespace Nameless
   ]
 
 
-  -- NOTE: type is big and ugly and causes non-termination when there's a safety check in left-existential
+  -- incomplete: update generalize so that infer_reduce always generalizes and combines using intersection instead of union
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   #eval infer_reduce 0 [lessterm| 
@@ -3660,9 +3701,8 @@ namespace Nameless
   ] 
 
 
-  -- incomplete
+  -- complete
   -- NOTE: max of the two inputs  
-  -- NOTE: this fails if there is parameter type added to fix type
   -- expected: ?succ ?succ ?succ ?zero unit   
   #eval infer_reduce 0 [lessterm| 
     let y[0] = fix (\ y[0] =>
@@ -3691,21 +3731,10 @@ namespace Nameless
   ]
 
   -------------
-  -- PROBLEM: the function type of max should be inferred to be an intersection, not a union 
-  -- consider if order of rules, such as when variables are freed, influences this
   #eval unify_reduce 10
   [lesstype|
-    (? >> (? >> ({2 // ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩} >> β[0]))) |
-    (? >> (? >> ({2 // ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩} >> β[0])))
-  ]
-  [lesstype| ?succ ?zero unit * ?succ ?succ ?succ ?zero unit -> α[7] ]
-  [lesstype| α[7]]
-
-
-  #eval unify_reduce 10
-  [lesstype|
-    (? >> (? >> ({2 // ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩} >> β[0]))) & 
-    (? >> (? >> ({2 // ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩} >> β[0])))
+    (({2 // ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩} >> β[0])) & 
+    (({2 // ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩} >> β[0]))
   ]
   [lesstype| ?succ ?zero unit * ?succ ?succ ?succ ?zero unit -> α[7] ]
   [lesstype| α[7]]
@@ -4192,6 +4221,20 @@ namespace Nameless
     (\y[0] => (( \ #one() => #two() \ #three() => #four()) y[0]))
   ]
 
+  #eval infer_envs 0 [lessterm| 
+    (\y[0] => (( \ #one() => #two() \ #three() => #four()) y[0]))
+  ]
+
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = _ in
+    (( \ #one() => #two() \ #three() => #four()) y[0])
+  ]
+
+  #eval unify_reduce 10
+  [lesstype| (?one unit -> ?two unit) & (?three unit -> ?four unit) ]
+  [lesstype| α[7] -> α[8]]
+  [lesstype| α[7] -> α[8]]
+
   ------- path selection --------------
   -- expected: ?two unit 
   #eval infer_reduce 0 [lessterm| 
@@ -4326,8 +4369,7 @@ namespace Nameless
   (y[1] (y[0], #zero ()))
   ]
 
-  -- NOTE: this is specialized because left-universal checks constraints after unification
-  -- expected: ⊥ 
+  -- expected: nat 
   #eval infer_reduce 0 [lessterm|
   let y[0] : ⟨nat_⟩ >> β[0] * β[0] -> β[0] = _ in 
   let y[0] : ⟨even⟩ = _ in
