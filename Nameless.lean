@@ -2041,16 +2041,8 @@ namespace Nameless
 
         match op with
         | some (i, ty_slices) => 
-
-            -- TODO: -- avoid unsafe intersections 
-            -- intersecting is safe if the type is a function type whose parameter patterns are disjoint
-            -- option A: generalize then intersect 
-            -- option B: union then generalize
-            -- in either case A or B:
-            -- we need an inhabital check to be safe; intersect/generalize only if inhabitable
-            -- let ty_schema := ty_collapsed -- [lesstype| ⟨ty_collapsed⟩ >> β[0]]
-            -- check if generalization is inhabiltable
-
+          -- NOTE: it seems that Remy doesn't need to do a function type check
+          -- Remy's version operates on lambda calculus, so all types are function types
           let ty_param := (
             if ty_slices.all Ty.functiontype then
               List.foldr (fun ty_slice ty_acc => 
