@@ -1155,9 +1155,7 @@ namespace Nameless
         | _ => none
       )
 
-
       let (i, contexts_constraint) := (unify i context ty_c1 ty_c2)
-
       match env_simple_unchanged contexts_constraint with 
       | some context_constraint => 
         let (i, contexts) := (unify i context_constraint ty1 ty2) 
@@ -1270,9 +1268,28 @@ namespace Nameless
       -- try backtracking order first
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       -------------------
-      bind_nl (unify i context ty' ty) (fun i context => 
-        unify i context ty_c1 ty_c2
+      let (i, contexts) := (
+        --------------
+        -- backwards
+        --------------
+        bind_nl (unify i context ty' ty) (fun i context => 
+          unify i context ty_c1 ty_c2
+        )
       )
+
+      if !contexts.isEmpty then
+        (i, contexts)
+      else
+        (i, [])
+        --------------
+        -- forward 
+        -- diverges
+        --------------
+        -- bind_nl (unify i context ty_c1 ty_c2) (fun i context => 
+        --   unify i context ty' ty
+        -- )
+        ---------------
+
 
     -- left universal
     | .univ op_ty_c ty1, ty2 =>
@@ -3665,6 +3682,54 @@ namespace Nameless
     (y[0] (#succ #zero(), #succ #succ #succ #zero()))
   ] 
 
+
+  def led_ := [lesstype|
+    induct 
+      {1 // ((?zero unit * β[0]) * ?true unit)} |
+      {3 // ((?succ β[1] * ?succ β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
+      {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
+  ]
+
+  -------------
+  -- PROBLEM: the function type of max should be inferred to be an intersection, not a union 
+  -- consider if order of rules, such as when variables are freed, influences this
+  #eval unify_reduce 10
+  [lesstype|
+    (? >> (? >> ({2 // ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩} >> β[0]))) |
+    (? >> (? >> ({2 // ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩} >> β[0])))
+  ]
+  [lesstype| ?succ ?zero unit * ?succ ?succ ?succ ?zero unit -> α[7] ]
+  [lesstype| α[7]]
+
+
+  #eval unify_reduce 10
+  [lesstype|
+    (? >> (? >> ({2 // ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩} >> β[0]))) & 
+    (? >> (? >> ({2 // ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩} >> β[0])))
+  ]
+  [lesstype| ?succ ?zero unit * ?succ ?succ ?succ ?zero unit -> α[7] ]
+  [lesstype| α[7]]
+
+
+  -- expected: ?succ ?succ ?succ ?zero unit
+  #eval unify_reduce 10
+  [lesstype| (?succ ?zero unit * ?succ ?succ ?succ ?zero unit) * α[7] ]
+  [lesstype|
+    ({2 // ((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩}) 
+    |
+    ({2 // ((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩})
+  ]
+  [lesstype| α[7]]
+
+  -- expected: ?succ ?succ ?succ ?zero unit
+  #eval unify_reduce 10
+  [lesstype| (?succ ?succ ?succ ?zero unit * ?succ ?zero unit) * α[7] ]
+  [lesstype|
+    ({2 // ((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩}) 
+    |
+    ({2 // ((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩})
+  ]
+  [lesstype| α[7]]
 
   --------------- debugging ---------------
 
