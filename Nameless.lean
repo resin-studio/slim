@@ -1421,7 +1421,10 @@ namespace Nameless
 
     | _, _ => (i, []) 
 
-    partial def compress (boundary : Nat) (context : Context) (ty : Ty) :=
+    def stale_boundary (boundary : Nat) : PHashSet Nat :=
+      from_list (List.range boundary)
+
+    partial def compress (stale : PHashSet Nat) (context : Context) (ty : Ty) :=
       -----------------------
       -- assumption: env_simple is cycle-free  
       -----------------------
@@ -1437,7 +1440,7 @@ namespace Nameless
 
         -- relational constraints
         let constraints : PHashMap Ty Ty := fids.fold (fun constraints fid => 
-          if fid >= boundary then
+          if !stale.contains fid then
             match context.env_keychain.find? fid with
             | some keychain =>
               keychain.fold (fun constraints key =>
@@ -1447,7 +1450,7 @@ namespace Nameless
                   if constraints.contains key then
                     constraints
                   else
-                    constraints.insert key (compress boundary context relation) 
+                    constraints.insert key (compress stale context relation) 
                 | none => 
                   -- invariant: this impli should never happen
                   constraints 
@@ -1464,11 +1467,63 @@ namespace Nameless
         else
           intersect_over (fun (ty_lhs, ty_rhs) => 
             let fvs_constraints := (free_vars ty_lhs)
-            let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
+            let fids_c := List.filter (fun id => !stale.contains id) (toList fvs_constraints)
             [lesstype|
               {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
             ]
           ) constraints.toList
+
+    -- old
+    -- partial def compress (boundary : Nat) (context : Context) (ty : Ty) :=
+    --   -----------------------
+    --   -- assumption: env_simple is cycle-free  
+    --   -----------------------
+
+    --   let ty := simplify (subst context.env_simple ty)
+
+    --   let fids := (free_vars ty)
+    --   if fids.isEmpty then
+    --     ty
+    --   else 
+
+    --     let constraints : PHashMap Ty Ty := empty
+
+    --     -- relational constraints
+    --     let constraints : PHashMap Ty Ty := fids.fold (fun constraints fid => 
+    --       if fid >= boundary then
+    --         match context.env_keychain.find? fid with
+    --         | some keychain =>
+    --           keychain.fold (fun constraints key =>
+    --             (match context.env_relational.find? key with
+    --             | some relation => 
+    --               let key := subst context.env_simple key
+    --               if constraints.contains key then
+    --                 constraints
+    --               else
+    --                 constraints.insert key (compress boundary context relation) 
+    --             | none => 
+    --               -- invariant: this impli should never happen
+    --               constraints 
+    --             )
+    --           ) constraints
+    --         | none => constraints
+    --       else
+    --         constraints
+    --     ) constraints 
+
+
+    --     if constraints.isEmpty then
+    --       ty
+    --     else
+    --       intersect_over (fun (ty_lhs, ty_rhs) => 
+    --         let fvs_constraints := (free_vars ty_lhs)
+    --         let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
+    --         [lesstype|
+    --           {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
+    --         ]
+    --       ) constraints.toList
+
+-----------------------------------------------------
 
     -- TODO: remove this; replace with combination of universal generaliztion and compression/packing
     -- deprecated
@@ -1547,7 +1602,7 @@ namespace Nameless
     : Option Ty
     :=
       let context : Context := Context.mk env_simple empty empty adj 
-      let boundary := 0 
+      let stale : PHashSet Nat := empty 
       let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
 
 
@@ -1561,12 +1616,12 @@ namespace Nameless
         let result := (
           if intersectable then
             List.foldr (fun context ty_acc => 
-              let ty_ex := Ty.compress boundary context ty_result
+              let ty_ex := Ty.compress stale context ty_result
               Ty.intersect [lesstype| ⟨ty_ex⟩ >> β[0]] ty_acc
             ) Ty.top contexts 
           else
             List.foldr (fun context ty_acc => 
-              let ty_ex := Ty.compress boundary context ty_result
+              let ty_ex := Ty.compress stale context ty_result
               Ty.unionize ty_ex ty_acc
             ) Ty.bot contexts 
         )
@@ -2021,7 +2076,7 @@ namespace Nameless
         let op := context_ty_args.foldl (fun op_i_tys (context, ty_arg) =>
           -- let ty_schema := Ty.generalize free_var_boundary context ty_arg
           ----------
-          let ty_ex := Ty.compress free_var_boundary context ty_arg
+          let ty_ex := Ty.compress (Ty.stale_boundary free_var_boundary) context ty_arg
 
           let ty_slice := (
             if Ty.functiontype (Ty.subst context.env_simple ty_arg) then
@@ -2222,13 +2277,13 @@ namespace Nameless
         let ty_collapsed := (
           if intersectable then
             List.foldr (fun (context, ty') ty_acc => 
-              let ty_ex := Ty.compress boundary context ty' 
+              let ty_ex := Ty.compress (Ty.stale_boundary boundary) context ty' 
               -- Ty.intersect [lesstype| ⟨ty_ex⟩ >> β[0]] ty_acc
               Ty.intersect ty_ex ty_acc
             ) Ty.top context_tys 
           else
             List.foldr (fun (context, ty') ty_acc => 
-              let ty_ex := Ty.compress boundary context ty'
+              let ty_ex := Ty.compress (Ty.stale_boundary boundary) context ty'
               Ty.unionize ty_ex ty_acc
             ) Ty.bot context_tys
         )
