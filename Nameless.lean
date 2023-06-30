@@ -2148,12 +2148,16 @@ namespace Nameless
       -- Craig: proof : A -> B ==> A -> I -> B
       -- type inference : program ==> program : X -> Y ==> X -> Y <: A -> B ==> A <: X, Y <: B ==> A -> (X -> Y) -> B   
       let boundary := i
-      let (i, ty_IH) := (i + 1, Ty.fvar i) 
-      let (i, ty_IC) := (i + 1, Ty.fvar i) 
+      let (i, tvar_IH) := (i + 1, i) 
+      let (i, tvar_IC) := (i + 1, i) 
       bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
-      bind_nl (Ty.unify i context ty1 (Ty.impli ty_IH ty_IC)) (fun i context =>
-        let ty_IH := (Ty.subst context.env_simple ty_IH)
-        let ty_IC := (Ty.subst context.env_simple ty_IC)
+      bind_nl (Ty.unify i context ty1 (Ty.impli (Ty.fvar tvar_IH) (Ty.fvar tvar_IC))) (fun i context =>
+        -- let ty_IH := ymatch context.env_simple.find? tvar_IH  with | some ty_IH => ty_IH | none => Ty.bot
+        -- let ty_IC := match context.env_simple.find? tvar_IC  with | some ty_IC => ty_IC | none => Ty.top
+        -- TODO: need to connect result of recursive call to result of function applied to it
+        -- TODO: consider using compress
+        let ty_IH := Ty.subst context.env_simple (Ty.fvar tvar_IH)
+        let ty_IC := Ty.subst context.env_simple (Ty.fvar tvar_IC)
 
         let ty_content := List.foldr (fun ty_impli ty_acc =>
           let fvs := (toList (Ty.free_vars ty_impli)).filter (fun fid => fid >= boundary)
@@ -4524,10 +4528,12 @@ namespace Nameless
   --   fix(\ y[0] => (
   --     \ #zero () => #zero () 
   --     \ #succ y[0] => (
-  --       (y[1] y[0])
+  --       let y[0] = (y[1] y[0]) in
+  --       ((⟨add⟩) (y[0], #succ y[1]))
   --     )
   --   ))
   -- ]
+
 
   ------------------
 
@@ -4540,26 +4546,26 @@ namespace Nameless
 
   ------------------
 
-  def sum := [lessterm|
-    fix(\ y[0] => (
-      \ #zero () => #zero () 
-      \ #succ y[0] => (
-        let y[0] = (y[1] y[0]) in
-        ((⟨add⟩) (y[0], #succ y[1]))
-      )
-       -- {2 // (?succ X * Y) with (X, ?) <: self} 
-       -- Y = 
-    ))
-  ]
 
 
+  /-
+({2 // (β[1] -> β[0]) with (β[1] * β[0]) <: (induct (
+    (?zero unit * ?zero unit) |
+    {2 // (?succ β[1] * ?add (β[0] * ?succ β[1])) with (β[1] * β[0]) <: β[2]}
+))} >> β[0])
 
-   --
-   /-
-   some ({2 // (β[1] ->
-   β[0]) with (β[1] * β[0]) <: (induct ((?zero unit * ?zero unit) | {2 // (?succ β[1] * β[0]) with (β[1] * β[0]) <: β[2]}))} >> β[0])
-   -/
+  -/
+  -- def sum := [lessterm|
+  --   fix(\ y[0] => (
+  --     \ #zero () => #zero () 
+  --     \ #succ y[0] => (
+  --       (#add ((y[1] y[0]), #succ y[0]))
+  --     )
+  --   ))
+  -- ]
 
+
+  -- actual:
   /-
   ({3 // 
     ({2 // (β[1] -> β[0]) with (β[1] * β[0]) <: (induct (
@@ -4572,6 +4578,25 @@ namespace Nameless
     ))
   } >> β[0])
   -/
+  --expected:
+  /-
+       {2 // (?succ X * A) with (X, Y) <: self} 
+       where
+        add (e1, e2) : A 
+        e1 : Y
+        e2 : ?succ X 
+  -/
+  def sum := [lessterm|
+    fix(\ y[0] => (
+      \ #zero () => #zero () 
+      \ #succ y[0] => (
+        ((⟨add⟩) ((y[1] y[0]), #succ y[0]))
+      )
+    ))
+  ]
+
+  -- !!!maybe need to compress IH
+
   #eval infer_reduce 0 sum 
 
   -- incomplete
