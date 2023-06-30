@@ -1600,16 +1600,18 @@ namespace Nameless
       let (i, contexts) := icontexts
       (i, contexts.map fun context => (context, ty))
 
-    def to_pair_type : Ty -> Ty 
-    | .impli ty1 ty2 => 
-      [lesstype| ⟨ty1⟩ * ⟨ty2⟩ ] 
-    | [lesstype| ⊤ ] =>  [lesstype| ⊥ ]
-    | _ =>  [lesstype| ⊤ ]
+    -- deprecated
+    -- def to_pair_type : Ty -> Ty 
+    -- | .impli ty1 ty2 => 
+    --   [lesstype| ⟨ty1⟩ * ⟨ty2⟩ ] 
+    -- | [lesstype| ⊤ ] =>  [lesstype| ⊥ ]
+    -- | _ =>  [lesstype| ⊤ ]
 
     def get_prem : Ty -> Ty 
     | .impli ty1 _ => ty1 
     | [lesstype| ⊤ ] =>  [lesstype| ⊥ ]
     | _ =>  [lesstype| ⊤ ]
+
 
 
   end Ty
@@ -2152,37 +2154,49 @@ namespace Nameless
       let (i, tvar_IC) := (i + 1, i) 
       bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
       bind_nl (Ty.unify i context ty1 (Ty.impli (Ty.fvar tvar_IH) (Ty.fvar tvar_IC))) (fun i context =>
-        -- let ty_IH := ymatch context.env_simple.find? tvar_IH  with | some ty_IH => ty_IH | none => Ty.bot
-        -- let ty_IC := match context.env_simple.find? tvar_IC  with | some ty_IC => ty_IC | none => Ty.top
-        -- TODO: need to connect result of recursive call to result of function applied to it
-        -- TODO: consider using compress
         let ty_IH := Ty.subst context.env_simple (Ty.fvar tvar_IH)
         let ty_IC := Ty.subst context.env_simple (Ty.fvar tvar_IC)
 
-        let ty_content := List.foldr (fun ty_impli ty_acc =>
-          let fvs := (toList (Ty.free_vars ty_impli)).filter (fun fid => fid >= boundary)
-          let fvs_prem := (Ty.free_vars ty_IH)
-          let ty_choice := (
-            if List.any fvs (fun id => fvs_prem.find? id != none) then
-              let fixed_point := fvs.length
-              [lesstype|
-                {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.to_pair_type ty_impli)⟩ with 
-                  ⟨Ty.abstract fvs 0 (Ty.to_pair_type ty_IH)⟩ <: β[⟨fixed_point⟩] 
-                } 
-              ]
-            else if fvs.length > 0 then
-              [lesstype| {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 (Ty.to_pair_type ty_impli)⟩} ]
-            else
-              (Ty.to_pair_type ty_impli)
-          )
+        match ty_IH with
+        | .impli ty_IH1 ty_IH2 => (
+          let ty_IH_pair := [lesstype| ⟨ty_IH1⟩ * ⟨ty_IH2⟩]
+          let ty_content := List.foldr (fun ty_impli ty_acc =>
+            match ty_impli with
+            | .impli ty_ante ty_consq => (
 
-          (Ty.union ty_choice ty_acc) 
-        ) [lesstype| ⊥ ] (Ty.split_intersections ty_IC)
+              -- TODO: construct a type for ty_consq in terms of recursive result's type
+              -- need to ensure that variables in the recursive part (ty_IH2) remain free
+              -- may need to modify compress to ignore variables in a stale variable set, rather than those less than some boundary
+              let ty_payload := [lesstype| ⟨ty_ante⟩ * ⟨ty_consq⟩]
 
-        -- NOTE: constraint that ty' <= ty_IH is built into inductive type
-        let relational_type := [lesstype| induct ⟨ty_content⟩ ]
-        let ty' := Ty.simplify [lesstype| {2 // β[1] -> β[0] with β[1] * β[0] <: ⟨relational_type⟩} >> β[0]] 
-        (i, [(context, ty')])
+              let fvs := (toList (Ty.free_vars ty_impli)).filter (fun fid => fid >= boundary)
+              let fvs_prem := (Ty.free_vars ty_IH)
+              let ty_choice := (
+                if List.any fvs (fun id => fvs_prem.find? id != none) then
+                  let fixed_point := fvs.length
+                  [lesstype|
+                    {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 ty_payload⟩ with 
+                      ⟨Ty.abstract fvs 0 ty_IH_pair⟩ <: β[⟨fixed_point⟩] 
+                    } 
+                  ]
+                else if fvs.length > 0 then
+                  [lesstype| {⟨fvs.length⟩ // ⟨Ty.abstract fvs 0 ty_payload⟩} ]
+                else
+                  ty_payload
+              )
+
+              (Ty.union ty_choice ty_acc) 
+            )
+            | _ => Ty.top
+
+          ) [lesstype| ⊥ ] (Ty.split_intersections ty_IC)
+
+          -- NOTE: constraint that ty' <= ty_IH is built into inductive type
+          let relational_type := [lesstype| induct ⟨ty_content⟩ ]
+          let ty' := Ty.simplify [lesstype| {2 // β[1] -> β[0] with β[1] * β[0] <: ⟨relational_type⟩} >> β[0]] 
+          (i, [(context, ty')])
+        )
+        | _ => (i, [])
       ))
 
     partial def infer_simple i (t : Tm) :=
@@ -4501,6 +4515,12 @@ namespace Nameless
 
   #eval infer_reduce 0 add 
 
+  #eval infer_reduce 0 [lessterm|
+    let y[0] = _ in
+    let y[0] = _ in
+    (⟨add⟩ (y[0], y[1]))
+  ]
+
 
   -- broken: using let binding; inductive constraint is missing
   /-
@@ -4594,8 +4614,6 @@ namespace Nameless
       )
     ))
   ]
-
-  -- !!!maybe need to compress IH
 
   #eval infer_reduce 0 sum 
 
