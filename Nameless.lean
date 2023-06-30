@@ -1650,6 +1650,10 @@ namespace Nameless
     syntax:20 "\\" lessterm:30 "=>" lessterm:20 lessterm: lessterm
 
     syntax:30 lessterm:30 "." lessterm:100 : lessterm 
+
+    syntax:30 lessterm:30 "|>" lessterm:31 : lessterm 
+
+
     syntax:30 "(" lessterm:30 lessterm:30 ")" : lessterm 
     syntax:30 "let y[0]" ":" lesstype:30 "=" lessterm:30 "in" lessterm:30 : lessterm 
     syntax:30 "let y[0]" "=" lessterm:30 "in" lessterm:30 : lessterm 
@@ -1689,6 +1693,7 @@ namespace Nameless
 
     | `([lessterm| $a . $b ]) => `(Tm.proj [lessterm| $a ] [lessterm| $b ])
     | `([lessterm| ($a $b) ]) => `(Tm.app [lessterm| $a ] [lessterm| $b ])
+    | `([lessterm| ($b |> $a) ]) => `(Tm.app [lessterm| $a ] [lessterm| $b ])
     | `([lessterm| let y[0] : $a = $b in $c ]) => `(Tm.letb (Option.some [lesstype| $a ]) [lessterm| $b ] [lessterm| $c ])
     | `([lessterm| let y[0] = $b in $c ]) => `(Tm.letb Option.none [lessterm| $b ] [lessterm| $c ])
     | `([lessterm| fix $a ]) => `(Tm.fix [lessterm| $a ])
@@ -3532,338 +3537,6 @@ namespace Nameless
 
 --------------------------------------
 
-  -- better: notions of ?zero and ?true appear in inferred type? 
-  -- this requires including relational constraints in generalization
-  -- this works! 
-  #eval infer_reduce 0 [lessterm| 
-    (\ (y[0]) => ((fix (\ y[0] =>
-      \ (#zero(), #zero()) => #true()  
-    )) (y[0])))
-  ] 
-
-  -- expected: ?true unit
-  #eval infer_reduce 0 [lessterm| 
-    let y[0] = (\ (y[0]) => ((fix (\ y[0] =>
-      \ (#zero(), #zero()) => #true()  
-    )) (y[0])))
-    in
-    (y[0] (#zero(), #zero()))
-  ] 
-
-  def nat_pair := [lesstype|
-    induct
-      {(?zero unit * ⟨nat_⟩)} 
-      | 
-      {(?succ β[0] * ?succ β[1]) with (β[0] * β[1]) <: β[2] } 
-      | 
-      {(?succ ⟨nat_⟩ * ?zero unit)}
-  ]
-
-  -- expected: relational function type
-  #eval infer_reduce 0 [lessterm| 
-    fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    )
-  ] 
-    
-  -- expected: ?false unit
-  #eval infer_reduce 0 [lessterm| 
-    -- less than or equal:
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    (
-      (\ y[0] => y[0])
-      (y[0] (#succ #succ #zero(), #succ #zero()))
-    )
-  ] 
-
-  -- expected: the argument type should be refined by the function application 
-  #eval infer_reduce 0 [lessterm| 
-    -- less than or equal:
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    (\ (y[0], y[1]) => 
-      (
-        let y[0] = (y[2] (y[0], y[1])) in
-        y[1]
-      )
-    )
-  ] 
-
-  -- expected: type maintains relational information 
-  #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    let y[0] = (\ (y[0], y[1]) => 
-        (y[2] (y[0], y[1]))
-    ) in
-    y[0]
-  ] 
-
-
-  -- NOTE: not reducible 
-  -- expected: none 
-  #eval unify_reduce 10
-  [lesstype| (α[1] * α[2]) * ?true unit ]
-  [lesstype|
-  induct (
-      {1 // ((?zero unit * β[0]) * ?true unit)} |
-      {3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
-      {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
-  )
-  ]
-  [lesstype| (α[1] * α[2]) * ?true unit ]
-
-  -- expected: ?? 
-  #eval unify_decide 0
-  [lesstype|
-    ({1 // β[0] with ((α[20] * α[18]) * β[0]) <: 
-      (induct ({1 // ((?zero unit * β[0]) * ?true unit)} |
-      ({3 // ((?succ β[1] * ?succ β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
-      {1 // ((?succ β[0] * ?zero unit) * ?false unit)})))}
-  )
-  ]
-  [lesstype| ?true unit ]
-
-
-  -- expected: type is maintained after identity function application
-  #eval infer_reduce 0 [lessterm| 
-    -- less than or equal:
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    (\ (y[0], y[1]) => 
-      (
-        (\ y[0] => y[0])
-        (y[2] (y[0], y[1]))
-      )
-    )
-  ]
-
-  -- expected: type that describes max invariant
-  -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
-  #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    let y[0] = _ in
-    let y[0] = _ in
-    (
-      (
-      \ #true() => y[1]
-      \ #false() => y[0]
-      )
-      (y[2] (y[0], y[1]))
-    )
-  ] 
-
-
-
-  -- expected: 
-  /-
-  (? >> (? >> ({2 // (β[1] * β[0]) with (β[1] * β[0]) <: (induct ({1 // (?zero unit * β[0])} |
-        ({3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} | {1 // (?succ β[0] * ?zero unit)})))} >> β[0])))
-  -/
-  #eval unify_reduce 10 
-  [lesstype| 
-  α[0] * α[1]
-  ]
-  [lesstype| 
-  (induct (
-    {1 // (?zero unit * β[0])} | 
-    {3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} |
-    {1 // (?succ β[0] * ?zero unit)}
-  )) 
-  ]
-  [lesstype| 
-  α[0] * α[1]
-  ]
-
-  -- expected: 
-  /-
-  (? >> (? >> ({2 // (β[1] * β[0]) with (β[1] * β[0]) <: (induct ({1 // (?zero unit * β[0])} |
-        ({3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} | {1 // (?succ β[0] * ?zero unit)})))} >> β[0])))
-  -/
-  #eval unify_reduce 10 
-  [lesstype| 
-  (induct (
-    {1 // (?zero unit * β[0])} | 
-    {3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} |
-    {1 // (?succ β[0] * ?zero unit)}
-  )) >> (β[0] ->
-    {1 // β[0] with (β[1] * β[0]) <: (induct 
-      {1 // ((?zero unit * β[0]) * ?true unit)} |
-      {3 // ((?succ β[1] * ?succ β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
-      {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
-    )}
-  )
-    ]
-  [lesstype| 
-  α[0] * α[1] -> α[2]
-  ]
-  [lesstype| 
-  α[0] * α[1]
-  ]
-
-
-  -- complete
-  -- expected: type that describes max invariant
-  -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
-  #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    (\ (y[0], y[1]) => 
-      (
-        (
-        \ #true() => y[1]
-        \ #false() => y[0]
-        )
-        (y[2] (y[0], y[1]))
-      )
-    ) 
-  ] 
-
-
-  -- complete
-  -- NOTE: max of the two inputs  
-  -- expected: ?succ ?succ ?succ ?zero unit   
-  #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ) in
-    let y[0] = (\ (y[0], y[1]) => 
-      (
-        (
-        \ #true() => y[1]
-        \ #false() => y[0]
-        )
-        (y[2] (y[0], y[1]))
-      )
-    ) in
-    (y[0] (#succ #zero(), #succ #succ #succ #zero()))
-  ] 
-
-
-  def led_ := [lesstype|
-    induct 
-      {1 // ((?zero unit * β[0]) * ?true unit)} |
-      {3 // ((?succ β[1] * ?succ β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
-      {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
-  ]
-
-  -------------
-  #eval unify_reduce 10
-  [lesstype|
-    (({2 // ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩} >> β[0])) & 
-    (({2 // ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩} >> β[0]))
-  ]
-  [lesstype| ?succ ?zero unit * ?succ ?succ ?succ ?zero unit -> α[7] ]
-  [lesstype| α[7]]
-
-
-  -- expected: ?succ ?succ ?succ ?zero unit
-  #eval unify_reduce 10
-  [lesstype| (?succ ?zero unit * ?succ ?succ ?succ ?zero unit) * α[7] ]
-  [lesstype|
-    ({2 // ((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩}) 
-    |
-    ({2 // ((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩})
-  ]
-  [lesstype| α[7]]
-
-  -- expected: ?succ ?succ ?succ ?zero unit
-  #eval unify_reduce 10
-  [lesstype| (?succ ?succ ?succ ?zero unit * ?succ ?zero unit) * α[7] ]
-  [lesstype|
-    ({2 // ((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩}) 
-    |
-    ({2 // ((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩})
-  ]
-  [lesstype| α[7]]
-
-  --------------- debugging ---------------
-
-  -- complete
-  -- expected: ?false unit 
-  #eval infer_reduce 0 [lessterm| 
-    (
-      (fix (\ y[0] =>
-        \ (#zero(), y[0]) => #true()  
-        \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-        \ (#succ y[0], #zero()) => #false() 
-      ))
-      (#succ #succ #zero(), #succ #zero())
-    )
-  ] 
-
-  #eval infer_reduce 0 [lessterm| 
-    let y[0] = (fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    )) in
-    (y[0] (#succ #succ #zero(), #succ #zero()))
-  ] 
-
-  #eval infer_reduce 0 [lessterm| 
-    (fix (\ y[0] =>
-      \ (#zero(), y[0]) => #true()  
-      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
-      \ (#succ y[0], #zero()) => #false() 
-    ))
-  ] 
-
-
-
-  #eval unify_decide 10 
-  [lesstype| ?succ ?zero unit * ?zero unit]
-  nat_pair
-
-
-  def le_ := [lesstype|
-    induct
-      {(?zero unit * β[0]) * ?true unit} 
-      | 
-      {(?succ β[0] * ?succ β[1]) * β[2] with (β[0] * β[1]) * β[2] <: β[3] } 
-      | 
-      {(?succ β[0] * ?zero unit) * ?false unit}
-  ]
-
-  -- expected: none 
-  #eval unify_reduce 10 
-  [lesstype|
-    (?ooga unit >>
-       (β[0] -> {1 // β[0] with (β[1] * β[0]) <: ⟨le_⟩}))
-  ]
-  [lesstype| ?succ ?succ ?zero unit * ?succ ?zero unit -> α[0]]
-  [lesstype| α[0] ]
-
-  -- expected: ?false unit 
-  #eval unify_reduce 10 
-  [lesstype| (⟨nat_pair⟩ >> (β[0] -> {1 // β[0] with (β[1] * β[0]) <: ⟨le_⟩})) ]
-  [lesstype| ?succ ?succ ?zero unit * ?succ ?zero unit -> α[0]]
-  [lesstype| α[0] ]
-
   ----------------------------
   -- incomplete without model-based subtyping / semantic subtyping
   ----------------------------
@@ -4429,6 +4102,421 @@ namespace Nameless
   let y[0] : ⟨nat_⟩ >> β[0] * β[0] -> β[0] = _ in 
   let y[0] : ⟨even⟩ = _ in
   (y[1] (#zero (), y[0]))
+  ]
+
+
+
+--------------------------------------
+
+
+-------------------------------------
+  -- max example 
+-------------------------------------
+
+
+  -- better: notions of ?zero and ?true appear in inferred type? 
+  -- this requires including relational constraints in generalization
+  -- this works! 
+  #eval infer_reduce 0 [lessterm| 
+    (\ (y[0]) => ((fix (\ y[0] =>
+      \ (#zero(), #zero()) => #true()  
+    )) (y[0])))
+  ] 
+
+  -- expected: ?true unit
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = (\ (y[0]) => ((fix (\ y[0] =>
+      \ (#zero(), #zero()) => #true()  
+    )) (y[0])))
+    in
+    (y[0] (#zero(), #zero()))
+  ] 
+
+  def nat_pair := [lesstype|
+    induct
+      {(?zero unit * ⟨nat_⟩)} 
+      | 
+      {(?succ β[0] * ?succ β[1]) with (β[0] * β[1]) <: β[2] } 
+      | 
+      {(?succ ⟨nat_⟩ * ?zero unit)}
+  ]
+
+  -- expected: relational function type
+  #eval infer_reduce 0 [lessterm| 
+    fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    )
+  ] 
+    
+  -- expected: ?false unit
+  #eval infer_reduce 0 [lessterm| 
+    -- less than or equal:
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    (
+      (\ y[0] => y[0])
+      (y[0] (#succ #succ #zero(), #succ #zero()))
+    )
+  ] 
+
+  -- expected: the argument type should be refined by the function application 
+  #eval infer_reduce 0 [lessterm| 
+    -- less than or equal:
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    (\ (y[0], y[1]) => 
+      (
+        let y[0] = (y[2] (y[0], y[1])) in
+        y[1]
+      )
+    )
+  ] 
+
+  -- expected: type maintains relational information 
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    let y[0] = (\ (y[0], y[1]) => 
+        (y[2] (y[0], y[1]))
+    ) in
+    y[0]
+  ] 
+
+
+  -- NOTE: not reducible 
+  -- expected: none 
+  #eval unify_reduce 10
+  [lesstype| (α[1] * α[2]) * ?true unit ]
+  [lesstype|
+  induct (
+      {1 // ((?zero unit * β[0]) * ?true unit)} |
+      {3 // ((?succ β[0] * ?succ β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
+      {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
+  )
+  ]
+  [lesstype| (α[1] * α[2]) * ?true unit ]
+
+  -- expected: ?? 
+  #eval unify_decide 0
+  [lesstype|
+    ({1 // β[0] with ((α[20] * α[18]) * β[0]) <: 
+      (induct ({1 // ((?zero unit * β[0]) * ?true unit)} |
+      ({3 // ((?succ β[1] * ?succ β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
+      {1 // ((?succ β[0] * ?zero unit) * ?false unit)})))}
+  )
+  ]
+  [lesstype| ?true unit ]
+
+
+  -- expected: type is maintained after identity function application
+  #eval infer_reduce 0 [lessterm| 
+    -- less than or equal:
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    (\ (y[0], y[1]) => 
+      (
+        (\ y[0] => y[0])
+        (y[2] (y[0], y[1]))
+      )
+    )
+  ]
+
+  -- expected: type that describes max invariant
+  -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    let y[0] = _ in
+    let y[0] = _ in
+    (
+      (
+      \ #true() => y[1]
+      \ #false() => y[0]
+      )
+      (y[2] (y[0], y[1]))
+    )
+  ] 
+
+
+
+  -- expected: 
+  /-
+  (? >> (? >> ({2 // (β[1] * β[0]) with (β[1] * β[0]) <: (induct ({1 // (?zero unit * β[0])} |
+        ({3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} | {1 // (?succ β[0] * ?zero unit)})))} >> β[0])))
+  -/
+  #eval unify_reduce 10 
+  [lesstype| 
+  α[0] * α[1]
+  ]
+  [lesstype| 
+  (induct (
+    {1 // (?zero unit * β[0])} | 
+    {3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} |
+    {1 // (?succ β[0] * ?zero unit)}
+  )) 
+  ]
+  [lesstype| 
+  α[0] * α[1]
+  ]
+
+  -- expected: 
+  /-
+  (? >> (? >> ({2 // (β[1] * β[0]) with (β[1] * β[0]) <: (induct ({1 // (?zero unit * β[0])} |
+        ({3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} | {1 // (?succ β[0] * ?zero unit)})))} >> β[0])))
+  -/
+  #eval unify_reduce 10 
+  [lesstype| 
+  (induct (
+    {1 // (?zero unit * β[0])} | 
+    {3 // (?succ β[1] * ?succ β[2]) with (β[1] * β[2]) <: β[3]} |
+    {1 // (?succ β[0] * ?zero unit)}
+  )) >> (β[0] ->
+    {1 // β[0] with (β[1] * β[0]) <: (induct 
+      {1 // ((?zero unit * β[0]) * ?true unit)} |
+      {3 // ((?succ β[1] * ?succ β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
+      {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
+    )}
+  )
+    ]
+  [lesstype| 
+  α[0] * α[1] -> α[2]
+  ]
+  [lesstype| 
+  α[0] * α[1]
+  ]
+
+
+  -- complete
+  -- expected: type that describes max invariant
+  -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    (\ (y[0], y[1]) => 
+      (
+        (
+        \ #true() => y[1]
+        \ #false() => y[0]
+        )
+        (y[2] (y[0], y[1]))
+      )
+    ) 
+  ] 
+
+
+  -- complete
+  -- NOTE: max of the two inputs  
+  -- expected: ?succ ?succ ?succ ?zero unit   
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ) in
+    let y[0] = (\ (y[0], y[1]) => 
+      (
+        (
+        \ #true() => y[1]
+        \ #false() => y[0]
+        )
+        (y[2] (y[0], y[1]))
+      )
+    ) in
+    (y[0] (#succ #zero(), #succ #succ #succ #zero()))
+  ] 
+
+
+  def led_ := [lesstype|
+    induct 
+      {1 // ((?zero unit * β[0]) * ?true unit)} |
+      {3 // ((?succ β[1] * ?succ β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
+      {1 // ((?succ β[0] * ?zero unit) * ?false unit)}
+  ]
+
+  -------------
+  #eval unify_reduce 10
+  [lesstype|
+    (({2 // ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩} >> β[0])) & 
+    (({2 // ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩} >> β[0]))
+  ]
+  [lesstype| ?succ ?zero unit * ?succ ?succ ?succ ?zero unit -> α[7] ]
+  [lesstype| α[7]]
+
+
+  -- expected: ?succ ?succ ?succ ?zero unit
+  #eval unify_reduce 10
+  [lesstype| (?succ ?zero unit * ?succ ?succ ?succ ?zero unit) * α[7] ]
+  [lesstype|
+    ({2 // ((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩}) 
+    |
+    ({2 // ((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩})
+  ]
+  [lesstype| α[7]]
+
+  -- expected: ?succ ?succ ?succ ?zero unit
+  #eval unify_reduce 10
+  [lesstype| (?succ ?succ ?succ ?zero unit * ?succ ?zero unit) * α[7] ]
+  [lesstype|
+    ({2 // ((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * ?true unit) <: ⟨led_⟩}) 
+    |
+    ({2 // ((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * ?false unit) <: ⟨led_⟩})
+  ]
+  [lesstype| α[7]]
+
+  --------------- debugging ---------------
+
+  -- complete
+  -- expected: ?false unit 
+  #eval infer_reduce 0 [lessterm| 
+    (
+      (fix (\ y[0] =>
+        \ (#zero(), y[0]) => #true()  
+        \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+        \ (#succ y[0], #zero()) => #false() 
+      ))
+      (#succ #succ #zero(), #succ #zero())
+    )
+  ] 
+
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = (fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    )) in
+    (y[0] (#succ #succ #zero(), #succ #zero()))
+  ] 
+
+  #eval infer_reduce 0 [lessterm| 
+    (fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    ))
+  ] 
+
+
+
+  #eval unify_decide 10 
+  [lesstype| ?succ ?zero unit * ?zero unit]
+  nat_pair
+
+
+  def le_ := [lesstype|
+    induct
+      {(?zero unit * β[0]) * ?true unit} 
+      | 
+      {(?succ β[0] * ?succ β[1]) * β[2] with (β[0] * β[1]) * β[2] <: β[3] } 
+      | 
+      {(?succ β[0] * ?zero unit) * ?false unit}
+  ]
+
+  -- expected: none 
+  #eval unify_reduce 10 
+  [lesstype|
+    (?ooga unit >>
+       (β[0] -> {1 // β[0] with (β[1] * β[0]) <: ⟨le_⟩}))
+  ]
+  [lesstype| ?succ ?succ ?zero unit * ?succ ?zero unit -> α[0]]
+  [lesstype| α[0] ]
+
+  -- expected: ?false unit 
+  #eval unify_reduce 10 
+  [lesstype| (⟨nat_pair⟩ >> (β[0] -> {1 // β[0] with (β[1] * β[0]) <: ⟨le_⟩})) ]
+  [lesstype| ?succ ?succ ?zero unit * ?succ ?zero unit -> α[0]]
+  [lesstype| α[0] ]
+
+-------------------------------------
+  -- sum example 
+-------------------------------------
+
+  def diff := [lessterm|
+    fix(\ y[0] => ( 
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1]))
+      \ (#zero (), y[0]) => y[0]
+      \ (y[0], #zero ()) => y[0] 
+    )) 
+  ]
+
+  #eval infer_reduce 10  [lessterm|
+    let y[0] = ⟨diff⟩ in
+    (y[0] (#succ #succ #zero (), #succ #zero ()))
+  ]
+
+
+  def leq := [lessterm|
+    fix (\ y[0] =>
+      \ (#zero(), y[0]) => #true()  
+      \ (#succ y[0], #succ y[1]) => (y[2] (y[0], y[1])) 
+      \ (#succ y[0], #zero()) => #false() 
+    )
+  ]
+
+  def max := [lessterm| 
+    (\ (y[0], y[1]) => 
+      (
+        (
+        \ #true() => y[1]
+        \ #false() => y[0]
+        )
+        (⟨leq⟩ (y[0], y[1]))
+      )
+    ) 
+  ] 
+
+  def add := [lessterm|
+    fix(\ y[0] => (
+      \ (#zero (), y[0]) => y[0] 
+      \ (#succ y[0], y[1]) => #succ (y[2] (y[0], y[1]))
+    ))
+  ]
+
+  #eval infer_reduce 0 add 
+
+  def sum := [lessterm|
+    fix(\ y[0] => (
+      \ #zero () => #zero () 
+      \ #succ y[0] => ((⟨add⟩) ((y[1] y[0]), #succ y[0]))
+    ))
+  ]
+
+/-
+({3 // 
+  ({2 // (β[1] -> β[0]) with (β[1] * β[0]) <: (induct (
+      (?zero unit * ?zero unit) |
+      {2 // (?succ β[1] * β[0]) with (β[1] * β[6]) <: β[2]} -- what does β[6] refer to? 
+  ))} >> β[0]) 
+  with ((β[0] * ?succ β[2]) * β[1]) <: (induct (
+        {1 // ((?zero unit * β[0]) * β[0])} |
+        {3 // ((?succ β[1] * β[2]) * ?succ β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]}
+  ))
+} >> β[0])
+-/
+
+  #eval infer_reduce 0 sum 
+
+  #eval infer_reduce 0 [lessterm| 
+    ((⟨sum⟩) #succ #zero ()) 
   ]
 
 
