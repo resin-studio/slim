@@ -331,33 +331,33 @@ namespace Nameless
       (.univ (op_ty_c.map (subst_while f m)) (subst_while f m ty))
     | .induc ty => .induc (subst_while f m ty)
 
-    partial def sub_nonneg (boundary : Nat) (m : PHashMap Nat Ty) (negs : PHashSet Nat) : Ty -> Ty
+    partial def sub_nonneg (stale : PHashSet Nat) (m : PHashMap Nat Ty) (negs : PHashSet Nat) : Ty -> Ty
     | .bvar id => .bvar id 
     | .fvar id => 
-      if id >= boundary && negs.contains id then
+      if !stale.contains id && negs.contains id then
         (match m.find? id with
           | some ty => 
-            sub_nonneg boundary m negs ty 
+            sub_nonneg stale m negs ty 
           | none => .fvar id
         )
       else .fvar id 
     | .unit => .unit
     | .top => .top
     | .bot => .bot
-    | .tag l ty => .tag l (sub_nonneg boundary m negs ty) 
-    | .field l ty => .field l (sub_nonneg boundary m negs ty)
-    | .union ty1 ty2 => .union (sub_nonneg boundary m negs ty1) (sub_nonneg boundary m negs ty2)
-    | .inter ty1 ty2 => .inter (sub_nonneg boundary m negs ty1) (sub_nonneg boundary m negs ty2)
+    | .tag l ty => .tag l (sub_nonneg stale m negs ty) 
+    | .field l ty => .field l (sub_nonneg stale m negs ty)
+    | .union ty1 ty2 => .union (sub_nonneg stale m negs ty1) (sub_nonneg stale m negs ty2)
+    | .inter ty1 ty2 => .inter (sub_nonneg stale m negs ty1) (sub_nonneg stale m negs ty2)
     | .impli ty1 ty2 => 
       let new_negs := free_vars ty1
-      .impli ty1 (sub_nonneg boundary m (negs + new_negs) ty2)
+      .impli ty1 (sub_nonneg stale m (negs + new_negs) ty2)
     | .exis n ty_c1 ty_c2 ty => (.exis n
-      (sub_nonneg boundary m negs ty_c1) (sub_nonneg boundary m negs ty_c2) 
-      (sub_nonneg boundary m negs ty)
+      (sub_nonneg stale m negs ty_c1) (sub_nonneg stale m negs ty_c2) 
+      (sub_nonneg stale m negs ty)
     )
     | .univ op_ty_c ty => 
-      (.univ (op_ty_c.map (sub_nonneg boundary m negs)) (sub_nonneg boundary m negs ty))
-    | .induc ty => .induc (sub_nonneg boundary m negs ty)
+      (.univ (op_ty_c.map (sub_nonneg stale m negs)) (sub_nonneg stale m negs ty))
+    | .induc ty => .induc (sub_nonneg stale m negs ty)
 
 
     declare_syntax_cat lesstype
@@ -618,69 +618,70 @@ namespace Nameless
       ) constraints_acc
 
 
-    partial def pack (boundary : Nat) (context : Context) (negs : PHashSet Nat) (ty : Ty) :=
-      -----------------------
-      -- assumption: env_simple is cycle-free  
-      -- keep variables that exist in parameter position; substitute variables that are only in return position 
-      -- avoid substitution to allow constraint refinements
-      -- recursively pack referenced variables as constraints
-      -----------------------
+    -- deprecated
+    -- partial def pack (stale : PHashSet Nat) (context : Context) (negs : PHashSet Nat) (ty : Ty) :=
+    --   -----------------------
+    --   -- assumption: env_simple is cycle-free  
+    --   -- keep variables that exist in parameter position; substitute variables that are only in return position 
+    --   -- avoid substitution to allow constraint refinements
+    --   -- recursively pack referenced variables as constraints
+    --   -----------------------
 
-      let ty := sub_nonneg boundary context.env_simple negs ty
+    --   let ty := sub_nonneg stale context.env_simple negs ty
 
-      let fids := (free_vars ty)
-      if fids.isEmpty then
-        ty
-      else 
+    --   let fids := (free_vars ty)
+    --   if fids.isEmpty then
+    --     ty
+    --   else 
 
-        let constraints : PHashMap Ty Ty := empty
+    --     let constraints : PHashMap Ty Ty := empty
 
-        -- simple constraints
-        let constraints : PHashMap Ty Ty := fids.fold (fun constraints fid =>
-          if fid >= boundary then
-            match context.env_simple.find? fid with
-            | some ty_simple =>
-              constraints.insert (Ty.fvar fid) (pack boundary context (negs + fids) ty_simple) 
-            | none => constraints
-          else
-            constraints
-        ) constraints 
+    --     -- simple constraints
+    --     let constraints : PHashMap Ty Ty := fids.fold (fun constraints fid =>
+    --       if !stale.contains fid then
+    --         match context.env_simple.find? fid with
+    --         | some ty_simple =>
+    --           constraints.insert (Ty.fvar fid) (pack stale context (negs + fids) ty_simple) 
+    --         | none => constraints
+    --       else
+    --         constraints
+    --     ) constraints 
 
-        -- relational constraints
-        let constraints : PHashMap Ty Ty := fids.fold (fun constraints fid => 
-          if fid >= boundary then
-            match context.env_keychain.find? fid with
-            | some keychain =>
-              keychain.fold (fun constraints key =>
-                (match context.env_relational.find? key with
-                | some relation => 
-                  let key := sub_nonneg boundary context.env_simple (negs + fids) key
-                  if constraints.contains key then
-                    constraints
-                  else
-                    constraints.insert key (pack boundary context (negs + fids) relation) 
-                | none => 
-                  -- invariant: this impli should never happen
-                  constraints 
-                )
-              ) constraints
-            | none => constraints
-          else
-            constraints
-        ) constraints 
+    --     -- relational constraints
+    --     let constraints : PHashMap Ty Ty := fids.fold (fun constraints fid => 
+    --       if !stale.contains fid then
+    --         match context.env_keychain.find? fid with
+    --         | some keychain =>
+    --           keychain.fold (fun constraints key =>
+    --             (match context.env_relational.find? key with
+    --             | some relation => 
+    --               let key := sub_nonneg stale context.env_simple (negs + fids) key
+    --               if constraints.contains key then
+    --                 constraints
+    --               else
+    --                 constraints.insert key (pack stale context (negs + fids) relation) 
+    --             | none => 
+    --               -- invariant: this impli should never happen
+    --               constraints 
+    --             )
+    --           ) constraints
+    --         | none => constraints
+    --       else
+    --         constraints
+    --     ) constraints 
 
 
-        if constraints.isEmpty then
-          let list_fids := toList fids
-          [lesstype| {⟨list_fids.length⟩ // ⟨abstract list_fids 0 ty⟩}  ]
-        else
-          intersect_over (fun (ty_lhs, ty_rhs) => 
-            let fvs_constraints := fids + (free_vars ty_lhs) + (free_vars ty_rhs)
-            let fids_c := List.filter (fun id => id >= boundary) (toList fvs_constraints)
-            [lesstype|
-              {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
-            ]
-          ) constraints.toList
+    --     if constraints.isEmpty then
+    --       let list_fids := toList fids
+    --       [lesstype| {⟨list_fids.length⟩ // ⟨abstract list_fids 0 ty⟩}  ]
+    --     else
+    --       intersect_over (fun (ty_lhs, ty_rhs) => 
+    --         let fvs_constraints := fids + (free_vars ty_lhs) + (free_vars ty_rhs)
+    --         let fids_c := List.filter (fun id => !stale.contains id) (toList fvs_constraints)
+    --         [lesstype|
+    --           {⟨fids_c.length⟩ // ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
+    --         ]
+    --       ) constraints.toList
 
 
 
@@ -2218,13 +2219,12 @@ namespace Nameless
           let ty_content := List.foldr (fun ty_impli ty_acc =>
             match ty_impli with
             | .impli ty_ante ty_consq => (
-
-              -- TODO: construct a type for ty_consq in terms of recursive result's type
-              -- need to ensure that variables in the recursive part (ty_IH2) remain free
-              -- may need to modify compress to ignore variables in a stale variable set, rather than those less than some boundary
+              let vars_IH2 := Ty.free_vars ty_IH2 
+              let stale_consq := (Ty.stale_boundary boundary) + vars_IH2
+              let ty_consq := Ty.compress stale_consq context ty_consq
               let ty_payload := [lesstype| ⟨ty_ante⟩ * ⟨ty_consq⟩]
 
-              let fvs := (toList (Ty.free_vars ty_impli)).filter (fun fid => fid >= boundary)
+              let fvs := (toList (Ty.free_vars ty_payload)).filter (fun fid => fid >= boundary)
               let fvs_prem := (Ty.free_vars ty_IH)
               let ty_choice := (
                 if List.any fvs (fun id => fvs_prem.find? id != none) then
@@ -2278,8 +2278,7 @@ namespace Nameless
           if intersectable then
             List.foldr (fun (context, ty') ty_acc => 
               let ty_ex := Ty.compress (Ty.stale_boundary boundary) context ty' 
-              -- Ty.intersect [lesstype| ⟨ty_ex⟩ >> β[0]] ty_acc
-              Ty.intersect ty_ex ty_acc
+              Ty.intersect [lesstype| ⟨ty_ex⟩ >> β[0]] ty_acc
             ) Ty.top context_tys 
           else
             List.foldr (fun (context, ty') ty_acc => 
@@ -4576,20 +4575,7 @@ namespace Nameless
     (⟨add⟩ (y[0], y[1]))
   ]
 
-
-  -- broken: using let binding; inductive constraint is missing
-  /-
-  some ({2 // (β[1] ->
-   β[0]) with (β[1] * β[0]) <: (induct ((?zero unit * ?zero unit) | {2 // (?succ β[1] * β[0])}))} >> β[0])
-   -/
-
-  /-
-   some ({2 // (β[1] ->
-   β[0]) with (β[1] * β[0]) <: (induct ((?zero unit * ?zero unit) | {2 // (?succ β[1] * β[0])}))} >> β[0])
-   -/
-
-
-  -- def sum := [lessterm|
+  -- def sum_let := [lessterm|
   --   fix(\ y[0] => (
   --     \ #zero () => #zero () 
   --     \ #succ y[0] => (
@@ -4599,7 +4585,7 @@ namespace Nameless
   --   ))
   -- ]
 
-  -- def sum := [lessterm|
+  -- def sum_let := [lessterm|
   --   fix(\ y[0] => (
   --     \ #zero () => #zero () 
   --     \ #succ y[0] => (
@@ -4609,58 +4595,9 @@ namespace Nameless
   --   ))
   -- ]
 
+  -- unsound: using let binding; inductive constraint is missing
+  -- #eval infer_reduce 0 sum_let 
 
-  ------------------
-
-  -- def sum := [lessterm|
-  --   fix(\ y[0] => (
-  --     \ #zero () => #zero () 
-  --     \ #succ y[0] => ((y[1] y[0]), #succ y[0])
-  --   ))
-  -- ]
-
-  ------------------
-
-
-
-  /-
-({2 // (β[1] -> β[0]) with (β[1] * β[0]) <: (induct (
-    (?zero unit * ?zero unit) |
-    {2 // (?succ β[1] * ?add (β[0] * ?succ β[1])) with (β[1] * β[0]) <: β[2]}
-))} >> β[0])
-
-  -/
-  -- def sum := [lessterm|
-  --   fix(\ y[0] => (
-  --     \ #zero () => #zero () 
-  --     \ #succ y[0] => (
-  --       (#add ((y[1] y[0]), #succ y[0]))
-  --     )
-  --   ))
-  -- ]
-
-
-  -- actual:
-  /-
-  ({3 // 
-    ({2 // (β[1] -> β[0]) with (β[1] * β[0]) <: (induct (
-        (?zero unit * ?zero unit) |
-        {2 // (?succ β[1] * β[0]) with (β[1] * β[6]) <: β[2]} -- what does β[6] refer to? 
-    ))} >> β[0]) 
-    with ((β[0] * ?succ β[2]) * β[1]) <: (induct (
-          {1 // ((?zero unit * β[0]) * β[0])} |
-          {3 // ((?succ β[1] * β[2]) * ?succ β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]}
-    ))
-  } >> β[0])
-  -/
-  --expected:
-  /-
-       {2 // (?succ X * A) with (X, Y) <: self} 
-       where
-        add (e1, e2) : A 
-        e1 : Y
-        e2 : ?succ X 
-  -/
   def sum := [lessterm|
     fix(\ y[0] => (
       \ #zero () => #zero () 
@@ -4670,9 +4607,16 @@ namespace Nameless
     ))
   ]
 
+  --expected: type that relates the recursive result type variable to the application's result type 
+  /-
+       {2 // (?succ X * A) with (X, Y) <: self} 
+       where
+        add (e1, e2) : A 
+        e1 : Y
+        e2 : ?succ X 
+  -/
   #eval infer_reduce 0 sum 
 
-  -- incomplete
   #eval infer_reduce 0 [lessterm| 
     ((⟨sum⟩) #succ #succ #zero ()) 
   ]
