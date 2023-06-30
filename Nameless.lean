@@ -2144,6 +2144,9 @@ namespace Nameless
 
 
     | .fix t1 =>
+      -- NOTE: extracting type from term seems similar to craig interpolation
+      -- Craig: proof : A -> B ==> A -> I -> B
+      -- type inference : program ==> program : X -> Y ==> X -> Y <: A -> B ==> A <: X, Y <: B ==> A -> (X -> Y) -> B   
       let boundary := i
       let (i, ty_IH) := (i + 1, Ty.fvar i) 
       let (i, ty_IC) := (i + 1, Ty.fvar i) 
@@ -2202,7 +2205,8 @@ namespace Nameless
           if intersectable then
             List.foldr (fun (context, ty') ty_acc => 
               let ty_ex := Ty.compress boundary context ty' 
-              Ty.intersect [lesstype| ⟨ty_ex⟩ >> β[0]] ty_acc
+              -- Ty.intersect [lesstype| ⟨ty_ex⟩ >> β[0]] ty_acc
+              Ty.intersect ty_ex ty_acc
             ) Ty.top context_tys 
           else
             List.foldr (fun (context, ty') ty_acc => 
@@ -4493,30 +4497,86 @@ namespace Nameless
 
   #eval infer_reduce 0 add 
 
+
+  -- broken: using let binding; inductive constraint is missing
+  /-
+  some ({2 // (β[1] ->
+   β[0]) with (β[1] * β[0]) <: (induct ((?zero unit * ?zero unit) | {2 // (?succ β[1] * β[0])}))} >> β[0])
+   -/
+
+  /-
+   some ({2 // (β[1] ->
+   β[0]) with (β[1] * β[0]) <: (induct ((?zero unit * ?zero unit) | {2 // (?succ β[1] * β[0])}))} >> β[0])
+   -/
+
+
+  -- def sum := [lessterm|
+  --   fix(\ y[0] => (
+  --     \ #zero () => #zero () 
+  --     \ #succ y[0] => (
+  --       let y[0] = (y[1] y[0]) in
+  --       y[0]
+  --     )
+  --   ))
+  -- ]
+
+  -- def sum := [lessterm|
+  --   fix(\ y[0] => (
+  --     \ #zero () => #zero () 
+  --     \ #succ y[0] => (
+  --       (y[1] y[0])
+  --     )
+  --   ))
+  -- ]
+
+  ------------------
+
+  -- def sum := [lessterm|
+  --   fix(\ y[0] => (
+  --     \ #zero () => #zero () 
+  --     \ #succ y[0] => ((y[1] y[0]), #succ y[0])
+  --   ))
+  -- ]
+
+  ------------------
+
   def sum := [lessterm|
     fix(\ y[0] => (
       \ #zero () => #zero () 
-      \ #succ y[0] => ((⟨add⟩) ((y[1] y[0]), #succ y[0]))
+      \ #succ y[0] => (
+        let y[0] = (y[1] y[0]) in
+        ((⟨add⟩) (y[0], #succ y[1]))
+      )
+       -- {2 // (?succ X * Y) with (X, ?) <: self} 
+       -- Y = 
     ))
   ]
 
-/-
-({3 // 
-  ({2 // (β[1] -> β[0]) with (β[1] * β[0]) <: (induct (
-      (?zero unit * ?zero unit) |
-      {2 // (?succ β[1] * β[0]) with (β[1] * β[6]) <: β[2]} -- what does β[6] refer to? 
-  ))} >> β[0]) 
-  with ((β[0] * ?succ β[2]) * β[1]) <: (induct (
-        {1 // ((?zero unit * β[0]) * β[0])} |
-        {3 // ((?succ β[1] * β[2]) * ?succ β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]}
-  ))
-} >> β[0])
--/
 
+
+   --
+   /-
+   some ({2 // (β[1] ->
+   β[0]) with (β[1] * β[0]) <: (induct ((?zero unit * ?zero unit) | {2 // (?succ β[1] * β[0]) with (β[1] * β[0]) <: β[2]}))} >> β[0])
+   -/
+
+  /-
+  ({3 // 
+    ({2 // (β[1] -> β[0]) with (β[1] * β[0]) <: (induct (
+        (?zero unit * ?zero unit) |
+        {2 // (?succ β[1] * β[0]) with (β[1] * β[6]) <: β[2]} -- what does β[6] refer to? 
+    ))} >> β[0]) 
+    with ((β[0] * ?succ β[2]) * β[1]) <: (induct (
+          {1 // ((?zero unit * β[0]) * β[0])} |
+          {3 // ((?succ β[1] * β[2]) * ?succ β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]}
+    ))
+  } >> β[0])
+  -/
   #eval infer_reduce 0 sum 
 
+  -- incomplete
   #eval infer_reduce 0 [lessterm| 
-    ((⟨sum⟩) #succ #zero ()) 
+    ((⟨sum⟩) #succ #succ #zero ()) 
   ]
 
 
