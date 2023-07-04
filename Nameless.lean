@@ -2071,53 +2071,58 @@ namespace Nameless
         let free_var_boundary := i
 
         let (i, context_ty_args) := (infer i context env_tm t_arg)
-        let op := context_ty_args.foldl (fun op_i_tys (context, ty_arg) =>
-          -- let ty_schema := Ty.generalize free_var_boundary context ty_arg
-          ----------
-          let ty_ex := Ty.compress (Ty.stale_boundary free_var_boundary) context ty_arg
 
-          let ty_slice := (
-            if Ty.functiontype (Ty.subst context.env_simple ty_arg) then
-              [lesstype| [_:⟨ty_ex⟩] β[0]]
-            else
-              ty_ex
-          )
+        if !context_ty_args.isEmpty then (
+          let op := context_ty_args.foldl (fun op_i_tys (context, ty_arg) =>
+            -- let ty_schema := Ty.generalize free_var_boundary context ty_arg
+            ----------
+            let ty_ex := Ty.compress (Ty.stale_boundary free_var_boundary) context ty_arg
 
-          match op_i_tys with
-          | none => none
-          | some (i, tys) => (
-            let (i, tys') := (
-              bind_nl (Ty.unify i context ty_arg ty_expected) (fun i _ =>
-                (i, [ty_slice])
-              )
+            let ty_slice := (
+              if Ty.functiontype (Ty.subst context.env_simple ty_arg) then
+                [lesstype| [_:⟨ty_ex⟩] β[0]]
+              else
+                ty_ex
             )
-            if tys'.isEmpty then
-              none
-            else
-              some (i, tys ++ tys')
-          )
 
-        ) (some (i, []))
+            match op_i_tys with
+            | none => none
+            | some (i, tys) => (
+              let (i, tys') := (
+                bind_nl (Ty.unify i context ty_arg ty_expected) (fun i _ =>
+                  (i, [ty_slice])
+                )
+              )
+              if tys'.isEmpty then
+                none
+              else
+                some (i, tys ++ tys')
+            )
 
-        match op with
-        | some (i, ty_slices) => 
-          -- NOTE: it seems that Remy doesn't need to do a function type check
-          -- Remy's version operates on lambda calculus, so all types are function types
-          let ty_param := (
-            if ty_slices.all Ty.functiontype then
-              List.foldr (fun ty_slice ty_acc => 
-                Ty.intersect ty_slice ty_acc
-              ) Ty.top ty_slices
-            else
-              List.foldr (fun ty_slice ty_acc => 
-                Ty.unionize ty_slice ty_acc
-              ) Ty.bot ty_slices
-          )
+          ) (some (i, []))
 
-          let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_param)]) 
-          let t := instantiate 0 [x] t 
-          (infer i context (env_tm ; env_tmx) t) 
+          match op with
+          | some (i, ty_slices) => 
+            -- NOTE: it seems that Remy doesn't need to do a function type check
+            -- Remy's version operates on lambda calculus, so all types are function types
+            let ty_param := (
+              if ty_slices.all Ty.functiontype then
+                List.foldr (fun ty_slice ty_acc => 
+                  Ty.intersect ty_slice ty_acc
+                ) Ty.top ty_slices
+              else
+                List.foldr (fun ty_slice ty_acc => 
+                  Ty.unionize ty_slice ty_acc
+                ) Ty.bot ty_slices
+            )
+
+            let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_param)]) 
+            let t := instantiate 0 [x] t 
+            (infer i context (env_tm ; env_tmx) t) 
           | none => (i, [])
+        ) else (
+            (i, [])
+        )
 
         -----------------------------------------------
         -- let (i, context_ty_args) := (infer i context env_tm t_arg)
@@ -2894,29 +2899,31 @@ namespace Nameless
       )))
   ] 
 
-  -- unsound
+  -- sound
   -- observed error: there is a single solution containing an empty environment 
   -- expected: none  
   #eval infer_reduce 0 [lessterm| 
-    let y[0] : succ//zero//unit = 
-    (
-      (\ (y[0], y[1]) => (
+    let y[0] : succ//zero//unit = (\ (y[0], y[1]) => 
+      (
         (
-          (\ true;() => y[1] \ false;() => y[0]))
-          ((
-            \ (zero;(), y[0]) => true;()  
-            \ (succ;y[0], succ;y[1]) => false;()
-            \ (succ;y[0], zero;()) => false;() 
-          )
-          (y[0], y[1])) 
+        \ true;() => y[1]
+        \ false;() => y[0]
         )
+        (fix (\ y[0] =>
+          \ (zero;(), y[0]) => true;()  
+          \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
+          \ (succ; y[0], zero;()) => false;() 
+        ) (y[0], y[1]))
       )
-      (succ;succ;zero;(), succ;zero;())
-    ) 
-    in
-    y[0] 
+    ) in
+    (y[0] (succ;succ;zero;(), succ;zero;()))
   ] 
 
+  -- expected: none
+  #eval infer_reduce 0 [lessterm| 
+    let y[0] = (\ () => ())(zero;()) in
+    y[0]
+  ] 
 
   ---------- generics ----------------
 
