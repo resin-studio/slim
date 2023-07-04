@@ -2074,8 +2074,6 @@ namespace Nameless
 
         if !context_ty_args.isEmpty then (
           let op := context_ty_args.foldl (fun op_i_tys (context, ty_arg) =>
-            -- let ty_schema := Ty.generalize free_var_boundary context ty_arg
-            ----------
             let ty_ex := Ty.compress (Ty.stale_boundary free_var_boundary) context ty_arg
 
             let ty_slice := (
@@ -2105,6 +2103,8 @@ namespace Nameless
           | some (i, ty_slices) => 
             -- NOTE: it seems that Remy doesn't need to do a function type check
             -- Remy's version operates on lambda calculus, so all types are function types
+            -- TODO: information in contexts is lost by collapsing type
+            -- perhaps we can avoid collapsing until the very end
             let ty_param := (
               if ty_slices.all Ty.functiontype then
                 List.foldr (fun ty_slice ty_acc => 
@@ -3729,7 +3729,9 @@ namespace Nameless
 
   -----------  local strengthening ----------
 
-  -- unsound
+  -- incomplete: let-binding does not persist contexts 
+  -- contextual information is lost
+  -- perhaps need to return all contexts rather than intersecting 
   -- expected: (one//unit | three//unit) 
   #eval infer_reduce 0 [lessterm|
     let y[0] = _ in
@@ -3739,6 +3741,28 @@ namespace Nameless
     ) in
     y[1]
   ]
+
+  --------------------
+  --------------------
+
+  -- expected: (two//unit | four//unit)
+  #eval infer_envs 0 [lessterm|
+    let y[0] = _ in
+    (\ one;() => two;() \ three;() => four;())
+    (y[0])
+  ]
+
+  #eval infer_envs 0 [lessterm|
+    let y[0] = _ in
+    let y[0] = (
+      (\ one;() => two;() \ three;() => four;())
+      (y[0])
+    ) in
+    y[0]
+  ]
+
+  --------------------
+  --------------------
 
   -- expected:  (([_:(one//unit -> two//unit)]β[0]) & ([_:(three//unit -> four//unit)]β[0]))
   #eval infer_reduce 0 [lessterm|
