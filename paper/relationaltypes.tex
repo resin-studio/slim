@@ -916,12 +916,16 @@ the application must type check for all function types and all argument types.
 If even one combination cannot be unified then the inference of application fails,
 indicated by breaking the for-loop, which then implicitly returns an empty set.  
 
+\TODO{update application to merely require some function cases to type check}
+
 the let-binding case infers the type of the argument and checks that
 all possible types subtype the annotation and result in a well-typed body. 
 It generalizes type variables in the inferred argument type while maintaining
 the constraints indicated by the subtyping environment. 
 
 \TODO{update let-binding to generalize only if something is a function-type: e.g. intersection, univeral, implication }
+
+\TODO{update let-binding to merely require some bodies to type check}
 
 The fix case infers inductive types for the parameters and bodies of its
 target expression. Moreover, it inductively relates the parameter and body types to each other.
