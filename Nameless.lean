@@ -3690,6 +3690,25 @@ namespace Nameless
   ]
 
   -- incomplete
+  -- expected: dos//unit | other//unit
+  #eval infer_reduce 10 [lessterm|
+    let y[0] : (dos//unit) | (two//unit) = _ in
+    (\ dos;() => y[0] \ two;() => other;())
+    (y[0])
+  ]
+
+  ---------------
+  #eval infer_reduce 10 [lessterm|
+    let y[0] : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
+    let y[0] = _ in
+    (
+      -- (\ dos;() => y[0] \ two;() => other;())
+      (y[1](y[0]))
+    ) 
+  ]
+  ---------------
+
+  -- incomplete
   -- expected: uno//unit 
   #eval infer_reduce 10 [lessterm|
     let y[0] : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
@@ -3712,6 +3731,14 @@ namespace Nameless
       (y[0])
     ) in
     y[1]
+  ]
+
+  -- expected:  (([_:(one//unit -> two//unit)]β[0]) & ([_:(three//unit -> four//unit)]β[0]))
+  #eval infer_reduce 0 [lessterm|
+    \ y[0] => (
+      (\ one;() => two;() \ three;() => four;())
+      (y[0])
+    )
   ]
 
   -- expected: one//unit
