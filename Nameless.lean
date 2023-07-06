@@ -4581,14 +4581,33 @@ namespace Nameless
     (⟨sum⟩)(succ;succ;zero;()) 
   ]
 
+
+  -- sum(2) : {v | v >= 2} 
+  -- 0 : {v | v >= 2} 
+  -- expected: false 
+  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;())]) with
+  | some ty => unify_decide 0 [lesstype| zero//unit ] ty
+  | none => false
+
+  -- sum(2) : {v | v >= 2} 
+  -- 1 : {v | v >= 2} 
+  -- expected: false 
+  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;())]) with
+  | some ty => unify_decide 0 [lesstype| succ//zero//unit ] ty
+  | none => false
+
+  -- sum(2) : {v | v >= 2} 
+  -- 2 : {v | v >= 2} 
   -- expected: true
   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;())]) with
   | some ty => unify_decide 0 [lesstype| succ//succ//zero//unit ] ty
   | none => false
 
-  -- expected: false 
+  -- sum(2) : {v | v >= 2} 
+  -- 3 : {v | v >= 2} 
+  -- expected: true 
   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;())]) with
-  | some ty => unify_decide 0 [lesstype| zero//unit ] ty
+  | some ty => unify_decide 0 [lesstype| succ//succ//succ//zero//unit ] ty
   | none => false
 
 
@@ -4596,15 +4615,16 @@ namespace Nameless
     (⟨sum⟩)(succ;zero;()) 
   ]
 
+  -- expected: false 
+  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;())]) with
+  | some ty => unify_decide 0 [lesstype| zero//unit ] ty
+  | none => false
+
   -- expected: true
   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;())]) with
   | some ty => unify_decide 0 [lesstype| succ//zero//unit ] ty
   | none => false
 
-  -- expected: false 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;())]) with
-  | some ty => unify_decide 0 [lesstype| zero//unit ] ty
-  | none => false
 
   #eval infer_reduce 0 [lessterm| 
     (⟨sum⟩)(zero;()) 
@@ -4614,5 +4634,9 @@ namespace Nameless
   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(zero;())]) with
   | some ty => unify_decide 0 [lesstype| zero//unit ] ty
   | none => false
+
+-------------------------------------
+  -- foldn example 
+-------------------------------------
 
 end Nameless 
