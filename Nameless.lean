@@ -1042,6 +1042,9 @@ namespace Nameless
     if ty_l == ty_r then (i, [context]) else
     match ty_l, ty_r with
 
+    ---------------------------------------------------------------
+
+    ------------------------------------------------------------
 
     -- left existential
     | .exis n ty_c1 ty_c2 ty1, ty2 => (
@@ -1107,93 +1110,6 @@ namespace Nameless
         (i, [])
       -----------------------------
     )
-
-    -- right existential
-    | ty', .exis n ty_c1 ty_c2 ty =>
-      let (i, args) := (
-        i + n, 
-        (List.range n).map (fun j => Ty.fvar (i + j))
-      )
-
-      let ty_c1 := instantiate 0 args ty_c1
-      let ty_c2 := instantiate 0 args ty_c2
-      let ty := instantiate 0 args ty
-
-      -------------------
-      -- try backtracking order first
-      -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
-      -------------------
-      let (i, contexts) := (
-        --------------
-        -- backwards
-        --------------
-        bind_nl (unify i context ty' ty) (fun i context => 
-          unify i context ty_c1 ty_c2
-        )
-      )
-
-      if !contexts.isEmpty then
-        (i, contexts)
-      else
-        (i, [])
-        --------------
-        -- forward 
-        -- diverges
-        --------------
-        -- bind_nl (unify i context ty_c1 ty_c2) (fun i context => 
-        --   unify i context ty' ty
-        -- )
-        ---------------
-
-
-    -- left universal
-    | .univ op_ty_c ty1, ty2 =>
-      let (i, id_bound) := (i + 1, i)
-      let args := [Ty.fvar id_bound]
-
-      let op_ty_c := Option.map (instantiate 0 args) op_ty_c
-      let ty1 := instantiate 0 args ty1
-
-      ----------------------------
-      -- try both orders: forward and backtracking;
-      -- only necessary that some solution exists 
-      ----------------------------
-      -- backtracking
-      -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
-      ----------------------------
-      let (i, contexts) := (
-        bind_nl (unify i context ty1 ty2) (fun i context => 
-          match op_ty_c with
-          | none => (i, [context])
-          | some ty_c => (
-            -------------------------------------
-            let op_ty_b := context.env_simple.find? id_bound 
-            match op_ty_b with
-            | some ty_b => 
-              (unify i context ty_b ty_c)
-            | none => 
-              -- TODO: add occurs check
-              (i, [{context with env_simple := context.env_simple.insert id_bound ty_c}])
-          )
-        )
-      )
-      -- TODO: could union solutions together instead of if/else
-      if !contexts.isEmpty then
-        (i, contexts)
-      else 
-        -----------------------------------------
-        -- forward tracking
-        -- This allows more complete subtyping, but breaks relational selection 
-        -- consider a mechanism that combines both directions
-        -----------------------------------------
-        match op_ty_c with
-        | none => (unify i context ty1 ty2)
-        | some ty_c => (
-          let context := {context with env_simple := context.env_simple.insert id_bound ty_c}
-          (unify i context ty1 ty2)
-        )
-
-    ---------------------------------------------------------------
 
     -- right variable
     | ty', .fvar id => 
@@ -1325,7 +1241,7 @@ namespace Nameless
             (i, [])
 
 
-    ------------------------------------------------------------
+
 
     -----------------------------------------------------
 
@@ -1370,6 +1286,92 @@ namespace Nameless
 
 
     ---------------------------------------------------
+
+    -- right existential
+    | ty', .exis n ty_c1 ty_c2 ty =>
+      let (i, args) := (
+        i + n, 
+        (List.range n).map (fun j => Ty.fvar (i + j))
+      )
+
+      let ty_c1 := instantiate 0 args ty_c1
+      let ty_c2 := instantiate 0 args ty_c2
+      let ty := instantiate 0 args ty
+
+      -------------------
+      -- try backtracking order first
+      -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
+      -------------------
+      let (i, contexts) := (
+        --------------
+        -- backwards
+        --------------
+        bind_nl (unify i context ty' ty) (fun i context => 
+          unify i context ty_c1 ty_c2
+        )
+      )
+
+      if !contexts.isEmpty then
+        (i, contexts)
+      else
+        (i, [])
+        --------------
+        -- forward 
+        -- diverges
+        --------------
+        -- bind_nl (unify i context ty_c1 ty_c2) (fun i context => 
+        --   unify i context ty' ty
+        -- )
+        ---------------
+
+
+    -- left universal
+    | .univ op_ty_c ty1, ty2 =>
+      let (i, id_bound) := (i + 1, i)
+      let args := [Ty.fvar id_bound]
+
+      let op_ty_c := Option.map (instantiate 0 args) op_ty_c
+      let ty1 := instantiate 0 args ty1
+
+      ----------------------------
+      -- try both orders: forward and backtracking;
+      -- only necessary that some solution exists 
+      ----------------------------
+      -- backtracking
+      -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
+      ----------------------------
+      let (i, contexts) := (
+        bind_nl (unify i context ty1 ty2) (fun i context => 
+          match op_ty_c with
+          | none => (i, [context])
+          | some ty_c => (
+            -------------------------------------
+            let op_ty_b := context.env_simple.find? id_bound 
+            match op_ty_b with
+            | some ty_b => 
+              (unify i context ty_b ty_c)
+            | none => 
+              -- TODO: add occurs check
+              (i, [{context with env_simple := context.env_simple.insert id_bound ty_c}])
+          )
+        )
+      )
+      -- TODO: could union solutions together instead of if/else
+      if !contexts.isEmpty then
+        (i, contexts)
+      else 
+        -----------------------------------------
+        -- forward tracking
+        -- This allows more complete subtyping, but breaks relational selection 
+        -- consider a mechanism that combines both directions
+        -----------------------------------------
+        match op_ty_c with
+        | none => (unify i context ty1 ty2)
+        | some ty_c => (
+          let context := {context with env_simple := context.env_simple.insert id_bound ty_c}
+          (unify i context ty1 ty2)
+        )
+
 
     -------------------------------------
 
@@ -1659,10 +1661,10 @@ namespace Nameless
     :=
       let context : Context := Context.mk env_simple empty empty adj 
       let stale : PHashSet Nat := empty 
-      -- let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
-      let (_, contexts) : Nat × List Context := bind_nl (unify i context ty1 ty2) (fun i context =>
-        unify_all i [context] context.env_relational.toList
-      )
+      let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
+      -- let (_, contexts) : Nat × List Context := bind_nl (unify i context ty1 ty2) (fun i context =>
+      --   unify_all i [context] context.env_relational.toList
+      -- )
 
       if contexts.isEmpty then
         none
@@ -2143,11 +2145,11 @@ namespace Nameless
       
     partial def infer_reduce_context (i : Nat) (context : Ty.Context) (t : Tm) : Option Ty :=
       let boundary := 0
-      -- let (_, context_tys) := (infer i context {} t) 
-      let (_, context_tys) := bind_nl (infer i context {} t) (fun i (context, ty) =>
-        bind_nl (Ty.unify_all i [context] context.env_relational.toList) (fun i context =>
-          (i, [(context, ty)])
-      ))
+      let (_, context_tys) := (infer i context {} t) 
+      -- let (_, context_tys) := bind_nl (infer i context {} t) (fun i (context, ty) =>
+      --   bind_nl (Ty.unify_all i [context] context.env_relational.toList) (fun i context =>
+      --     (i, [(context, ty)])
+      -- ))
 
       if context_tys.isEmpty then
         none
@@ -2377,6 +2379,7 @@ namespace Nameless
 
 
   -- NOTE: requires unifying the type's constraint to ensure inhabitable constraint type  
+  -- NOTE: requires unifying the assumed parametric type's constraint before type variable assignment  
   -- expected: none 
   #eval unify_reduce 30
   [lesstype| [_:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
@@ -2720,6 +2723,7 @@ namespace Nameless
   [lesstype| (α[7]) ]
 
 
+  -- NOTE: this requires variable assignment before witnessed parametric constraint solving
   -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
   #eval infer_reduce 10 [lessterm|
     let y[0] = (\ y[0] => fix(\ y[0] => 
@@ -4290,6 +4294,7 @@ namespace Nameless
   ]
 
 
+  -- NOTE: unify_all breaks this
   -- complete
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
