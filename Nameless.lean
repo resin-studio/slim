@@ -1769,8 +1769,11 @@ namespace Nameless
     syntax:60 "\\" lessterm:61 "=>" lessterm:60 : lessterm
     syntax:60 "\\" lessterm:61 "=>" lessterm:60 lessterm:60 : lessterm
 
+
     syntax:60 "let y[0]" ":" lesstype "=" lessterm:60 "in" lessterm:60 : lessterm 
     syntax:60 "let y[0]" "=" lessterm:60 "in" lessterm:60 : lessterm 
+
+    syntax:60 "if" lessterm "then" lessterm "else" lessterm : lessterm
 
     syntax "[lessterm| " lessterm "]" : term
 
@@ -1805,6 +1808,13 @@ namespace Nameless
 
     | `([lessterm| let y[0] : $a = $b in $c ]) => `(Tm.letb (Option.some [lesstype| $a ]) [lessterm| $b ] [lessterm| $c ])
     | `([lessterm| let y[0] = $b in $c ]) => `(Tm.letb Option.none [lessterm| $b ] [lessterm| $c ])
+
+    | `([lessterm| if $a then $b else $c ]) => `(
+        [lessterm| $a |> (
+            \ ⟨Tm.tag "true" Tm.unit⟩ => ($b) 
+            \ ⟨Tm.tag "false" Tm.unit⟩ => ($c))
+        ]
+    )
 
     -- generic
     | `([lessterm| ($a) ]) => `([lessterm| $a ])
@@ -4638,5 +4648,30 @@ namespace Nameless
 -------------------------------------
   -- foldn example 
 -------------------------------------
+
+
+  def lt := [lessterm|
+    fix (\ y[0] =>
+      \ (zero;(), succ;y[0]) => true;()  
+      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
+      \ (succ; y[0], zero;()) => false;() 
+    )
+  ]
+
+  def foldn := [lessterm|
+  \ (y[0], y[1], y[2]) => (
+      let y[0] = fix(\ y[0] => (\ (y[0], y[1]) =>
+        -- n, b, f: 3, 4, 5
+        -- loop: 2
+        -- i, c: 0, 1 
+        (if ⟨lt⟩(y[0], y[3]) then
+          y[2](⟨add⟩(y[0], succ;zero;()), y[5](y[0], y[1]))
+        else
+          y[1]
+        )
+      )) in 
+      y[0](zero;())(y[2])
+  )
+  ]
 
 end Nameless 
