@@ -1186,8 +1186,6 @@ is critical to ensure that easier constraints are generated. To that end, cases 
 strengthen the left side or weaken the right side occur before rules that
 weaken the left side or strengthen the right side.
 
-\TODO{solve free parametric type variables and solve constraints before assigning variables; to ensure types are inhabitable}
-
 The left existential case first tries to unify the constraint. It's possible that the
 constraint cannot be solved, but also isn't invalid, in which case unifying the existential type's constraint 
 simply updates the subtyping environment with the unsolved relational constraint. 

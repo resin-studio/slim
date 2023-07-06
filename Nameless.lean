@@ -1042,75 +1042,6 @@ namespace Nameless
     if ty_l == ty_r then (i, [context]) else
     match ty_l, ty_r with
 
-    ---------------------------------------------------------------
-
-    ------------------------------------------------------------
-
-    -- left existential
-    | .exis n ty_c1 ty_c2 ty1, ty2 => (
-      let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
-
-      let args := ids_bound.map (fun id => Ty.fvar id)
-      let ty_c1 := instantiate 0 args ty_c1
-      let ty_c2 := instantiate 0 args ty_c2
-      let ty1 := instantiate 0 args ty1
-
-      let env_simple_unchanged : List Ty.Context -> Option Ty.Context := (fun new_contexts => 
-        match new_contexts with
-        | [new_context] => 
-          if new_context.env_simple.toList == context.env_simple.toList then
-            some new_context
-          else
-            none
-        | _ => none
-      )
-
-      let (i, contexts_constraint) := (unify i context ty_c1 ty_c2)
-      match env_simple_unchanged contexts_constraint with 
-      | some context_constraint => 
-        let (i, contexts) := (unify i context_constraint ty1 ty2) 
-        -- ensure that opaque variables are not bound from payload unification
-        let result_safe := ids_bound.all (fun id => constraint_unchanged id context_constraint contexts)
-        if result_safe then
-          (i, contexts)
-        else
-          (i, [])
-      | none => 
-        all_nl (i, contexts_constraint) (fun i context_constraint =>
-          let (i, contexts') := (unify i context_constraint ty1 ty2)
-          if !contexts'.isEmpty && (ids_bound.all (fun id => constraint_unchanged id context_constraint contexts')) then
-            (i, contexts')
-          else
-            (i, [])
-        )
-    ) 
-
-    -- right universal
-    | ty1, .univ op_ty_c ty2  => (
-      let id_bound := i
-      let i := i + 1
-
-      let args := [Ty.fvar id_bound]
-      let op_ty_c := Option.map (instantiate 0 args) op_ty_c
-      let ty2 := instantiate 0 args ty2
-
-
-      let context := match op_ty_c with
-      | none => context
-      | some ty_c => {context with 
-        -- TODO: add occurs check
-        env_simple := context.env_simple.insert id_bound ty_c
-      }
-
-      let (i, contexts) := (unify i context ty1 ty2)
-      let result_safe := constraint_unchanged id_bound context contexts
-      if result_safe then
-        (i, contexts)
-      else
-        (i, [])
-      -----------------------------
-    )
-
     -- right variable
     | ty', .fvar id => 
       ----------------------
@@ -1240,10 +1171,73 @@ namespace Nameless
           else
             (i, [])
 
-
-
-
     -----------------------------------------------------
+
+    -- left existential
+    | .exis n ty_c1 ty_c2 ty1, ty2 => (
+      let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
+
+      let args := ids_bound.map (fun id => Ty.fvar id)
+      let ty_c1 := instantiate 0 args ty_c1
+      let ty_c2 := instantiate 0 args ty_c2
+      let ty1 := instantiate 0 args ty1
+
+      let env_simple_unchanged : List Ty.Context -> Option Ty.Context := (fun new_contexts => 
+        match new_contexts with
+        | [new_context] => 
+          if new_context.env_simple.toList == context.env_simple.toList then
+            some new_context
+          else
+            none
+        | _ => none
+      )
+
+      let (i, contexts_constraint) := (unify i context ty_c1 ty_c2)
+      match env_simple_unchanged contexts_constraint with 
+      | some context_constraint => 
+        let (i, contexts) := (unify i context_constraint ty1 ty2) 
+        -- ensure that opaque variables are not bound from payload unification
+        let result_safe := ids_bound.all (fun id => constraint_unchanged id context_constraint contexts)
+        if result_safe then
+          (i, contexts)
+        else
+          (i, [])
+      | none => 
+        all_nl (i, contexts_constraint) (fun i context_constraint =>
+          let (i, contexts') := (unify i context_constraint ty1 ty2)
+          if !contexts'.isEmpty && (ids_bound.all (fun id => constraint_unchanged id context_constraint contexts')) then
+            (i, contexts')
+          else
+            (i, [])
+        )
+    ) 
+
+    -- right universal
+    | ty1, .univ op_ty_c ty2  => (
+      let id_bound := i
+      let i := i + 1
+
+      let args := [Ty.fvar id_bound]
+      let op_ty_c := Option.map (instantiate 0 args) op_ty_c
+      let ty2 := instantiate 0 args ty2
+
+
+      let context := match op_ty_c with
+      | none => context
+      | some ty_c => {context with 
+        -- TODO: add occurs check
+        env_simple := context.env_simple.insert id_bound ty_c
+      }
+
+      let (i, contexts) := (unify i context ty1 ty2)
+      let result_safe := constraint_unchanged id_bound context contexts
+      if result_safe then
+        (i, contexts)
+      else
+        (i, [])
+      -----------------------------
+    )
+
 
     -- left induction
     | .induc ty, ty_r => 
@@ -1268,9 +1262,9 @@ namespace Nameless
 
     -- consequent intersection
     | ty1, .impli ty2 (Ty.inter ty_u1 ty_u2) =>
-       bind_nl (unify i context ty1 (Ty.impli ty2 ty_u1)) (fun i context =>
-         unify i context ty1 (Ty.impli ty2 ty_u2)
-       )
+      bind_nl (unify i context ty1 (Ty.impli ty2 ty_u1)) (fun i context =>
+        unify i context ty1 (Ty.impli ty2 ty_u2)
+      )
 
     -- left union
     | Ty.union ty1 ty2, ty => 
@@ -1371,7 +1365,6 @@ namespace Nameless
           let context := {context with env_simple := context.env_simple.insert id_bound ty_c}
           (unify i context ty1 ty2)
         )
-
 
     -------------------------------------
 
@@ -2379,14 +2372,6 @@ namespace Nameless
   [lesstype| α[0] ]
 
 
-  -- NOTE: requires unifying the type's constraint to ensure inhabitable constraint type  
-  -- NOTE: requires unifying the assumed parametric type's constraint before type variable assignment  
-  -- expected: none 
-  #eval unify_reduce 30
-  [lesstype| [_:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| foo//succ//zero//unit -> α[0] ] 
-  [lesstype| boo//α[0] ]
-
   -----------------------------------------------
 
   def even_list := [lesstype| 
@@ -2724,7 +2709,15 @@ namespace Nameless
   [lesstype| (α[7]) ]
 
 
-  -- NOTE: this requires variable assignment before witnessed parametric constraint solving
+  -- NOTE: it is important to preserve the universal type structure for application to succeed
+  -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
+  #eval infer_reduce 10 [lessterm|
+    (\ y[0] => fix(\ y[0] => 
+      \ zero;() => nil;()
+      \ succ;y[0] => cons;(y[2], y[1](y[0]))
+    ))(thing;())(succ;succ;zero;())
+  ]
+
   -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
   #eval infer_reduce 10 [lessterm|
     let y[0] = (\ y[0] => fix(\ y[0] => 
@@ -2733,6 +2726,7 @@ namespace Nameless
     )) in 
     y[0](thing;())(succ;succ;zero;())
   ]
+
 
   -- expected: cons//nil//unit
   #eval infer_reduce 10 [lessterm|
@@ -4099,6 +4093,31 @@ namespace Nameless
 
 
 --------------------------------------
+
+-----------------------------------
+-- uninhabitable
+-----------------------------------
+
+  -- is unification with uninhabitable types unsound?
+  -- assigment indicates a subtyping; (not a typing)
+  -- the existience of a subtyping does not imply the existence of a typing; 
+  -- that is, the subtype could also be empty 
+  -- thus it does not introduce a false premise in order to draw a false conclusion
+
+  -- learns that α[7] is an uninhabitable type
+  #eval unify_decide 10 
+  [lesstype| α[7] ]
+  [lesstype| {β[0] with succ//β[0] <: foo//β[0]} ]
+
+  -- learns that α[0] is an uninhabitable type
+  #eval unify_decide 30
+  [lesstype| [_:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| foo//succ//zero//unit -> α[0] ] 
+
+  -- expected false
+  #eval unify_decide 30
+  [lesstype| [_:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
+  [lesstype| foo//succ//zero//unit -> α[0] ] 
 
 
 -------------------------------------
