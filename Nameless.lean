@@ -2146,7 +2146,7 @@ namespace Nameless
       let context : Ty.Context := ⟨empty, empty, empty, empty⟩
       let (i, context_tys) := (infer (i + 1) context {} t)
       context_tys.map (fun (context, ty) => context.env_simple)
-      
+
     partial def infer_reduce_context (i : Nat) (context : Ty.Context) (t : Tm) : Option Ty :=
       let boundary := 0
       let (_, context_tys) := (infer i context {} t) 
@@ -4539,35 +4539,6 @@ namespace Nameless
 
   #eval infer_reduce 0 add 
 
-  #eval infer_reduce 0 [lessterm|
-    let y[0] = _ in
-    let y[0] = _ in
-    (⟨add⟩ (y[0], y[1]))
-  ]
-
-  -- def sum_let := [lessterm|
-  --   fix(\ y[0] => (
-  --     \ zero; () => zero; () 
-  --     \ succ; y[0] => (
-  --       let y[0] = (y[1] y[0]) in
-  --       y[0]
-  --     )
-  --   ))
-  -- ]
-
-  -- def sum_let := [lessterm|
-  --   fix(\ y[0] => (
-  --     \ zero; () => zero; () 
-  --     \ succ; y[0] => (
-  --       let y[0] = (y[1] y[0]) in
-  --       ((⟨add⟩) (y[0], succ; y[1]))
-  --     )
-  --   ))
-  -- ]
-
-  -- unsound: using let binding; inductive constraint is missing
-  -- #eval infer_reduce 0 sum_let 
-
   def sum := [lessterm|
     fix(\ y[0] => (
       \ zero; () => zero; () 
@@ -4652,11 +4623,39 @@ namespace Nameless
 
   def lt := [lessterm|
     fix (\ y[0] =>
-      \ (zero;(), succ;y[0]) => true;()  
+      \ (zero;(), succ;zero;()) => true;()  
       \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+      \ (y[0], zero;()) => false;() 
     )
   ]
+
+  #eval infer_reduce 0 lt
+
+  -- expected: true 
+  #eval infer_reduce 0 [lessterm| 
+    ⟨lt⟩(zero;(), succ;zero;()) 
+  ]
+
+  -- expected: true 
+  #eval infer_reduce 0 [lessterm| 
+    ⟨lt⟩(succ;zero;(), succ;succ;zero;()) 
+  ]
+
+  -- expected: false
+  #eval infer_reduce 0 [lessterm| 
+    ⟨lt⟩(zero;(), zero;()) 
+  ]
+
+  -- expected: false
+  #eval infer_reduce 0 [lessterm| 
+    ⟨lt⟩(succ;zero;(), succ;zero;()) 
+  ]
+
+  -- expected: false
+  #eval infer_reduce 0 [lessterm| 
+    ⟨lt⟩(succ;succ;zero;(), succ;zero;()) 
+  ]
+
 
   def foldn := [lessterm|
   \ (y[0], y[1], y[2]) => (
@@ -4665,13 +4664,49 @@ namespace Nameless
         -- loop: 2
         -- i, c: 0, 1 
         (if ⟨lt⟩(y[0], y[3]) then
-          y[2](⟨add⟩(y[0], succ;zero;()), y[5](y[0], y[1]))
+          y[2](succ;y[0], y[5](y[0], y[1]))
         else
           y[1]
         )
       )) in 
-      y[0](zero;())(y[2])
+      y[0](zero;(), y[2])
   )
   ]
+
+  -- TODO
+  -- incomplete: inductive type inference from fix may be flawed
+  #eval infer_reduce 0 foldn
+
+
+  -------------------------------
+  -- inductive type inference
+  -------------------------------
+
+
+  def zero := [lessterm|
+    fix (\ y[0] =>
+      \ zero;() => true;()  
+      \ succ;y[0] => false;() 
+    )
+  ]
+
+  def sum_ite := [lessterm|
+    fix(\ y[0] => (\ y[0] =>
+      if ⟨zero⟩(y[0]) then
+        zero;()
+      else
+        y[0] |> (\ succ; y[0] => ⟨add⟩((y[2](y[0]), succ;y[0])))
+        -- (\ succ; y[0] => ⟨add⟩((y[2](y[0]), succ;y[0])))(y[0])
+    ))
+  ]
+
+
+  #eval infer_reduce 0 sum
+
+  -- TODO
+  -- incomplete: inductive type inference from fix may be flawed
+  -- cannot infer inductive type that relies on if-then-else instead of pattern matching 
+  #eval infer_reduce 0 sum_ite
+
 
 end Nameless 
