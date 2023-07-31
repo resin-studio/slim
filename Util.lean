@@ -84,6 +84,16 @@ namespace PHashSet
   instance [BEq α] [Hashable α] : Add (PHashSet α) where
     add x y := y.fold insert x 
 
+  instance [BEq α] [Hashable α] : Mul (PHashSet α) where
+    mul x y := (
+      y.fold (fun result item => 
+        if x.contains item then
+          insert result item
+        else
+          result
+      ) empty
+    )
+
   instance [BEq α] [Hashable α] : Sub (PHashSet α) where
     sub x y := y.fold erase x 
 

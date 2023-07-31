@@ -76,6 +76,7 @@ namespace Nameless
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
   | impli : Ty -> Ty -> Ty
+  -- TODO: generalize form of constraints to allow a set of mutually dependent subtypings 
   | exis : Nat -> Ty -> Ty -> Ty -> Ty
   | univ : Option Ty -> Ty -> Ty
   | induc : Ty -> Ty
@@ -84,13 +85,24 @@ namespace Nameless
 
   namespace Ty
 
+    structure Qual where
+      -- type variable qualifiers are top-down directed 
+      -- top-down is sufficienct if flag is introduced when variable is introduced  
+      -- if the flag were introduced at first usage of variable, 
+        -- then top-down would be insufficient.
+        --  and the flag would need to propagate bottom-up and left-to-right
+      descrip : PHashSet Nat -- used to control adjustment
+
+    def adjustable (q : Qual) (id : Nat) : Bool :=
+      q.descrip.contains id
+
     structure Context where
       -- invariant: simple_to_relational.contains key --> 
       --              exsists ty_lower , ty_lower == simple_to_relational.find key  && env_relational.contains ty_lower   
       env_simple : PHashMap Nat Ty
       env_keychain : PHashMap Nat (PHashSet Ty)
       env_relational : PHashMap Ty Ty
-      adj : PHashSet Nat
+      -- adj : PHashSet Nat
     deriving Repr
 
     instance : BEq Context where
@@ -426,7 +438,8 @@ namespace Nameless
     syntax "{" lesstype:41 "with" lesstype "}": lesstype 
     syntax "{" lesstype:41 "}" : lesstype 
 
-    syntax:50 "[" "_" ":" lesstype:51 "]" lesstype:50 : lesstype 
+    -- TODO: update bound quantification with subtyping symbol <:
+    syntax:50 "[" "_" "<:" lesstype:51 "]" lesstype:50 : lesstype 
     syntax:50 "[" "_" "]" lesstype:50 : lesstype 
 
     syntax "induct" lesstype:40 : lesstype 
@@ -477,7 +490,7 @@ namespace Nameless
     | `([lesstype| [ _ ] $d  ]) => 
       `(Ty.univ none [lesstype| $d ])
 
-    | `([lesstype| [ _ : $a ] $d  ]) => 
+    | `([lesstype| [ _ <: $a ] $d  ]) => 
       `(Ty.univ (some [lesstype| $a ]) [lesstype| $d ])
 
     | `([lesstype| induct $a ]) => `(Ty.induc [lesstype| $a ])
@@ -542,6 +555,9 @@ namespace Nameless
     instance : Repr Ty where
       reprPrec := repr
 
+    instance : ToString Ty where
+      toString := fun t => Format.pretty (repr t 0)
+
   #check Format
   def envRepr 
   (m : PHashMap Nat Ty) (n : Nat) : Format :=
@@ -569,7 +585,7 @@ namespace Nameless
 
     #eval [lesstype| {1 # β[0] with (β[1] * β[0]) <: booga//unit} ] 
     #eval [lesstype| {1 # β[0] with β[1] * β[0] <: booga//unit} ] 
-    #eval [lesstype| [_:ooga//unit] β[0] -> {1 # β[0] with β[1] * β[0] <: booga//unit} ] 
+    #eval [lesstype| [_ <: ooga//unit] β[0] -> {1 # β[0] with β[1] * β[0] <: booga//unit} ] 
 
 ------------------------------------------------------------
 
@@ -986,6 +1002,9 @@ namespace Nameless
           match ty_rec with
           | Ty.induc ty_body =>
             let unions := split_unions ty_body
+            -- TODO: decreasing is too strict
+            -- increasing can be fine too 
+            -- only the the switch that controls branching must be decreasing
             unions.all (decreasing 0)
           | _ => false 
         | _ => false
@@ -1005,7 +1024,7 @@ namespace Nameless
         env_simple := c1.env_simple;c2.env_simple,
         env_keychain := c1.env_keychain;c2.env_keychain
         env_relational := c1.env_relational;c2.env_relational
-        adj := c1.adj + c2.adj
+        -- adj := c1.adj + c2.adj
       }
 
 
@@ -1038,7 +1057,7 @@ namespace Nameless
     --     (unify i context ty1 (.impli ty_arg' ty3))
     --   )
 
-    partial def unify (i : Nat) (context : Context) (ty_l ty_r : Ty) : (Nat × List Context) :=
+    partial def unify (i : Nat) (qual : Qual) (context : Context) (ty_l ty_r : Ty) : (Nat × List Context) :=
     if ty_l == ty_r then (i, [context]) else
     match ty_l, ty_r with
 
@@ -1056,11 +1075,11 @@ namespace Nameless
 
       match context.env_simple.find? id with 
       | some ty => 
-        let (i, contexts) := (unify i context ty' ty) 
+        let (i, contexts) := (unify i qual context ty' ty) 
 
         if !contexts.isEmpty then
           (i, contexts)
-        else if (context.adj.contains id) && (!occurs context id (Ty.union ty' ty)) then
+        else if (adjustable qual id) && (!occurs context id (Ty.union ty' ty)) then
           let context := {context with env_simple := context.env_simple.insert id (Ty.unionize ty' ty)}
           (i, [context])
         else
@@ -1079,7 +1098,7 @@ namespace Nameless
                 -- TODO: add occurs check
                 let env_sub : PHashMap Nat Ty := empty.insert id ty'
                 let ty_sub := subst env_sub key  
-                let (i, contexts) := (unify i context ty_sub relation) 
+                let (i, contexts) := (unify i qual context ty_sub relation) 
                 ------------
                 if !contexts.isEmpty then
                   (i, contexts)
@@ -1087,7 +1106,7 @@ namespace Nameless
                   -- check inhabitation of [id <: ty']{... * id *.... with ... * id *.... <: R}
                   -- corresponds to factoring relation
                   let labels := extract_label_list key 
-                  let (i, contexts_oracle) := (unify i context ty_sub (factor_out_relation labels relation))
+                  let (i, contexts_oracle) := (unify i qual context ty_sub (factor_out_relation labels relation))
                   if !contexts_oracle.isEmpty then
                     (i, [context])
                   else
@@ -1100,6 +1119,8 @@ namespace Nameless
         | none => (
           if (Ty.fvar id) == ty' then
             (i, [context])
+          -- else if (!writable qual id) then
+          --   (i, [context])
           else if !occurs context id ty' then
             (i, [{context with env_simple := context.env_simple.insert id ty' }])
           else
@@ -1118,10 +1139,10 @@ namespace Nameless
 
       match context.env_simple.find? id with 
       | some ty' => 
-        let (i, contexts) := (unify i context ty' ty)
+        let (i, contexts) := (unify i qual context ty' ty)
         if !contexts.isEmpty then
           (i, contexts)
-        else if (context.adj.contains id) && (!occurs context id (Ty.inter ty ty')) then
+        else if (adjustable qual id) && (!occurs context id (Ty.inter ty ty')) then
           let context := {context with env_simple := context.env_simple.insert id (Ty.inter ty ty')}
           (i, [context])
         else
@@ -1144,7 +1165,7 @@ namespace Nameless
                   [lesstype| {⟨fids.length⟩ # ⟨abstract fids 0 ty_sub⟩} ] 
                 )
                 -- unify relational lhs and constructed relational rhs 
-                let (i, contexts_oracle) := (unify i context relation ty_weak)
+                let (i, contexts_oracle) := (unify i qual context relation ty_weak)
 
                 if !contexts_oracle.isEmpty then
                   (i, [context])
@@ -1165,6 +1186,10 @@ namespace Nameless
         | none =>
           if (Ty.fvar id) == ty then
             (i, [context])
+          -- else if (!writable qual id) then
+          --   let context := {context with env_simple := context.env_simple.insert id ty}
+          --   let context := {context with env_simple := context.env_simple.insert (2000 + id) (Ty.tag s!"minlocal_{qual.minlocal}" Ty.unit)}
+          --   (i, [context])
           else if (!occurs context id ty) then
             let context := {context with env_simple := context.env_simple.insert id ty}
             (i, [context])
@@ -1192,10 +1217,10 @@ namespace Nameless
         | _ => none
       )
 
-      let (i, contexts_constraint) := (unify i context ty_c1 ty_c2)
+      let (i, contexts_constraint) := (unify i qual context ty_c1 ty_c2)
       match env_simple_unchanged contexts_constraint with 
       | some context_constraint => 
-        let (i, contexts) := (unify i context_constraint ty1 ty2) 
+        let (i, contexts) := (unify i qual context_constraint ty1 ty2) 
         -- ensure that opaque variables are not bound from payload unification
         let result_safe := ids_bound.all (fun id => constraint_unchanged id context_constraint contexts)
         if result_safe then
@@ -1204,7 +1229,7 @@ namespace Nameless
           (i, [])
       | none => 
         all_nl (i, contexts_constraint) (fun i context_constraint =>
-          let (i, contexts') := (unify i context_constraint ty1 ty2)
+          let (i, contexts') := (unify i qual context_constraint ty1 ty2)
           if !contexts'.isEmpty && (ids_bound.all (fun id => constraint_unchanged id context_constraint contexts')) then
             (i, contexts')
           else
@@ -1229,7 +1254,7 @@ namespace Nameless
         env_simple := context.env_simple.insert id_bound ty_c
       }
 
-      let (i, contexts) := (unify i context ty1 ty2)
+      let (i, contexts) := (unify i qual context ty1 ty2)
       let result_safe := constraint_unchanged id_bound context contexts
       if result_safe then
         (i, contexts)
@@ -1246,36 +1271,36 @@ namespace Nameless
       else
         let labels := extract_label_list ty_r
         let ty_factored := (factor_out_relation labels (.induc ty))
-        let (i, contexts) := unify i context ty_factored ty_r
+        let (i, contexts) := unify i qual context ty_factored ty_r
         if !contexts.isEmpty then
           (i, contexts)
         else
           -- using induction hypothesis, ty1 ≤ ty2; safely unroll
           let ty := instantiate 0 [ty_r] ty
-          unify i context ty ty_r
+          unify i qual context ty ty_r
 
     -- antecedent union 
     | ty1, .impli (Ty.union ty_u1 ty_u2) ty2 =>
-      bind_nl (unify i context ty1 (Ty.impli ty_u1 ty2)) (fun i context =>
-        unify i context ty1 (Ty.impli ty_u2 ty2)
+      bind_nl (unify i qual context ty1 (Ty.impli ty_u1 ty2)) (fun i context =>
+        unify i qual context ty1 (Ty.impli ty_u2 ty2)
       )
 
     -- consequent intersection
     | ty1, .impli ty2 (Ty.inter ty_u1 ty_u2) =>
-      bind_nl (unify i context ty1 (Ty.impli ty2 ty_u1)) (fun i context =>
-        unify i context ty1 (Ty.impli ty2 ty_u2)
+      bind_nl (unify i qual context ty1 (Ty.impli ty2 ty_u1)) (fun i context =>
+        unify i qual context ty1 (Ty.impli ty2 ty_u2)
       )
 
     -- left union
     | Ty.union ty1 ty2, ty => 
-      bind_nl (unify i context ty1 ty) (fun i context =>
-        (unify i context ty2 ty)
+      bind_nl (unify i qual context ty1 ty) (fun i context =>
+        (unify i qual context ty2 ty)
       )
 
     -- right intersection
     | ty, .inter ty1 ty2 => 
-      bind_nl (unify i context ty ty1) (fun i context =>
-        (unify i context ty ty2)
+      bind_nl (unify i qual context ty ty1) (fun i context =>
+        (unify i qual context ty ty2)
       )
 
 
@@ -1300,8 +1325,8 @@ namespace Nameless
         --------------
         -- backwards
         --------------
-        bind_nl (unify i context ty' ty) (fun i context => 
-          unify i context ty_c1 ty_c2
+        bind_nl (unify i qual context ty' ty) (fun i context => 
+          unify i qual context ty_c1 ty_c2
         )
       )
 
@@ -1335,7 +1360,7 @@ namespace Nameless
       -- NOTE: unify constraint last, as quantified variables should react to unification of payloads
       ----------------------------
       let (i, contexts) := (
-        bind_nl (unify i context ty1 ty2) (fun i context => 
+        bind_nl (unify i qual context ty1 ty2) (fun i context => 
           match op_ty_c with
           | none => (i, [context])
           | some ty_c => (
@@ -1343,7 +1368,7 @@ namespace Nameless
             let op_ty_b := context.env_simple.find? id_bound 
             match op_ty_b with
             | some ty_b => 
-              (unify i context ty_b ty_c)
+              (unify i qual context ty_b ty_c)
             | none => 
               -- TODO: add occurs check
               (i, [{context with env_simple := context.env_simple.insert id_bound ty_c}])
@@ -1360,10 +1385,10 @@ namespace Nameless
         -- consider a mechanism that combines both directions
         -----------------------------------------
         match op_ty_c with
-        | none => (unify i context ty1 ty2)
+        | none => (unify i qual context ty1 ty2)
         | some ty_c => (
           let context := {context with env_simple := context.env_simple.insert id_bound ty_c}
-          (unify i context ty1 ty2)
+          (unify i qual context ty1 ty2)
         )
 
     -------------------------------------
@@ -1374,11 +1399,11 @@ namespace Nameless
       let ty' := (simplify (subst context.env_simple ty'))
       let ty_r := (simplify (subst context.env_simple (.induc ty)))
       if reducible context ty' ty_r then
-        unify i context ty' (instantiate 0 [Ty.induc ty] ty) 
+        unify i qual context ty' (instantiate 0 [Ty.induc ty] ty) 
       else
         match context.env_relational.find? ty' with
         | .some ty_cache => 
-          unify i context ty_cache (Ty.induc ty)
+          unify i qual context ty_cache (Ty.induc ty)
         | .none => (
           let occurence := (toList (free_vars ty')).any (fun key => occurs context key (.induc ty)) 
           let rlabels := extract_record_labels ty' 
@@ -1397,14 +1422,14 @@ namespace Nameless
 
     -- right union
     | ty, .union ty1 ty2 => 
-      let (i, contexts_ty1) := (unify i context ty ty1)
-      let (i, contexts_ty2) := (unify i context ty ty2)
+      let (i, contexts_ty1) := (unify i qual context ty ty1)
+      let (i, contexts_ty2) := (unify i qual context ty ty2)
       (i, contexts_ty1 ++ contexts_ty2)
 
     -- left intersection
     | .inter ty1 ty2, ty => 
-      let (i, contexts_ty1) := (unify i context ty1 ty)
-      let (i, contexts_ty2) := (unify i context ty2 ty)
+      let (i, contexts_ty1) := (unify i qual context ty1 ty)
+      let (i, contexts_ty2) := (unify i qual context ty2 ty)
       (i, contexts_ty1 ++ contexts_ty2)
 
     -- top
@@ -1421,8 +1446,8 @@ namespace Nameless
     -- implication
     | .impli ty_param ty_body, .impli ty_arg ty_res =>
 
-      bind_nl (unify i context ty_arg ty_param) (fun i context =>
-        (unify i context ty_body ty_res)
+      bind_nl (unify i qual context ty_arg ty_param) (fun i context =>
+        (unify i qual context ty_body ty_res)
       ) 
 
     -- bound variable
@@ -1435,14 +1460,14 @@ namespace Nameless
     -- tag
     | .tag l' ty', .tag l ty =>
       if l' = l then
-        unify i context ty' ty
+        unify i qual context ty' ty
       else
         (i, [])
 
     -- field
     | .field l' ty', .field l ty =>
       if l' == l then
-        unify i context ty' ty
+        unify i qual context ty' ty
       else
         (i, [])
 
@@ -1455,31 +1480,32 @@ namespace Nameless
     -- iteritively unify all constraints 
     -- loop through constraints; unify subsequent constraint under contexts generated by previous constraints
     -- ERROR: causes function type inference to break in max example 
-    partial def unify_all (i : Nat) (contexts : List Context)  : List (Ty × Ty) -> Nat × List Context 
+    partial def unify_all (i : Nat) (qual : Qual) (contexts : List Context)  : List (Ty × Ty) -> Nat × List Context 
     | [] => (i, contexts)
     | (key, rel) :: constraints =>
-      bind_nl (unify_all i contexts constraints) (fun i context =>
-        unify i context key rel
+      bind_nl (unify_all i qual contexts constraints) (fun i context =>
+        unify i qual context key rel
       )
 
     -- repeatedly call unify_all until fixed point
     -- needed for completeness in case there are dependencies in opposite order of constraint list traversal 
     -- TODO: replace unify_all calls with solve calls
     -- ERROR: diverges
-    partial def solve (i : Nat) (contexts : List Context) (constraints : List (Ty × Ty)) 
+    partial def solve (i : Nat) (qual : Qual) (contexts : List Context) (constraints : List (Ty × Ty)) 
     : Nat × List Context 
     :=
-      let (i, contexts') := unify_all i contexts constraints
+      let (i, contexts') := unify_all i qual contexts constraints
       if contexts' == contexts then
         (i, contexts')
       else
-        solve i contexts' constraints
+        solve i qual contexts' constraints
 
 
-    partial def compress (stale : PHashSet Nat) (context : Context) (ty : Ty) :=
+    partial def pack (stale : PHashSet Nat) (context : Context) (ty : Ty) :=
       -----------------------
       -- assumption: env_simple is cycle-free  
       -----------------------
+      -- TODO: generalize form of constraints to allow a set of mutually dependent subtypings 
 
       let ty := simplify (subst context.env_simple ty)
 
@@ -1502,7 +1528,7 @@ namespace Nameless
                   if constraints.contains key then
                     constraints
                   else
-                    constraints.insert key (compress stale context relation) 
+                    constraints.insert key (pack stale context relation) 
                 | none => 
                   -- invariant: this case should never happen
                   constraints 
@@ -1519,14 +1545,14 @@ namespace Nameless
         else
           intersect_over (fun (ty_lhs, ty_rhs) => 
             let fvs_constraints := (free_vars ty_lhs)
-            let fids_c := List.filter (fun id => !stale.contains id) (toList fvs_constraints)
+            let fids_c := (toList ((Ty.free_vars ty) +fvs_constraints)).filter (fun id => !stale.contains id)
             [lesstype|
               {⟨fids_c.length⟩ # ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
             ]
           ) constraints.toList
 
     -- old
-    -- partial def compress (boundary : Nat) (context : Context) (ty : Ty) :=
+    -- partial def pack (boundary : Nat) (context : Context) (ty : Ty) :=
     --   -----------------------
     --   -- assumption: env_simple is cycle-free  
     --   -----------------------
@@ -1552,7 +1578,7 @@ namespace Nameless
     --               if constraints.contains key then
     --                 constraints
     --               else
-    --                 constraints.insert key (compress boundary context relation) 
+    --                 constraints.insert key (pack boundary context relation) 
     --             | none => 
     --               -- invariant: this impli should never happen
     --               constraints 
@@ -1577,7 +1603,7 @@ namespace Nameless
 
 -----------------------------------------------------
 
-    -- TODO: remove this; replace with combination of universal generaliztion and compression/packing
+    -- TODO: remove this; replace with combination of universal generaliztion and packing
     -- deprecated
     /-
     def generalize (boundary : Nat) (context : Context) (ty : Ty) : Ty := (
@@ -1616,8 +1642,8 @@ namespace Nameless
       --     [lesstype| ? >> ⟨ty_acc⟩]
       --   ) (abstract fids_pl 0 ty)
       else (
-        let ty_compressed := compress boundary context ty
-        let ty_base := [lesstype| ⟨ty_compressed⟩ >> β[0]]
+        let ty_packed := pack boundary context ty
+        let ty_base := [lesstype| ⟨ty_packed⟩ >> β[0]]
         (List.range fids_pl.length).foldl (fun ty_acc _ =>
           [lesstype| ? >> ⟨ty_acc⟩]
         ) (abstract fids_pl 0 ty_base) 
@@ -1649,13 +1675,14 @@ namespace Nameless
 
 
     partial def unify_reduce_full (i : Nat) 
-      (env_simple : PHashMap Nat Ty) (adj : PHashSet Nat)
+      (env_simple : PHashMap Nat Ty) (descrip : PHashSet Nat)
       (ty1 ty2 ty_result : Ty) 
     : Option Ty
     :=
-      let context : Context := Context.mk env_simple empty empty adj 
+      let qual := ⟨descrip⟩
+      let context : Context := Context.mk env_simple empty empty 
       let stale : PHashSet Nat := empty 
-      let (_, contexts) : Nat × List Context := (unify i context ty1 ty2)
+      let (_, contexts) : Nat × List Context := (unify i qual context ty1 ty2)
       -- let (_, contexts) : Nat × List Context := bind_nl (unify i context ty1 ty2) (fun i context =>
       --   unify_all i [context] context.env_relational.toList
       -- )
@@ -1667,15 +1694,17 @@ namespace Nameless
           functiontype (subst context.env_simple ty_result)
         )
 
+        let intersectable := false
+
         let result := (
           if intersectable then
             List.foldr (fun context ty_acc => 
-              let ty_ex := Ty.compress stale context ty_result
-              Ty.intersect [lesstype| [_:⟨ty_ex⟩] β[0]] ty_acc
+              let ty_ex := Ty.pack stale context ty_result
+              Ty.intersect [lesstype| [_ <:⟨ty_ex⟩] β[0]] ty_acc
             ) Ty.top contexts 
           else
             List.foldr (fun context ty_acc => 
-              let ty_ex := Ty.compress stale context ty_result
+              let ty_ex := Ty.pack stale context ty_result
               Ty.unionize ty_ex ty_acc
             ) Ty.bot contexts 
         )
@@ -1691,18 +1720,21 @@ namespace Nameless
       unify_reduce_full i empty adj ty1 ty2 ty_result
 
     partial def unify_simple (i : Nat) (ty1) (ty2) :=
-      let context : Context := ⟨empty, empty, empty, empty⟩
-      (unify i context ty1 ty2)
+      let qual := ⟨empty⟩
+      let context : Context := ⟨empty, empty, empty⟩
+      (unify i qual context ty1 ty2)
 
     partial def unify_envs (i : Nat) (ty1 ty2 : Ty) : List (PHashMap Nat Ty):=
-      let context : Context := ⟨empty, empty, empty, empty⟩
-      let (i, contexts) := (unify i context ty1 ty2)
+      let qual := ⟨empty⟩
+      let context : Context := ⟨empty, empty, empty⟩
+      let (i, contexts) := (unify i qual context ty1 ty2)
       contexts.map (fun context => context.env_simple)
       
 
     partial def unify_decide (i : Nat) (ty1) (ty2) :=
-      let context : Context := ⟨empty, empty, empty, empty⟩
-      let (_, result) := (unify i context ty1 ty2)
+      let qual := ⟨empty⟩
+      let context : Context := ⟨empty, empty, empty⟩
+      let (_, result) := (unify i qual context ty1 ty2)
       !result.isEmpty
 
     def combine (icontexts : (Nat × List Context)) (ty : Ty) :=
@@ -1732,7 +1764,8 @@ namespace Nameless
   | fvar : Nat -> Tm 
   | tag : String -> Tm -> Tm
   | record : List (String × Tm) -> Tm
-  | func : List (Tm × Tm) -> Tm
+  | func : Tm -> Tm
+  | matc : Tm -> List (Tm × Tm) -> Tm
   | proj : Tm -> String -> Tm
   | app : Tm -> Tm -> Tm
   | letb : Option Ty -> Tm -> Tm -> Tm
@@ -1748,7 +1781,7 @@ namespace Nameless
     syntax:90 "(" lessterm ")" : lessterm
     syntax:90 "⟨" term "⟩" : lessterm 
     syntax:90 "_" : lessterm
-    syntax:90 "()" : lessterm
+    syntax:90 ";" : lessterm
     syntax:90 "y[" lessterm:90 "]": lessterm
     syntax:90 "x[" lessterm:90 "]" : lessterm
     syntax:90 "fix" "(" lessterm ")" : lessterm 
@@ -1757,7 +1790,7 @@ namespace Nameless
     syntax:80 lessterm:80 "." lessterm:81 : lessterm 
     syntax:80 lessterm:81 ";" lessterm:80 : lessterm
 
-    syntax:72 lessterm:73 "|>" lessterm:72 : lessterm 
+    -- syntax:72 lessterm:73 "|>" lessterm:72 : lessterm 
 
     syntax:70 lessterm:71 "," lessterm:70 : lessterm
 
@@ -1766,12 +1799,15 @@ namespace Nameless
     syntax:60 "@" lessterm:61 "=" lessterm:61 : lessterm
     syntax:60 "@" lessterm:61 "=" lessterm:61 lessterm:60 : lessterm
 
-    syntax:60 "\\" lessterm:61 "=>" lessterm:60 : lessterm
-    syntax:60 "\\" lessterm:61 "=>" lessterm:60 lessterm:60 : lessterm
+    syntax:60 "_" "=>" lessterm:60 : lessterm
+
+    syntax:60 "match" lessterm:61 lessterm:50 : lessterm
+    syntax:50 "case" lessterm:51 "=>" lessterm : lessterm
+    syntax:50 "case" lessterm:51 "=>" lessterm lessterm:50 : lessterm
 
 
-    syntax:60 "let y[0]" ":" lesstype "=" lessterm:60 "in" lessterm:60 : lessterm 
-    syntax:60 "let y[0]" "=" lessterm:60 "in" lessterm:60 : lessterm 
+    syntax:60 "let" "_" ":" lesstype "=" lessterm:60 "in" lessterm:60 : lessterm 
+    syntax:60 "let" "_" "=" lessterm:60 "in" lessterm:60 : lessterm 
 
     syntax:60 "if" lessterm "then" lessterm "else" lessterm : lessterm
 
@@ -1781,15 +1817,15 @@ namespace Nameless
     | record fields => fields
     | _ =>  []
 
-    def function_cases : Tm -> List (Tm × Tm)
-    | func implis => implis 
-    | _ =>  []
+    -- def function_cases : Tm -> List (Tm × Tm)
+    -- | func implis => implis 
+    -- | _ =>  []
 
     macro_rules
     | `([lessterm| $n:num ]) => `($n)
     | `([lessterm| $a:ident]) => `($(Lean.quote (toString a.getId)))
     | `([lessterm| _ ]) => `(Tm.hole)
-    | `([lessterm| () ]) => `(Tm.unit)
+    | `([lessterm| ; ]) => `(Tm.unit)
     | `([lessterm| y[$n] ]) => `(Tm.bvar [lessterm| $n ])
     | `([lessterm| x[$n] ]) => `(Tm.fvar [lessterm| $n ])
     | `([lessterm| fix($a) ]) => `(Tm.fix [lessterm| $a ])
@@ -1797,22 +1833,26 @@ namespace Nameless
 
     | `([lessterm| $a ; $b ]) => `(Tm.tag [lessterm| $a ] [lessterm| $b ])
     | `([lessterm| $a . $b ]) => `(Tm.proj [lessterm| $a ] [lessterm| $b ])
-    | `([lessterm| $b |> $a ]) => `(Tm.app [lessterm| $a ] [lessterm| $b ])
+    -- | `([lessterm| $b |> $a ]) => `(Tm.app [lessterm| $a ] [lessterm| $b ])
     | `([lessterm| $a , $b ]) => `(Tm.record [("l", [lessterm| $a ]), ("r", [lessterm|$b ])])
 
     | `([lessterm| @ $a = $b ]) => `( Tm.record [ ([lessterm| $a ], [lessterm| $b ]) ]  )
     | `([lessterm| @ $a = $b $xs ]) => `( Tm.record (([lessterm| $a ], [lessterm| $b ]) :: (Tm.record_fields [lessterm| $xs ])))
 
-    | `([lessterm| \ $b => $d ]) => `(Tm.func [([lessterm| $b ], [lessterm| $d ])])
-    | `([lessterm| \ $b => $d $xs ]) => `( Tm.func (([lessterm| $b ], [lessterm| $d ]) :: (Tm.function_cases [lessterm| $xs ])))
+    | `([lessterm| _ => $b ]) => `(Tm.func [lessterm| $b ] )
 
-    | `([lessterm| let y[0] : $a = $b in $c ]) => `(Tm.letb (Option.some [lesstype| $a ]) [lessterm| $b ] [lessterm| $c ])
-    | `([lessterm| let y[0] = $b in $c ]) => `(Tm.letb Option.none [lessterm| $b ] [lessterm| $c ])
+    | `([lessterm| match $a $b ]) => `(Tm.matc [lessterm| $a ] [lessterm| $b ] )
+    | `([lessterm| case $b => $d ]) => `([([lessterm| $b ], [lessterm| $d ])])
+    | `([lessterm| case $b => $d $xs ]) => `((([lessterm| $b ], [lessterm| $d ]) :: [lessterm| $xs ]))
+
+    | `([lessterm| let _ : $a = $b in $c ]) => `(Tm.letb (Option.some [lesstype| $a ]) [lessterm| $b ] [lessterm| $c ])
+    | `([lessterm| let _ = $b in $c ]) => `(Tm.letb Option.none [lessterm| $b ] [lessterm| $c ])
 
     | `([lessterm| if $a then $b else $c ]) => `(
-        [lessterm| $a |> (
-            \ ⟨Tm.tag "true" Tm.unit⟩ => ($b) 
-            \ ⟨Tm.tag "false" Tm.unit⟩ => ($c))
+        [lessterm| 
+          match $a 
+          case ⟨Tm.tag "true" Tm.unit⟩ => ($b) 
+          case ⟨Tm.tag "false" Tm.unit⟩ => ($c)
         ]
     )
 
@@ -1858,10 +1898,10 @@ namespace Nameless
     -- | .letb op_ty1 t1 t2 =>
     --   match op_ty1 with
     --   | some ty1 =>
-    --     "let y[0] : " ++ (Ty.repr ty1 n) ++ " = " ++  (repr t1 n) ++ " in" ++
+    --     "let _ : " ++ (Ty.repr ty1 n) ++ " = " ++  (repr t1 n) ++ " in" ++
     --     Format.line  ++ (repr t2 n) 
     --   | none =>
-    --     "let y[0] = " ++  (repr t1 n) ++ " in" ++
+    --     "let _ = " ++  (repr t1 n) ++ " in" ++
     --     Format.line  ++ (repr t2 n) 
     -- | .fix t1 =>
     --   Format.bracket "(" ("fix " ++ (repr t1 n)) ")"
@@ -1881,6 +1921,7 @@ namespace Nameless
         | .none, _ => none
       ) (some i)
     | .func _ => none
+    | .matc _ _ => none
     | .proj _ _ => none
     | .app _ _ => none
     | .letb _ _ _ => none
@@ -1899,15 +1940,17 @@ namespace Nameless
       record (List.map (fun (l, t) =>
         (l, abstract fids start t)
       ) fds)
-    | .func fs =>
-      func (List.map (fun (tp, tb) =>
+    | .matc arg branches => 
+      matc (abstract fids start arg) (List.map (fun (tp, tb) =>
         let n := match pattern_wellformed 0 tp with
         | .some n => n 
         | .none => 0 
         let tp := abstract fids (start + n) tp 
         let tb := abstract fids (start + n) tb
         (tp, tb)
-      ) fs)
+      ) branches)
+    | .func body =>
+      func (abstract fids (start + 1) body)
     | .proj t l => 
       proj (abstract fids start t) l
     | .app t1 t2 =>
@@ -1922,45 +1965,47 @@ namespace Nameless
       .fix (abstract fids start t)
 
 
-    partial def instantiate (start : Nat) (args : List Tm) : Tm -> Tm
+    partial def instantiate (start : Nat) (subs : List Tm) : Tm -> Tm
     | .hole => hole 
     | .bvar id => 
-        if h : start ≤ id ∧ (id - start) < args.length then
-          let i : Fin args.length := {
+        if h : start ≤ id ∧ (id - start) < subs.length then
+          let i : Fin subs.length := {
             val := (id - start),
             isLt := (match h with | And.intro _ h' => h') 
           } 
-          args.get i 
+          subs.get i 
         else
           .bvar id
     | .fvar id => .fvar id 
     | .unit => .unit 
-    | .tag l t => tag l (instantiate start args t)
+    | .tag l t => tag l (instantiate start subs t)
     | .record fds =>
       record (List.map (fun (l, t) =>
-        (l, instantiate start args t)
+        (l, instantiate start subs t)
       ) fds)
-    | .func fs =>
-      func (List.map (fun (tp, tb) =>
+    | .matc arg branches => 
+      matc (instantiate start subs arg) (List.map (fun (tp, tb) =>
         let n := match pattern_wellformed 0 tp with
         | .some n => n 
         | .none => 0 
-        let tp := instantiate (start + n) args tp 
-        let tb := instantiate (start + n) args tb
+        let tp := instantiate (start + n) subs tp 
+        let tb := instantiate (start + n) subs tb
         (tp, tb)
-      ) fs)
+      ) branches)
+    | .func tb =>
+      func (instantiate (start + 1) subs tb)
     | .proj t l => 
-      proj (instantiate start args t) l
+      proj (instantiate start subs t) l
     | .app t1 t2 =>
       app 
-        (instantiate start args t1) 
-        (instantiate start args t2)
+        (instantiate start subs t1) 
+        (instantiate start subs t2)
     | .letb ty1 t1 t2 =>
       letb ty1 
-        (instantiate start args t1)
-        (instantiate (start + 1) args t2)
+        (instantiate start subs t1)
+        (instantiate (start + 1) subs t2)
     | .fix t =>
-      .fix (instantiate start args t)
+      .fix (instantiate start subs t)
 
 
 
@@ -1979,7 +2024,7 @@ namespace Nameless
 
 
 
-    partial def infer (i : Nat) (context : Ty.Context) (env_tm : PHashMap Nat Ty) (t : Tm) : 
+    partial def infer (i : Nat) (qual : Ty.Qual) (context : Ty.Context) (env_tm : PHashMap Nat Ty) (t : Tm) : 
     (Nat × List (Ty.Context × Ty)) :=
     match t with
     | hole => 
@@ -1994,7 +2039,7 @@ namespace Nameless
       | none => (i, [])
 
     | .tag l t1 =>   
-      bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
+      bind_nl (infer i qual context env_tm t1) (fun i (context, ty1) =>
         (i, [(context, Ty.tag l ty1)])
       )
 
@@ -2002,60 +2047,71 @@ namespace Nameless
 
       let f_step := (fun (l, t1) acc =>
         bind_nl acc (fun i (context, ty_acc) =>
-        bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
+        bind_nl (infer i qual context env_tm t1) (fun i (context, ty1) =>
           (i, [(context, Ty.inter (Ty.field l ty1) ty_acc)])
         ))
       )
 
       List.foldr f_step (i, [(context, Ty.top)]) fds 
 
-    | .func fs =>
-      let f_step := (fun (p, b) acc =>
-        bind_nl acc (fun i (context, ty_acc) =>
-        match pattern_wellformed 0 p with
-        | none => (i, [])
-        | some n =>
-          let env_pat : PHashMap Nat Ty := (List.range n).foldl (fun env_pat j => 
-            let tm_key := (i + (2 * j))
-            let ty_x := Ty.fvar (i + (2 * j) + 1) 
-            (env_pat.insert tm_key ty_x)
-          ) empty
-          let i := i + (2 * n)
+    | .matc arg branches =>
+      all_nl (infer i qual context env_tm arg) (fun i (context, ty_arg) => 
+        bind_nl (i, branches) (fun i (p, b) =>
+          match pattern_wellformed 0 p with
+          | none => (i, [])
+          | some n => (
+            let env_pat : PHashMap Nat Ty := (List.range n).foldl (fun env_pat j => 
+              let tm_key := (i + (2 * j))
+              let ty_x := Ty.fvar (i + (2 * j) + 1) 
+              (env_pat.insert tm_key ty_x)
+            ) empty
+            let i := i + (2 * n)
 
-          let list_tm_x := env_pat.toList.map (fun (k, _) => (fvar k))
+            let list_tm_x := env_pat.toList.map (fun (k, _) => (fvar k))
 
-          let p := instantiate 0 list_tm_x p 
-          let b := instantiate 0 list_tm_x b  
-          bind_nl (infer i context (env_tm ; env_pat) p) (fun i (context, ty_p) =>
-
-          let adj : PHashSet Nat := (Ty.free_vars ty_p)
-          let context := {context with adj := context.adj + adj}
-          bind_nl (infer i context (env_tm ; env_pat) b) (fun i (context, ty_b) =>
-              let context := {context with adj := context.adj - adj}
-              (i, [(context, Ty.simplify (Ty.inter (Ty.impli ty_p ty_b) ty_acc))])
-          )))
+            let p := instantiate 0 list_tm_x p 
+            let b := instantiate 0 list_tm_x b  
+            bind_nl (infer i qual context (env_tm ; env_pat) p) (fun i (context, ty_p) =>
+            bind_nl (Ty.unify i qual context ty_arg ty_p) (fun i context =>
+              let qual := {qual with descrip := qual.descrip + (Ty.free_vars ty_p)}
+              (infer i qual context (env_tm ; env_pat) b) 
+            ))
+          )
         )
+      )
 
-      List.foldr f_step (i, [(context, Ty.top)]) fs
+    | .func body =>
+      let (i, env_param, ty_p) : (Nat × PHashMap Nat Ty × Ty) := (
+        let ty_p := Ty.fvar (i + 1)
+        (i + 2, empty.insert i ty_p, ty_p)
+      )
+
+      let list_tm_x := env_param.toList.map (fun (k, _) => (fvar k))
+
+      let b := instantiate 0 list_tm_x body
+      let qual := {qual with descrip := qual.descrip + (Ty.free_vars ty_p)}
+      bind_nl (infer i qual context (env_tm ; env_param) b) (fun i (context, ty_b) =>
+          (i, [(context, Ty.simplify (Ty.impli ty_p ty_b))])
+      )
 
     | .proj t1 l =>
-      bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
+      bind_nl (infer i qual context env_tm t1) (fun i (context, ty1) =>
       let (i, ty) := (i + 1, Ty.fvar i)
-      bind_nl (Ty.unify i context ty1 (Ty.field l ty)) (fun i context =>
+      bind_nl (Ty.unify i qual context ty1 (Ty.field l ty)) (fun i context =>
         (i, [(context, ty)])
       ))
 
     | .app t_f t_arg =>
       let (i, id_res) := (i + 1, i)
       let ty_res := Ty.fvar id_res
-      let adj : PHashSet Nat := empty.insert id_res
-      let context := {context with adj := context.adj + adj}
+      let descrip : PHashSet Nat := empty.insert id_res
+      let qual := {qual with descrip := qual.descrip + descrip}
 
-      -- NOTE: merely require some of the cases of the function to type check
-      bind_nl (infer i context env_tm t_f) (fun i (context, ty_f) =>
-        all_nl (infer i context env_tm t_arg) (fun i (context, ty_arg) =>
-          bind_nl (Ty.unify i context ty_f (Ty.impli ty_arg ty_res)) (fun i context => 
-            let context := {context with adj := context.adj - adj}
+      -- NOTE: for all types that the argument could be there there exists a function type that matches.
+      all_nl (infer i qual context env_tm t_arg) (fun i (context, ty_arg) =>
+        bind_nl (infer i qual context env_tm t_f) (fun i (context, ty_f) =>
+          bind_nl (Ty.unify i qual context ty_f (Ty.impli ty_arg ty_res)) (fun i context => 
+            -- let context := {context with adj := context.adj - adj}
             (i, [(context, ty_res)])
           )
         )
@@ -2070,11 +2126,11 @@ namespace Nameless
       if t_arg == Tm.hole then
         let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_expected)]) 
         let t := instantiate 0 [x] t 
-        (infer i context (env_tm ; env_tmx) t) 
+        (infer i qual context (env_tm ; env_tmx) t) 
       else
         let (i, context_ty_args) := (
-          all_nl (infer i context env_tm t_arg) (fun i (context, ty_arg) =>
-            bind_nl (Ty.unify i context ty_arg ty_expected) (fun i context =>
+          all_nl (infer i qual context env_tm t_arg) (fun i (context, ty_arg) =>
+            bind_nl (Ty.unify i qual context ty_arg ty_expected) (fun i context =>
               (i, [(context, ty_arg)])
             )
           )
@@ -2082,7 +2138,7 @@ namespace Nameless
         bind_nl (i, context_ty_args) (fun i (context, ty_arg) =>
           let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_arg)]) 
           let t := instantiate 0 [x] t 
-          (infer i context (env_tm ; env_tmx) t) 
+          (infer i qual context (env_tm ; env_tmx) t) 
         )
 
     | .fix t1 =>
@@ -2090,66 +2146,200 @@ namespace Nameless
       -- Craig: proof : A -> B ==> A -> I -> B
       -- type inference : program ==> program : X -> Y ==> X -> Y <: A -> B ==> A <: X, Y <: B ==> A -> (X -> Y) -> B   
       let boundary := i
-      let (i, tvar_IH) := (i + 1, i) 
-      let (i, tvar_IC) := (i + 1, i) 
-      bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
-      bind_nl (Ty.unify i context ty1 (Ty.impli (Ty.fvar tvar_IH) (Ty.fvar tvar_IC))) (fun i context =>
-        let ty_IH := Ty.subst context.env_simple (Ty.fvar tvar_IH)
-        let ty_IC := Ty.subst context.env_simple (Ty.fvar tvar_IC)
 
-        match ty_IH with
-        | .impli ty_IH1 ty_IH2 => (
-          let ty_IH_pair := [lesstype| ⟨ty_IH1⟩ * ⟨ty_IH2⟩]
-          let ty_content := List.foldr (fun ty_impli ty_acc =>
-            match ty_impli with
-            | .impli ty_ante ty_consq => (
-              let vars_IH2 := Ty.free_vars ty_IH2 
-              let stale_consq := (Ty.stale_boundary boundary) + vars_IH2
-              let ty_consq := Ty.compress stale_consq context ty_consq
-              let ty_payload := [lesstype| ⟨ty_ante⟩ * ⟨ty_consq⟩]
+      let (i, inductive_branches) := (infer i qual context env_tm t1)
+      let ty_content := inductive_branches.foldr (fun (context, ty_branch) ty_acc =>
+        match ty_branch with
+        | .impli ty_IH ty_IC => 
+          let ty_IH := Ty.subst context.env_simple ty_IH
+          let ty_IC := Ty.subst context.env_simple ty_IC
 
-              let fvs := (toList (Ty.free_vars ty_payload)).filter (fun fid => fid >= boundary)
-              let fvs_prem := (Ty.free_vars ty_IH)
-              let ty_choice := (
-                if List.any fvs (fun id => fvs_prem.find? id != none) then
-                  let fixed_point := fvs.length
-                  [lesstype|
-                    {⟨fvs.length⟩ # ⟨Ty.abstract fvs 0 ty_payload⟩ with 
-                      ⟨Ty.abstract fvs 0 ty_IH_pair⟩ <: β[⟨fixed_point⟩] 
-                    } 
-                  ]
-                else if fvs.length > 0 then
-                  [lesstype| {⟨fvs.length⟩ # ⟨Ty.abstract fvs 0 ty_payload⟩} ]
-                else
-                  ty_payload
-              )
+          match ty_IH, ty_IC with
+          | .impli ty_IH_ante ty_IH_consq, .impli ty_IC_ante ty_IC_consq => (
+            /-
+            abstract/pack type of application in tail position 
+            -/
+            let stale_consq := (Ty.stale_boundary boundary) + (Ty.free_vars ty_IH_consq)
+            let ty_IC_consq := Ty.pack stale_consq context ty_IC_consq
+            let ty_IC_pair := [lesstype| ⟨ty_IC_ante⟩ * ⟨ty_IC_consq⟩]
 
-              (Ty.union ty_choice ty_acc) 
+            let ty_IH_pair := [lesstype| ⟨ty_IH_ante⟩ * ⟨ty_IH_consq⟩]
+
+            let fvs_IH := Ty.free_vars ty_IH_pair
+            let fvs_IC := Ty.free_vars ty_IC_pair
+            let fvs := (toList (fvs_IH + fvs_IC)).filter (fun fid => fid >= boundary)
+            let ty_choice := (
+              if !(fvs_IH * fvs_IC).isEmpty then
+                let fixed_point := fvs.length
+                [lesstype|
+                  {⟨fvs.length⟩ # ⟨Ty.abstract fvs 0 ty_IC_pair⟩ with 
+                    ⟨Ty.abstract fvs 0 ty_IH_pair⟩ <: β[⟨fixed_point⟩] 
+                  } 
+                ]
+              else if fvs.length > 0 then
+                [lesstype| {⟨fvs.length⟩ # ⟨Ty.abstract fvs 0 ty_IC_pair⟩} ]
+              else
+                ty_IC_pair
             )
-            | _ => Ty.top
 
-          ) .bot (Ty.split_intersections ty_IC)
+            /-
+            include other constraints on variables with along with inductive constraint
+            -/
+            -- let ty_IC_packed := Ty.pack (Ty.stale_boundary boundary) context ty_IC_pair
+            -- let ty_choice := (
+            --   if ty_IC_packed == Ty.simplify (Ty.subst context.env_simple ty_IC_pair) then
+            --     ty_choice
+            --   else 
+            --     Ty.intersect ty_choice ty_IC_packed
+            -- )
 
-          -- NOTE: constraint that ty' <= ty_IH is built into inductive type
-          let relational_type := [lesstype| induct ⟨ty_content⟩ ]
-          let ty' := Ty.simplify [lesstype| [_:{2 # β[1] -> β[0] with β[1] * β[0] <: ⟨relational_type⟩}] β[0]] 
-          (i, [(context, ty')])
-        )
-        | _ => (i, [])
-      ))
+            (Ty.union ty_choice ty_acc) 
+          )
+          | .fvar id_IH, .impli ty_IC_ante ty_IC_consq => (
+            let stale_consq := (Ty.stale_boundary boundary)
+            let ty_IC_consq := Ty.pack stale_consq context ty_IC_consq
+            let ty_IC_pair := [lesstype| ⟨ty_IC_ante⟩ * ⟨ty_IC_consq⟩]
+
+            let fvs := (toList (Ty.free_vars ty_IC_pair)).filter (fun fid => fid >= boundary)
+            let ty_choice := (
+              if fvs.length > 0 then
+                [lesstype| {⟨fvs.length⟩ # ⟨Ty.abstract fvs 0 ty_IC_pair⟩} ]
+              else
+                ty_IC_pair
+            )
+            (Ty.union ty_choice ty_acc) 
+          )
+          | _, _ => Ty.top
+        | _ => (Ty.tag "other" Ty.unit)
+      ) Ty.bot
+
+      let ty_rel := [lesstype| induct ⟨ty_content⟩ ]
+      let ty' := Ty.simplify [lesstype| [_<:{2 # β[1] -> β[0] with β[1] * β[0] <: ⟨ty_rel⟩}] β[0]] 
+
+
+      -- let context := {context with env_simple := context.env_simple.insert 666 (Ty.tag s!"msg_{i}_" Ty.unit)}
+      let context := {context with env_simple := context.env_simple.insert 666 (Ty.tag s!"boundary_{boundary}_" Ty.unit)}
+
+      (i, [(context, ty')])
+
+      ------------------
+
+      ---------
+      -- bind_nl (infer i qual context env_tm t1) (fun i (context, ty1) =>
+      -- let (i, tvar_IH) := (i + 1, i) 
+      -- let context := {context with env_simple := context.env_simple.insert 666 (Ty.tag s!"IH_{tvar_IH}" Ty.unit)}
+      -- let (i, tvar_IC) := (i + 1, i) 
+      -- bind_nl (Ty.unify i qual context ty1 (Ty.impli (Ty.fvar tvar_IH) (Ty.fvar tvar_IC))) (fun i context =>
+      -- let ty_IH := Ty.simplify (Ty.subst context.env_simple (Ty.fvar tvar_IH))
+      -- match ty_IH with
+      -- | .impli ty_IH1 ty_IH2 => (
+      --   let ty_IC := Ty.subst context.env_simple (Ty.fvar tvar_IC)
+      --   let ty_IH_pair := [lesstype| ⟨ty_IH1⟩ * ⟨ty_IH2⟩]
+      --   let ty_content := List.foldr (fun ty_impli ty_acc =>
+      --     match ty_impli with
+      --     | .impli ty_ante ty_consq => (
+      --       let vars_IH2 := Ty.free_vars ty_IH2 
+      --       let stale_consq := (Ty.stale_boundary boundary) + vars_IH2
+
+      --       -- associate the return type with other types it's related to (including inductive references)
+      --       let ty_consq := Ty.pack stale_consq context ty_consq
+      --       let ty_payload := [lesstype| ⟨ty_ante⟩ * ⟨ty_consq⟩]
+
+      --       let fvs := (toList (Ty.free_vars ty_payload)).filter (fun fid => fid >= boundary)
+      --       let fvs_prem := (Ty.free_vars ty_IH_pair)
+      --       let ty_choice := (
+      --         if List.any fvs (fun id => fvs_prem.find? id != none) then
+      --           let fixed_point := fvs.length
+      --           [lesstype|
+      --             {⟨fvs.length⟩ # ⟨Ty.abstract fvs 0 ty_payload⟩ with 
+      --               ⟨Ty.abstract fvs 0 ty_IH_pair⟩ <: β[⟨fixed_point⟩] 
+      --             } 
+      --           ]
+      --         else if fvs.length > 0 then
+      --           [lesstype| {⟨fvs.length⟩ # ⟨Ty.abstract fvs 0 ty_payload⟩} ]
+      --         else
+      --           ty_payload
+      --       )
+
+      --       (Ty.union ty_choice ty_acc) 
+      --     )
+      --     | _ => Ty.top
+
+      --   ) .bot (Ty.split_intersections ty_IC)
+
+      --   /-
+      --   NOTE: constraint that ty' <= ty_IH is built into inductive type
+      --   -/
+      --   -- let relational_type := [lesstype| induct ⟨ty_content⟩ ]
+      --   -- let ty' := Ty.simplify [lesstype| [_<:{2 # β[1] -> β[0] with β[1] * β[0] <: ⟨relational_type⟩}] β[0]] 
+      --   -- (i, [(context, ty')])
+
+      -- )
+      -- | _ => 
+      --   (i, [])
+      -- ))
+
+
+      -- debugging --
+      -- bind_nl (infer i context env_tm t1) (fun i (context, ty1) =>
+      -- bind_nl (Ty.unify i context ty1 (Ty.impli (Ty.fvar tvar_IH) (Ty.fvar tvar_IC))) (fun i context =>
+      --   (i, [(context, ty1)])
+      -- ))
+      ---------------
+
+      -- bind_nl (Ty.unify i context (ty_IH) (Ty.impli (Ty.fvar tvar_IH1) (Ty.fvar tvar_IH2))) (fun i context =>
+      ------
+      -- let ((i, contexts), ty_IH1, ty_IH2) := (match ty_IH with
+      --   | .impli ty_IH1 ty_IH2 => ((i, [context]), ty_IH1, ty_IH2)
+      --   | _ => 
+      --     let (i, ty_IH1) := (i + 1, Ty.fvar i) 
+      --     let (i, ty_IH2) := (i + 1, Ty.fvar i) 
+      --     (Ty.unify i context ty_IH (Ty.impli ty_IH1 ty_IH2), ty_IH1, ty_IH2)
+      -- )
+      -- bind_nl (i, contexts) (fun i context =>
+
+
+      -- (i, [(context, ty_IH)])
+
+      -- let debug_msg := (
+      --   match ty_IH with
+      --   | Ty.fvar id => if context.env_simple.contains id then s!"assigned_{id}" else s!"UNassigned_{id}"
+      --   | _ => "non-var"
+      -- )
+
+      ----------
+      -- let ty_fresh := Ty.fvar 666
+      -- let context := {context with env_simple := context.env_simple.insert 666 ty_IH}
+      -- let context := {context with env_simple := context.env_simple.insert 777 (Ty.tag debug_msg Ty.unit)}
+      -- (i, [(context, ty_fresh)])
+      ----
+      -- OBSERVATION: the ty_IH is a variable and is not yet assigned to an implication; be eventually will be  
+      -- CHALLENGE: how to add a requirement to this variable such that future assignments can be decomposed into inductive case?
+      -- IDEA: create assignment to fresh variables: X -> Y; construct relational type using fresh variables; 
+      -- future applications will then unify with fresh variables
+      --------------
+      -- (i, [(context, Ty.bot)])
+      -- (i, [(context, ty_IH)])
+      -- TODO: why does ty_IH allow the type inference in the other case to pass, but the others don't?
+      -- probably related to application's requirement that all argument types pass
+      -- (i, [])
+      -- (i, [(context, Ty.tag "booga_ty_IH" ty_IH)])
+      -- (i, [(context, Ty.top)])
 
     partial def infer_simple i (t : Tm) :=
-      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
-      (infer (i + 1) context {} t)
+      let qual := ⟨empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty⟩
+      (infer (i + 1) qual context {} t)
 
     partial def infer_envs (i : Nat) (t : Tm) : List (PHashMap Nat Ty) :=
-      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
-      let (i, context_tys) := (infer (i + 1) context {} t)
+      let qual := ⟨empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty⟩
+      let (i, context_tys) := (infer (i + 1) qual context {} t)
       context_tys.map (fun (context, ty) => context.env_simple)
 
-    partial def infer_reduce_context (i : Nat) (context : Ty.Context) (t : Tm) : Option Ty :=
+    partial def infer_reduce_context (i : Nat) (qual : Ty.Qual) (context : Ty.Context) (t : Tm) : Option Ty :=
       let boundary := 0
-      let (_, context_tys) := (infer i context {} t) 
+      let (_, context_tys) := (infer i qual context {} t) 
       -- let (_, context_tys) := bind_nl (infer i context {} t) (fun i (context, ty) =>
       --   bind_nl (Ty.unify_all i [context] context.env_relational.toList) (fun i context =>
       --     (i, [(context, ty)])
@@ -2161,16 +2351,17 @@ namespace Nameless
         let intersectable := context_tys.all (fun (context, ty_result) => 
           Ty.functiontype (Ty.subst context.env_simple ty_result)
         )
+        let intersectable := false
 
         let ty_collapsed := (
           if intersectable then
             List.foldr (fun (context, ty') ty_acc => 
-              let ty_ex := Ty.compress (Ty.stale_boundary boundary) context ty' 
-              Ty.intersect [lesstype| [_:⟨ty_ex⟩] β[0]] ty_acc
+              let ty_ex := Ty.pack (Ty.stale_boundary boundary) context ty' 
+              Ty.intersect [lesstype| [_ <: ⟨ty_ex⟩] β[0]] ty_acc
             ) Ty.top context_tys 
           else
             List.foldr (fun (context, ty') ty_acc => 
-              let ty_ex := Ty.compress (Ty.stale_boundary boundary) context ty'
+              let ty_ex := Ty.pack (Ty.stale_boundary boundary) context ty'
               Ty.unionize ty_ex ty_acc
             ) Ty.bot context_tys
         )
@@ -2178,8 +2369,9 @@ namespace Nameless
 
 
     partial def infer_reduce (i : Nat) (t : Tm) : Option Ty := 
-      let context : Ty.Context := ⟨empty, empty, empty, empty⟩
-      infer_reduce_context (i + 1)  context t
+      let qual := ⟨empty⟩
+      let context : Ty.Context := ⟨empty, empty, empty⟩
+      infer_reduce_context (i + 1) qual context t
 
     -- structure Work where
     --   cost : Nat
@@ -2188,8 +2380,6 @@ namespace Nameless
     --   patches : PHashMap Nat Tm 
     --   t : Tm
     -- deriving Repr
-
-
 
     -- def Work.le (x y: Work): Bool := x.cost <= y.cost
 
@@ -2232,89 +2422,89 @@ namespace Nameless
     -- | letb ty t1 t2 => letb ty (subst m t1) (subst m t2)
     -- | .fix t => .fix (subst m t)
 
-    -- (tag labels, field labels)
-    partial def extract_labels : Ty -> (List String × List String)
-    | .bvar id => ([], []) 
-    | .fvar id => ([], [])
-    | .unit => ([], []) 
-    | .top => ([], [])
-    | .bot => ([], [])
-    | .tag l ty => 
-      let (ls_t, ls_f) := extract_labels ty
-      (l :: ls_t, ls_f) 
-    | .field l ty => 
-      let (ls_t, ls_f) := extract_labels ty
-      (ls_t, l :: ls_f) 
-    | .union ty1 ty2 => 
-      let (ls_t1, ls_f1) := extract_labels ty1
-      let (ls_t2, ls_f2) := extract_labels ty2
-      (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
-    | .inter ty1 ty2 => 
-      let (ls_t1, ls_f1) := extract_labels ty1
-      let (ls_t2, ls_f2) := extract_labels ty2
-      (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
-    | .impli ty1 ty2 => 
-      let (ls_t1, ls_f1) := extract_labels ty1
-      let (ls_t2, ls_f2) := extract_labels ty2
-      (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
-    | .exis n ty_c1 ty_c2 ty =>
-      let (ls_tc1, ls_fc1) := extract_labels ty_c1
-      let (ls_tc2, ls_fc2) := extract_labels ty_c2
-      let (ls_t, ls_f) := extract_labels ty
-      (ls_tc1 ++ ls_tc2 ++ ls_t, ls_fc1 ++ ls_fc2 ++ ls_f) 
-    | .univ op_ty_c ty =>
-      let (ls_tc, ls_fc) := (match op_ty_c with
-      | none => ([], [])
-      | some ty_c => extract_labels ty_c
-      )
-      let (ls_t, ls_f) := extract_labels ty
-      (ls_tc ++ ls_t, ls_fc ++ ls_f) 
-    | .induc ty =>
-      extract_labels ty
+    -- -- (tag labels, field labels)
+    -- partial def extract_labels : Ty -> (List String × List String)
+    -- | .bvar id => ([], []) 
+    -- | .fvar id => ([], [])
+    -- | .unit => ([], []) 
+    -- | .top => ([], [])
+    -- | .bot => ([], [])
+    -- | .tag l ty => 
+    --   let (ls_t, ls_f) := extract_labels ty
+    --   (l :: ls_t, ls_f) 
+    -- | .field l ty => 
+    --   let (ls_t, ls_f) := extract_labels ty
+    --   (ls_t, l :: ls_f) 
+    -- | .union ty1 ty2 => 
+    --   let (ls_t1, ls_f1) := extract_labels ty1
+    --   let (ls_t2, ls_f2) := extract_labels ty2
+    --   (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
+    -- | .inter ty1 ty2 => 
+    --   let (ls_t1, ls_f1) := extract_labels ty1
+    --   let (ls_t2, ls_f2) := extract_labels ty2
+    --   (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
+    -- | .impli ty1 ty2 => 
+    --   let (ls_t1, ls_f1) := extract_labels ty1
+    --   let (ls_t2, ls_f2) := extract_labels ty2
+    --   (ls_t1 ++ ls_t2, ls_f1 ++ ls_f2) 
+    -- | .exis n ty_c1 ty_c2 ty =>
+    --   let (ls_tc1, ls_fc1) := extract_labels ty_c1
+    --   let (ls_tc2, ls_fc2) := extract_labels ty_c2
+    --   let (ls_t, ls_f) := extract_labels ty
+    --   (ls_tc1 ++ ls_tc2 ++ ls_t, ls_fc1 ++ ls_fc2 ++ ls_f) 
+    -- | .univ op_ty_c ty =>
+    --   let (ls_tc, ls_fc) := (match op_ty_c with
+    --   | none => ([], [])
+    --   | some ty_c => extract_labels ty_c
+    --   )
+    --   let (ls_t, ls_f) := extract_labels ty
+    --   (ls_tc ++ ls_t, ls_fc ++ ls_f) 
+    -- | .induc ty =>
+    --   extract_labels ty
 
 
-    partial def enumerate_fields : List String -> List (List (String × Tm))
-    | [] => []
-    | l :: ls =>
-      (enumerate_fields ls).map (fun fields => (l, hole) :: fields)
+    -- partial def enumerate_fields : List String -> List (List (String × Tm))
+    -- | [] => []
+    -- | l :: ls =>
+    --   (enumerate_fields ls).map (fun fields => (l, hole) :: fields)
 
-    partial def enumerate_implis : List String -> List (List (Tm × Tm))
-    | [] => []
-    | l :: ls =>
-      (enumerate_implis ls).map (fun implis => ([lessterm| ⟨l⟩;y[0] ], [lessterm| _ ]) :: implis)
+    -- partial def enumerate_implis : List String -> List (List (Tm × Tm))
+    -- | [] => []
+    -- | l :: ls =>
+    --   (enumerate_implis ls).map (fun implis => ([lessterm| ⟨l⟩;y[0] ], [lessterm| _ ]) :: implis)
 
-    partial def join_functions (t1 : Tm) (t2 : Tm) : List Tm := match t1, t2 with
-    | func implis1, func implis2 => [func (implis1 ++ implis2)]
-    | _, _ => []
+    -- partial def join_functions (t1 : Tm) (t2 : Tm) : List Tm := match t1, t2 with
+    -- | func implis1, func implis2 => [func (implis1 ++ implis2)]
+    -- | _, _ => []
 
-    partial def enumerate (i : Nat) (env_tm : PHashMap Nat Ty) (ty : Ty) : List Tm :=
-      let (ls_t, ls_f) := (extract_labels ty)
-      let tags := ls_t.map (fun l => tag l hole)
+    -- partial def enumerate (i : Nat) (env_tm : PHashMap Nat Ty) (ty : Ty) : List Tm :=
+    --   let (ls_t, ls_f) := (extract_labels ty)
+    --   let tags := ls_t.map (fun l => tag l hole)
 
-      let fields := enumerate_fields ls_f
-      let records := fields.map (fun fds => record fds)
+    --   let fields := enumerate_fields ls_f
+    --   let records := fields.map (fun fds => record fds)
 
-      let implis := enumerate_implis ls_t
-      let functions := (
-        [lessterm| \ y[0] => _ ] :: 
-        (implis.map (fun implis => func implis))
-      )
+    --   let implis := enumerate_implis ls_t
+    --   let functions := (
+    --     [lessterm| \ y[0] => _ ] :: 
+    --     (implis.map (fun implis => func implis))
+    --   )
 
-      [lessterm| () ] ::
-      tags ++
-      records ++
-      functions ++
-      [ [lessterm| let y[0] = _ in _ ] ] ++
-      [ [lessterm| fix(_)] ] ++
-      List.bind env_tm.toList (fun (x, ty) =>
-        let (_, ls) := extract_labels ty
-        let var := (fvar x)
-        let application := [lessterm| let y[0] = ⟨fvar x⟩(_) in _ ] 
-        let projections := ls.map (fun l =>
-          [lessterm| let y[0] = (⟨fvar x⟩.⟨l⟩) in _ ] 
-        )
-        var :: application :: projections
-      )
+    --   [lessterm| () ] ::
+    --   tags ++
+    --   records ++
+    --   functions ++
+    --   [ [lessterm| let _ = _ in _ ] ] ++
+    --   [ [lessterm| fix(_)] ] ++
+    --   List.bind env_tm.toList (fun (x, ty) =>
+    --     let (_, ls) := extract_labels ty
+    --     let var := (fvar x)
+    --     let application := [lessterm| let _ = ⟨fvar x⟩(_) in _ ] 
+    --     let projections := ls.map (fun l =>
+    --       [lessterm| let _ = (⟨fvar x⟩.⟨l⟩) in _ ] 
+    --     )
+    --     var :: application :: projections
+    --   )
 
   end Tm
 
@@ -2377,7 +2567,7 @@ namespace Nameless
 
   -- expected: cons//nil//unit
   #eval unify_reduce 30
-  [lesstype| [_:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| [_<:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| succ//succ//zero//unit -> cons//α[0] ] 
   [lesstype| α[0] ]
 
@@ -2415,7 +2605,7 @@ namespace Nameless
 
   -- expected: cons//nil//unit
   #eval unify_reduce 10
-  [lesstype| [_:{2 # β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩}] β[0]]
+  [lesstype| [_<:{2 # β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩}] β[0]]
   [lesstype| succ//zero//unit -> α[2]]
   [lesstype| α[2]]
 
@@ -2445,8 +2635,8 @@ namespace Nameless
   -- substitution could cause the same unification problem to repeat infinitely
   -- expected: true
   #eval unify_decide 10 
-  [lesstype| [_:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| [_:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
 
   -- expected: true
   #eval unify_decide 10 
@@ -2614,7 +2804,7 @@ namespace Nameless
 
   ------ type inference --------
   #eval infer_reduce 0 [lessterm|
-    succ;zero;()
+    succ;zero;;
   ]
 
 
@@ -2622,53 +2812,53 @@ namespace Nameless
 
   -- expected: cons//nil//unit
   #eval infer_reduce 0 [lessterm|
-    let y[0] : (zero//unit -> nil//unit) & (succ//zero//unit -> cons//nil//unit) = _ in 
-    (y[0] (succ;zero;()))
+    let _ : (zero//unit -> nil//unit) & (succ//zero//unit -> cons//nil//unit) = _ in 
+    (y[0] (succ;zero;;))
   ]
 
   #eval infer_reduce 10 
   [lessterm|
-  let y[0] : (
+  let _ : (
     ([_] (hello//β[0] -> world//unit)) & 
     ([_] one//β[0] -> two//unit)
   ) = _ in 
-  y[0](one;())
+  y[0](one;;)
   ]
 
   #eval infer_reduce 10 
   [lessterm|
-  let y[0] : (
+  let _ : (
     ([_] 
       (hello//β[0] -> world//unit) & 
       (one//β[0] -> two//unit)
     )
   ) = _ in 
-  y[0](one;())
+  y[0](one;;)
   ]
 
   -- expected: cons//nil//unit
   #eval infer_reduce 0 [lessterm|
-    let y[0] : [_:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
-    (y[0] (succ;zero;()))
+    let _ : [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
+    (y[0] (succ;zero;;))
   ]
 
   -- NOTE: weakening causes a fairly imprecise type  
   -- expected:  {2 // β[1] with β[0] * β[1] <: ⟨nat_list⟩}  
   #eval infer_reduce 10 [lessterm|
-    let y[0] : [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
-    (y[0] (succ;zero;()))
+    let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
+    (y[0] (succ;zero;;))
   ]
 
 ---------------------------------------------------------------
   ----------------------------------
-  -- complete
+  -- incomplete
   -- nat should not be subbed into relational key
   -- double
   #eval infer_reduce 10 [lessterm|
-    let y[0] : ⟨nat_⟩ = _ in
-    let y[0] = fix(\ y[0] => (
-      \ zero;() => zero;()
-      \ succ;y[0] => succ;succ;(y[1](y[0]))
+    let _ : ⟨nat_⟩ = _ in
+    let _ = fix(_ => _ => (match (y[0]) 
+      case zero;; => zero;;
+      case succ;y[0] => succ;succ;(y[2](y[0]))
     )) in
     y[0](y[1])
   ]
@@ -2676,23 +2866,18 @@ namespace Nameless
 
   --------- relational typing -----------
 
-  #eval [lessterm|
-    cons;(())
+  -- complete: relational type with base case and inductive case 
+  #eval infer_reduce 0 [lessterm|
+    fix(_ => _ => match y[0] 
+    case zero;; => nil;;
+    case succ;y[0] => cons;(y[2](y[0]))
+    )
   ]
 
   #eval infer_reduce 0 [lessterm|
-    fix(\ y[0] => (
-    \ zero;() => nil;()
-    \ succ;y[0] => cons;(y[1](y[0]))
-    ))
-  ]
-
-    -- cons//cons//(y[1](y[0]))
-
-  #eval infer_reduce 0 [lessterm|
-    let y[0] = fix(\ y[0] => 
-      \ zero;() => nil;()
-      \ succ;y[0] => cons;(y[1](y[0]))
+    let _ = fix(_ => _ => match y[0]
+      case zero;; => nil;;
+      case succ;y[0] => cons;(y[2](y[0]))
     ) in 
     y[0]
   ]
@@ -2722,52 +2907,52 @@ namespace Nameless
   -- NOTE: it is important to preserve the universal type structure for application to succeed
   -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
   #eval infer_reduce 10 [lessterm|
-    (\ y[0] => fix(\ y[0] => 
-      \ zero;() => nil;()
-      \ succ;y[0] => cons;(y[2], y[1](y[0]))
-    ))(thing;())(succ;succ;zero;())
+    (_ => fix(_ => _ => match y[0] 
+      case zero;; => nil;;
+      case succ;y[0] => cons;(y[3], y[2](y[0]))
+    ))(thing;;)(succ;succ;zero;;)
   ]
 
   -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
   #eval infer_reduce 10 [lessterm|
-    let y[0] = (\ y[0] => fix(\ y[0] => 
-      \ zero;() => nil;()
-      \ succ;y[0] => cons;(y[2], y[1](y[0]))
+    let _ = (_ => fix(_ => _ => match y[0]
+      case zero;; => nil;;
+      case succ;y[0] => cons;(y[3], y[2](y[0]))
     )) in 
-    y[0](thing;())(succ;succ;zero;())
+    y[0](thing;;)(succ;succ;zero;;)
   ]
 
 
   -- expected: cons//nil//unit
   #eval infer_reduce 10 [lessterm|
-    fix(\ y[0] => ( 
-      \ zero;() => nil;()
-      \ succ;y[0] => cons;(y[1](y[0]))
-    ))(succ;zero;())
+    fix(_ => _ => match y[0]
+      case zero;; => nil;;
+      case succ;y[0] => cons;(y[2](y[0]))
+    )(succ;zero;;)
   ]
-
+  
   -- expected: cons//nil//unit
   #eval infer_reduce 10 [lessterm|
-    let y[0] = fix(\ y[0] => ( 
-      \ zero;() => nil;()
-      \ succ;y[0] => cons;(y[1](y[0]))
-    )) in 
-    y[0](succ;zero;())
+    let _ = fix(_ => _ => match y[0]
+      case zero;; => nil;;
+      case succ;y[0] => cons;(y[2](y[0]))
+    ) in 
+    y[0](succ;zero;;)
   ]
 
   -- expected: cons//cons//nil//unit
   #eval infer_reduce 10 [lessterm|
-    let y[0] = fix(\ y[0] => ( 
-      \ zero;() => nil;()
-      \ succ;y[0] => cons;(y[1](y[0]))
-    )) in 
-    y[0](succ;succ;zero;())
+    let _ = fix(_ => _ => match y[0]
+      case zero;; => nil;;
+      case succ;y[0] => cons;(y[2](y[0]))
+    ) in 
+    y[0](succ;succ;zero;;)
   ]
 
 
   #eval unify_reduce 10 
   [lesstype|
-  ([_:α[3]] (β[0] -> {1 # β[0] with (β[1] * β[0]) <: 
+  ([_<:α[3]] (β[0] -> {1 # β[0] with (β[1] * β[0]) <: 
     (induct (
         (zero//unit * nil//unit) | 
         {2 # (succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2]}))
@@ -2779,58 +2964,55 @@ namespace Nameless
   -------------------------------
 
   #eval infer_reduce 0 [lessterm| 
-      (fix (\ y[0] => (
-        \ (zero;(), y[0]) => true;()  
-        \ (succ;y[0], succ;y[1]) => y[2](y[0], y[1])
-        \ (succ;y[0], zero;()) => false;() 
-      )))
+      (fix (_ => _ => match y[0] 
+        case (zero;;, y[0]) => true;;  
+        case (succ;y[0], succ;y[1]) => y[4](y[0], y[1])
+        case (succ;y[0], zero;;) => false;; 
+      ))
   ] 
 
   -- sound
-  -- observed error: there is a single solution containing an empty environment 
   -- expected: none  
   #eval infer_reduce 0 [lessterm| 
-    let y[0] : succ//zero//unit = (\ (y[0], y[1]) => 
+    let _ : succ//zero//unit = (_ => match y[0] case (y[0], y[1]) => 
       (
-        (
-        \ true;() => y[1]
-        \ false;() => y[0]
-        )
-        (fix (\ y[0] =>
-          \ (zero;(), y[0]) => true;()  
-          \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-          \ (succ; y[0], zero;()) => false;() 
-        ) (y[0], y[1]))
+        if 
+          (fix (_ => _ => match y[0]
+            case (zero;;, y[0]) => true;;  
+            case (succ;y[0], succ;y[1]) => y[4](y[0], y[1])
+            case (succ;y[0], zero;;) => false;; 
+          ) (y[0], y[1]))
+        then y[1] else y[0]
       )
     ) in
-    (y[0] (succ;succ;zero;(), succ;zero;()))
+    (y[0] (succ;succ;zero;;, succ;zero;;))
   ] 
 
   -- expected: none
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = (\ () => ())(zero;()) in
+    let _ = (_ => match y[0] case ; => ;)(zero;;) in
     y[0]
   ] 
 
   ---------- generics ----------------
 
   #eval infer_reduce 10 [lessterm|
-    ((\ cons;(y[0], y[1]) => y[0]) (cons;(ooga;(), booga;())))
+    (_ => match y[0] case cons;(y[0], y[1]) => y[0])(cons;(ooga;;, booga;;))
   ]
 
   #eval infer_reduce 10 [lessterm|
-    let y[0] = (\ cons;(y[0], y[1]) => y[0]) in
-    (y[0] (cons;(ooga;(), booga;())))  
+    let _ = _ => match y[0] case cons;(y[0], y[1]) => y[0] in
+    y[0](cons;(ooga;;, booga;;))
   ]
 
   #eval infer_reduce 10 [lessterm|
-    let y[0] = (\ cons;(y[0], y[1]) => y[0]) in 
+    let _ = _ => match y[0] case cons;(y[0], y[1]) => y[0] in 
     y[0]  
   ]
 
   #eval infer_reduce 10 [lessterm|
-    let y[0] : [_][_] cons//(β[0] * β[1]) -> β[0] = _ in
-    (y[0] (cons;(ooga;(), booga;())))  
+    let _ : [_][_] cons//(β[0] * β[1]) -> β[0] = _ in
+    (y[0] (cons;(ooga;;, booga;;)))  
   ]
 
   ---------- expanding return type ----------------
@@ -2847,10 +3029,10 @@ namespace Nameless
   -/
   #eval infer_reduce 0 [lessterm|
     -- fix \ self \ data => 
-    fix (\ y[0] => \ y[0] => 
+    fix (_ => _ => 
       (
         @data = y[0]
-        @update = (\ y[0] => y[2](cons;(y[0], y[1])))
+        @update = (_ => y[2](cons;(y[0], y[1])))
       )
     ) 
   ]
@@ -2880,13 +3062,13 @@ namespace Nameless
 /-
   #eval infer_reduce 0 [lessterm|
     -- fix \ self \ data => 
-    let y[0] = fix (\ y[0] => \ y[0] => 
-      (@update = (\ y[0] => (y[2] cons; (y[0], y[1]))))
+    let _ = fix (\ y[0] => \ y[0] => 
+      (@update = (\ y[0] => (y[2] cons;(y[0], y[1]))))
     ) in 
     -- y[0]
-    -- let y[0] = (y[1] nil;())
-    (y[0] nil;())
-    -- (((y[0] nil;()).update #hello()).update #world())
+    -- let _ = (y[1] nil;;)
+    (y[0] nil;;)
+    -- (((y[0] nil;;).update #hello()).update #world())
   ]
 -/
   ------------------
@@ -2896,12 +3078,12 @@ namespace Nameless
   -- weakening mechanism is deprecated
   ----------------------------------------
   -- #eval infer_reduce 0 [lessterm|
-  --   let y[0] : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
+  --   let _ : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
   --   ((y[0] #hello ()) #world ())
   -- ]
 
   -- #eval infer_reduce 0 [lessterm|
-  --   let y[0] = (\ y[0] => \ y[0] => (y[1], y[0])) in 
+  --   let _ = (\ y[0] => \ y[0] => (y[1], y[0])) in 
   --   ((y[0] #hello ()) #world ())
   -- ]
 
@@ -2911,67 +3093,65 @@ namespace Nameless
 
   -- -- NOTE: this requires subbing in unions to maintain weakening after let-poly generalization
   -- #eval infer_reduce 0 [lessterm|
-  --   let y[0] : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
-  --   let y[0] = (y[0] #hello ()) in
+  --   let _ : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
+  --   let _ = (y[0] #hello ()) in
   --   (y[0] #world())
   -- ]
   ----------------------------------------
 
   ---------- strengthening ----------------
   #eval infer_reduce 0 [lessterm|
-  let y[0] : uno//unit -> unit = _ in 
-  let y[0] : dos//unit -> unit = _ in 
-  (\ y[0] =>
-    y[2](y[0]))
+  let _ : uno//unit -> unit = _ in 
+  let _ : dos//unit -> unit = _ in 
+  (_ => y[2](y[0]))
   ]
 
   #eval infer_reduce 0 [lessterm|
-  let y[0] : uno//unit -> unit = _ in 
-  let y[0] : dos//unit -> unit = _ in 
-  (\ y[0] => y[2](y[0]))(uno;())
+  let _ : uno//unit -> unit = _ in 
+  let _ : dos//unit -> unit = _ in 
+  (_ => y[2](y[0]))(uno;;)
   ]
 
   #eval infer_reduce 0 [lessterm|
-  let y[0] : uno//unit -> unit = _ in 
-  y[0](uno;())
+  let _ : uno//unit -> unit = _ in 
+  y[0](uno;;)
   ]
 
   -- expected: (uno : unit) & (dos : unit) -> unit * unit
   #eval infer_reduce 0 [lessterm|
-    let y[0] : (uno : unit) -> unit = _ in 
-    let y[0] : (dos : unit) -> unit = _ in 
-    (\ y[0] => 
+    let _ : (uno : unit) -> unit = _ in 
+    let _ : (dos : unit) -> unit = _ in 
+    (_ => 
       y[2](y[0]), y[1](y[0])
     )
   ]
 
   -- expected: ⊥ -> unit * unit
   #eval infer_reduce 0 [lessterm|
-  let y[0] : uno//unit -> unit = _ in 
-  let y[0] : dos//unit -> unit = _ in 
-  (\ y[0] =>
-    (y[2](y[0]), y[1](y[0])))
+  let _ : uno//unit -> unit = _ in 
+  let _ : dos//unit -> unit = _ in 
+  (_ => (y[2](y[0]), y[1](y[0])))
   ]
 
   #eval infer_reduce 0 [lessterm|
-  let y[0] : uno//unit -> unit = _ in 
-  let y[0] = _ in 
-  let y[0] = y[1](y[0]) in 
+  let _ : uno//unit -> unit = _ in 
+  let _ = _ in 
+  let _ = y[1](y[0]) in 
   y[0]
   ]
 
   #eval infer_reduce 0 [lessterm|
-  let y[0] : uno//unit -> unit = _ in 
-  let y[0] : dos//unit -> unit = _ in 
-  (\ y[0] =>
-    let y[0] = y[2](y[0]) in 
-    let y[0] = y[2](y[1]) in 
+  let _ : uno//unit -> unit = _ in 
+  let _ : dos//unit -> unit = _ in 
+  (_ =>
+    let _ = y[2](y[0]) in 
+    let _ = y[2](y[1]) in 
     (y[0], y[1])
   )
   ]
 
   ----------------------------------
-  #eval [lessterm| @x = hello;() @y = world;()]
+  #eval [lessterm| @x = hello;; @y = world;;]
   --------------------------------------
 
   #eval unify_decide 0 
@@ -3010,36 +3190,28 @@ namespace Nameless
     [lesstype| succ//zero//unit * cons//nil//unit ] 
     other_nat_list
 
-  #eval [lessterm|
-  (\ y[0] => ( 
-    \ (succ;y[0], succ;y[1]) => y[2](y[0], y[1])
-    \ (zero;(), y[0]) => y[0]
-    \ (y[0], zero;()) => y[0] 
-  ))
-  ]
-
   #eval infer_reduce 10 [lessterm|
-  fix(\ y[0] => ( 
-    \ (succ;y[0], succ;y[1]) => y[2](y[0], y[1])
-    \ (zero;(), y[0]) => y[0]
-    \ (y[0], zero;()) => y[0] 
-  ))
+  fix(_ => _ => match y[0]  
+    case (succ;y[0], succ;y[1]) => y[3](y[0], y[1])
+    case (zero;;, y[0]) => y[0]
+    case (y[0], zero;;) => y[0] 
+  )
   ]
 
   -- NOTE: requires simplification when checking if relation is reducible 
   -- expected: the difference: succ//zero//unit
   #eval infer_reduce 10 [lessterm|
-  fix(\ y[0] => ( 
-    \ (succ;y[0], succ;y[1]) => y[2](y[0], y[1])
-    \ (zero;(), y[0]) => y[0]
-    \ (y[0], zero;()) => y[0] 
-  ))(succ;succ;zero;(), succ;succ;succ;zero;())
+  fix(_ => _ => match y[0]  
+    case (succ;y[0], succ;y[1]) => y[3](y[0], y[1])
+    case (zero;;, y[0]) => y[0]
+    case (y[0], zero;;) => y[0] 
+  )(succ;succ;zero;;, succ;succ;succ;zero;;)
   ]
 
   -- expected: the difference: succ//zero//unit
   #eval unify_reduce 10
   [lesstype|
-  ([_:{2 # (β[1] ->
+  ([_<:{2 # (β[1] ->
     β[0]) with (β[1] * β[0]) <: (induct ({3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0] & top) <: β[3]} |
       ({1 # ((zero//unit * β[0]) * β[0])} | {1 # ((β[0] * zero//unit) * β[0])} | bot)))}] β[0])
   ]
@@ -3070,11 +3242,11 @@ namespace Nameless
   -- NOTE: this may have some non-termination depending on how occurs is used 
   #eval infer_simple 10 
   [lessterm|
-  let y[0] : ⟨spec⟩ = fix(\ y[0] => ( 
-    \ (succ;y[0], succ;y[1]) => y[2](y[0], y[1])
-    \ (zero;(), y[0]) => y[0]
-    \ (y[0], zero;()) => y[0] 
-  )) in 
+  let _ : ⟨spec⟩ = fix(_ => _ => match y[0]  
+    case (succ;y[0], succ;y[1]) => y[3](y[0], y[1])
+    case (zero;;, y[0]) => y[0]
+    case (y[0], zero;;) => y[0] 
+  ) in 
   y[0]
   ]
 
@@ -3082,23 +3254,23 @@ namespace Nameless
 
   #eval infer_reduce 10 
   [lessterm|
-  let y[0] = fix(\ y[0] => ( 
-    \ (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1]))
-    \ (zero;(), y[0]) => y[0]
-    \ (y[0], zero;()) => y[0] 
-  )) in 
+  let _ = fix(_ => _ => match y[0]
+    case (succ;y[0], succ;y[1]) => (y[3] (y[0], y[1]))
+    case (zero;;, y[0]) => y[0]
+    case (y[0], zero;;) => y[0] 
+  ) in 
   y[0]
   ]
 
   -- expected: succ//zero//unit 
   #eval infer_reduce 10 
   [lessterm|
-  let y[0] = fix(\ y[0] => ( 
-    \ (succ;y[0], succ;y[1]) => (y[2] (y[0], y[1]))
-    \ (zero;(), y[0]) => y[0]
-    \ (y[0], zero;()) => y[0] 
-  )) in 
-  y[0](succ;succ;zero;(), succ;zero;())
+  let _ = fix(_ => _ => match y[0]
+    case (succ;y[0], succ;y[1]) => (y[3] (y[0], y[1]))
+    case (zero;;, y[0]) => y[0]
+    case (y[0], zero;;) => y[0] 
+  ) in 
+  y[0](succ;succ;zero;;, succ;zero;;)
   ]
 
   def diff_rel :=
@@ -3136,7 +3308,7 @@ namespace Nameless
   -- spec
   -- [lesstype| α[0] * α[1] ]
 
-  ------------ transposition checking ----------------
+  ------------ factoring checking ----------------
 
   def list_ := [lesstype|
     induct 
@@ -3145,9 +3317,9 @@ namespace Nameless
   ]
 
   -- #eval [lessterm| 
-  --   let y[0] : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
-  --     \ zero;() => nil;()  
-  --     \ succ; y[0] => cons; (y[1] y[0]) 
+  --   let _ : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
+  --     \ zero;; => nil;;  
+  --     \ succ;y[0] => cons;(y[1] y[0]) 
   --   )
   --   in
   --   y[0]
@@ -3155,8 +3327,8 @@ namespace Nameless
 
   -- #eval infer_reduce 0 [lessterm| 
   --   fix(\ y[0] =>
-  --     \ zero;() => nil;()  
-  --     \ succ; y[0] => cons; (y[1] y[0]) 
+  --     \ zero;; => nil;;  
+  --     \ succ;y[0] => cons;(y[1] y[0]) 
   --   )
   -- ]
 
@@ -3183,7 +3355,7 @@ namespace Nameless
   [lesstype| ⟨nat_list⟩ ]
 
 
-  ----- transposition construction ----
+  ----- factored construction ----
   
   -- expected: ⟨nat_⟩ * ⟨list_⟩
   #eval unify_reduce 10
@@ -3202,16 +3374,23 @@ namespace Nameless
   [lesstype| top ]
 
 
-  ----- transposition projection ----
+  ----- factored projection ----
 
+  -- sound
   -- expected: false 
   #eval unify_decide 10
-  [lesstype| {β[0] -> unit with β[0] * α[0] <: ⟨nat_list⟩} ]
+  [lesstype| {2 # β[0] -> unit with β[0] * β[1] <: ⟨nat_list⟩} ]
   [lesstype| succ//zero//unit -> unit ]
 
+  -- unsound
   -- expected: false 
   #eval unify_decide 10
-  [lesstype| {β[0] -> unit with β[0] * α[0] <: ⟨nat_list⟩} ]
+  [lesstype| {2 # β[0] -> unit with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| ⟨nat_⟩ -> unit ]
+
+  -- expected: false 
+  #eval unify_decide 10
+  [lesstype| {2 # β[0] -> unit with β[0] * cons//cons//nil//unit <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ -> unit ]
 
   -- expected: false 
@@ -3249,7 +3428,7 @@ namespace Nameless
   -- incomplete 
   -- expected: true 
   #eval unify_decide 10
-  [lesstype| [_:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
 
   -- expected: true 
@@ -3265,7 +3444,7 @@ namespace Nameless
   -- complete
   -- expected: true 
   #eval unify_decide 10
-  [lesstype| [_:{2 # β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
+  [lesstype| [_<:{2 # β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
 
   -- expected: true 
@@ -3276,19 +3455,19 @@ namespace Nameless
   -- incomplete
   -- expected: true 
   #eval unify_decide 10
-  [lesstype| [_:{2 # β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
-  [lesstype| [_:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| [_<:{2 # β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
+  [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
 
 
   -- expected: true 
   #eval unify_decide 10
-  [lesstype| [_:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| succ//zero//unit -> α[0] ]
 
   -- expected: false 
   #eval unify_decide 0
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
-  [lesstype| [_:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
 
   -- expected: false 
   #eval unify_decide 10
@@ -3326,9 +3505,9 @@ namespace Nameless
 ---------------- debugging
 
   #eval infer_reduce 0 [lessterm| 
-    let y[0] : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
-      \ zero;() => nil;()  
-      \ succ;y[0] => cons;(y[1](y[0])) 
+    let _ : ⟨nat_⟩ -> ⟨list_⟩ = fix(_ => _ => match y[0]
+      case zero;; => nil;;  
+      case succ;y[0] => cons;(y[2](y[0])) 
     )
     in
     y[0]
@@ -3424,7 +3603,7 @@ namespace Nameless
   -- expected: false 
   #eval unify_decide 0
   [lesstype| one//unit  ]
-  [lesstype| [_:{(β[0] | α[0]) -> β[0] with (β[0] | α[0]) <: (one//unit | two//unit) & (three//unit | four//unit) }] β[0] ]
+  [lesstype| [_<:{(β[0] | α[0]) -> β[0] with (β[0] | α[0]) <: (one//unit | two//unit) & (three//unit | four//unit) }] β[0] ]
 
   -- expected: false 
   #eval unify_decide 0
@@ -3434,7 +3613,7 @@ namespace Nameless
   -- expected: false 
   #eval unify_decide 0
   [lesstype| one//unit  ]
-  [lesstype|  [_:{(β[0] | α[0]) -> β[0] with (β[0] | α[0]) <: (one//unit | two//unit) * (three//unit | four//unit)}] β[0] ]
+  [lesstype|  [_<:{(β[0] | α[0]) -> β[0] with (β[0] | α[0]) <: (one//unit | two//unit) * (three//unit | four//unit)}] β[0] ]
 
   -- expected: false 
   #eval unify_decide 0
@@ -3444,7 +3623,7 @@ namespace Nameless
 
 ---------------------------------
   #eval infer_reduce 1 [lessterm| 
-    let y[0] : α[0] = _ in
+    let _ : α[0] = _ in
     y[0] 
   ] 
 
@@ -3464,8 +3643,8 @@ namespace Nameless
 
   -- expected: none 
   #eval infer_reduce 0 [lessterm| 
-    let y[0] : ([_][_] β[0] * β[1] -> {1 # β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩}) = 
-    (\ (y[0], y[1]) => y[0]) in
+    let _ : ([_][_] β[0] * β[1] -> {1 # β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩}) = 
+    (_ => match y[0] case (y[0], y[1]) => y[0]) in
     y[0]
   ] 
 
@@ -3483,7 +3662,7 @@ namespace Nameless
   -/
   #eval unify_reduce 50
   [lesstype| 
-  ([_:α[10]] (β[0] ->
+  ([_<:α[10]] (β[0] ->
   {1 # β[0] with (β[1] * β[0]) <: (induct ((zero//unit * nil//unit) |
      {2 # (succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2]}))}))
   ]
@@ -3500,12 +3679,12 @@ namespace Nameless
     ))})
   -/
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (zero;()) => nil;()  
-      \ (succ; y[0]) => cons;(y[1](y[0])) 
+    let _ = fix (_ => _ => match y[0]
+      case (zero;;) => nil;;  
+      case (succ;y[0]) => cons;(y[1](y[0])) 
     ) in
-    let y[0] = _ in
-    let y[0] = (y[1] (y[0])) in
+    let _ = _ in
+    let _ = (y[1] (y[0])) in
     y[1]
   ] 
 
@@ -3523,10 +3702,10 @@ namespace Nameless
 
   -- expected: (?spanish unit | ?english unit)
   #eval infer_reduce 10 [lessterm|
-    let y[0] : [_:α[0]] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
-    let y[0] : α[1] = _ in
+    let _ : [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
+    let _ : α[1] = _ in
     (
-      (\ dos;() => spanish;() \ two;() => english;())
+      (_ => match y[0] case dos;; => spanish;; case two;; => english;;)
       (y[1](y[0]))
     ) 
   ]
@@ -3535,28 +3714,28 @@ namespace Nameless
 
   -- expected: uno//unit
   #eval infer_reduce 10 [lessterm|
-    let y[0] : uno//unit -> dos//unit = _ in
-    let y[0] = _ in
-    let y[0] = y[1](y[0]) in
+    let _ : uno//unit -> dos//unit = _ in
+    let _ = _ in
+    let _ = y[1](y[0]) in
     y[1]
   ]
 
   -- expected: uno//unit
   #eval infer_reduce 10 [lessterm|
-    let y[0] : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit)} = _ in
-    let y[0] = _ in
+    let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit)} = _ in
+    let _ = _ in
     (
-      (\ dos;() => y[0])
+      (_ => match y[0] case dos;; => y[0])
       (y[1](y[0]))
     ) 
   ]
 
   -- expected: uno//unit
   #eval infer_reduce 10 [lessterm|
-    let y[0] : uno//unit -> dos//unit = _ in
-    let y[0] = _ in
+    let _ : uno//unit -> dos//unit = _ in
+    let _ = _ in
     (
-      (\ dos;() => y[0])
+      (_ => match y[0] case dos;; => y[0])
       (y[1](y[0]))
     ) 
   ]
@@ -3564,10 +3743,10 @@ namespace Nameless
   -- requires local strengthening in left-existential
   -- expected: uno//unit
   #eval infer_reduce 10 [lessterm|
-    let y[0] : [_:α[2]] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit)} = _ in
-    let y[0] = _ in
+    let _ : [_<:α[2]] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit)} = _ in
+    let _ = _ in
     (
-      (\ dos;() => y[0])
+      (_ => match y[0] case dos;; => y[0])
       (y[1](y[0]))
     ) 
   ]
@@ -3575,10 +3754,10 @@ namespace Nameless
   -- incomplete
   -- expected: uno//unit | other//unit
   #eval infer_reduce 10 [lessterm|
-    let y[0] : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
-    let y[0] = _ in
+    let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
+    let _ = _ in
     (
-      (\ dos;() => y[0] \ two;() => other;())
+      (_ => match y[0] case dos;; => y[0] case two;; => other;;)
       (y[1](y[0]))
     ) 
   ]
@@ -3586,18 +3765,18 @@ namespace Nameless
   -- incomplete
   -- expected: dos//unit | other//unit
   #eval infer_reduce 10 [lessterm|
-    let y[0] : (dos//unit) | (two//unit) = _ in
-    (\ dos;() => y[0] \ two;() => other;())
+    let _ : (dos//unit) | (two//unit) = _ in
+    (_ => match y[0] case dos;; => y[0] case two;; => other;;)
     (y[0])
   ]
 
   -- incomplete
   -- expected: uno//unit 
   #eval infer_reduce 10 [lessterm|
-    let y[0] : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
-    let y[0] = _ in
+    let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
+    let _ = _ in
     (
-      (\ dos;() => y[0] \ two;() => uno;())
+      (_ => match y[0] case dos;; => y[0] case two;; => uno;;)
       (y[1](y[0]))
     ) 
   ]
@@ -3608,9 +3787,9 @@ namespace Nameless
   -- complete
   -- expected: (one//unit | three//unit) 
   #eval infer_reduce 0 [lessterm|
-    let y[0] = _ in
-    let y[0] = (
-      (\ one;() => two;() \ three;() => four;())
+    let _ = _ in
+    let _ = (
+      (_ => match y[0] case one;; => two;; case three;; => four;;)
       (y[0])
     ) in
     y[1]
@@ -3618,33 +3797,42 @@ namespace Nameless
 
   -- expected: (two//unit | four//unit)
   #eval infer_reduce 0 [lessterm|
-    let y[0] = _ in
-    (\ one;() => two;() \ three;() => four;())
+    let _ = _ in
+    (_ => match y[0] case one;; => two;; case three;; => four;;)
     (y[0])
   ]
 
   -- expected:  (([_:(one//unit -> two//unit)]β[0]) & ([_:(three//unit -> four//unit)]β[0]))
   #eval infer_reduce 0 [lessterm|
-    \ y[0] => (
-      (\ one;() => two;() \ three;() => four;())
+    _ => (
+      (_ => match y[0] 
+        case one;; => two;; 
+        case three;; => four;;
+      )
       (y[0])
     )
   ]
 
   -- expected: one//unit
   #eval infer_reduce 0 [lessterm|
-    let y[0] = _ in
+    let _ = _ in
     (
-      (\ one;() => y[0] \ three;() => one; ())
+      (_ => match y[0] 
+        case one;; => y[0] 
+        case three;; => one;;
+      )
       (y[0])
     )
   ]
 
   -- expected: none 
   #eval infer_reduce 0 [lessterm|
-    let y[0] : one//unit | two//unit = _ in
+    let _ : one//unit | two//unit = _ in
     (
-      (\ one;() => y[0] \ three;() => one; ())
+      (_ => match y[0] 
+        case one;; => y[0] 
+        case three;; => one;;
+      )
       (y[0])
     )
   ]
@@ -3668,9 +3856,12 @@ namespace Nameless
   -- incomplete
   -- expected: one//unit 
   #eval infer_reduce 0 [lessterm|
-    let y[0] : {β[0] with β[0] <: one//unit | three//unit} = _ in
+    let _ : {β[0] with β[0] <: one//unit | three//unit} = _ in
     (
-      (\ one;() => y[0] \ three;() => one; ())
+      (_ => match y[0] 
+        case one;; => y[0] 
+        case three;; => one;;
+      )
       (y[0])
     )
   ]
@@ -3678,9 +3869,12 @@ namespace Nameless
   -- incomplete
   -- expected: one//unit | three//unit 
   #eval infer_reduce 0 [lessterm|
-    let y[0] : {β[0] with β[0] <: one//unit | three//unit} = _ in
+    let _ : {β[0] with β[0] <: one//unit | three//unit} = _ in
     (
-      (\ one;() => y[0] \ three;() => y[0])
+      (_ => match y[0] 
+        case one;; => y[0] 
+        case three;; => y[0]
+      )
       (y[0])
     )
   ]
@@ -3700,9 +3894,12 @@ namespace Nameless
   -- complete
   -- expected: four//unit
   #eval infer_reduce 0 [lessterm|
-    let y[0] : one//unit | three//unit = _ in
+    let _ : one//unit | three//unit = _ in
     (
-      (\ one;() => four;() \ three;() => four; ())
+      (_ => match y[0] 
+        case one;; => four;; 
+        case three;; => four;;
+      )
       (y[0])
     )
   ]
@@ -3778,9 +3975,12 @@ namespace Nameless
   -- expected: two//unit | four//unit
   -- may be affected initial expected type in infer_reduce 
   #eval infer_reduce 0 [lessterm|
-    let y[0] : one//unit | three//unit = _ in
+    let _ : one//unit | three//unit = _ in
     (
-      (\ one;() => two;() \ three;() => four; ())
+      (_ => match y[0] 
+        case one;; => two;; 
+        case three;; => four;;
+      )
       (y[0])
     )
   ]
@@ -3788,9 +3988,12 @@ namespace Nameless
   -- imprecise 
   -- expected: one//unit
   #eval infer_reduce 0 [lessterm|
-    let y[0] : one//unit | three//unit = _ in
+    let _ : one//unit | three//unit = _ in
     (
-      (\ one;() => y[0] \ three;() => one; ())
+      (_ => match y[0] 
+        case one;; => y[0] 
+        case three;; => one;;
+      )
       (y[0])
     )
   ]
@@ -3849,24 +4052,31 @@ namespace Nameless
   -- incomplete
   -- expected: nil//unit | other//unit
   #eval infer_reduce 10 [lessterm|
-    let y[0] : α[0] = _ in
-    let y[0] : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
+    let _ : α[0] = _ in
+    let _ : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
     (
-      (\ zero;() => y[1] \ succ; y[0] => other;())
+      (_ => match y[0] 
+        case zero;; => y[1] 
+        case succ; y[0] => other;;
+      )
       (y[0])
     )
   ]
 
   ----- using function application --------
 
+  -- incomplete
   -- NOTE: full reduction requires using unify_all to solve remaining constraints
   -- NOTE: return type should not be refined further after return
   -- expected: zero//unit | other//unit
   #eval infer_reduce 10 [lessterm|
-    let y[0] : [_:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in
-    let y[0] = _ in
+    let _ : [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in
+    let _ = _ in
     (
-      (\ nil;() => y[0] \ cons;y[0] => other;())
+      (_ => match y[0] 
+        case nil;; => y[0] 
+        case cons;y[0] => other;;
+      )
       (y[1](y[0]))
     )
   ]
@@ -3874,10 +4084,12 @@ namespace Nameless
   -- argument type is weaker than parameter type
   -- expected: none 
   #eval infer_reduce 10 [lessterm|
-    let y[0] : α[0] = _ in
-    let y[0] : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
+    let _ : α[0] = _ in
+    let _ : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
     (
-      (\ zero;() => y[1])
+      (_ => match y[0] 
+        case zero;; => y[1]
+      )
       (y[0])
     )
   ]
@@ -3887,49 +4099,49 @@ namespace Nameless
 
   -- expected: multiple environments
   #eval infer_simple 0 [lessterm| 
-    let y[0] = _ in 
-    (\ one;() => two;() \ three;() => four;())(y[0])
+    let _ = _ in 
+    (_ => match y[0] 
+      case one;; => two;; 
+      case three;; => four;;
+    )(y[0])
   ]
 
 
   -- expected: none 
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = _ in 
-    (\ two;() => thing;()) (( \ one;() => two;() \ three;() => four;())(y[0]))
+    let _ = _ in 
+    (_ => match y[0] 
+      case two;; => thing;;
+    ) 
+    ((_ => match y[0] 
+      case one;; => two;; 
+      case three;; => four;;)(y[0]))
   ]
 
   #eval infer_simple 0 [lessterm| 
-    let y[0] = _ in 
-    let y[0] = ( \ one;() => two;() \ three;() => four;())(y[0]) in
+    let _ = _ in 
+    let _ = (_ => match y[0] 
+      case one;; => two;; 
+      case three;; => four;;
+    )(y[0]) in
     y[0]
   ]
 
-  -- sound
-  -- expected: none 
+  -- sound because initial type may be restricted
+  -- there exists a type that can be inhabited 
+  -- expected: one//unit
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = _ in 
-    let y[0] = ( \ one;() => two;() \ three;() => four;())(y[0]) in
-    (\ two;() => thing;())(y[0])
+    let _ = _ in 
+    let _ = (_ => match y[0] case one;; => two;; case three;; => four;;)(y[0]) in
+    let _ = (_ => match y[0] case two;; => thing;;)(y[0]) in
+    y[2]
   ]
-
-  -----------
-  #eval infer_reduce 0 [lessterm| 
-    let y[0] = _ in 
-    let y[0] = ( \ one;() => two;() \ three;() => four;())(y[0]) in
-    y[0]
-  ]
-
-  #eval infer_reduce 0 [lessterm| 
-    let y[0] = _ in 
-    ( \ one;() => two;() \ three;() => four;())(y[0])
-  ]
-  -----------
 
   -- expected: thing//unit
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = _ in 
-    let y[0] = ( \ one;() => two;())(y[0]) in
-    (\ two;() => thing;())(y[0])
+    let _ = _ in 
+    let _ = (_ => match y[0] case one;; => two;;)(y[0]) in
+    (_ => match y[0] case two;; => thing;;)(y[0])
   ]
 
   --------------------------------------
@@ -3937,22 +4149,25 @@ namespace Nameless
 
   -- expected: ((one//unit -> two//unit) & (three//unit -> four//unit))
   #eval infer_reduce 0 [lessterm| 
-    ( \ one;() => two;() \ three;() => four;())
+    (_ => match y[0] case one;; => two;; case three;; => four;;)
   ]
 
   -- imprecise: inferring union instead of intersection
+  -- requires generalization upon detection of funciton types
   -- expected: ((one//unit -> two//unit) & (three//unit -> four//unit))
   #eval infer_reduce 0 [lessterm| 
-    (\y[0] => ( \ one;() => two;() \ three;() => four;())(y[0]))
+    (_ => (_ => match y[0] case one;; => two;; case three;; => four;;)(y[0]))
   ]
 
   #eval infer_envs 0 [lessterm| 
-    (\y[0] => ( \ one;() => two;() \ three;() => four;())(y[0]))
+    (_ => (_ => match y[0] case one;; => two;; case three;; => four;;)(y[0]))
   ]
 
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = _ in
-    ( \ one;() => two;() \ three;() => four;())(y[0])
+    let _ = _ in
+    (_ => match y[0] 
+      case one;; => two;; 
+      case three;; => four;;)(y[0])
   ]
 
   #eval unify_reduce 10
@@ -3963,7 +4178,7 @@ namespace Nameless
   ------- path selection --------------
   -- expected: two//unit 
   #eval infer_reduce 0 [lessterm| 
-    ( \ one;() => two;() \ three;() => four;())(one;()) 
+    (_ => match y[0] case one;; => two;; case three;; => four;;)(one;;) 
   ]
 
 ------------------------------
@@ -3996,6 +4211,7 @@ namespace Nameless
   ]
   [lesstype| (zero//unit * succ//zero//unit) ]
 
+  -- incomplete: not fully reduced
   -- expected: ((zero//unit * succ//zero//unit) | (succ//zero//unit * zero//unit))
   #eval unify_reduce 10
   [lesstype|
@@ -4011,11 +4227,12 @@ namespace Nameless
   [lesstype| succ//zero//unit -> α[7] ]
   [lesstype| α[7] ]
 
+  -- incomplete: not fully reduced
   -- expected: ((zero//unit * succ//zero//unit) | (succ//zero//unit * zero//unit))
   #eval infer_reduce 10
   [lessterm|
-    let y[0] : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
-    y[0](succ;zero;())
+    let _ : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
+    y[0](succ;zero;;)
   ]
   -----------------------------------
 
@@ -4030,23 +4247,23 @@ namespace Nameless
   -- expected: none 
   #eval infer_reduce 10
   [lessterm|
-    let y[0] : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
-    let y[0] : (zero//unit * succ//zero//unit) -> unit = _ in 
-    y[0](y[1](succ;zero;()))
+    let _ : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
+    let _ : (zero//unit * succ//zero//unit) -> unit = _ in 
+    y[0](y[1](succ;zero;;))
   ]
 
   -- expected: unit
   #eval infer_reduce 10
   [lessterm|
-    let y[0] : (foo//unit) -> unit = _ in 
-    y[0](foo;())
+    let _ : (foo//unit) -> unit = _ in 
+    y[0](foo;;)
   ]
 
   -- expected: none 
   #eval infer_reduce 10
   [lessterm|
-    let y[0] : (foo//unit) -> unit = _ in 
-    y[0](boo;())
+    let _ : (foo//unit) -> unit = _ in 
+    y[0](boo;;)
   ]
 
   -------------------------------------------
@@ -4055,8 +4272,8 @@ namespace Nameless
   -- expected: none 
   #eval infer_reduce 10
   [lessterm|
-    let y[0] : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
-    let y[0] : (zero//unit * succ//zero//unit) = y[0](succ;zero;()) in
+    let _ : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
+    let _ : (zero//unit * succ//zero//unit) = y[0](succ;zero;;) in
     y[0]
 
   ]
@@ -4088,16 +4305,16 @@ namespace Nameless
   -- NOTE: this is specialized because left-universal checks constraints after unification
   -- expected: even 
   #eval infer_reduce 0 [lessterm|
-  let y[0] : [_:⟨nat_⟩] β[0] * β[0] -> β[0] = _ in 
-  let y[0] : ⟨even⟩ = _ in
-  (y[1] (y[0], zero; ()))
+  let _ : [_<:⟨nat_⟩] β[0] * β[0] -> β[0] = _ in 
+  let _ : ⟨even⟩ = _ in
+  (y[1] (y[0], zero;;))
   ]
 
   -- expected: nat 
   #eval infer_reduce 0 [lessterm|
-  let y[0] : [_:⟨nat_⟩] β[0] * β[0] -> β[0] = _ in 
-  let y[0] : ⟨even⟩ = _ in
-  (y[1] (zero; (), y[0]))
+  let _ : [_<:⟨nat_⟩] β[0] * β[0] -> β[0] = _ in 
+  let _ : ⟨even⟩ = _ in
+  (y[1] (zero;;, y[0]))
   ]
 
 
@@ -4114,19 +4331,19 @@ namespace Nameless
   -- that is, the subtype could also be empty 
   -- thus it does not introduce a false premise in order to draw a false conclusion
 
-  -- learns that α[7] is an uninhabitable type
+  -- α[7] is an uninhabitable type
   #eval unify_decide 10 
   [lesstype| α[7] ]
   [lesstype| {β[0] with succ//β[0] <: foo//β[0]} ]
 
-  -- learns that α[0] is an uninhabitable type
+  -- α[0] is an uninhabitable type
   #eval unify_decide 30
-  [lesstype| [_:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| [_<:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
   [lesstype| foo//succ//zero//unit -> α[0] ] 
 
   -- expected false
   #eval unify_decide 30
-  [lesstype| [_:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
+  [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
   [lesstype| foo//succ//zero//unit -> α[0] ] 
 
 
@@ -4135,22 +4352,36 @@ namespace Nameless
 -------------------------------------
 
 
-  -- better: notions of zero//and true//appear in inferred type? 
+  -- incomplete
+  -- expected: notions of zero//and true//appear in inferred type
   -- this requires including relational constraints in generalization
-  -- this works! 
   #eval infer_reduce 0 [lessterm| 
-    (\ (y[0]) => ((fix (\ y[0] =>
-      \ (zero;(), zero;()) => true;()  
-    )) (y[0])))
+    (_ => (fix (_ => _ => match y[0]
+      case (zero;;, zero;;) => true;;  
+    )) (y[0]))
   ] 
 
+  -- incomplete: lack of recursive call causes failure
+  #eval infer_reduce 0 [lessterm| 
+    (fix (_ => _ => match y[0]
+      case (zero;;, zero;;) => true;;
+    ))
+  ] 
+
+  #eval infer_reduce 0 [lessterm| 
+    (fix (_ => _ => match y[0]
+      case (zero;;, zero;;) => y[0](true;;)
+    ))
+  ] 
+
+  -- incomplete
   -- expected: true//unit
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = (\ (y[0]) => ((fix (\ y[0] =>
-      \ (zero;(), zero;()) => true;()  
+    let _ = (_ => ((fix (_ => _ => match y[0]
+      case (zero;;, zero;;) => true;;  
     )) (y[0])))
     in
-    (y[0] (zero;(), zero;()))
+    (y[0] (zero;;, zero;;))
   ] 
 
   def nat_pair := [lesstype|
@@ -4164,38 +4395,38 @@ namespace Nameless
 
   -- expected: relational function type
   #eval infer_reduce 0 [lessterm| 
-    fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+    fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
     )
   ] 
     
   -- expected: false//unit
   #eval infer_reduce 0 [lessterm| 
     -- less than or equal:
-    let y[0] = fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+    let _ = fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
     ) in
     (
-      (\ y[0] => y[0])
-      (y[0] (succ; succ; zero;(), succ; zero;()))
+      (_ => y[0])
+      (y[0] (succ; succ; zero;;, succ; zero;;))
     )
   ] 
 
   -- expected: the argument type should be refined by the function application 
   #eval infer_reduce 0 [lessterm| 
     -- less than or equal:
-    let y[0] = fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+    let _ = fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
     ) in
-    (\ (y[0], y[1]) => 
+    (_ => match y[0] case (y[0], y[1]) => 
       (
-        let y[0] = (y[2] (y[0], y[1])) in
+        let _ = (y[3] (y[0], y[1])) in
         y[1]
       )
     )
@@ -4203,13 +4434,13 @@ namespace Nameless
 
   -- expected: type maintains relational information 
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+    let _ = fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
     ) in
-    let y[0] = (\ (y[0], y[1]) => 
-        (y[2] (y[0], y[1]))
+    let _ = (_ => match y[0] case (y[0], y[1]) => 
+        (y[3] (y[0], y[1]))
     ) in
     y[0]
   ] 
@@ -4243,14 +4474,14 @@ namespace Nameless
   -- expected: type is maintained after identity function application
   #eval infer_reduce 0 [lessterm| 
     -- less than or equal:
-    let y[0] = fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ;y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ;y[0], zero;()) => false;() 
+    let _ = fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ;y[0], succ; y[1]) => y[3](y[0], y[1])
+      case (succ;y[0], zero;;) => false;; 
     ) in
-    (\ (y[0], y[1]) => 
+    (_ => match y[0] case (y[0], y[1]) => 
       (
-        (\ y[0] => y[0])
+        (_ => y[0])
         (y[2] (y[0], y[1]))
       )
     )
@@ -4259,19 +4490,18 @@ namespace Nameless
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+    let _ = fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
     ) in
-    let y[0] = _ in
-    let y[0] = _ in
+    let _ = _ in
+    let _ = _ in
     (
-      (
-      \ true;() => y[1]
-      \ false;() => y[0]
-      )
-      (y[2] (y[0], y[1]))
+      if (y[2] (y[0], y[1])) then
+        y[1]
+      else
+        y[0]
     )
   ] 
 
@@ -4304,7 +4534,7 @@ namespace Nameless
   -/
   #eval unify_reduce 10 
   [lesstype| 
-  [_:(induct (
+  [_<:(induct (
     {1 # (zero//unit * β[0])} | 
     {3 # (succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3]} |
     {1 # (succ//β[0] * zero//unit)}
@@ -4333,41 +4563,74 @@ namespace Nameless
   -- expected: type that describes max invariant
   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+    let _ = fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
     ) in
-    (\ (y[0], y[1]) => 
+    (_ => match y[0] case (y[0], y[1]) => 
       (
-        (
-        \ true;() => y[1]
-        \ false;() => y[0]
-        )
-        (y[2] (y[0], y[1]))
+        if (y[3] (y[0], y[1])) then
+          y[1]
+        else 
+          y[0]
       )
     ) 
   ] 
+
+/-
+{2 # ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * true//unit) <: (induct (
+      ((zero//unit * α[7]) * true//unit) |
+      {3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
+      ((succ//α[14] * zero//unit) * false//unit)
+))} |
+
+{2 # ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * false//unit) <: (induct (
+      ((zero//unit * α[7]) * true//unit) |
+      {3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
+      ((succ//α[14] * zero//unit) * false//unit)
+))}
+-/
 
   -- complete
   -- NOTE: max of the two inputs  
   -- expected: succ//succ//succ//zero//unit   
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+    let _ = fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
     ) in
-    let y[0] = (\ (y[0], y[1]) => 
+    let _ = (_ => match y[0] case (y[0], y[1]) =>
       (
-        (
-        \ true;() => y[1]
-        \ false;() => y[0]
-        )
-        (y[2] (y[0], y[1]))
+        if (y[3] (y[0], y[1])) then
+          y[1]
+        else
+          y[0]
       )
     ) in
-    (y[0] (succ; zero;(), succ; succ; succ; zero;()))
+    (y[0] (succ;zero;;, succ;succ;succ;zero;;))
+  ] 
+
+
+  -- incomplete 
+  -- actual: {X with X > 1} 
+  -- expected: succ//succ//succ//zero//unit   
+  #eval infer_reduce 0 [lessterm| 
+    let _ = fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
+    ) in
+    let _ = (_ => match y[0] case (y[0], y[1]) =>
+      (
+        if (y[3] (y[0], y[1])) then
+          y[1]
+        else
+          y[0]
+      )
+    ) in
+    (y[0] (succ;succ;succ;zero;;, succ;zero;;))
   ] 
 
   -- complete
@@ -4375,20 +4638,21 @@ namespace Nameless
   -- not necessary for all cases to succeed
   -- expected: succ//succ//succ//zero//unit   
   #eval infer_reduce 0 [lessterm| 
-    (\ (y[0], y[1]) => 
+    (_ => match y[0] case (y[0], y[1]) => 
       (
-        (
-        \ true;() => y[1]
-        \ false;() => y[0]
-        )
-        (fix(\ y[0] =>
-          \ (zero;(), y[0]) => true;()  
-          \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-          \ (succ; y[0], zero;()) => false;() 
-        ) (y[0], y[1]))
+        if 
+          (fix(_ => _ => match y[0]
+            case (zero;;, y[0]) => true;;  
+            case (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
+            case (succ; y[0], zero;;) => false;; 
+          ) (y[0], y[1]))
+        then
+          y[1]
+        else
+          y[0]
       )
     ) 
-    ((succ; zero;(), succ; succ; succ; zero;()))
+    ((succ; zero;;, succ; succ; succ; zero;;))
   ] 
 
 
@@ -4402,8 +4666,8 @@ namespace Nameless
   -------------
   #eval unify_reduce 10
   [lesstype|
-    (([_:{2 # ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩}] β[0])) & 
-    (([_:{2 # ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩}] β[0]))
+    (([_<:{2 # ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩}] β[0])) & 
+    (([_<:{2 # ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩}] β[0]))
   ]
   [lesstype| succ//zero//unit * succ//succ//succ//zero//unit -> α[7] ]
   [lesstype| α[7]]
@@ -4435,29 +4699,29 @@ namespace Nameless
   -- expected: false//unit 
   #eval infer_reduce 0 [lessterm| 
     (
-      (fix (\ y[0] =>
-        \ (zero;(), y[0]) => true;()  
-        \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-        \ (succ; y[0], zero;()) => false;() 
+      (fix (_ => _ => match y[0]
+        case (zero;;, y[0]) => true;;  
+        case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+        case (succ; y[0], zero;;) => false;; 
       ))
-      (succ; succ; zero;(), succ; zero;())
+      (succ; succ; zero;;, succ; zero;;)
     )
   ] 
 
   #eval infer_reduce 0 [lessterm| 
-    let y[0] = (fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+    let _ = (fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
     )) in
-    (y[0] (succ; succ; zero;(), succ; zero;()))
+    (y[0] (succ; succ; zero;;, succ; zero;;))
   ] 
 
   #eval infer_reduce 0 [lessterm| 
-    (fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+    (fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
     ))
   ] 
 
@@ -4480,15 +4744,16 @@ namespace Nameless
   -- expected: none 
   #eval unify_reduce 10 
   [lesstype|
-    ([_:ooga//unit]
+    ([_<:ooga//unit]
        (β[0] -> {1 # β[0] with (β[1] * β[0]) <: ⟨le_⟩}))
   ]
   [lesstype| succ//succ//zero//unit * succ//zero//unit -> α[0]]
   [lesstype| α[0] ]
 
+  -- incomplete: not reducing all the way
   -- expected: false//unit 
   #eval unify_reduce 10 
-  [lesstype| ([_:⟨nat_pair⟩] (β[0] -> {1 # β[0] with (β[1] * β[0]) <: ⟨le_⟩})) ]
+  [lesstype| ([_<:⟨nat_pair⟩] (β[0] -> {1 # β[0] with (β[1] * β[0]) <: ⟨le_⟩})) ]
   [lesstype| succ//succ//zero//unit * succ//zero//unit -> α[0]]
   [lesstype| α[0] ]
 
@@ -4497,55 +4762,54 @@ namespace Nameless
 -------------------------------------
 
   def diff := [lessterm|
-    fix(\ y[0] => ( 
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1]))
-      \ (zero; (), y[0]) => y[0]
-      \ (y[0], zero; ()) => y[0] 
-    )) 
+    fix(_ => _ => match y[0] 
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1]))
+      case (zero;;, y[0]) => y[0]
+      case (y[0], zero;;) => y[0] 
+    )
   ]
 
   #eval infer_reduce 10  [lessterm|
-    let y[0] = ⟨diff⟩ in
-    (y[0] (succ; succ; zero; (), succ; zero; ()))
+    let _ = ⟨diff⟩ in
+    (y[0] (succ; succ; zero;;, succ; zero;;))
   ]
 
 
   def leq := [lessterm|
-    fix (\ y[0] =>
-      \ (zero;(), y[0]) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (succ; y[0], zero;()) => false;() 
+    fix (_ => _ => match y[0]
+      case (zero;;, y[0]) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+      case (succ; y[0], zero;;) => false;; 
     )
   ]
 
   def max := [lessterm| 
-    (\ (y[0], y[1]) => 
+    (_ => match y[0] case (y[0], y[1]) => 
       (
-        (
-        \ true;() => y[1]
-        \ false;() => y[0]
-        )
-        (⟨leq⟩ (y[0], y[1]))
+        if (⟨leq⟩ (y[0], y[1])) then
+          y[1]
+        else
+          y[0]
       )
     ) 
   ] 
 
   def add := [lessterm|
-    fix(\ y[0] => (
-      \ (zero; (), y[0]) => y[0] 
-      \ (succ; y[0], y[1]) => succ; (y[2] (y[0], y[1]))
-    ))
+    fix(_ => _ => match y[0] 
+      case (zero;;, y[0]) => y[0] 
+      case (succ; y[0], y[1]) => succ; (y[3] (y[0], y[1]))
+    )
   ]
 
   #eval infer_reduce 0 add 
 
   def sum := [lessterm|
-    fix(\ y[0] => (
-      \ zero; () => zero; () 
-      \ succ; y[0] => (
-        (⟨add⟩)((y[1](y[0]), succ;y[0]))
+    fix(_ => _ => match y[0]
+      case zero;; => zero;; 
+      case succ; y[0] => (
+        (⟨add⟩)((y[2](y[0]), succ;y[0]))
       )
-    ))
+    )
   ]
 
   --expected: type that relates the recursive result type variable to the application's result type 
@@ -4559,154 +4823,202 @@ namespace Nameless
   #eval infer_reduce 0 sum 
 
   #eval infer_reduce 0 [lessterm| 
-    (⟨sum⟩)(succ;succ;zero;()) 
+    (⟨sum⟩)(succ;succ;zero;;) 
   ]
-
 
   -- sum(2) : {v | v >= 2} 
   -- 0 : {v | v >= 2} 
   -- expected: false 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;())]) with
+  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
   | some ty => unify_decide 0 [lesstype| zero//unit ] ty
   | none => false
 
   -- sum(2) : {v | v >= 2} 
   -- 1 : {v | v >= 2} 
   -- expected: false 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;())]) with
+  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
   | some ty => unify_decide 0 [lesstype| succ//zero//unit ] ty
   | none => false
 
   -- sum(2) : {v | v >= 2} 
   -- 2 : {v | v >= 2} 
   -- expected: true
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;())]) with
+  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
   | some ty => unify_decide 0 [lesstype| succ//succ//zero//unit ] ty
   | none => false
 
   -- sum(2) : {v | v >= 2} 
   -- 3 : {v | v >= 2} 
   -- expected: true 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;())]) with
+  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
   | some ty => unify_decide 0 [lesstype| succ//succ//succ//zero//unit ] ty
   | none => false
 
 
   #eval infer_reduce 0 [lessterm| 
-    (⟨sum⟩)(succ;zero;()) 
+    (⟨sum⟩)(succ;zero;;) 
   ]
 
   -- expected: false 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;())]) with
+  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;;)]) with
   | some ty => unify_decide 0 [lesstype| zero//unit ] ty
   | none => false
 
   -- expected: true
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;())]) with
+  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;;)]) with
   | some ty => unify_decide 0 [lesstype| succ//zero//unit ] ty
   | none => false
 
 
   #eval infer_reduce 0 [lessterm| 
-    (⟨sum⟩)(zero;()) 
+    (⟨sum⟩)(zero;;) 
   ]
 
   -- expected: true 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(zero;())]) with
+  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(zero;;)]) with
   | some ty => unify_decide 0 [lesstype| zero//unit ] ty
   | none => false
 
--------------------------------------
-  -- foldn example 
--------------------------------------
-
+  -------------------------------------
+  /-
+  foldn example 
+  -/
+  -------------------------------------
 
   def lt := [lessterm|
-    fix (\ y[0] =>
-      \ (zero;(), succ;zero;()) => true;()  
-      \ (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      \ (y[0], zero;()) => false;() 
+    fix (_ => _ => match y[0]
+      case (zero;;, succ;zero;;) => true;;  
+      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+      case (y[0], zero;;) => false;; 
     )
   ]
 
   #eval infer_reduce 0 lt
 
-  -- expected: true 
+  -- expected: true//unit
   #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩(zero;(), succ;zero;()) 
+    ⟨lt⟩(zero;;, succ;zero;;) 
   ]
 
-  -- expected: true 
+  -- expected: true//unit
   #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩(succ;zero;(), succ;succ;zero;()) 
+    ⟨lt⟩(succ;zero;;, succ;succ;zero;;) 
   ]
 
-  -- expected: false
+  -- expected: false//unit
   #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩(zero;(), zero;()) 
+    ⟨lt⟩(zero;;, zero;;) 
   ]
 
-  -- expected: false
+  -- expected: false//unit
   #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩(succ;zero;(), succ;zero;()) 
+    ⟨lt⟩(succ;zero;;, succ;zero;;) 
   ]
 
-  -- expected: false
+  -- expected: false//unit
   #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩(succ;succ;zero;(), succ;zero;()) 
+    ⟨lt⟩(succ;succ;zero;;, succ;zero;;) 
   ]
 
+  #eval infer_reduce 0 [lessterm| 
+    ⟨lt⟩ 
+  ]
 
+---------------
   def foldn := [lessterm|
-  \ (y[0], y[1], y[2]) => (
-      let y[0] = fix(\ y[0] => (\ (y[0], y[1]) =>
-        -- n, b, f: 3, 4, 5
-        -- loop: 2
-        -- i, c: 0, 1 
-        (if ⟨lt⟩(y[0], y[3]) then
-          y[2](succ;y[0], y[5](y[0], y[1]))
+  let _ = _ in
+  let _ = _ in
+  _ => match y[0] case (y[0], (y[1], y[2])) => (
+      let _ = fix(_ => _ => match y[0] case (y[0], y[1]) =>
+        /-
+        n, b, f: 4, 5, 6 
+        loop: 3 
+        i, c: 0, 1 
+        -/
+        (if ⟨lt⟩(y[0], y[4]) then
+          -- y[3](succ;y[0], y[6](y[0], y[1]))
+          y[3](succ;y[0], ;)
         else
           y[1]
         )
-      )) in 
-      y[0](zero;(), y[2])
+      ) in 
+      /-
+      loop: 0 
+      n: 1
+      b: 2
+      f: 3
+      -/
+      y[0](zero;;, y[2])
+      -- y[0]
   )
   ]
 
-  -- TODO
-  -- incomplete: inductive type inference from fix may be flawed
+  /-
+  incomplete
+  ERROR: naive decreasing requirement for unifying with inductive type is overly strict  
+  TODO: convert to leverging CHC solver, and rely on external decidability heuristics 
+  -/
   #eval infer_reduce 0 foldn
 
+  /-
+  ERROR: fails due to overly strict and naive decreasing heuristic
+  -/ 
+  #eval decreasing 0
+  [lesstype|
+    -- THE succ//β[1] is not decreasing!!
+    {3 # ((β[1] * β[2]) * β[0]) with ((succ//β[1] * unit) * β[0]) <: β[3]}
+  ]
 
   -------------------------------
-  -- inductive type inference
+  /-
+  pattern matching type inference 
+  -/
   -------------------------------
-
-
-  def zero := [lessterm|
-    fix (\ y[0] =>
-      \ zero;() => true;()  
-      \ succ;y[0] => false;() 
+  /-
+  Pattern matching should include switch, rather then merely having branches of a function.
+  Inclusion of switch allows more precise typing; since switch <: pattern constraint can be leveraged for inferring type for each case.
+  Seems related to occurence typing
+  -/
+  #eval infer_reduce 0 [lessterm|
+    let _ = _ in
+    (_ => match y[0]
+      case XO;; => (_ => match y[0] case XO;; => XX;;)(y[0]) -- need to prevent this assignment from escaping
+      case YO;; => YY;;
     )
   ]
 
-  def sum_ite := [lessterm|
-    fix(\ y[0] => (\ y[0] =>
-      if ⟨zero⟩(y[0]) then
-        zero;()
-      else
-        y[0] |> (\ succ; y[0] => ⟨add⟩((y[2](y[0]), succ;y[0])))
-        -- (\ succ; y[0] => ⟨add⟩((y[2](y[0]), succ;y[0])))(y[0])
-    ))
+  #eval infer_reduce 0 [lessterm|
+    (_ => 
+      (_ => match y[0]
+        case XO;; => (_ => match y[0] case XO;; => XX;;)(y[0]) -- need to prevent this assignment from escaping
+        case YO;; => YY;;
+      )((y[0]))
+    )
   ]
 
+----------------------------------
 
-  #eval infer_reduce 0 sum
+  def zero := [lessterm|
+    _ => match y[0]
+    case zero;; => true;;  
+    case succ;y[0] => false;; 
+  ]
 
-  -- TODO
-  -- incomplete: inductive type inference from fix may be flawed
-  -- cannot infer inductive type that relies on if-then-else instead of pattern matching 
-  #eval infer_reduce 0 sum_ite
+  #eval infer_reduce 0 [lessterm|
+    fix(_ => _ =>
+      if ⟨zero⟩(y[0]) then
+        zero;;
+      else
+        match y[0] 
+        case succ;y[0] => succ;(y[2](y[0]))
+    )(succ;zero;;)
+  ]
 
+  #eval infer_reduce 0 [lessterm|
+    fix(_ => _ => match y[0]
+      case zero;; => zero;; 
+      case succ;y[0] => succ;y[2](y[0])
+    )(succ;zero;;)
+  ]
 
 end Nameless 

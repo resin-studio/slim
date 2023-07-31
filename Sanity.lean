@@ -295,7 +295,7 @@ def plus := [:
 -- -- == [: (y ~ α[1] ∧ z ~ succ*succ*α[1]) :]
 
 -- #eval infer_reduce 1 [:
---   let y[0] : (hello*@ -> α[0]) = (λ y[0] => y[0]) =>
+--   let _ : (hello*@ -> α[0]) = (λ y[0] => y[0]) =>
 --   y[0]
 -- :]
 -- -- == [: hello*@ -> hello*@ :]
@@ -340,7 +340,7 @@ def plus := [:
 --   test "generalization" [
 --     ("annotated", 
 --       infer_reduce 1 [:
---         let y[0] : str*@ -> ⊤ = (λ y[0] => hello ; y[0]) =>
+--         let _ : str*@ -> ⊤ = (λ y[0] => hello ; y[0]) =>
 --         y[0]
 --       :]
 --       == 
@@ -348,7 +348,7 @@ def plus := [:
 --     ),
 --     ("existentially annotated", 
 --       infer_reduce 1 [:
---         let y[0] : ∃ 1 => β[0] = (λ y[0] => hello ; y[0]) =>
+--         let _ : ∃ 1 => β[0] = (λ y[0] => hello ; y[0]) =>
 --         y[0]
 --       :]
 --       == 
@@ -356,7 +356,7 @@ def plus := [:
 --     ),
 --     ("universally annotated", 
 --       infer_reduce 1 [:
---         let y[0] : ∀ 2 => β[0] -> β[1] = (λ y[0] => hello ; y[0]) =>
+--         let _ : ∀ 2 => β[0] -> β[1] = (λ y[0] => hello ; y[0]) =>
 --         y[0]
 --       :]
 --       == 
@@ -364,7 +364,7 @@ def plus := [:
 --     ),
 --     ("unannotated", 
 --       infer_reduce 0 [:
---         let y[0] = (λ y[0] => hello ; y[0]) =>
+--         let _ = (λ y[0] => hello ; y[0]) =>
 --         (
 --           y[0]
 --         )
@@ -375,7 +375,7 @@ def plus := [:
 --     ("nested scopes 1", 
 --       infer_reduce 0 [:
 --         (λ y[0] => 
---           let y[0] = (λ y[0] => (y[1], (hello ; y[0]))) =>
+--           let _ = (λ y[0] => (y[1], (hello ; y[0]))) =>
 --           (
 --             y[0]
 --           )
@@ -388,8 +388,8 @@ def plus := [:
 --     ("nested scopes 2", 
 --       infer_reduce 0 [:
 --         (λ y[0] => 
---           let y[0] = (λ y[0] => y[0]) =>
---           let y[0] = (λ y[0] => ((y[1] y[2]), (hello ; y[0]))) =>
+--           let _ = (λ y[0] => y[0]) =>
+--           let _ = (λ y[0] => ((y[1] y[2]), (hello ; y[0]))) =>
 --           (
 --             y[0]
 --           )
@@ -405,7 +405,7 @@ def plus := [:
 --   test "widening" [
 --     ("1", 
 --       infer_reduce 0 [:
---         let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+--         let _ : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
 --         (y[0] hello;())
 --       :]
 --       == 
@@ -413,7 +413,7 @@ def plus := [:
 --     ),
 --     ("2", 
 --       infer_reduce 0 [:
---         let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+--         let _ : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
 --         ((y[0] hello;()) world;())
 --       :]
 --       ==
@@ -422,12 +422,12 @@ def plus := [:
 --   ]
 
       #eval infer_reduce 0 [:
-        let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+        let _ : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
         (y[0] hello;())
       :]
 
       #eval infer_reduce 0 [:
-        let y[0] : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
+        let _ : ∀ 1 => β[0] -> (β[0] -> (β[0] × β[0])) = _ => 
         ((y[0] hello;()) world;())
       :]
 
@@ -435,7 +435,7 @@ def plus := [:
 --   test "narrowing" [
 --     ("1", 
 --       infer_reduce 0 [:
---         let y[0] : uno*@ -> @ = _ => 
+--         let _ : uno*@ -> @ = _ => 
 --         (λ y[0] =>
 --           ((y[1] y[0])))
 --       :]
@@ -444,8 +444,8 @@ def plus := [:
 --     ),
 --     ("2",
 --       infer_reduce 0 [:
---         let y[0] : uno*@ -> @ = _ => 
---         let y[0] : dos*@ -> @ = _ =>
+--         let _ : uno*@ -> @ = _ => 
+--         let _ : dos*@ -> @ = _ =>
 --         (λ y[0] =>
 --           ((y[2] y[0]), (y[1] y[0])))
 --       :]
@@ -929,7 +929,7 @@ nat_to_unit
 -- -- :]
 
 #eval [:
-  let y[0] : (
+  let _ : (
     (zero*@ -> nil*@) ∧
     (succ*zero*@ -> cons*nil*@) ∧
     (succ*succ*zero*@ -> cons*cons*nil*@)
@@ -938,7 +938,7 @@ nat_to_unit
 :]
 
 #eval synth_reduce [:
-  let y[0] : (
+  let _ : (
     (zero*@ -> nil*@) ∧
     (succ*zero*@ -> cons*nil*@) ∧
     (succ*succ*zero*@ -> cons*cons*nil*@)
@@ -947,7 +947,7 @@ nat_to_unit
 :]
 
 #eval synth_reduce [:
-  let y[0] : (∀ 1 => β[0] -> (ν β[0] =>
+  let _ : (∀ 1 => β[0] -> (ν β[0] =>
     (zero*@ -> nil*@) ∧
     (∀ 2 :: β[2] ≤ (β[0] -> β[1]) =>
       succ*β[0] -> cons*(β[3] × β[1])
