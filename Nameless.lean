@@ -432,8 +432,8 @@ namespace Nameless
     syntax:40 lesstype "<:" lesstype "," lesstype: lesstype
     ------------
 
-    syntax "{" lesstype "#" lesstype:41 "with" lesstype "}": lesstype 
-    syntax "{" lesstype "#" lesstype:41 "}" : lesstype 
+    syntax "{" lesstype:41 "with" lesstype "#" lesstype "}": lesstype 
+    syntax "{" lesstype:41 "#" lesstype "}" : lesstype 
 
     syntax "{" lesstype:41 "with" lesstype "}": lesstype 
     syntax "{" lesstype:41 "}" : lesstype 
@@ -473,10 +473,10 @@ namespace Nameless
     | `([lesstype| $b <: $c , $xs ]) => `(([lesstype| $b ],[lesstype| $c ]) :: [lesstype| $xs])
     --------------
 
-    | `([lesstype| { $n # $d with $xs }  ]) => 
+    | `([lesstype| { $d with $xs # $n}  ]) => 
       `(intersect_over (fun (lhs, rhs) => Ty.exis [lesstype| $n ] lhs rhs [lesstype| $d ]) [lesstype| $xs ])
 
-    | `([lesstype| { $n # $b:lesstype } ]) => `(Ty.exis [lesstype| $n ] Ty.unit Ty.unit [lesstype| $b ] )
+    | `([lesstype| { $b:lesstype # $n } ]) => `(Ty.exis [lesstype| $n ] Ty.unit Ty.unit [lesstype| $b ] )
 
     | `([lesstype| { $d with $xs}  ]) => 
       `(intersect_over 
@@ -530,14 +530,14 @@ namespace Nameless
     | .exis var_count ty_c1 ty_c2 ty_pl =>
       if (ty_c1, ty_c2) == (.unit, .unit) then
         Format.bracket "{" (
-          (Nat.repr var_count) ++ " # " ++
-          repr ty_pl n
+          repr ty_pl n ++
+          " # " ++ (Nat.repr var_count)
         ) "}"
       else
         Format.bracket "{" (
-          (Nat.repr var_count) ++ " # " ++
           (repr ty_pl n) ++ " with " ++
-          (repr ty_c1 n) ++ " <: " ++ (repr ty_c2 n)
+          (repr ty_c1 n) ++ " <: " ++ (repr ty_c2 n) ++
+          " # " ++ (Nat.repr var_count)
         ) "}"
     | .univ op_ty_c ty_pl =>
       match op_ty_c with
@@ -583,9 +583,9 @@ namespace Nameless
     #eval [lesstype| {β[0] with β[0] <: ooga//unit, β[0] <: booga//unit} ]
     #eval [lesstype| {β[0] with β[0] <: ooga//unit} ]
 
-    #eval [lesstype| {1 # β[0] with (β[1] * β[0]) <: booga//unit} ] 
-    #eval [lesstype| {1 # β[0] with β[1] * β[0] <: booga//unit} ] 
-    #eval [lesstype| [_ <: ooga//unit] β[0] -> {1 # β[0] with β[1] * β[0] <: booga//unit} ] 
+    #eval [lesstype| {β[0] with (β[1] * β[0]) <: booga//unit # 1} ] 
+    #eval [lesstype| {β[0] with β[1] * β[0] <: booga//unit # 1} ] 
+    #eval [lesstype| [_ <: ooga//unit] β[0] -> {β[0] with β[1] * β[0] <: booga//unit # 1} ] 
 
 ------------------------------------------------------------
 
@@ -1162,7 +1162,7 @@ namespace Nameless
                 let ty_sub := subst env_sub key  
                 let ty_weak := (
                   let fids := toList (free_vars ty_sub)
-                  [lesstype| {⟨fids.length⟩ # ⟨abstract fids 0 ty_sub⟩} ] 
+                  [lesstype| {⟨abstract fids 0 ty_sub⟩ # ⟨fids.length⟩} ] 
                 )
                 -- unify relational lhs and constructed relational rhs 
                 let (i, contexts_oracle) := (unify i qual context relation ty_weak)
@@ -1547,7 +1547,7 @@ namespace Nameless
             let fvs_constraints := (free_vars ty_lhs)
             let fids_c := (toList ((Ty.free_vars ty) +fvs_constraints)).filter (fun id => !stale.contains id)
             [lesstype|
-              {⟨fids_c.length⟩ # ⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩}
+              {⟨abstract fids_c 0 ty⟩ with ⟨abstract fids_c 0 ty_lhs⟩ <: ⟨abstract fids_c 0 ty_rhs⟩ # ⟨fids_c.length⟩}
             ]
           ) constraints.toList
 
@@ -2172,12 +2172,14 @@ namespace Nameless
               if !(fvs_IH * fvs_IC).isEmpty then
                 let fixed_point := fvs.length
                 [lesstype|
-                  {⟨fvs.length⟩ # ⟨Ty.abstract fvs 0 ty_IC_pair⟩ with 
+                  {⟨Ty.abstract fvs 0 ty_IC_pair⟩ with 
                     ⟨Ty.abstract fvs 0 ty_IH_pair⟩ <: β[⟨fixed_point⟩] 
+                    #
+                    ⟨fvs.length⟩
                   } 
                 ]
               else if fvs.length > 0 then
-                [lesstype| {⟨fvs.length⟩ # ⟨Ty.abstract fvs 0 ty_IC_pair⟩} ]
+                [lesstype| {⟨Ty.abstract fvs 0 ty_IC_pair⟩ # ⟨fvs.length⟩} ]
               else
                 ty_IC_pair
             )
@@ -2203,7 +2205,7 @@ namespace Nameless
             let fvs := (toList (Ty.free_vars ty_IC_pair)).filter (fun fid => fid >= boundary)
             let ty_choice := (
               if fvs.length > 0 then
-                [lesstype| {⟨fvs.length⟩ # ⟨Ty.abstract fvs 0 ty_IC_pair⟩} ]
+                [lesstype| {⟨Ty.abstract fvs 0 ty_IC_pair⟩ # ⟨fvs.length⟩} ]
               else
                 ty_IC_pair
             )
@@ -2214,7 +2216,7 @@ namespace Nameless
       ) Ty.bot
 
       let ty_rel := [lesstype| induct ⟨ty_content⟩ ]
-      let ty' := Ty.simplify [lesstype| [_<:{2 # β[1] -> β[0] with β[1] * β[0] <: ⟨ty_rel⟩}] β[0]] 
+      let ty' := Ty.simplify [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨ty_rel⟩ # 2}] β[0]] 
 
 
       -- let context := {context with env_simple := context.env_simple.insert 666 (Ty.tag s!"msg_{i}_" Ty.unit)}
@@ -2605,7 +2607,7 @@ namespace Nameless
 
   -- expected: cons//nil//unit
   #eval unify_reduce 10
-  [lesstype| [_<:{2 # β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩}] β[0]]
+  [lesstype| [_<:{β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}] β[0]]
   [lesstype| succ//zero//unit -> α[2]]
   [lesstype| α[2]]
 
@@ -2613,21 +2615,21 @@ namespace Nameless
   -- expected: cons//nil//unit
   #eval unify_reduce 10
   [lesstype| succ//zero//unit -> α[2]]
-  [lesstype| {2 # β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩}]
+  [lesstype| {β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}]
   [lesstype| α[2]]
 
   ----------------
 
   -- expected: none 
   #eval unify_reduce 10
-  [lesstype| {2 # β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩}]
+  [lesstype| {β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}]
   [lesstype| succ//zero//unit -> α[2]]
   [lesstype| α[2]]
 
   -- expected: cons//nil//unit 
   #eval unify_reduce 10
   [lesstype| succ//zero//unit -> α[2]]
-  [lesstype| {2 # β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩}]
+  [lesstype| {β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}]
   [lesstype| α[2]]
 
 
@@ -2899,7 +2901,7 @@ namespace Nameless
   [lesstype| (succ//succ//zero//unit * α[7]) ]
   [lesstype|
       (induct ((zero//unit * nil//unit) |
-          {2 # (succ//β[1] * cons//(thing//unit * β[0])) with (β[1] * β[0]) <: β[2]}))
+          {(succ//β[1] * cons//(thing//unit * β[0])) with (β[1] * β[0]) <: β[2] # 2}))
   ]
   [lesstype| (α[7]) ]
 
@@ -2952,11 +2954,11 @@ namespace Nameless
 
   #eval unify_reduce 10 
   [lesstype|
-  ([_<:α[3]] (β[0] -> {1 # β[0] with (β[1] * β[0]) <: 
+  ([_<:α[3]] (β[0] -> {β[0] with (β[1] * β[0]) <: 
     (induct (
         (zero//unit * nil//unit) | 
-        {2 # (succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2]}))
-  }))
+        {(succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2] # 2}))
+   # 1}))
   ]
   [lesstype| succ//zero//unit -> α[0] ]
   [lesstype| α[0] ]
@@ -3211,9 +3213,9 @@ namespace Nameless
   -- expected: the difference: succ//zero//unit
   #eval unify_reduce 10
   [lesstype|
-  ([_<:{2 # (β[1] ->
-    β[0]) with (β[1] * β[0]) <: (induct ({3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0] & top) <: β[3]} |
-      ({1 # ((zero//unit * β[0]) * β[0])} | {1 # ((β[0] * zero//unit) * β[0])} | bot)))}] β[0])
+  ([_<:{(β[1] ->
+    β[0]) with (β[1] * β[0]) <: (induct ({((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0] & top) <: β[3] # 3} |
+      ({((zero//unit * β[0]) * β[0]) # 1} | {((β[0] * zero//unit) * β[0]) # 1} | bot))) # 2}] β[0])
   ]
   [lesstype| succ//zero//unit * succ//succ//zero//unit -> α[7] ]
   [lesstype| α[7] ] 
@@ -3379,18 +3381,18 @@ namespace Nameless
   -- sound
   -- expected: false 
   #eval unify_decide 10
-  [lesstype| {2 # β[0] -> unit with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| {β[0] -> unit with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
   [lesstype| succ//zero//unit -> unit ]
 
   -- unsound
   -- expected: false 
   #eval unify_decide 10
-  [lesstype| {2 # β[0] -> unit with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| {β[0] -> unit with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
   [lesstype| ⟨nat_⟩ -> unit ]
 
   -- expected: false 
   #eval unify_decide 10
-  [lesstype| {2 # β[0] -> unit with β[0] * cons//cons//nil//unit <: ⟨nat_list⟩} ]
+  [lesstype| {β[0] -> unit with β[0] * cons//cons//nil//unit <: ⟨nat_list⟩ # 2} ]
   [lesstype| ⟨nat_⟩ -> unit ]
 
   -- expected: false 
@@ -3405,12 +3407,12 @@ namespace Nameless
 
   -- expected: true 
   #eval unify_decide 10
-  [lesstype| {2 # β[0] with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| {β[0] with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
   [lesstype| ⟨nat_⟩ ]
 
   -- expected: false
   #eval unify_decide 10
-  [lesstype| {2 # β[0] with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| {β[0] with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
   [lesstype| succ//zero//unit ]
 
   ----------------------------
@@ -3433,7 +3435,7 @@ namespace Nameless
 
   -- expected: true 
   #eval unify_decide 10
-  [lesstype| [_] β[0] -> {2 # β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2} ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
 
   -- NOTE: the relational constraint check should check inhabitation 
@@ -3444,18 +3446,18 @@ namespace Nameless
   -- complete
   -- expected: true 
   #eval unify_decide 10
-  [lesstype| [_<:{2 # β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
+  [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2}] β[0] ]
   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
 
   -- expected: true 
   #eval unify_decide 10
-  [lesstype| {2 # β[1] * β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+  [lesstype| {β[1] * β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2} ]
   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
 
   -- incomplete
   -- expected: true 
   #eval unify_decide 10
-  [lesstype| [_<:{2 # β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
+  [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2}] β[0] ]
   [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
 
 
@@ -3499,7 +3501,7 @@ namespace Nameless
   [lesstype|
     induct
       zero//unit |
-      {2 # succ//β[0] with β[0] <: β[2]}
+      {succ//β[0] with β[0] <: β[2] # 2}
   ]
 
 ---------------- debugging
@@ -3528,7 +3530,7 @@ namespace Nameless
 
   -- expected: false 
   #eval unify_decide 0
-  [lesstype| {3 # β[2] with β[0] * β[1] <: ⟨nat_list⟩} ]
+  [lesstype| {β[2] with β[0] * β[1] <: ⟨nat_list⟩ # 3} ]
   [lesstype| ⟨nat_⟩]
 
   -- expected: true 
@@ -3563,7 +3565,7 @@ namespace Nameless
 
   -- expected: false 
   #eval unify_decide 0
-  [lesstype| {2 # β[0]  with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
+  [lesstype| {β[0]  with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit) # 2} ]
   [lesstype| one//unit ]
 
   -- expected: false 
@@ -3573,12 +3575,12 @@ namespace Nameless
 
   -- expected: false 
   #eval unify_decide 0
-  [lesstype| {2 # β[0] with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
+  [lesstype| {β[0] with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit) # 2} ]
   [lesstype| one//unit ]
 
   -- expected: true 
   #eval unify_decide 0
-  [lesstype| {2 # β[0] with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
+  [lesstype| {β[0] with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit) # 2} ]
   [lesstype| one//unit | three//unit ]
 
   -- expected: false 
@@ -3643,7 +3645,7 @@ namespace Nameless
 
   -- expected: none 
   #eval infer_reduce 0 [lessterm| 
-    let _ : ([_][_] β[0] * β[1] -> {1 # β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩}) = 
+    let _ : ([_][_] β[0] * β[1] -> {β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩ # 1}) = 
     (_ => match y[0] case (y[0], y[1]) => y[0]) in
     y[0]
   ] 
@@ -3663,8 +3665,8 @@ namespace Nameless
   #eval unify_reduce 50
   [lesstype| 
   ([_<:α[10]] (β[0] ->
-  {1 # β[0] with (β[1] * β[0]) <: (induct ((zero//unit * nil//unit) |
-     {2 # (succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2]}))}))
+  {β[0] with (β[1] * β[0]) <: (induct ((zero//unit * nil//unit) |
+     {(succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2] # 2})) # 1}))
   ]
   [lesstype| α[20] -> α[12]]
   [lesstype| α[20]]
@@ -4012,7 +4014,7 @@ namespace Nameless
   -- expected: true 
   #eval unify_decide 10 
   [lesstype| succ//α[1] * α[0] ]
-  [lesstype| {2 # (succ//β[0] * cons//β[1]) with (β[0] * β[1]) <: ⟨nat_list⟩} ]
+  [lesstype| {(succ//β[0] * cons//β[1]) with (β[0] * β[1]) <: ⟨nat_list⟩ # 2} ]
 
   ---------- relational propagation ---------
 
@@ -4452,9 +4454,9 @@ namespace Nameless
   [lesstype| (α[1] * α[2]) * true//unit ]
   [lesstype|
   induct (
-      {1 # ((zero//unit * β[0]) * true//unit)} |
-      {3 # ((succ//β[0] * succ//β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3]} |
-      {1 # ((succ//β[0] * zero//unit) * false//unit)}
+      {((zero//unit * β[0]) * true//unit) # 1} |
+      {((succ//β[0] * succ//β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3] # 3} |
+      {((succ//β[0] * zero//unit) * false//unit) # 1}
   )
   ]
   [lesstype| (α[1] * α[2]) * true//unit ]
@@ -4462,10 +4464,10 @@ namespace Nameless
   -- expected: ?? 
   #eval unify_decide 0
   [lesstype|
-    ({1 # β[0] with ((α[20] * α[18]) * β[0]) <: 
-      (induct ({1 # ((zero//unit * β[0]) * true//unit)} |
-      ({3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
-      {1 # ((succ//β[0] * zero//unit) * false//unit)})))}
+    ({β[0] with ((α[20] * α[18]) * β[0]) <: 
+      (induct ({((zero//unit * β[0]) * true//unit) # 1} |
+      ({((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3] # 3} |
+      {((succ//β[0] * zero//unit) * false//unit) # 1}))) # 1}
   )
   ]
   [lesstype| true//unit ]
@@ -4518,9 +4520,9 @@ namespace Nameless
   ]
   [lesstype| 
   (induct (
-    {1 # (zero//unit * β[0])} | 
-    {3 # (succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3]} |
-    {1 # (succ//β[0] * zero//unit)}
+    {(zero//unit * β[0]) # 1} | 
+    {(succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3] # 3} |
+    {(succ//β[0] * zero//unit) # 1}
   )) 
   ]
   [lesstype| 
@@ -4535,15 +4537,15 @@ namespace Nameless
   #eval unify_reduce 10 
   [lesstype| 
   [_<:(induct (
-    {1 # (zero//unit * β[0])} | 
-    {3 # (succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3]} |
-    {1 # (succ//β[0] * zero//unit)}
+    {(zero//unit * β[0]) # 1} | 
+    {(succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3] # 3} |
+    {(succ//β[0] * zero//unit) # 1}
   ))] (β[0] ->
-    {1 # β[0] with (β[1] * β[0]) <: (induct 
-      {1 # ((zero//unit * β[0]) * true//unit)} |
-      {3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
-      {1 # ((succ//β[0] * zero//unit) * false//unit)}
-    )}
+    {β[0] with (β[1] * β[0]) <: (induct 
+      {((zero//unit * β[0]) * true//unit) # 1} |
+      {((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3] # 3} |
+      {((succ//β[0] * zero//unit) * false//unit) # 1}
+    ) # 1}
   )
     ]
   [lesstype| 
@@ -4658,16 +4660,16 @@ namespace Nameless
 
   def led_ := [lesstype|
     induct 
-      {1 # ((zero//unit * β[0]) * true//unit)} |
-      {3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
-      {1 # ((succ//β[0] * zero//unit) * false//unit)}
+      {((zero//unit * β[0]) * true//unit) # 1} |
+      {((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3] # 3} |
+      {((succ//β[0] * zero//unit) * false//unit) # 1}
   ]
 
   -------------
   #eval unify_reduce 10
   [lesstype|
-    (([_<:{2 # ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩}] β[0])) & 
-    (([_<:{2 # ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩}] β[0]))
+    (([_<:{((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩ # 2}] β[0])) & 
+    (([_<:{((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩ # 2}] β[0]))
   ]
   [lesstype| succ//zero//unit * succ//succ//succ//zero//unit -> α[7] ]
   [lesstype| α[7]]
@@ -4677,9 +4679,9 @@ namespace Nameless
   #eval unify_reduce 10
   [lesstype| (succ//zero//unit * succ//succ//succ//zero//unit) * α[7] ]
   [lesstype|
-    ({2 # ((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩}) 
+    ({((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩ # 2}) 
     |
-    ({2 # ((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩})
+    ({((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩ # 2})
   ]
   [lesstype| α[7]]
 
@@ -4687,9 +4689,9 @@ namespace Nameless
   #eval unify_reduce 10
   [lesstype| (succ//succ//succ//zero//unit * succ//zero//unit) * α[7] ]
   [lesstype|
-    ({2 # ((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩}) 
+    ({((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩ # 2}) 
     |
-    ({2 # ((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩})
+    ({((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩ # 2})
   ]
   [lesstype| α[7]]
 
@@ -4745,7 +4747,7 @@ namespace Nameless
   #eval unify_reduce 10 
   [lesstype|
     ([_<:ooga//unit]
-       (β[0] -> {1 # β[0] with (β[1] * β[0]) <: ⟨le_⟩}))
+       (β[0] -> {β[0] with (β[1] * β[0]) <: ⟨le_⟩ # 1}))
   ]
   [lesstype| succ//succ//zero//unit * succ//zero//unit -> α[0]]
   [lesstype| α[0] ]
@@ -4753,7 +4755,7 @@ namespace Nameless
   -- incomplete: not reducing all the way
   -- expected: false//unit 
   #eval unify_reduce 10 
-  [lesstype| ([_<:⟨nat_pair⟩] (β[0] -> {1 # β[0] with (β[1] * β[0]) <: ⟨le_⟩})) ]
+  [lesstype| ([_<:⟨nat_pair⟩] (β[0] -> {β[0] with (β[1] * β[0]) <: ⟨le_⟩ # 1})) ]
   [lesstype| succ//succ//zero//unit * succ//zero//unit -> α[0]]
   [lesstype| α[0] ]
 
@@ -4966,7 +4968,7 @@ namespace Nameless
   #eval decreasing 0
   [lesstype|
     -- THE succ//β[1] is not decreasing!!
-    {3 # ((β[1] * β[2]) * β[0]) with ((succ//β[1] * unit) * β[0]) <: β[3]}
+    {((β[1] * β[2]) * β[0]) with ((succ//β[1] * unit) * β[0]) <: β[3] # 3}
   ]
 
   -------------------------------
