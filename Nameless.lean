@@ -65,6 +65,10 @@ namespace Nameless
   #eval [2,4,6].mapM (fun i => if i % 2 == 0 then some [i + 1] else none)
 
 
+  -- TODO: generalize form of constraints to allow a set of mutually dependent subtypings 
+  -- TODO: remove calls to unify in infer; simply generate constraints 
+  -- TODO: remove descriptive flags from type inference. 
+    -- staged solving offloads the semantics of descriptive flags to a different constraint solving strategy.
   inductive Ty : Type
   | bvar : Nat -> Ty  
   | fvar : Nat -> Ty
@@ -76,8 +80,9 @@ namespace Nameless
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
   | impli : Ty -> Ty -> Ty
-  -- TODO: generalize form of constraints to allow a set of mutually dependent subtypings 
-  | exis : Nat -> Ty -> Ty -> Ty -> Ty
+  /- payload -> List (lower <: upper) -> bound -> Ty -/
+  | exis : Ty -> List (Ty × Ty) -> Nat -> Ty
+  -- TODO: remove Option from univ; top type is sufficient
   | univ : Option Ty -> Ty -> Ty
   | induc : Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
@@ -130,11 +135,17 @@ namespace Nameless
       let n1 := infer_abstraction start ty1 
       let n2 := infer_abstraction start ty2
       if n1 > n2 then n1 else n2 
-    | .exis n ty_c1 ty_c2 ty_pl =>
-      let n_c1 := infer_abstraction (start + n) ty_c1 
-      let n_c2 := infer_abstraction (start + n) ty_c2
-      let n_pl := infer_abstraction (start + n) ty_pl  
-      Nat.max (Nat.max n_c1 n_c2) n_pl
+    | .exis payload constraints n =>
+      let rec loop : List (Ty × Ty) -> Nat
+      | [] => 0 
+      | (ty_c1, ty_c2) :: constraints => 
+        let m := loop constraints
+        let n_c1 := infer_abstraction (start + n) ty_c1 
+        let n_c2 := infer_abstraction (start + n) ty_c2
+        Nat.max m (Nat.max n_c1 n_c2)
+      let m := loop constraints
+      let n_pl := infer_abstraction (start + n) payload  
+      Nat.max m n_pl 
     | .univ op_ty_c ty_pl =>
       let n_c := match op_ty_c with 
       | some ty_c => infer_abstraction (start + 1) ty_c 
@@ -3919,7 +3930,9 @@ namespace Nameless
   [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
   [lesstype| (one//unit | three//unit) -> α[7] ]
   [lesstype| α[7] ]
-
+  /-
+  -- TODO: adjustment isn't necessary if it treats variable as unassigned for each case 
+  -/
   ----------------------
   /-
                                                       Y <: ?'
