@@ -166,8 +166,10 @@ namespace Nameless
     | .union ty1 ty2 => (free_vars ty1).fold insert (free_vars ty2)
     | .inter ty1 ty2 => (free_vars ty1).fold insert (free_vars ty2)
     | .impli ty1 ty2 => (free_vars ty1).fold insert (free_vars ty2)
-    | .exis n ty_c1 ty_c2 ty =>
-      (free_vars ty_c1) + (free_vars ty_c2) + (free_vars ty)
+    | .exis ty constraints n =>
+      constraints.foldl (fun total (ty_c1, ty_c2) =>
+        total + (free_vars ty_c1) + (free_vars ty_c2)
+      ) (free_vars ty)
     | .univ op_ty_c ty =>
       match op_ty_c with
       | some ty_c => (free_vars ty_c) + (free_vars ty)
@@ -211,11 +213,11 @@ namespace Nameless
     | .union ty1 ty2 => .union (abstract fids start ty1) (abstract fids start ty2)
     | .inter ty1 ty2 => .inter (abstract fids start ty1) (abstract fids start ty2)
     | .impli ty1 ty2 => .impli (abstract fids start ty1) (abstract fids start ty2)
-    | .exis n ty_c1 ty_c2 ty => 
-      (.exis n
-        (abstract fids (start + n) ty_c1) (abstract fids (start + n) ty_c2)
-        (abstract fids (start + n) ty)
+    | .exis ty constraints n => 
+      let constraints' := constraints.map (fun (ty_c1, ty_c2) =>
+        (abstract fids (start + n) ty_c1, abstract fids (start + n) ty_c2)
       )
+      (.exis (abstract fids (start + n) ty) constraints' n)
     | .univ op_ty_c ty => 
       (.univ (Option.map (abstract fids (start + 1)) op_ty_c) (abstract fids (start + 1) ty))
     | .induc ty => .induc (abstract fids (start + 1) ty)
@@ -236,10 +238,11 @@ namespace Nameless
     | .union ty1 ty2 => .union (subst m ty1) (subst m ty2)
     | .inter ty1 ty2 => .inter (subst m ty1) (subst m ty2)
     | .impli ty1 ty2 => .impli (subst m ty1) (subst m ty2)
-    | .exis n ty_c1 ty_c2 ty => (.exis n
-      (subst m ty_c1) (subst m ty_c2) 
-      (subst m ty)
-    )
+    | .exis ty constraints n => 
+      let constraints' := constraints.map (fun (ty_c1, ty_c2) =>
+        (subst m ty_c1, subst m ty_c2)
+      )
+      (.exis (subst m ty) constraints' n)
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (subst m)) (subst m ty))
     | .induc ty => .induc (subst m ty)
@@ -326,8 +329,11 @@ namespace Nameless
     | .union ty1 ty2 => unionize (simplify ty1) (simplify ty2)
     | .inter ty1 ty2 => intersect (simplify ty1) (simplify ty2)
     | .impli ty1 ty2 => .impli (simplify ty1) (simplify ty2)
-    | .exis n cty1 cty2 ty => 
-      .exis n (simplify cty1) (simplify cty2) (simplify ty)
+    | .exis ty constraints n=> 
+      let constraints' := constraints.map (fun (ty_c1, ty_c2) => 
+        (simplify ty_c1, simplify ty_c2) 
+      )
+      .exis (simplify ty) constraints' n
     | .univ op_ty_c ty => 
       .univ (op_ty_c.map simplify) (simplify ty)
     | .induc ty => .induc (simplify ty)
@@ -360,7 +366,7 @@ namespace Nameless
       let fields := (record_fields (.inter ty1 ty2)).toList
       fields.all (fun (l, ty) => wellformed_key ty)
     | .impli ty1 ty2 => false 
-    | .exis n ty_c1 ty_c2 ty => false
+    | .exis ty constraints n => false
     | .univ op_ty_c ty => false
     | .induc ty => false
 
@@ -383,10 +389,11 @@ namespace Nameless
     | .union ty1 ty2 => .union (subst_while f m ty1) (subst_while f m ty2)
     | .inter ty1 ty2 => .inter (subst_while f m ty1) (subst_while f m ty2)
     | .impli ty1 ty2 => .impli (subst_while f m ty1) (subst_while f m ty2)
-    | .exis n ty_c1 ty_c2 ty => (.exis n
-      (subst_while f m ty_c1) (subst_while f m ty_c2) 
-      (subst_while f m ty)
-    )
+    | .exis ty constraints n => 
+      let constraints' := constraints.map (fun (ty_c1, ty_c2) =>
+        (subst_while f m ty_c1, subst_while f m ty_c2)
+      )
+      (.exis (subst_while f m ty) constraints' n)
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (subst_while f m)) (subst_while f m ty))
     | .induc ty => .induc (subst_while f m ty)
@@ -411,10 +418,11 @@ namespace Nameless
     | .impli ty1 ty2 => 
       let new_negs := free_vars ty1
       .impli ty1 (sub_nonneg stale m (negs + new_negs) ty2)
-    | .exis n ty_c1 ty_c2 ty => (.exis n
-      (sub_nonneg stale m negs ty_c1) (sub_nonneg stale m negs ty_c2) 
-      (sub_nonneg stale m negs ty)
-    )
+    | .exis ty constraints n => 
+      let constraints' := constraints.map (fun (ty_c1, ty_c2) => 
+        (sub_nonneg stale m negs ty_c1, sub_nonneg stale m negs ty_c2) 
+      )
+      (.exis (sub_nonneg stale m negs ty) constraints' n)
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (sub_nonneg stale m negs)) (sub_nonneg stale m negs ty))
     | .induc ty => .induc (sub_nonneg stale m negs ty)
@@ -485,15 +493,12 @@ namespace Nameless
     --------------
 
     | `([lesstype| { $d with $xs # $n}  ]) => 
-      `(intersect_over (fun (lhs, rhs) => Ty.exis [lesstype| $n ] lhs rhs [lesstype| $d ]) [lesstype| $xs ])
+      `(Ty.exis [lesstype| $d ] [lesstype| $xs ] [lesstype| $n ])
 
     | `([lesstype| { $b:lesstype # $n } ]) => `(Ty.exis [lesstype| $n ] Ty.unit Ty.unit [lesstype| $b ] )
 
     | `([lesstype| { $d with $xs}  ]) => 
-      `(intersect_over 
-        (fun (lhs, rhs) => Ty.exis (Ty.infer_abstraction 0 [lesstype| $d ]) lhs rhs [lesstype| $d ])
-        [lesstype| $xs]
-      )
+      `(Ty.exis [lesstype| $d ] [lesstype| $xs ] (Ty.infer_abstraction 0 [lesstype| $d ]))
 
     | `([lesstype| { $b:lesstype } ]) => 
       `(Ty.exis (Ty.infer_abstraction 0 [lesstype| $b ]) Ty.unit Ty.unit [lesstype| $b ] )
@@ -538,16 +543,20 @@ namespace Nameless
       Format.bracket "(" ((repr ty1 n) ++ " & " ++ (repr ty2 n)) ")"
     | .impli ty1 ty2 =>
       Format.bracket "(" ((repr ty1 n) ++ " ->" ++ Format.line ++ (repr ty2 n)) ")"
-    | .exis var_count ty_c1 ty_c2 ty_pl =>
-      if (ty_c1, ty_c2) == (.unit, .unit) then
+    | .exis ty_pl constraints var_count =>
+      if constraints.isEmpty then
         Format.bracket "{" (
           repr ty_pl n ++
           " # " ++ (Nat.repr var_count)
         ) "}"
       else
+        let constraints' := constraints.map (fun (ty_c1, ty_c2) =>
+          (repr ty_c1 n) ++ " <: " ++ (repr ty_c2 n)
+        )
+        let constraints'' := Format.joinSep constraints' ", "
         Format.bracket "{" (
           (repr ty_pl n) ++ " with " ++
-          (repr ty_c1 n) ++ " <: " ++ (repr ty_c2 n) ++
+          constraints'' ++
           " # " ++ (Nat.repr var_count)
         ) "}"
     | .univ op_ty_c ty_pl =>
@@ -620,10 +629,20 @@ namespace Nameless
       no_function_types ty1 && 
       no_function_types ty2
     | .impli _ _ => false
-    | .exis n ty_c1 ty_c2 ty_pl =>
-      no_function_types ty_c1 && 
-      no_function_types ty_c2 && 
-      no_function_types ty_pl
+    | .exis ty_pl constraints n =>
+      /-
+      NOTE: Lean can't automatically prove termination using higher order function
+      -/
+      -- constraints.all (fun (ty_c1, ty_c2) => 
+      --   (no_function_types ty_c1) && (no_function_types ty_c2)
+      -- ) && (no_function_types ty_pl)
+      let rec loop : List (Ty × Ty) -> Bool  
+      | [] => true
+      | (ty_c1, ty_c2) :: constraints => 
+        (loop constraints) && 
+        (no_function_types ty_c1) && (no_function_types ty_c2)
+      (loop constraints) &&
+      (no_function_types ty_pl)
     | .univ op_ty_c ty_pl =>
       (match op_ty_c with 
       | none => true
@@ -770,11 +789,11 @@ namespace Nameless
     | .union ty1 ty2 => .union (instantiate start args ty1) (instantiate start args ty2)
     | .inter ty1 ty2 => .inter (instantiate start args ty1) (instantiate start args ty2)
     | .impli ty1 ty2 => .impli (instantiate start args ty1) (instantiate start args ty2)
-    | .exis n ty_c1 ty_c2 ty => 
-      (.exis n
-        (instantiate (start + n) args ty_c1) (instantiate (start + n) args ty_c2)
-        (instantiate (start + n) args ty)
+    | .exis ty constraints n => 
+      let constraints' := constraints.map (fun (ty_c1, ty_c2) =>
+        (instantiate (start + n) args ty_c1, instantiate (start + n) args ty_c2)
       )
+      (.exis (instantiate (start + n) args ty) constraints' n)
     | .univ op_ty_c ty => 
       (.univ (Option.map (instantiate (start + 1) args) op_ty_c) (instantiate (start + 1) args ty)
       )
