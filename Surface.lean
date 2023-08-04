@@ -30,8 +30,19 @@ namespace Surface
   deriving Repr, Inhabited, Hashable, BEq
   #check List.repr
 
+  def bind_nl (i_xs : Nat × List α) 
+    (f : Nat -> α -> (Nat × List β)) 
+  : (Nat × List β) 
+  :=
+    let (i, xs) := i_xs
+    List.foldl (fun (i, u_acc) env_ty =>
+      let (i, xs) := (f i env_ty)
+      (i, u_acc ++ xs)
+    ) (i, []) xs 
+
 
   namespace Ty
+
 
     partial def infer_abstraction (exclude : PHashSet String) : Ty -> PHashSet String 
     | .id name => 
@@ -330,11 +341,17 @@ namespace Surface
       let (stack1, ty1') <- (to_nameless free_vars bound_vars ty1) 
       let (stack2, ty2') <- (to_nameless free_vars bound_vars ty2) 
       some (stack1 ++ stack2, .impli ty1' ty2')
-    | .exis names ty1 ty2 ty3 => do
-      let (stack1, ty1') <- (to_nameless free_vars (names ++ bound_vars) ty1) 
-      let (stack2, ty2') <- (to_nameless free_vars (names ++ bound_vars) ty2) 
-      let (stack3, ty3') <- (to_nameless free_vars (names ++ bound_vars) ty3) 
-      some (names :: stack1 ++ stack2 ++ stack3, .exis names.length ty1' ty2' ty3')
+    | .exis ty3 constraints names => do
+      let (stack, ty3') <- (to_nameless free_vars (names ++ bound_vars) ty3) 
+      let (stack, constraints') <- constraints.foldrM (fun (ty1, ty2) stack_constraints' => do
+        let (stack, constraints') := stack_constraints'
+        let (stack1, ty1') <- (to_nameless free_vars (names ++ bound_vars) ty1) 
+        let (stack2, ty2') <- (to_nameless free_vars (names ++ bound_vars) ty2) 
+        (stack1 ++ stack2 ++ stack, (ty1', ty2') :: constraints')
+      ) (stack, [])
+
+      some (names :: stack, .exis ty3' constraints' names.length)
+
     | .univ name op_ty_c ty3 => do
       let op <- (Option.map (to_nameless free_vars (name :: bound_vars)) op_ty_c)
       let (stack1, op_ty_c') := (match op with
@@ -347,7 +364,7 @@ namespace Surface
       let (stack, ty') <- (to_nameless free_vars (name :: bound_vars) ty) 
       some ([name] :: stack, .induc ty')
 
-    def extract_free_vars : Ty -> PHashSet String
+    partial def extract_free_vars : Ty -> PHashSet String
     | id name => from_list [name] 
     | .unit => {} 
     | .bot => {} 
@@ -362,8 +379,18 @@ namespace Surface
       extract_free_vars ty1 + extract_free_vars ty2 
     | impli ty1 ty2  =>
       extract_free_vars ty1 + extract_free_vars ty2 
-    | exis bound_names tyc1 tyc2 ty_pl =>
-      let names := (extract_free_vars tyc1) + (extract_free_vars tyc2) + (extract_free_vars ty_pl)
+    | exis ty_pl constraints bound_names =>
+      let rec loop : List (Ty × Ty) -> PHashSet String
+      | [] => {} 
+      | (ty_c1, ty_c2) :: constraints =>
+        (extract_free_vars ty_c1) + (extract_free_vars ty_c2) + (loop constraints)
+      let names := (extract_free_vars ty_pl) + loop constraints
+      /-
+      automatic termination proof fails with higher order function
+      -/
+      -- let names := constraints.foldl (fun names (ty_c1, ty_c2) =>
+      --   names + (extract_free_vars ty_c1) + (extract_free_vars ty_c2)
+      -- ) (extract_free_vars ty_pl)
       from_list ((toList names).filter (fun n => !(bound_names.contains n)))
     | univ bound_name op_tyc ty_pl =>
       let names := (match op_tyc with
@@ -413,14 +440,19 @@ namespace Surface
       let (stack, ty1') <- (from_nameless free_names names stack ty1)   
       let (stack, ty2') <- (from_nameless free_names names stack ty2)   
       some (stack, .impli ty1' ty2') 
-    | .exis n ty1 ty2 ty3 => 
+    | .exis ty3 constraints n => 
       match stack with
       | names' :: stack'  =>
         if names'.length == n then do
-          let (stack', ty1') <- (from_nameless free_names (names' ++ names) stack' ty1)   
-          let (stack', ty2') <- (from_nameless free_names (names' ++ names) stack' ty2)   
           let (stack', ty3') <- (from_nameless free_names (names' ++ names) stack' ty3)   
-          some (stack', .exis names' ty1' ty2' ty3') 
+
+          let (stack', constraints') <- constraints.foldrM (fun (ty1, ty2) (stack', constraints') => do
+            let (stack', ty1') <- (from_nameless free_names (names' ++ names) stack' ty1)   
+            let (stack', ty2') <- (from_nameless free_names (names' ++ names) stack' ty2)   
+            (stack', (ty1', ty2') :: constraints')
+          ) (stack', [])
+
+          some (stack', .exis ty3' constraints' names') 
         else
           none
       | [] => none
@@ -448,7 +480,7 @@ namespace Surface
         | _ => none
       | [] => none
 
-    def extract_bound_stack (i : Nat): Nameless.Ty -> Nat × List (List String)  
+    partial def extract_bound_stack (i : Nat): Nameless.Ty -> Nat × List (List String)  
     | .bvar _ => (i, []) 
     | .fvar _ => (i, []) 
     | .unit => (i, []) 
@@ -477,12 +509,17 @@ namespace Surface
       let (i, stack_pl) := extract_bound_stack i ty_pl
       let (i, names) := (i + 1, [s!"T{i}"])
       (i, names :: stack_c ++ stack_pl)
-    | .exis n tyc1 tyc2 ty_pl =>
-      let (i, stack1) := extract_bound_stack i tyc1 
-      let (i, stack2) := extract_bound_stack i tyc2 
+    | .exis ty_pl constraints n =>
+      -- TODO: consider natural recursion definition to gain automatic termination proof 
       let (i, stack_pl) := extract_bound_stack i ty_pl
+      let (i, stack_cs) := bind_nl (i, constraints) (fun i (tyc1, tyc2) =>
+        let (i, stack1) := extract_bound_stack i tyc1 
+        let (i, stack2) := extract_bound_stack i tyc2 
+        (i, stack1 ++ stack2)
+      )  
+
       let (i, names) := (i + n, (List.range n).map (fun j => s!"T{i + j}"))
-      (i, names :: stack1 ++ stack2 ++ stack_pl)
+      (i, names :: stack_pl ++ stack_cs)
     | .induc ty =>
       let (i, stack) := extract_bound_stack i ty 
       let (i, names) := (i + 1, [s!"T{i}"])
