@@ -495,13 +495,13 @@ namespace Nameless
     | `([lesstype| { $d with $xs # $n}  ]) => 
       `(Ty.exis [lesstype| $d ] [lesstype| $xs ] [lesstype| $n ])
 
-    | `([lesstype| { $b:lesstype # $n } ]) => `(Ty.exis [lesstype| $n ] Ty.unit Ty.unit [lesstype| $b ] )
+    | `([lesstype| { $b:lesstype # $n } ]) => `(Ty.exis [lesstype| $b ] [] [lesstype| $n ] )
 
     | `([lesstype| { $d with $xs}  ]) => 
       `(Ty.exis [lesstype| $d ] [lesstype| $xs ] (Ty.infer_abstraction 0 [lesstype| $d ]))
 
     | `([lesstype| { $b:lesstype } ]) => 
-      `(Ty.exis (Ty.infer_abstraction 0 [lesstype| $b ]) Ty.unit Ty.unit [lesstype| $b ] )
+      `(Ty.exis (Ty.infer_abstraction 0 [lesstype| $b ]) [] [lesstype| $b ] )
 
     | `([lesstype| [ _ ] $d  ]) => 
       `(Ty.univ none [lesstype| $d ])
@@ -631,18 +631,19 @@ namespace Nameless
     | .impli _ _ => false
     | .exis ty_pl constraints n =>
       /-
-      NOTE: Lean can't automatically prove termination using higher order function
+      NOTE: Lean can't automatically prove termination using higher order function in this particular case
       -/
-      -- constraints.all (fun (ty_c1, ty_c2) => 
+      -- (no_function_types ty_pl) && constraints.all (fun (ty_c1, ty_c2) => 
       --   (no_function_types ty_c1) && (no_function_types ty_c2)
-      -- ) && (no_function_types ty_pl)
+      -- )
       let rec loop : List (Ty × Ty) -> Bool  
       | [] => true
       | (ty_c1, ty_c2) :: constraints => 
         (loop constraints) && 
         (no_function_types ty_c1) && (no_function_types ty_c2)
-      (loop constraints) &&
-      (no_function_types ty_pl)
+
+      (no_function_types ty_pl) && (loop constraints)
+
     | .univ op_ty_c ty_pl =>
       (match op_ty_c with 
       | none => true
@@ -827,8 +828,11 @@ namespace Nameless
     | .union ty1 ty2 => (occurs m key ty1) || (occurs m key ty2)
     | .inter ty1 ty2 => (occurs m key ty1) || (occurs m key ty2)
     | .impli ty1 ty2 => (occurs m key ty1) || (occurs m key ty2)
-    | .exis n ty_c1 ty_c2 ty => 
-      (occurs m key ty_c1) || (occurs m key ty_c2) || (occurs m key ty)
+    | .exis ty constraints n => 
+      (occurs m key ty) || (constraints.any (fun (ty_c1, ty_c2) =>
+        (occurs m key ty_c1) || (occurs m key ty_c2)
+      ))
+
     | .univ op_ty_c ty => 
       (match op_ty_c with
       | none => false
@@ -848,9 +852,9 @@ namespace Nameless
     | .inter ty1 ty2 =>
       .inter (subst_default sign ty1) (subst_default sign ty2)
     | .impli ty1 ty2 => .impli (subst_default (!sign) ty1) (subst_default sign ty2)
-    | .exis n cty1 cty2 ty => 
+    | .exis ty constraints n => 
       -- can't sub away if constrained
-      .exis n cty1 cty2 ty
+      .exis ty constraints n
     | .univ op_ty_c ty => 
       -- can't sub away if constrained
       .univ op_ty_c ty
@@ -901,7 +905,7 @@ namespace Nameless
     | .inter ty1 ty2 => 
       let fields := toList (record_fields (Ty.inter ty1 ty2))
       from_list (fields.map (fun (l, _) => l))
-    | .exis n ty_c1 ty_c2 ty => (extract_record_labels ty)
+    | .exis ty constraints n => (extract_record_labels ty)
     | .induc ty => extract_record_labels ty
     | _ => {} 
 
@@ -929,18 +933,18 @@ namespace Nameless
         none
 
     def extract_field_induct (label : String): Ty -> Option Ty 
-    | .exis n ty (.bvar id) ty_pl => 
+    | .exis ty [(.bvar id, ty_pl)] n => 
       -- assume β[n] is the inductive fixed point 
       if id == n then
         Option.bind (extract_field label ty) (fun ty => 
         Option.bind (extract_field label ty_pl) (fun ty_pl =>
-          (Ty.exis n  ty (.bvar id) ty_pl)
+          (Ty.exis ty [(.bvar id, ty_pl)] n)
         ))
       else 
         none
-    | .exis n Ty.unit Ty.unit ty_pl => 
+    | .exis ty_pl [] n => 
       Option.bind (extract_field label ty_pl) (fun ty_pl =>
-        (Ty.exis n  Ty.unit Ty.unit ty_pl)
+        (Ty.exis ty_pl [] n)
       )
     | ty => extract_field label ty 
 
@@ -1002,14 +1006,16 @@ namespace Nameless
     | .inter ty1 ty2 =>
       decreasing id_induct ty1 && decreasing id_induct ty2
     | .impli _ _ => false
-    | .exis n' ty_c1 ty_c2 ty' => 
-      match ty' with 
-      | .tag _ _ => 
-        decreasing (id_induct + n') ty_c1
-      | _ =>
-        decreasing (id_induct + n') ty_c1 &&
-        decreasing (id_induct + n') ty_c2 && 
-        decreasing (id_induct + n') ty'
+    | .exis ty' constraints n'=> 
+      constraints.all (fun (ty_c1, ty_c2) =>
+        match ty' with 
+        | .tag _ _ => 
+          decreasing (id_induct + n') ty_c1
+        | _ =>
+          decreasing (id_induct + n') ty_c1 &&
+          decreasing (id_induct + n') ty_c2 && 
+          decreasing (id_induct + n') ty'
+      )
     | .univ _ _ => false 
     | .induc _ => false 
 
@@ -1229,13 +1235,17 @@ namespace Nameless
     -----------------------------------------------------
 
     -- left existential
-    | .exis n ty_c1 ty_c2 ty1, ty2 => (
+    | .exis ty1 constraints n, ty2 => (
       let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
 
       let args := ids_bound.map (fun id => Ty.fvar id)
-      let ty_c1 := instantiate 0 args ty_c1
-      let ty_c2 := instantiate 0 args ty_c2
+      let constraints := constraints.map (fun (ty_c1, ty_c2) =>
+        let ty_c1 := instantiate 0 args ty_c1
+        let ty_c2 := instantiate 0 args ty_c2
+        (ty_c1, ty_c2)
+      )
       let ty1 := instantiate 0 args ty1
+
 
       let env_simple_unchanged : List Ty.Context -> Option Ty.Context := (fun new_contexts => 
         match new_contexts with
@@ -1247,7 +1257,9 @@ namespace Nameless
         | _ => none
       )
 
-      let (i, contexts_constraint) := (unify i qual context ty_c1 ty_c2)
+      let (i, contexts_constraint) := all_nl (i, constraints) (fun i (ty_c1, ty_c2) => 
+        (unify i qual context ty_c1 ty_c2)
+      )
       match env_simple_unchanged contexts_constraint with 
       | some context_constraint => 
         let (i, contexts) := (unify i qual context_constraint ty1 ty2) 
@@ -1337,14 +1349,17 @@ namespace Nameless
     ---------------------------------------------------
 
     -- right existential
-    | ty', .exis n ty_c1 ty_c2 ty =>
+    | ty', .exis ty constraints n =>
       let (i, args) := (
         i + n, 
         (List.range n).map (fun j => Ty.fvar (i + j))
       )
 
-      let ty_c1 := instantiate 0 args ty_c1
-      let ty_c2 := instantiate 0 args ty_c2
+      let constraints := constraints.map (fun (ty_c1, ty_c2) => 
+        let ty_c1 := instantiate 0 args ty_c1
+        let ty_c2 := instantiate 0 args ty_c2
+        (ty_c1, ty_c2)
+      ) 
       let ty := instantiate 0 args ty
 
       -------------------
@@ -1356,7 +1371,9 @@ namespace Nameless
         -- backwards
         --------------
         bind_nl (unify i qual context ty' ty) (fun i context => 
-          unify i qual context ty_c1 ty_c2
+          all_nl (i, constraints) (fun i (ty_c1, ty_c2) =>
+            unify i qual context ty_c1 ty_c2
+          )
         )
       )
 
@@ -2543,2516 +2560,2516 @@ namespace Nameless
 
 
 --------------------------------------------------
-  open Ty Tm
+  -- open Ty Tm
 
   --- unification --
-  def nat_ := [lesstype|
-    induct 
-      zero//unit |
-      succ//β[0]
-  ]
+--   def nat_ := [lesstype|
+--     induct 
+--       zero//unit |
+--       succ//β[0]
+--   ]
 
   
     
-  #eval unify_decide 30
-  [lesstype| (zero//unit) ] 
-  [lesstype| zero//unit | succ//unit ]
+--   #eval unify_decide 30
+--   [lesstype| (zero//unit) ] 
+--   [lesstype| zero//unit | succ//unit ]
 
 
-  #eval unify_reduce 30
-  [lesstype| (succ//succ//succ//α[0]) ] 
-  [lesstype| zero//unit | succ//⟨nat_⟩ ] 
-  [lesstype| α[0] ]
+--   #eval unify_reduce 30
+--   [lesstype| (succ//succ//succ//α[0]) ] 
+--   [lesstype| zero//unit | succ//⟨nat_⟩ ] 
+--   [lesstype| α[0] ]
 
-  #eval unify_decide 30
-  [lesstype| (succ//succ//succ//zero//unit) ] 
-  [lesstype| zero//unit | succ//⟨nat_⟩ ]
-
-  #eval unify_reduce 30
-  [lesstype| (succ//α[0]) ] 
-  nat_
-  [lesstype| α[0] ]
-
-  def nat_list := [lesstype| 
-    induct 
-      (zero//unit * nil//unit) | 
-      {succ//β[0] * cons//β[1] with (β[0] * β[1]) <: β[2]}
-  ]
-
-  #eval unify_reduce 30
-  [lesstype| (succ//zero//unit) * cons//α[0] ] 
-  nat_list
-  [lesstype| α[0] ]
-
-  #eval unify_reduce 30
-  [lesstype| succ//zero//unit * α[0] ]
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| α[0] ]
-
-  -- subtyping via local constraints
-  -- expected: nil//unit
-  #eval unify_reduce 30
-  [lesstype| {β[0] with succ//zero//unit * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| cons//α[0] ] 
-  [lesstype| α[0] ]
-
-
-  -- expected: cons//nil//unit
-  #eval unify_reduce 30
-  [lesstype| [_<:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| succ//succ//zero//unit -> cons//α[0] ] 
-  [lesstype| α[0] ]
-
-
-  -----------------------------------------------
-
-  def even_list := [lesstype| 
-    induct 
-      (zero//unit * nil//unit) | 
-      {succ//succ//β[0] * cons//cons//β[1] with (β[0] * β[1]) <: β[2]}
-  ]
-
-
-  -- affected by direction of variable assigment
-  -- expected: true
-  #eval unify_decide 0 even_list nat_list 
-
-  -- expected: false 
-  #eval unify_decide 0 nat_list even_list
-
-  def even := [lesstype| 
-    induct zero//unit | succ//succ//β[0]
-  ]
-
-  ---------------------------------
-  #eval unify_decide 0 even nat_ 
-  #eval unify_decide 0 nat_ even
-  ------------------------
-
-  -- expected: true
-  #eval unify_decide 0
-  [lesstype| [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-
-
-  -- expected: cons//nil//unit
-  #eval unify_reduce 10
-  [lesstype| [_<:{β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}] β[0]]
-  [lesstype| succ//zero//unit -> α[2]]
-  [lesstype| α[2]]
-
-
-  -- expected: cons//nil//unit
-  #eval unify_reduce 10
-  [lesstype| succ//zero//unit -> α[2]]
-  [lesstype| {β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}]
-  [lesstype| α[2]]
-
-  ----------------
-
-  -- expected: none 
-  #eval unify_reduce 10
-  [lesstype| {β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}]
-  [lesstype| succ//zero//unit -> α[2]]
-  [lesstype| α[2]]
-
-  -- expected: cons//nil//unit 
-  #eval unify_reduce 10
-  [lesstype| succ//zero//unit -> α[2]]
-  [lesstype| {β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}]
-  [lesstype| α[2]]
-
-
-  -- potential CYCLE avoided by equality check before substitution
-  -- substitution could cause the same unification problem to repeat infinitely
-  -- expected: true
-  #eval unify_decide 10 
-  [lesstype| [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-
-  -- expected: true
-  #eval unify_decide 10 
-  [lesstype| α[1] -> {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| α[2] -> {β[0] with α[2] * β[0] <: ⟨nat_list⟩} ]
-
-  #eval unify_simple 10 
-  [lesstype| α[1] -> α[3] ]
-  [lesstype| α[2] -> α[4] ]
-
-  -- expected: true 
-  #eval unify_decide 10 
-  [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
-
-  -- expected: false 
-  #eval unify_decide 10 
-  [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| {β[0] with α[2] * β[0] <: ⟨nat_list⟩} ]
-
-  -- expected: true
-  #eval unify_decide 10 
-  [lesstype| {α[1] * β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| {α[2] * β[0] with α[2] * β[0] <: ⟨nat_list⟩} ]
-
-  -- expected: true
-  #eval unify_decide 10 
-  [lesstype| {β[0] * β[1] with β[0] * β[1] <: ⟨nat_list⟩} ]
-  [lesstype| {β[0] * β[1] with β[0] * β[1] <: ⟨nat_list⟩} ]
-
-  -- expected: true
-  #eval unify_decide 10 
-  [lesstype| {β[0] with β[0] <: ⟨nat_list⟩} ]
-  [lesstype| {β[0] with β[0] <: ⟨nat_list⟩} ]
-
-  -- expected: true
-  #eval unify_decide 10 
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| ⟨nat_list⟩ ]
----------------
-
-  def plus := [lesstype| 
-    induct 
-      {x : zero//unit & y : β[0] & z : β[0]} | 
-      {x : succ//β[0] & y : β[1] & z : succ//β[2] with (x : β[0] & y : β[1] & z : β[2]) <: β[3] }
-  ]
-
-  #eval plus
-
-  #eval unify_reduce 30 [lesstype|
-    (
-      x : (α[10]) &
-      y : (succ//zero//unit) & 
-      z : (succ//succ//zero//unit)
-    )
-  ] plus
-  [lesstype| α[10] ]
-
-  #eval unify_reduce 30 
-    [lesstype|
-      (
-        x : (zero//unit) &
-        y : (zero//unit) & 
-        z : (zero//unit)
-      )
-    ] 
-    plus
-    [lesstype| unit ]
-
-  #eval unify_reduce 30 
-    [lesstype|
-      (
-        x : (succ//zero//unit) &
-        y : (succ//succ//zero//unit) & 
-        z : (succ//succ//succ//zero//unit)
-      )
-    ] 
-    plus
-    [lesstype| unit ]
-
-
-  #eval unify_reduce 30 [lesstype|
-    (
-      x : (succ//zero//unit) & 
-      y : (α[10]) &
-      z : (succ//succ//succ//zero//unit)
-    )
-  ] plus
-  [lesstype| α[10] ]
-
-
-  #eval unify_reduce 30 [lesstype|
-    (
-      x : succ//α[1] &
-      y : α[2] &
-      z : (succ//succ//zero//unit)
-    )
-  ] plus
-  [lesstype| α[1] * α[2] ]
-
-
-
-  -- expected: none 
-  #eval unify_reduce 30 
-  [lesstype| (α[0] * zero//unit) | (zero//unit * α[0]) ] 
-  [lesstype| (⟨nat_⟩ * zero//unit) ] 
-  [lesstype| α[0] ]
-
-
-
-  #eval unify_reduce 30 [lesstype|
-    (
-      x : succ//α[0] &
-      y : α[2] &
-      z : (succ//succ//zero//unit)
-    )
-  ] plus
-  [lesstype| succ//α[0] * α[2] ]
-
-  #eval unify_reduce 30 [lesstype|
-    (
-      x : α[0] &
-      y : α[2] &
-      z : (succ//succ//zero//unit)
-    )
-  ] plus
-  [lesstype| α[0] * α[2] ]
-
-  #eval unify_reduce 1 [lesstype|
-    (
-      x : (succ//succ//zero//unit) & 
-      y : (succ//zero//unit) &
-      z : (α[0])
-    )
-  ] plus
-  [lesstype| α[0] ]
-  -- == [lesstype| succ//succ//succ//zero//unit ]
-
-  #eval unify_reduce 30 [lesstype|
-    (
-      x : (succ//zero//unit) & 
-      y : (α[10]) &
-      z : (succ//succ//zero//unit)
-    )
-  ] plus
-  [lesstype| α[10] ]
-
-
-  #eval unify_reduce 10 [lesstype|
-  (
-    x : α[5] &
-    y : succ//zero//unit &
-    z : succ//succ//zero//unit
-  )
-  ] plus
-  [lesstype| α[5] ]
-
-  #eval unify_simple 10 
-    .bot
-    plus 
-
-  #eval unify_simple 10 
-    plus 
-    .bot
-
-  ------ type inference --------
-  #eval infer_reduce 0 [lessterm|
-    succ;zero;;
-  ]
-
-
-  -- path discrimination
-
-  -- expected: cons//nil//unit
-  #eval infer_reduce 0 [lessterm|
-    let _ : (zero//unit -> nil//unit) & (succ//zero//unit -> cons//nil//unit) = _ in 
-    (y[0] (succ;zero;;))
-  ]
-
-  #eval infer_reduce 10 
-  [lessterm|
-  let _ : (
-    ([_] (hello//β[0] -> world//unit)) & 
-    ([_] one//β[0] -> two//unit)
-  ) = _ in 
-  y[0](one;;)
-  ]
-
-  #eval infer_reduce 10 
-  [lessterm|
-  let _ : (
-    ([_] 
-      (hello//β[0] -> world//unit) & 
-      (one//β[0] -> two//unit)
-    )
-  ) = _ in 
-  y[0](one;;)
-  ]
-
-  -- expected: cons//nil//unit
-  #eval infer_reduce 0 [lessterm|
-    let _ : [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
-    (y[0] (succ;zero;;))
-  ]
-
-  -- NOTE: weakening causes a fairly imprecise type  
-  -- expected:  {2 // β[1] with β[0] * β[1] <: ⟨nat_list⟩}  
-  #eval infer_reduce 10 [lessterm|
-    let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
-    (y[0] (succ;zero;;))
-  ]
-
----------------------------------------------------------------
-  ----------------------------------
-  -- incomplete
-  -- nat should not be subbed into relational key
-  -- double
-  #eval infer_reduce 10 [lessterm|
-    let _ : ⟨nat_⟩ = _ in
-    let _ = fix(_ => _ => (match (y[0]) 
-      case zero;; => zero;;
-      case succ;y[0] => succ;succ;(y[2](y[0]))
-    )) in
-    y[0](y[1])
-  ]
-  ----------------------------------
-
-  --------- relational typing -----------
-
-  -- complete: relational type with base case and inductive case 
-  #eval infer_reduce 0 [lessterm|
-    fix(_ => _ => match y[0] 
-    case zero;; => nil;;
-    case succ;y[0] => cons;(y[2](y[0]))
-    )
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-    let _ = fix(_ => _ => match y[0]
-      case zero;; => nil;;
-      case succ;y[0] => cons;(y[2](y[0]))
-    ) in 
-    y[0]
-  ]
-
-  --------- relational selection -----------
-
-  #eval unify_reduce 10 
-  [lesstype| (succ//zero//unit * α[0]) ]
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| α[0] ]
-
-  #eval unify_reduce 10 
-  [lesstype| (succ//succ//zero//unit * α[0]) ]
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| α[0] ]
-
-  -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
-  #eval unify_reduce 10 
-  [lesstype| (succ//succ//zero//unit * α[7]) ]
-  [lesstype|
-      (induct ((zero//unit * nil//unit) |
-          {(succ//β[1] * cons//(thing//unit * β[0])) with (β[1] * β[0]) <: β[2] # 2}))
-  ]
-  [lesstype| (α[7]) ]
-
-
-  -- NOTE: it is important to preserve the universal type structure for application to succeed
-  -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
-  #eval infer_reduce 10 [lessterm|
-    (_ => fix(_ => _ => match y[0] 
-      case zero;; => nil;;
-      case succ;y[0] => cons;(y[3], y[2](y[0]))
-    ))(thing;;)(succ;succ;zero;;)
-  ]
-
-  -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
-  #eval infer_reduce 10 [lessterm|
-    let _ = (_ => fix(_ => _ => match y[0]
-      case zero;; => nil;;
-      case succ;y[0] => cons;(y[3], y[2](y[0]))
-    )) in 
-    y[0](thing;;)(succ;succ;zero;;)
-  ]
-
-
-  -- expected: cons//nil//unit
-  #eval infer_reduce 10 [lessterm|
-    fix(_ => _ => match y[0]
-      case zero;; => nil;;
-      case succ;y[0] => cons;(y[2](y[0]))
-    )(succ;zero;;)
-  ]
+--   #eval unify_decide 30
+--   [lesstype| (succ//succ//succ//zero//unit) ] 
+--   [lesstype| zero//unit | succ//⟨nat_⟩ ]
+
+--   #eval unify_reduce 30
+--   [lesstype| (succ//α[0]) ] 
+--   nat_
+--   [lesstype| α[0] ]
+
+--   def nat_list := [lesstype| 
+--     induct 
+--       (zero//unit * nil//unit) | 
+--       {succ//β[0] * cons//β[1] with (β[0] * β[1]) <: β[2]}
+--   ]
+
+--   #eval unify_reduce 30
+--   [lesstype| (succ//zero//unit) * cons//α[0] ] 
+--   nat_list
+--   [lesstype| α[0] ]
+
+--   #eval unify_reduce 30
+--   [lesstype| succ//zero//unit * α[0] ]
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| α[0] ]
+
+--   -- subtyping via local constraints
+--   -- expected: nil//unit
+--   #eval unify_reduce 30
+--   [lesstype| {β[0] with succ//zero//unit * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| cons//α[0] ] 
+--   [lesstype| α[0] ]
+
+
+--   -- expected: cons//nil//unit
+--   #eval unify_reduce 30
+--   [lesstype| [_<:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| succ//succ//zero//unit -> cons//α[0] ] 
+--   [lesstype| α[0] ]
+
+
+--   -----------------------------------------------
+
+--   def even_list := [lesstype| 
+--     induct 
+--       (zero//unit * nil//unit) | 
+--       {succ//succ//β[0] * cons//cons//β[1] with (β[0] * β[1]) <: β[2]}
+--   ]
+
+
+--   -- affected by direction of variable assigment
+--   -- expected: true
+--   #eval unify_decide 0 even_list nat_list 
+
+--   -- expected: false 
+--   #eval unify_decide 0 nat_list even_list
+
+--   def even := [lesstype| 
+--     induct zero//unit | succ//succ//β[0]
+--   ]
+
+--   ---------------------------------
+--   #eval unify_decide 0 even nat_ 
+--   #eval unify_decide 0 nat_ even
+--   ------------------------
+
+--   -- expected: true
+--   #eval unify_decide 0
+--   [lesstype| [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
+
+--   -- expected: cons//nil//unit
+--   #eval unify_reduce 10
+--   [lesstype| [_<:{β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}] β[0]]
+--   [lesstype| succ//zero//unit -> α[2]]
+--   [lesstype| α[2]]
+
+
+--   -- expected: cons//nil//unit
+--   #eval unify_reduce 10
+--   [lesstype| succ//zero//unit -> α[2]]
+--   [lesstype| {β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}]
+--   [lesstype| α[2]]
+
+--   ----------------
+
+--   -- expected: none 
+--   #eval unify_reduce 10
+--   [lesstype| {β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}]
+--   [lesstype| succ//zero//unit -> α[2]]
+--   [lesstype| α[2]]
+
+--   -- expected: cons//nil//unit 
+--   #eval unify_reduce 10
+--   [lesstype| succ//zero//unit -> α[2]]
+--   [lesstype| {β[0] -> β[1] with β[0] * β[1] <: ⟨nat_list⟩ # 2}]
+--   [lesstype| α[2]]
+
+
+--   -- potential CYCLE avoided by equality check before substitution
+--   -- substitution could cause the same unification problem to repeat infinitely
+--   -- expected: true
+--   #eval unify_decide 10 
+--   [lesstype| [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
+--   -- expected: true
+--   #eval unify_decide 10 
+--   [lesstype| α[1] -> {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| α[2] -> {β[0] with α[2] * β[0] <: ⟨nat_list⟩} ]
+
+--   #eval unify_simple 10 
+--   [lesstype| α[1] -> α[3] ]
+--   [lesstype| α[2] -> α[4] ]
+
+--   -- expected: true 
+--   #eval unify_decide 10 
+--   [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
+
+--   -- expected: false 
+--   #eval unify_decide 10 
+--   [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| {β[0] with α[2] * β[0] <: ⟨nat_list⟩} ]
+
+--   -- expected: true
+--   #eval unify_decide 10 
+--   [lesstype| {α[1] * β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| {α[2] * β[0] with α[2] * β[0] <: ⟨nat_list⟩} ]
+
+--   -- expected: true
+--   #eval unify_decide 10 
+--   [lesstype| {β[0] * β[1] with β[0] * β[1] <: ⟨nat_list⟩} ]
+--   [lesstype| {β[0] * β[1] with β[0] * β[1] <: ⟨nat_list⟩} ]
+
+--   -- expected: true
+--   #eval unify_decide 10 
+--   [lesstype| {β[0] with β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| {β[0] with β[0] <: ⟨nat_list⟩} ]
+
+--   -- expected: true
+--   #eval unify_decide 10 
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| ⟨nat_list⟩ ]
+-- ---------------
+
+--   def plus := [lesstype| 
+--     induct 
+--       {x : zero//unit & y : β[0] & z : β[0]} | 
+--       {x : succ//β[0] & y : β[1] & z : succ//β[2] with (x : β[0] & y : β[1] & z : β[2]) <: β[3] }
+--   ]
+
+--   #eval plus
+
+--   #eval unify_reduce 30 [lesstype|
+--     (
+--       x : (α[10]) &
+--       y : (succ//zero//unit) & 
+--       z : (succ//succ//zero//unit)
+--     )
+--   ] plus
+--   [lesstype| α[10] ]
+
+--   #eval unify_reduce 30 
+--     [lesstype|
+--       (
+--         x : (zero//unit) &
+--         y : (zero//unit) & 
+--         z : (zero//unit)
+--       )
+--     ] 
+--     plus
+--     [lesstype| unit ]
+
+--   #eval unify_reduce 30 
+--     [lesstype|
+--       (
+--         x : (succ//zero//unit) &
+--         y : (succ//succ//zero//unit) & 
+--         z : (succ//succ//succ//zero//unit)
+--       )
+--     ] 
+--     plus
+--     [lesstype| unit ]
+
+
+--   #eval unify_reduce 30 [lesstype|
+--     (
+--       x : (succ//zero//unit) & 
+--       y : (α[10]) &
+--       z : (succ//succ//succ//zero//unit)
+--     )
+--   ] plus
+--   [lesstype| α[10] ]
+
+
+--   #eval unify_reduce 30 [lesstype|
+--     (
+--       x : succ//α[1] &
+--       y : α[2] &
+--       z : (succ//succ//zero//unit)
+--     )
+--   ] plus
+--   [lesstype| α[1] * α[2] ]
+
+
+
+--   -- expected: none 
+--   #eval unify_reduce 30 
+--   [lesstype| (α[0] * zero//unit) | (zero//unit * α[0]) ] 
+--   [lesstype| (⟨nat_⟩ * zero//unit) ] 
+--   [lesstype| α[0] ]
+
+
+
+--   #eval unify_reduce 30 [lesstype|
+--     (
+--       x : succ//α[0] &
+--       y : α[2] &
+--       z : (succ//succ//zero//unit)
+--     )
+--   ] plus
+--   [lesstype| succ//α[0] * α[2] ]
+
+--   #eval unify_reduce 30 [lesstype|
+--     (
+--       x : α[0] &
+--       y : α[2] &
+--       z : (succ//succ//zero//unit)
+--     )
+--   ] plus
+--   [lesstype| α[0] * α[2] ]
+
+--   #eval unify_reduce 1 [lesstype|
+--     (
+--       x : (succ//succ//zero//unit) & 
+--       y : (succ//zero//unit) &
+--       z : (α[0])
+--     )
+--   ] plus
+--   [lesstype| α[0] ]
+--   -- == [lesstype| succ//succ//succ//zero//unit ]
+
+--   #eval unify_reduce 30 [lesstype|
+--     (
+--       x : (succ//zero//unit) & 
+--       y : (α[10]) &
+--       z : (succ//succ//zero//unit)
+--     )
+--   ] plus
+--   [lesstype| α[10] ]
+
+
+--   #eval unify_reduce 10 [lesstype|
+--   (
+--     x : α[5] &
+--     y : succ//zero//unit &
+--     z : succ//succ//zero//unit
+--   )
+--   ] plus
+--   [lesstype| α[5] ]
+
+--   #eval unify_simple 10 
+--     .bot
+--     plus 
+
+--   #eval unify_simple 10 
+--     plus 
+--     .bot
+
+--   ------ type inference --------
+--   #eval infer_reduce 0 [lessterm|
+--     succ;zero;;
+--   ]
+
+
+--   -- path discrimination
+
+--   -- expected: cons//nil//unit
+--   #eval infer_reduce 0 [lessterm|
+--     let _ : (zero//unit -> nil//unit) & (succ//zero//unit -> cons//nil//unit) = _ in 
+--     (y[0] (succ;zero;;))
+--   ]
+
+--   #eval infer_reduce 10 
+--   [lessterm|
+--   let _ : (
+--     ([_] (hello//β[0] -> world//unit)) & 
+--     ([_] one//β[0] -> two//unit)
+--   ) = _ in 
+--   y[0](one;;)
+--   ]
+
+--   #eval infer_reduce 10 
+--   [lessterm|
+--   let _ : (
+--     ([_] 
+--       (hello//β[0] -> world//unit) & 
+--       (one//β[0] -> two//unit)
+--     )
+--   ) = _ in 
+--   y[0](one;;)
+--   ]
+
+--   -- expected: cons//nil//unit
+--   #eval infer_reduce 0 [lessterm|
+--     let _ : [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
+--     (y[0] (succ;zero;;))
+--   ]
+
+--   -- NOTE: weakening causes a fairly imprecise type  
+--   -- expected:  {2 // β[1] with β[0] * β[1] <: ⟨nat_list⟩}  
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in 
+--     (y[0] (succ;zero;;))
+--   ]
+
+-- ---------------------------------------------------------------
+--   ----------------------------------
+--   -- incomplete
+--   -- nat should not be subbed into relational key
+--   -- double
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : ⟨nat_⟩ = _ in
+--     let _ = fix(_ => _ => (match (y[0]) 
+--       case zero;; => zero;;
+--       case succ;y[0] => succ;succ;(y[2](y[0]))
+--     )) in
+--     y[0](y[1])
+--   ]
+--   ----------------------------------
+
+--   --------- relational typing -----------
+
+--   -- complete: relational type with base case and inductive case 
+--   #eval infer_reduce 0 [lessterm|
+--     fix(_ => _ => match y[0] 
+--     case zero;; => nil;;
+--     case succ;y[0] => cons;(y[2](y[0]))
+--     )
+--   ]
+
+--   #eval infer_reduce 0 [lessterm|
+--     let _ = fix(_ => _ => match y[0]
+--       case zero;; => nil;;
+--       case succ;y[0] => cons;(y[2](y[0]))
+--     ) in 
+--     y[0]
+--   ]
+
+--   --------- relational selection -----------
+
+--   #eval unify_reduce 10 
+--   [lesstype| (succ//zero//unit * α[0]) ]
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| α[0] ]
+
+--   #eval unify_reduce 10 
+--   [lesstype| (succ//succ//zero//unit * α[0]) ]
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| α[0] ]
+
+--   -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
+--   #eval unify_reduce 10 
+--   [lesstype| (succ//succ//zero//unit * α[7]) ]
+--   [lesstype|
+--       (induct ((zero//unit * nil//unit) |
+--           {(succ//β[1] * cons//(thing//unit * β[0])) with (β[1] * β[0]) <: β[2] # 2}))
+--   ]
+--   [lesstype| (α[7]) ]
+
+
+--   -- NOTE: it is important to preserve the universal type structure for application to succeed
+--   -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
+--   #eval infer_reduce 10 [lessterm|
+--     (_ => fix(_ => _ => match y[0] 
+--       case zero;; => nil;;
+--       case succ;y[0] => cons;(y[3], y[2](y[0]))
+--     ))(thing;;)(succ;succ;zero;;)
+--   ]
+
+--   -- expected: cons//(thing//unit * cons//(thing//unit * nil//unit))
+--   #eval infer_reduce 10 [lessterm|
+--     let _ = (_ => fix(_ => _ => match y[0]
+--       case zero;; => nil;;
+--       case succ;y[0] => cons;(y[3], y[2](y[0]))
+--     )) in 
+--     y[0](thing;;)(succ;succ;zero;;)
+--   ]
+
+
+--   -- expected: cons//nil//unit
+--   #eval infer_reduce 10 [lessterm|
+--     fix(_ => _ => match y[0]
+--       case zero;; => nil;;
+--       case succ;y[0] => cons;(y[2](y[0]))
+--     )(succ;zero;;)
+--   ]
   
-  -- expected: cons//nil//unit
-  #eval infer_reduce 10 [lessterm|
-    let _ = fix(_ => _ => match y[0]
-      case zero;; => nil;;
-      case succ;y[0] => cons;(y[2](y[0]))
-    ) in 
-    y[0](succ;zero;;)
-  ]
-
-  -- expected: cons//cons//nil//unit
-  #eval infer_reduce 10 [lessterm|
-    let _ = fix(_ => _ => match y[0]
-      case zero;; => nil;;
-      case succ;y[0] => cons;(y[2](y[0]))
-    ) in 
-    y[0](succ;succ;zero;;)
-  ]
-
-
-  #eval unify_reduce 10 
-  [lesstype|
-  ([_<:α[3]] (β[0] -> {β[0] with (β[1] * β[0]) <: 
-    (induct (
-        (zero//unit * nil//unit) | 
-        {(succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2] # 2}))
-   # 1}))
-  ]
-  [lesstype| succ//zero//unit -> α[0] ]
-  [lesstype| α[0] ]
-
-  -------------------------------
-
-  #eval infer_reduce 0 [lessterm| 
-      (fix (_ => _ => match y[0] 
-        case (zero;;, y[0]) => true;;  
-        case (succ;y[0], succ;y[1]) => y[4](y[0], y[1])
-        case (succ;y[0], zero;;) => false;; 
-      ))
-  ] 
-
-  -- sound
-  -- expected: none  
-  #eval infer_reduce 0 [lessterm| 
-    let _ : succ//zero//unit = (_ => match y[0] case (y[0], y[1]) => 
-      (
-        if 
-          (fix (_ => _ => match y[0]
-            case (zero;;, y[0]) => true;;  
-            case (succ;y[0], succ;y[1]) => y[4](y[0], y[1])
-            case (succ;y[0], zero;;) => false;; 
-          ) (y[0], y[1]))
-        then y[1] else y[0]
-      )
-    ) in
-    (y[0] (succ;succ;zero;;, succ;zero;;))
-  ] 
-
-  -- expected: none
-  #eval infer_reduce 0 [lessterm| 
-    let _ = (_ => match y[0] case ; => ;)(zero;;) in
-    y[0]
-  ] 
-
-  ---------- generics ----------------
-
-  #eval infer_reduce 10 [lessterm|
-    (_ => match y[0] case cons;(y[0], y[1]) => y[0])(cons;(ooga;;, booga;;))
-  ]
-
-  #eval infer_reduce 10 [lessterm|
-    let _ = _ => match y[0] case cons;(y[0], y[1]) => y[0] in
-    y[0](cons;(ooga;;, booga;;))
-  ]
-
-  #eval infer_reduce 10 [lessterm|
-    let _ = _ => match y[0] case cons;(y[0], y[1]) => y[0] in 
-    y[0]  
-  ]
-
-  #eval infer_reduce 10 [lessterm|
-    let _ : [_][_] cons//(β[0] * β[1]) -> β[0] = _ in
-    (y[0] (cons;(ooga;;, booga;;)))  
-  ]
-
-  ---------- expanding return type ----------------
-  -- weakening mechanism may be superfluous; subsumed by behavior of inductive and existential types.
-  ----------------------------------------------
-  -- object-oriented example without type annotation ----------------
-  -- a typical object-oriented pattern:
-  -- where the method constructs new data and calls constructor with new data 
-
-  -- expected:
-  /-
-  constructor : (Data <: ?) >> Data -> {Object with Data * Object <: DO}
-        where μ DO . {D, α, O // D * (data : D & update : α -> O) with (cons//(α * D) * O) <: DO
-  -/
-  #eval infer_reduce 0 [lessterm|
-    -- fix \ self \ data => 
-    fix (_ => _ => 
-      (
-        @data = y[0]
-        @update = (_ => y[2](cons;(y[0], y[1])))
-      )
-    ) 
-  ]
-
--- NOTE: 
--- The weakening flag may not actually be needed, as distinct types can be handled via existential inside of inductive type,
--- which results in fresh variables at the time of unification.
-  /-
-(? >> 
-
-(β[1] >> -- this is correct; short hand for (β[0] <: β[1] >>) 
-
-(β[0] ->
-   {1 // β[0] with (β[1] * β[0]) <: (induct 
-      {3 // (β[2] * (
-        (data : β[2]) & (update : (β[1] -> β[0]))
-        )) with (cons//(β[1] * β[2]) * β[0]) <: β[3]}
-   )}
- )
- )
- )
-  -/
-
-
--- diverges
--- non-termination without let generalization
-/-
-  #eval infer_reduce 0 [lessterm|
-    -- fix \ self \ data => 
-    let _ = fix (\ y[0] => \ y[0] => 
-      (@update = (\ y[0] => (y[2] cons;(y[0], y[1]))))
-    ) in 
-    -- y[0]
-    -- let _ = (y[1] nil;;)
-    (y[0] nil;;)
-    -- (((y[0] nil;;).update #hello()).update #world())
-  ]
--/
-  ------------------
-
-
-  ----------------------------------------
-  -- weakening mechanism is deprecated
-  ----------------------------------------
-  -- #eval infer_reduce 0 [lessterm|
-  --   let _ : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
-  --   ((y[0] #hello ()) #world ())
-  -- ]
-
-  -- #eval infer_reduce 0 [lessterm|
-  --   let _ = (\ y[0] => \ y[0] => (y[1], y[0])) in 
-  --   ((y[0] #hello ()) #world ())
-  -- ]
-
-  -- #eval infer_reduce 0 [lessterm|
-  --   (((\ y[0] => \ y[0] => (y[1], y[0])) #hello ()) #world ())
-  -- ]
-
-  -- -- NOTE: this requires subbing in unions to maintain weakening after let-poly generalization
-  -- #eval infer_reduce 0 [lessterm|
-  --   let _ : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
-  --   let _ = (y[0] #hello ()) in
-  --   (y[0] #world())
-  -- ]
-  ----------------------------------------
-
-  ---------- strengthening ----------------
-  #eval infer_reduce 0 [lessterm|
-  let _ : uno//unit -> unit = _ in 
-  let _ : dos//unit -> unit = _ in 
-  (_ => y[2](y[0]))
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-  let _ : uno//unit -> unit = _ in 
-  let _ : dos//unit -> unit = _ in 
-  (_ => y[2](y[0]))(uno;;)
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-  let _ : uno//unit -> unit = _ in 
-  y[0](uno;;)
-  ]
-
-  -- expected: (uno : unit) & (dos : unit) -> unit * unit
-  #eval infer_reduce 0 [lessterm|
-    let _ : (uno : unit) -> unit = _ in 
-    let _ : (dos : unit) -> unit = _ in 
-    (_ => 
-      y[2](y[0]), y[1](y[0])
-    )
-  ]
-
-  -- expected: ⊥ -> unit * unit
-  #eval infer_reduce 0 [lessterm|
-  let _ : uno//unit -> unit = _ in 
-  let _ : dos//unit -> unit = _ in 
-  (_ => (y[2](y[0]), y[1](y[0])))
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-  let _ : uno//unit -> unit = _ in 
-  let _ = _ in 
-  let _ = y[1](y[0]) in 
-  y[0]
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-  let _ : uno//unit -> unit = _ in 
-  let _ : dos//unit -> unit = _ in 
-  (_ =>
-    let _ = y[2](y[0]) in 
-    let _ = y[2](y[1]) in 
-    (y[0], y[1])
-  )
-  ]
-
-  ----------------------------------
-  #eval [lessterm| @x = hello;; @y = world;;]
-  --------------------------------------
-
-  #eval unify_decide 0 
-    [lesstype| hello//unit ] 
-    [lesstype| α[0] ] 
-
-  -- not well foundend: induction untagged 
-  -- expected: false
-  #eval unify_decide 0 
-    [lesstype| hello//unit ] 
-    [lesstype| induct wrong//unit | β[0] ] 
-
-  -- potentially diverges - inductive type not well founded
-  -- expected: false
-  #eval unify_decide 0 
-    [lesstype| hello//unit ] 
-    [lesstype| induct β[0] ] 
-
-  def bad_nat_list := [lesstype| 
-    induct 
-      (zero//unit * nil//unit) | 
-      {(β[0] * β[1]) with β[0] * β[1] <: β[2]}
-  ]
-
-  -- expected: false
-  #eval unify_decide 0 
-    [lesstype| zero//unit * nil//unit ] 
-    bad_nat_list
-
-  def other_nat_list := [lesstype| 
-    induct {(succ//β[0] * cons//β[1]) with β[0] * β[1] <: β[2]}
-  ]
-
-  -- expected: false; base case is missing
-  #eval unify_decide 0 
-    [lesstype| succ//zero//unit * cons//nil//unit ] 
-    other_nat_list
-
-  #eval infer_reduce 10 [lessterm|
-  fix(_ => _ => match y[0]  
-    case (succ;y[0], succ;y[1]) => y[3](y[0], y[1])
-    case (zero;;, y[0]) => y[0]
-    case (y[0], zero;;) => y[0] 
-  )
-  ]
-
-  -- NOTE: requires simplification when checking if relation is reducible 
-  -- expected: the difference: succ//zero//unit
-  #eval infer_reduce 10 [lessterm|
-  fix(_ => _ => match y[0]  
-    case (succ;y[0], succ;y[1]) => y[3](y[0], y[1])
-    case (zero;;, y[0]) => y[0]
-    case (y[0], zero;;) => y[0] 
-  )(succ;succ;zero;;, succ;succ;succ;zero;;)
-  ]
-
-  -- expected: the difference: succ//zero//unit
-  #eval unify_reduce 10
-  [lesstype|
-  ([_<:{(β[1] ->
-    β[0]) with (β[1] * β[0]) <: (induct ({((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0] & top) <: β[3] # 3} |
-      ({((zero//unit * β[0]) * β[0]) # 1} | {((β[0] * zero//unit) * β[0]) # 1} | bot))) # 2}] β[0])
-  ]
-  [lesstype| succ//zero//unit * succ//succ//zero//unit -> α[7] ]
-  [lesstype| α[7] ] 
-
-  ----------------------------------
-
-  def gt := [lesstype| 
-    induct  
-      {succ//β[0] * zero//unit} | 
-      {succ//β[0] * succ//β[1] with (β[0] * β[1]) <: β[2]}
-  ]
-
-  -------------------------------------------------
-
-  def spec := [lesstype| 
-  (α[0] * α[1]) -> (
-    { β[0] with (x:β[0] & y:α[1] & z:α[0]) <: ⟨plus⟩} |
-    { β[0] with (x:β[0] & y:α[0] & z:α[1]) <: ⟨plus⟩}
-  )  
-  ]
-
-  -- Note: is this in effect, the same thing as PDR/IC3?
-  -- That is, whatever is learned to strengthen the conclusion 
-  -- is automatically applied to preceding iterations 
-  -- due to the wrapping type in inductive binding 
-  -- NOTE: this may have some non-termination depending on how occurs is used 
-  #eval infer_simple 10 
-  [lessterm|
-  let _ : ⟨spec⟩ = fix(_ => _ => match y[0]  
-    case (succ;y[0], succ;y[1]) => y[3](y[0], y[1])
-    case (zero;;, y[0]) => y[0]
-    case (y[0], zero;;) => y[0] 
-  ) in 
-  y[0]
-  ]
-
-  -------------------------------------------------
-
-  #eval infer_reduce 10 
-  [lessterm|
-  let _ = fix(_ => _ => match y[0]
-    case (succ;y[0], succ;y[1]) => (y[3] (y[0], y[1]))
-    case (zero;;, y[0]) => y[0]
-    case (y[0], zero;;) => y[0] 
-  ) in 
-  y[0]
-  ]
-
-  -- expected: succ//zero//unit 
-  #eval infer_reduce 10 
-  [lessterm|
-  let _ = fix(_ => _ => match y[0]
-    case (succ;y[0], succ;y[1]) => (y[3] (y[0], y[1]))
-    case (zero;;, y[0]) => y[0]
-    case (y[0], zero;;) => y[0] 
-  ) in 
-  y[0](succ;succ;zero;;, succ;zero;;)
-  ]
-
-  def diff_rel :=
-  [lesstype|
-    induct 
-      {zero//unit * β[0] * β[0]} | 
-      {β[0] * zero//unit * β[0]} |
-      {(succ//β[1] * succ//β[2] * β[0]) with (β[1] * β[2] * β[0]) <: β[3]}
-  ]
-
-  #eval unify_reduce 10
-  [lesstype| succ//succ//zero//unit * succ//zero//unit * α[0] ]
-  diff_rel
-  [lesstype| α[0] ]
-
-
-
-  def plus_choice := [lesstype| 
-  α[0] * α[1] * (
-    { β[0] with (x:β[0] & y:α[1] & z:α[0]) <: ⟨plus⟩} |
-    { β[0] with (x:β[0] & y:α[0] & z:α[1]) <: ⟨plus⟩}
-  )  
-  ]
-
-  #eval unify_reduce 10
-  plus_choice
-  diff_rel
-  [lesstype| α[0] ]
-
-
-  -- #eval unify_reduce 10
-  -- [lesstype|
-  --   ? >> β[0] -> {β[0] with (β[1] * β[0]) <: ⟨diff_rel⟩}
-  -- ]
-  -- spec
-  -- [lesstype| α[0] * α[1] ]
-
-  ------------ factoring checking ----------------
-
-  def list_ := [lesstype|
-    induct 
-      nil//unit |
-      cons//β[0]
-  ]
-
-  -- #eval [lessterm| 
-  --   let _ : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
-  --     \ zero;; => nil;;  
-  --     \ succ;y[0] => cons;(y[1] y[0]) 
-  --   )
-  --   in
-  --   y[0]
-  -- ] 
-
-  -- #eval infer_reduce 0 [lessterm| 
-  --   fix(\ y[0] =>
-  --     \ zero;; => nil;;  
-  --     \ succ;y[0] => cons;(y[1] y[0]) 
-  --   )
-  -- ]
-
-
-
-  -- expected: true 
-  #eval unify_decide 0
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| ⟨nat_⟩ * ⟨nat_⟩ ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| ⟨nat_⟩ * nil//unit ]
-
-  -- expected: false
-  #eval unify_decide 0
-  [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
-  [lesstype| ⟨nat_list⟩ ]
-
-
-  ----- factored construction ----
+--   -- expected: cons//nil//unit
+--   #eval infer_reduce 10 [lessterm|
+--     let _ = fix(_ => _ => match y[0]
+--       case zero;; => nil;;
+--       case succ;y[0] => cons;(y[2](y[0]))
+--     ) in 
+--     y[0](succ;zero;;)
+--   ]
+
+--   -- expected: cons//cons//nil//unit
+--   #eval infer_reduce 10 [lessterm|
+--     let _ = fix(_ => _ => match y[0]
+--       case zero;; => nil;;
+--       case succ;y[0] => cons;(y[2](y[0]))
+--     ) in 
+--     y[0](succ;succ;zero;;)
+--   ]
+
+
+--   #eval unify_reduce 10 
+--   [lesstype|
+--   ([_<:α[3]] (β[0] -> {β[0] with (β[1] * β[0]) <: 
+--     (induct (
+--         (zero//unit * nil//unit) | 
+--         {(succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2] # 2}))
+--    # 1}))
+--   ]
+--   [lesstype| succ//zero//unit -> α[0] ]
+--   [lesstype| α[0] ]
+
+--   -------------------------------
+
+--   #eval infer_reduce 0 [lessterm| 
+--       (fix (_ => _ => match y[0] 
+--         case (zero;;, y[0]) => true;;  
+--         case (succ;y[0], succ;y[1]) => y[4](y[0], y[1])
+--         case (succ;y[0], zero;;) => false;; 
+--       ))
+--   ] 
+
+--   -- sound
+--   -- expected: none  
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ : succ//zero//unit = (_ => match y[0] case (y[0], y[1]) => 
+--       (
+--         if 
+--           (fix (_ => _ => match y[0]
+--             case (zero;;, y[0]) => true;;  
+--             case (succ;y[0], succ;y[1]) => y[4](y[0], y[1])
+--             case (succ;y[0], zero;;) => false;; 
+--           ) (y[0], y[1]))
+--         then y[1] else y[0]
+--       )
+--     ) in
+--     (y[0] (succ;succ;zero;;, succ;zero;;))
+--   ] 
+
+--   -- expected: none
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = (_ => match y[0] case ; => ;)(zero;;) in
+--     y[0]
+--   ] 
+
+--   ---------- generics ----------------
+
+--   #eval infer_reduce 10 [lessterm|
+--     (_ => match y[0] case cons;(y[0], y[1]) => y[0])(cons;(ooga;;, booga;;))
+--   ]
+
+--   #eval infer_reduce 10 [lessterm|
+--     let _ = _ => match y[0] case cons;(y[0], y[1]) => y[0] in
+--     y[0](cons;(ooga;;, booga;;))
+--   ]
+
+--   #eval infer_reduce 10 [lessterm|
+--     let _ = _ => match y[0] case cons;(y[0], y[1]) => y[0] in 
+--     y[0]  
+--   ]
+
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : [_][_] cons//(β[0] * β[1]) -> β[0] = _ in
+--     (y[0] (cons;(ooga;;, booga;;)))  
+--   ]
+
+--   ---------- expanding return type ----------------
+--   -- weakening mechanism may be superfluous; subsumed by behavior of inductive and existential types.
+--   ----------------------------------------------
+--   -- object-oriented example without type annotation ----------------
+--   -- a typical object-oriented pattern:
+--   -- where the method constructs new data and calls constructor with new data 
+
+--   -- expected:
+--   /-
+--   constructor : (Data <: ?) >> Data -> {Object with Data * Object <: DO}
+--         where μ DO . {D, α, O // D * (data : D & update : α -> O) with (cons//(α * D) * O) <: DO
+--   -/
+--   #eval infer_reduce 0 [lessterm|
+--     -- fix \ self \ data => 
+--     fix (_ => _ => 
+--       (
+--         @data = y[0]
+--         @update = (_ => y[2](cons;(y[0], y[1])))
+--       )
+--     ) 
+--   ]
+
+-- -- NOTE: 
+-- -- The weakening flag may not actually be needed, as distinct types can be handled via existential inside of inductive type,
+-- -- which results in fresh variables at the time of unification.
+--   /-
+-- (? >> 
+
+-- (β[1] >> -- this is correct; short hand for (β[0] <: β[1] >>) 
+
+-- (β[0] ->
+--    {1 // β[0] with (β[1] * β[0]) <: (induct 
+--       {3 // (β[2] * (
+--         (data : β[2]) & (update : (β[1] -> β[0]))
+--         )) with (cons//(β[1] * β[2]) * β[0]) <: β[3]}
+--    )}
+--  )
+--  )
+--  )
+--   -/
+
+
+-- -- diverges
+-- -- non-termination without let generalization
+-- /-
+--   #eval infer_reduce 0 [lessterm|
+--     -- fix \ self \ data => 
+--     let _ = fix (\ y[0] => \ y[0] => 
+--       (@update = (\ y[0] => (y[2] cons;(y[0], y[1]))))
+--     ) in 
+--     -- y[0]
+--     -- let _ = (y[1] nil;;)
+--     (y[0] nil;;)
+--     -- (((y[0] nil;;).update #hello()).update #world())
+--   ]
+-- -/
+--   ------------------
+
+
+--   ----------------------------------------
+--   -- weakening mechanism is deprecated
+--   ----------------------------------------
+--   -- #eval infer_reduce 0 [lessterm|
+--   --   let _ : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
+--   --   ((y[0] #hello ()) #world ())
+--   -- ]
+
+--   -- #eval infer_reduce 0 [lessterm|
+--   --   let _ = (\ y[0] => \ y[0] => (y[1], y[0])) in 
+--   --   ((y[0] #hello ()) #world ())
+--   -- ]
+
+--   -- #eval infer_reduce 0 [lessterm|
+--   --   (((\ y[0] => \ y[0] => (y[1], y[0])) #hello ()) #world ())
+--   -- ]
+
+--   -- -- NOTE: this requires subbing in unions to maintain weakening after let-poly generalization
+--   -- #eval infer_reduce 0 [lessterm|
+--   --   let _ : ? >> β[0] -> (β[0] -> (β[0] * β[0])) = _ in 
+--   --   let _ = (y[0] #hello ()) in
+--   --   (y[0] #world())
+--   -- ]
+--   ----------------------------------------
+
+--   ---------- strengthening ----------------
+--   #eval infer_reduce 0 [lessterm|
+--   let _ : uno//unit -> unit = _ in 
+--   let _ : dos//unit -> unit = _ in 
+--   (_ => y[2](y[0]))
+--   ]
+
+--   #eval infer_reduce 0 [lessterm|
+--   let _ : uno//unit -> unit = _ in 
+--   let _ : dos//unit -> unit = _ in 
+--   (_ => y[2](y[0]))(uno;;)
+--   ]
+
+--   #eval infer_reduce 0 [lessterm|
+--   let _ : uno//unit -> unit = _ in 
+--   y[0](uno;;)
+--   ]
+
+--   -- expected: (uno : unit) & (dos : unit) -> unit * unit
+--   #eval infer_reduce 0 [lessterm|
+--     let _ : (uno : unit) -> unit = _ in 
+--     let _ : (dos : unit) -> unit = _ in 
+--     (_ => 
+--       y[2](y[0]), y[1](y[0])
+--     )
+--   ]
+
+--   -- expected: ⊥ -> unit * unit
+--   #eval infer_reduce 0 [lessterm|
+--   let _ : uno//unit -> unit = _ in 
+--   let _ : dos//unit -> unit = _ in 
+--   (_ => (y[2](y[0]), y[1](y[0])))
+--   ]
+
+--   #eval infer_reduce 0 [lessterm|
+--   let _ : uno//unit -> unit = _ in 
+--   let _ = _ in 
+--   let _ = y[1](y[0]) in 
+--   y[0]
+--   ]
+
+--   #eval infer_reduce 0 [lessterm|
+--   let _ : uno//unit -> unit = _ in 
+--   let _ : dos//unit -> unit = _ in 
+--   (_ =>
+--     let _ = y[2](y[0]) in 
+--     let _ = y[2](y[1]) in 
+--     (y[0], y[1])
+--   )
+--   ]
+
+--   ----------------------------------
+--   #eval [lessterm| @x = hello;; @y = world;;]
+--   --------------------------------------
+
+--   #eval unify_decide 0 
+--     [lesstype| hello//unit ] 
+--     [lesstype| α[0] ] 
+
+--   -- not well foundend: induction untagged 
+--   -- expected: false
+--   #eval unify_decide 0 
+--     [lesstype| hello//unit ] 
+--     [lesstype| induct wrong//unit | β[0] ] 
+
+--   -- potentially diverges - inductive type not well founded
+--   -- expected: false
+--   #eval unify_decide 0 
+--     [lesstype| hello//unit ] 
+--     [lesstype| induct β[0] ] 
+
+--   def bad_nat_list := [lesstype| 
+--     induct 
+--       (zero//unit * nil//unit) | 
+--       {(β[0] * β[1]) with β[0] * β[1] <: β[2]}
+--   ]
+
+--   -- expected: false
+--   #eval unify_decide 0 
+--     [lesstype| zero//unit * nil//unit ] 
+--     bad_nat_list
+
+--   def other_nat_list := [lesstype| 
+--     induct {(succ//β[0] * cons//β[1]) with β[0] * β[1] <: β[2]}
+--   ]
+
+--   -- expected: false; base case is missing
+--   #eval unify_decide 0 
+--     [lesstype| succ//zero//unit * cons//nil//unit ] 
+--     other_nat_list
+
+--   #eval infer_reduce 10 [lessterm|
+--   fix(_ => _ => match y[0]  
+--     case (succ;y[0], succ;y[1]) => y[3](y[0], y[1])
+--     case (zero;;, y[0]) => y[0]
+--     case (y[0], zero;;) => y[0] 
+--   )
+--   ]
+
+--   -- NOTE: requires simplification when checking if relation is reducible 
+--   -- expected: the difference: succ//zero//unit
+--   #eval infer_reduce 10 [lessterm|
+--   fix(_ => _ => match y[0]  
+--     case (succ;y[0], succ;y[1]) => y[3](y[0], y[1])
+--     case (zero;;, y[0]) => y[0]
+--     case (y[0], zero;;) => y[0] 
+--   )(succ;succ;zero;;, succ;succ;succ;zero;;)
+--   ]
+
+--   -- expected: the difference: succ//zero//unit
+--   #eval unify_reduce 10
+--   [lesstype|
+--   ([_<:{(β[1] ->
+--     β[0]) with (β[1] * β[0]) <: (induct ({((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0] & top) <: β[3] # 3} |
+--       ({((zero//unit * β[0]) * β[0]) # 1} | {((β[0] * zero//unit) * β[0]) # 1} | bot))) # 2}] β[0])
+--   ]
+--   [lesstype| succ//zero//unit * succ//succ//zero//unit -> α[7] ]
+--   [lesstype| α[7] ] 
+
+--   ----------------------------------
+
+--   def gt := [lesstype| 
+--     induct  
+--       {succ//β[0] * zero//unit} | 
+--       {succ//β[0] * succ//β[1] with (β[0] * β[1]) <: β[2]}
+--   ]
+
+--   -------------------------------------------------
+
+--   def spec := [lesstype| 
+--   (α[0] * α[1]) -> (
+--     { β[0] with (x:β[0] & y:α[1] & z:α[0]) <: ⟨plus⟩} |
+--     { β[0] with (x:β[0] & y:α[0] & z:α[1]) <: ⟨plus⟩}
+--   )  
+--   ]
+
+--   -- Note: is this in effect, the same thing as PDR/IC3?
+--   -- That is, whatever is learned to strengthen the conclusion 
+--   -- is automatically applied to preceding iterations 
+--   -- due to the wrapping type in inductive binding 
+--   -- NOTE: this may have some non-termination depending on how occurs is used 
+--   #eval infer_simple 10 
+--   [lessterm|
+--   let _ : ⟨spec⟩ = fix(_ => _ => match y[0]  
+--     case (succ;y[0], succ;y[1]) => y[3](y[0], y[1])
+--     case (zero;;, y[0]) => y[0]
+--     case (y[0], zero;;) => y[0] 
+--   ) in 
+--   y[0]
+--   ]
+
+--   -------------------------------------------------
+
+--   #eval infer_reduce 10 
+--   [lessterm|
+--   let _ = fix(_ => _ => match y[0]
+--     case (succ;y[0], succ;y[1]) => (y[3] (y[0], y[1]))
+--     case (zero;;, y[0]) => y[0]
+--     case (y[0], zero;;) => y[0] 
+--   ) in 
+--   y[0]
+--   ]
+
+--   -- expected: succ//zero//unit 
+--   #eval infer_reduce 10 
+--   [lessterm|
+--   let _ = fix(_ => _ => match y[0]
+--     case (succ;y[0], succ;y[1]) => (y[3] (y[0], y[1]))
+--     case (zero;;, y[0]) => y[0]
+--     case (y[0], zero;;) => y[0] 
+--   ) in 
+--   y[0](succ;succ;zero;;, succ;zero;;)
+--   ]
+
+--   def diff_rel :=
+--   [lesstype|
+--     induct 
+--       {zero//unit * β[0] * β[0]} | 
+--       {β[0] * zero//unit * β[0]} |
+--       {(succ//β[1] * succ//β[2] * β[0]) with (β[1] * β[2] * β[0]) <: β[3]}
+--   ]
+
+--   #eval unify_reduce 10
+--   [lesstype| succ//succ//zero//unit * succ//zero//unit * α[0] ]
+--   diff_rel
+--   [lesstype| α[0] ]
+
+
+
+--   def plus_choice := [lesstype| 
+--   α[0] * α[1] * (
+--     { β[0] with (x:β[0] & y:α[1] & z:α[0]) <: ⟨plus⟩} |
+--     { β[0] with (x:β[0] & y:α[0] & z:α[1]) <: ⟨plus⟩}
+--   )  
+--   ]
+
+--   #eval unify_reduce 10
+--   plus_choice
+--   diff_rel
+--   [lesstype| α[0] ]
+
+
+--   -- #eval unify_reduce 10
+--   -- [lesstype|
+--   --   ? >> β[0] -> {β[0] with (β[1] * β[0]) <: ⟨diff_rel⟩}
+--   -- ]
+--   -- spec
+--   -- [lesstype| α[0] * α[1] ]
+
+--   ------------ factoring checking ----------------
+
+--   def list_ := [lesstype|
+--     induct 
+--       nil//unit |
+--       cons//β[0]
+--   ]
+
+--   -- #eval [lessterm| 
+--   --   let _ : ⟨nat_⟩ -> ⟨list_⟩ = fix(\ y[0] =>
+--   --     \ zero;; => nil;;  
+--   --     \ succ;y[0] => cons;(y[1] y[0]) 
+--   --   )
+--   --   in
+--   --   y[0]
+--   -- ] 
+
+--   -- #eval infer_reduce 0 [lessterm| 
+--   --   fix(\ y[0] =>
+--   --     \ zero;; => nil;;  
+--   --     \ succ;y[0] => cons;(y[1] y[0]) 
+--   --   )
+--   -- ]
+
+
+
+--   -- expected: true 
+--   #eval unify_decide 0
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| ⟨nat_⟩ * ⟨nat_⟩ ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| ⟨nat_⟩ * nil//unit ]
+
+--   -- expected: false
+--   #eval unify_decide 0
+--   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+--   [lesstype| ⟨nat_list⟩ ]
+
+
+--   ----- factored construction ----
   
-  -- expected: ⟨nat_⟩ * ⟨list_⟩
-  #eval unify_reduce 10
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| α[1] * α[2] ]
-  [lesstype| α[1] * α[2] ]
-
-  -- expected: ⟨list_⟩
-  #eval unify_reduce 10
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| ⟨nat_⟩ * α[0] ]
-  [lesstype|  α[0] ]
-
-  #eval unify_decide 10
-  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
-  [lesstype| top ]
-
-
-  ----- factored projection ----
-
-  -- sound
-  -- expected: false 
-  #eval unify_decide 10
-  [lesstype| {β[0] -> unit with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
-  [lesstype| succ//zero//unit -> unit ]
-
-  -- unsound
-  -- expected: false 
-  #eval unify_decide 10
-  [lesstype| {β[0] -> unit with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
-  [lesstype| ⟨nat_⟩ -> unit ]
-
-  -- expected: false 
-  #eval unify_decide 10
-  [lesstype| {β[0] -> unit with β[0] * cons//cons//nil//unit <: ⟨nat_list⟩ # 2} ]
-  [lesstype| ⟨nat_⟩ -> unit ]
-
-  -- expected: false 
-  #eval unify_decide 10
-  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
-  [lesstype| succ//zero//unit ]
-
-  -- expected: true 
-  #eval unify_decide 10
-  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
-  [lesstype| ⟨nat_⟩ ]
-
-  -- expected: true 
-  #eval unify_decide 10
-  [lesstype| {β[0] with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
-  [lesstype| ⟨nat_⟩ ]
-
-  -- expected: false
-  #eval unify_decide 10
-  [lesstype| {β[0] with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
-  [lesstype| succ//zero//unit ]
-
-  ----------------------------
-
-  -- expected: true 
-  #eval unify_decide 10
-  [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| ⟨list_⟩ ]
-
-  -- expected: false 
-  #eval unify_decide 10
-  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
-  [lesstype| succ//succ//zero//unit ]
-
-  -- incomplete 
-  -- expected: true 
-  #eval unify_decide 10
-  [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
-
-  -- expected: true 
-  #eval unify_decide 10
-  [lesstype| [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2} ]
-  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
-
-  -- NOTE: the relational constraint check should check inhabitation 
-  -- [a <: Nat]{b with a * b <: nat_list} is inhabited
-  -- this requires unifying the left universal's constraint first, rather than backwards
-  -- and also checking inhabitation, use factoring to check inhabitation
-  -- X * Y <: ⟨nat_list⟩ |-  (X -> Y) <: NAT -> LIST
-  -- complete
-  -- expected: true 
-  #eval unify_decide 10
-  [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2}] β[0] ]
-  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
-
-  -- expected: true 
-  #eval unify_decide 10
-  [lesstype| {β[1] * β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2} ]
-  [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
-
-  -- incomplete
-  -- expected: true 
-  #eval unify_decide 10
-  [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2}] β[0] ]
-  [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-
+--   -- expected: ⟨nat_⟩ * ⟨list_⟩
+--   #eval unify_reduce 10
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| α[1] * α[2] ]
+--   [lesstype| α[1] * α[2] ]
+
+--   -- expected: ⟨list_⟩
+--   #eval unify_reduce 10
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| ⟨nat_⟩ * α[0] ]
+--   [lesstype|  α[0] ]
+
+--   #eval unify_decide 10
+--   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
+--   [lesstype| top ]
+
+
+--   ----- factored projection ----
+
+--   -- sound
+--   -- expected: false 
+--   #eval unify_decide 10
+--   [lesstype| {β[0] -> unit with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
+--   [lesstype| succ//zero//unit -> unit ]
+
+--   -- unsound
+--   -- expected: false 
+--   #eval unify_decide 10
+--   [lesstype| {β[0] -> unit with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
+--   [lesstype| ⟨nat_⟩ -> unit ]
+
+--   -- expected: false 
+--   #eval unify_decide 10
+--   [lesstype| {β[0] -> unit with β[0] * cons//cons//nil//unit <: ⟨nat_list⟩ # 2} ]
+--   [lesstype| ⟨nat_⟩ -> unit ]
+
+--   -- expected: false 
+--   #eval unify_decide 10
+--   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
+--   [lesstype| succ//zero//unit ]
+
+--   -- expected: true 
+--   #eval unify_decide 10
+--   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
+--   [lesstype| ⟨nat_⟩ ]
+
+--   -- expected: true 
+--   #eval unify_decide 10
+--   [lesstype| {β[0] with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
+--   [lesstype| ⟨nat_⟩ ]
+
+--   -- expected: false
+--   #eval unify_decide 10
+--   [lesstype| {β[0] with β[0] * β[1] <: ⟨nat_list⟩ # 2} ]
+--   [lesstype| succ//zero//unit ]
+
+--   ----------------------------
+
+--   -- expected: true 
+--   #eval unify_decide 10
+--   [lesstype| {β[0] with α[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| ⟨list_⟩ ]
+
+--   -- expected: false 
+--   #eval unify_decide 10
+--   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} ]
+--   [lesstype| succ//succ//zero//unit ]
+
+--   -- incomplete 
+--   -- expected: true 
+--   #eval unify_decide 10
+--   [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+--   -- expected: true 
+--   #eval unify_decide 10
+--   [lesstype| [_] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2} ]
+--   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+--   -- NOTE: the relational constraint check should check inhabitation 
+--   -- [a <: Nat]{b with a * b <: nat_list} is inhabited
+--   -- this requires unifying the left universal's constraint first, rather than backwards
+--   -- and also checking inhabitation, use factoring to check inhabitation
+--   -- X * Y <: ⟨nat_list⟩ |-  (X -> Y) <: NAT -> LIST
+--   -- complete
+--   -- expected: true 
+--   #eval unify_decide 10
+--   [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2}] β[0] ]
+--   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+
+--   -- expected: true 
+--   #eval unify_decide 10
+--   [lesstype| {β[1] * β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2} ]
+--   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+
+--   -- incomplete
+--   -- expected: true 
+--   #eval unify_decide 10
+--   [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩ # 2}] β[0] ]
+--   [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
 
-  -- expected: true 
-  #eval unify_decide 10
-  [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| succ//zero//unit -> α[0] ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
-  [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-
-  -- expected: false 
-  #eval unify_decide 10
-  [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
-  [lesstype| α[0] -> {β[0] with α[0] * β[0] <: ⟨nat_list⟩} ]
-
-  -- expected: false 
-  #eval unify_decide 10
-  [lesstype| ⟨list_⟩ ]
-  [lesstype| {β[0] with α[0] * β[0] <: ⟨nat_list⟩} ]
-
-  -- expected: false
-  #eval unify_decide 10
-  [lesstype| α[0] * ⟨list_⟩ ]
-  [lesstype| ⟨nat_list⟩ ]
-
-  -- expected: true 
-  #eval unify_decide 10
-  [lesstype| {β[0] with β[0] <: ⟨list_⟩} ]
-  [lesstype| ⟨list_⟩ ]
-
-
-  ------------------------------
-
-
-  -- expected: true 
-  #eval unify_decide 0
-  [lesstype| ⟨nat_⟩ ]
-  [lesstype|
-    induct
-      zero//unit |
-      {succ//β[0] with β[0] <: β[2] # 2}
-  ]
-
----------------- debugging
-
-  #eval infer_reduce 0 [lessterm| 
-    let _ : ⟨nat_⟩ -> ⟨list_⟩ = fix(_ => _ => match y[0]
-      case zero;; => nil;;  
-      case succ;y[0] => cons;(y[2](y[0])) 
-    )
-    in
-    y[0]
-  ] 
-  --------------------------------
-
-  ------- proactive safely assgined ---------
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| {β[0]} ]
-  [lesstype|  ooga//unit ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| {β[0] with β[0] <: ooga//unit} ]
-  [lesstype|  booga//unit]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| {β[2] with β[0] * β[1] <: ⟨nat_list⟩ # 3} ]
-  [lesstype| ⟨nat_⟩]
-
-  -- expected: true 
-  #eval unify_decide 0
-  [lesstype| {β[0] with β[0] <: ooga//unit} ]
-  [lesstype|  ooga//unit | booga//unit]
-
-  -- expected: false
-  #eval unify_decide 0
-  [lesstype| {β[0] with β[0] <: (three//unit)} ]
-  [lesstype| one//unit ]
-
-  -- expected: false
-  #eval unify_decide 0
-  [lesstype| (one//unit | three//unit) ]
-  [lesstype| one//unit ]
-
-  -- expected: false
-  #eval unify_decide 0
-  [lesstype| {β[0] with β[0] <: (one//unit | three//unit)} ]
-  [lesstype| one//unit ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| (one//unit * two//unit) | (three//unit * four//unit) ]
-  [lesstype| (three//unit * four//unit)  ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| {β[0] with β[0] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
-  [lesstype| one//unit * two//unit ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| {β[0]  with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit) # 2} ]
-  [lesstype| one//unit ]
-
-  -- expected: false 
-  #eval unify_decide 10
-  [lesstype| {β[0] with β[0] * α[0] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
-  [lesstype| one//unit  ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| {β[0] with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit) # 2} ]
-  [lesstype| one//unit ]
-
-  -- expected: true 
-  #eval unify_decide 0
-  [lesstype| {β[0] with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit) # 2} ]
-  [lesstype| one//unit | three//unit ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| (one//unit * two//unit) | (three//unit * four//unit) ]
-  [lesstype| one//unit  ]
-
-  -- expected: true 
-  #eval unify_decide 10 
-  [lesstype| {β[0] with β[0] * α[0] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
-  [lesstype| one//unit | three//unit  ]
-
-  -- expected: false 
-  #eval unify_decide 10 
-  [lesstype| {β[0] with β[0] * α[0] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
-  [lesstype| one//unit  ]
-
-
-
---------------------- universal introduction subtyping ----------------
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| one//unit  ]
-  [lesstype| [_<:{(β[0] | α[0]) -> β[0] with (β[0] | α[0]) <: (one//unit | two//unit) & (three//unit | four//unit) }] β[0] ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| one//unit  ]
-  [lesstype| (one//unit | two//unit) & (three//unit | four//unit) ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| one//unit  ]
-  [lesstype|  [_<:{(β[0] | α[0]) -> β[0] with (β[0] | α[0]) <: (one//unit | two//unit) * (three//unit | four//unit)}] β[0] ]
-
-  -- expected: false 
-  #eval unify_decide 0
-  [lesstype| one//unit  ]
-  [lesstype| (one//unit | two//unit) * (three//unit | four//unit) ]
-
-
----------------------------------
-  #eval infer_reduce 1 [lessterm| 
-    let _ : α[0] = _ in
-    y[0] 
-  ] 
-
-  def ooga := [lesstype| 
-    induct
-      {zero//unit * β[0]} |
-      {succ//β[0] * succ//β[1] with β[0] * β[1] <: β[2]}
-  ]
-
-  #eval unify_reduce 10
-  [lesstype| α[2] * α[3] -> {β[0] with (α[2] * β[0]) * (α[3] * β[0]) <: ⟨ooga⟩ * ⟨ooga⟩} ]
-  [lesstype| α[0] * α[1] -> α[1] ]
-  [lesstype| hmm//unit ]
-
-
---------------------------------------------------------
-
-  -- expected: none 
-  #eval infer_reduce 0 [lessterm| 
-    let _ : ([_][_] β[0] * β[1] -> {β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩ # 1}) = 
-    (_ => match y[0] case (y[0], y[1]) => y[0]) in
-    y[0]
-  ] 
-
-------- argument type inference ------
-
-  -- expected: the argument type should be refined by the function application 
-  -- should be similar to the function type, but just an exisitential without the return type
-  -- the return type is inferred, but the argument type is not inferred 
-  -- e.g.
-  /-
-    ({2 // β[0] with (β[0] * β[1]) <: (induct (
-          (zero//unit * nil//unit) |
-          {2 // (succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2]}
-    ))})
-  -/
-  #eval unify_reduce 50
-  [lesstype| 
-  ([_<:α[10]] (β[0] ->
-  {β[0] with (β[1] * β[0]) <: (induct ((zero//unit * nil//unit) |
-     {(succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2] # 2})) # 1}))
-  ]
-  [lesstype| α[20] -> α[12]]
-  [lesstype| α[20]]
-
-
-  -- expected: the argument type should be refined by the function application 
-  -- e.g.
-  /-
-    ({2 // β[0] with (β[0] * β[1]) <: (induct (
-          (zero//unit * nil//unit) |
-          {2 // (succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2]}
-    ))})
-  -/
-  #eval infer_reduce 0 [lessterm| 
-    let _ = fix (_ => _ => match y[0]
-      case (zero;;) => nil;;  
-      case (succ;y[0]) => cons;(y[1](y[0])) 
-    ) in
-    let _ = _ in
-    let _ = (y[1] (y[0])) in
-    y[1]
-  ] 
-
---------------------------------------
-
-  ----------------------------
-  -- incomplete without model-based subtyping / semantic subtyping
-  ----------------------------
-  -- URL: https://pnwamk.github.io/sst-tutorial/#%28part._sec~3asemantic-subtyping%29
-  #eval unify_decide 0
-  [lesstype| (x//unit | y//unit) * y//unit ] 
-  [lesstype| (x//unit * y//unit) | (y//unit * y//unit) ] 
-
-  -------------------------
-
-  -- expected: (?spanish unit | ?english unit)
-  #eval infer_reduce 10 [lessterm|
-    let _ : [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
-    let _ : α[1] = _ in
-    (
-      (_ => match y[0] case dos;; => spanish;; case two;; => english;;)
-      (y[1](y[0]))
-    ) 
-  ]
-
-  -----------  argument type strengthening ----------
-
-  -- expected: uno//unit
-  #eval infer_reduce 10 [lessterm|
-    let _ : uno//unit -> dos//unit = _ in
-    let _ = _ in
-    let _ = y[1](y[0]) in
-    y[1]
-  ]
-
-  -- expected: uno//unit
-  #eval infer_reduce 10 [lessterm|
-    let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit)} = _ in
-    let _ = _ in
-    (
-      (_ => match y[0] case dos;; => y[0])
-      (y[1](y[0]))
-    ) 
-  ]
-
-  -- expected: uno//unit
-  #eval infer_reduce 10 [lessterm|
-    let _ : uno//unit -> dos//unit = _ in
-    let _ = _ in
-    (
-      (_ => match y[0] case dos;; => y[0])
-      (y[1](y[0]))
-    ) 
-  ]
-
-  -- requires local strengthening in left-existential
-  -- expected: uno//unit
-  #eval infer_reduce 10 [lessterm|
-    let _ : [_<:α[2]] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit)} = _ in
-    let _ = _ in
-    (
-      (_ => match y[0] case dos;; => y[0])
-      (y[1](y[0]))
-    ) 
-  ]
-
-  -- incomplete
-  -- expected: uno//unit | other//unit
-  #eval infer_reduce 10 [lessterm|
-    let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
-    let _ = _ in
-    (
-      (_ => match y[0] case dos;; => y[0] case two;; => other;;)
-      (y[1](y[0]))
-    ) 
-  ]
-
-  -- incomplete
-  -- expected: dos//unit | other//unit
-  #eval infer_reduce 10 [lessterm|
-    let _ : (dos//unit) | (two//unit) = _ in
-    (_ => match y[0] case dos;; => y[0] case two;; => other;;)
-    (y[0])
-  ]
-
-  -- incomplete
-  -- expected: uno//unit 
-  #eval infer_reduce 10 [lessterm|
-    let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
-    let _ = _ in
-    (
-      (_ => match y[0] case dos;; => y[0] case two;; => uno;;)
-      (y[1](y[0]))
-    ) 
-  ]
-
-
-  -----------  local strengthening ----------
-
-  -- complete
-  -- expected: (one//unit | three//unit) 
-  #eval infer_reduce 0 [lessterm|
-    let _ = _ in
-    let _ = (
-      (_ => match y[0] case one;; => two;; case three;; => four;;)
-      (y[0])
-    ) in
-    y[1]
-  ]
-
-  -- expected: (two//unit | four//unit)
-  #eval infer_reduce 0 [lessterm|
-    let _ = _ in
-    (_ => match y[0] case one;; => two;; case three;; => four;;)
-    (y[0])
-  ]
-
-  -- expected:  (([_:(one//unit -> two//unit)]β[0]) & ([_:(three//unit -> four//unit)]β[0]))
-  #eval infer_reduce 0 [lessterm|
-    _ => (
-      (_ => match y[0] 
-        case one;; => two;; 
-        case three;; => four;;
-      )
-      (y[0])
-    )
-  ]
-
-  -- expected: one//unit
-  #eval infer_reduce 0 [lessterm|
-    let _ = _ in
-    (
-      (_ => match y[0] 
-        case one;; => y[0] 
-        case three;; => one;;
-      )
-      (y[0])
-    )
-  ]
-
-  -- expected: none 
-  #eval infer_reduce 0 [lessterm|
-    let _ : one//unit | two//unit = _ in
-    (
-      (_ => match y[0] 
-        case one;; => y[0] 
-        case three;; => one;;
-      )
-      (y[0])
-    )
-  ]
-
-  -----------  implication existential ----------
-
-  -- incomplete
-  -- expected: unit 
-  #eval unify_reduce 10 
-  [lesstype| (one//unit -> unit) & (three//unit -> unit) ]
-  [lesstype| {β[0] with β[0] <: (one//unit | three//unit)} -> α[7] ]
-  [lesstype| α[7] ]
-
-  -- expected: none 
-  #eval unify_reduce 10 
-  [lesstype| {β[0] with β[0] <: (one//unit | three//unit)} ]
-  [lesstype| one//unit ]
-  [lesstype| unexpected//unit ]
-
-
-  -- incomplete
-  -- expected: one//unit 
-  #eval infer_reduce 0 [lessterm|
-    let _ : {β[0] with β[0] <: one//unit | three//unit} = _ in
-    (
-      (_ => match y[0] 
-        case one;; => y[0] 
-        case three;; => one;;
-      )
-      (y[0])
-    )
-  ]
-
-  -- incomplete
-  -- expected: one//unit | three//unit 
-  #eval infer_reduce 0 [lessterm|
-    let _ : {β[0] with β[0] <: one//unit | three//unit} = _ in
-    (
-      (_ => match y[0] 
-        case one;; => y[0] 
-        case three;; => y[0]
-      )
-      (y[0])
-    )
-  ]
-
-
-  ---------- implication union ---------
-  -- (S1 -> T) & (S2 -> T) <: (S1 | S2 -> T) 
-
-
-  -- expected: unit
-  #eval unify_reduce 10 
-  [lesstype| (one//unit -> unit) & (three//unit -> unit) ]
-  [lesstype| (one//unit | three//unit) -> α[7] ]
-  [lesstype| α[7] ]
-
-
-  -- complete
-  -- expected: four//unit
-  #eval infer_reduce 0 [lessterm|
-    let _ : one//unit | three//unit = _ in
-    (
-      (_ => match y[0] 
-        case one;; => four;; 
-        case three;; => four;;
-      )
-      (y[0])
-    )
-  ]
-
-  -- expected: two//unit * four//unit
-  #eval unify_reduce 10 
-  [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
-  [lesstype| (one//unit -> α[7]) & (three//unit -> α[8])]
-  [lesstype| α[7] * α[8] ]
-
-
-  -- NOTE: requires adjustment to be turned on
-  -- expected: two//unit | four//unit
-  #eval unify_reduce_adj (empty.insert 7) 10
-  [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
-  [lesstype| (one//unit | three//unit) -> α[7] ]
-  [lesstype| α[7] ]
-  /-
-  -- TODO: adjustment isn't necessary if it treats variable as unassigned for each case 
-  -/
-  ----------------------
-  /-
-                                                      Y <: ?'
-                                                  --------------
-                                                    Y <: B | ?'
-                                                  --------------------
-    B <: ?                                            Y <: ?
-------------------------                     ------------------------
-  (A -> B) <: (A -> ?)                         (X -> Y) <: (X -> ?) 
----------------------------------          -----------------------------------
-  (A -> B & X -> Y) <: (A -> ?),            (A -> B & X -> Y) <: (X -> ?)
---------------------------------------------------------------------------------
-  (A -> B & X -> Y) <: (A | X) -> ?
-
-
-  -- NOTE: requires expanding ? into B | Y
-  -- since it starts as a variable; union a variable to indicate it can expand 
-  -/
-
------------------
-
-  -- NOTE: variable α[7] should not be refined
-  -- NOTE: requires adjustment to be turned on
-  -- it should be marked as expandable
-  -- expected: two//| ?four
-  #eval unify_reduce_adj (empty.insert 7) 10
-  [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
-  [lesstype| (one//unit | three//unit) -> {β[0] with β[0] <: α[7]} ]
-  [lesstype| α[7] ]
-
-
------------------
-
-  #eval unify_simple 10
-  [lesstype| (one//unit -> two//unit)  ]
-  [lesstype| (one//unit | three//unit) -> {β[0]} ]
-
-  #eval unify_simple 10
-  [lesstype| (three//unit -> four//unit) ]
-  [lesstype| (one//unit | three//unit) -> {β[0]} ]
-
-
----------------------------------------------------
-
-
-  -- expected: one//unit | three//unit
-  #eval unify_reduce 10
-  [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
-  [lesstype| α[7] -> (two//unit | four//unit) ]
-  [lesstype| α[7] ]
-
-
-  -------------------------------------------
-  -- requires weakening of return type in app
-  -- expected: two//unit | four//unit
-  -- may be affected initial expected type in infer_reduce 
-  #eval infer_reduce 0 [lessterm|
-    let _ : one//unit | three//unit = _ in
-    (
-      (_ => match y[0] 
-        case one;; => two;; 
-        case three;; => four;;
-      )
-      (y[0])
-    )
-  ]
-
-  -- imprecise 
-  -- expected: one//unit
-  #eval infer_reduce 0 [lessterm|
-    let _ : one//unit | three//unit = _ in
-    (
-      (_ => match y[0] 
-        case one;; => y[0] 
-        case three;; => one;;
-      )
-      (y[0])
-    )
-  ]
-
-  ---------- implication intersection ---------
-  -- (S -> T1) & (S -> T2) <: (S -> T1 & T2)
-
-  -- expected: true
-  #eval unify_decide 10 
-  [lesstype| (one//unit -> two//unit) & (one//unit -> three//unit) ]
-  [lesstype| one//unit -> (two//unit & three//unit)]
-
-  ----------------------------------
-
-  -- NOTE: in right-existential: if key is not matchable; save the relation
-  -- expected: true 
-  #eval unify_decide 10 
-  [lesstype| succ//α[1] * α[0] ]
-  [lesstype| {(succ//β[0] * cons//β[1]) with (β[0] * β[1]) <: ⟨nat_list⟩ # 2} ]
-
-  ---------- relational propagation ---------
-
-  -- NOTE: these are all dependent on an antecedent existential rule
-
-  -- incomplete
-  -- NOTE: variables are no longer expanded; 
-  -- need a generalized disjunction elimination rule 
-  -- or some general elimination rule for intersection of implication; e.g a factoring rule.
-  -- expected thing//unit | other//unit
-  #eval unify_reduce 10 
-  [lesstype| (zero//unit -> thing//unit) & (succ//α[1] -> other//unit)]
-  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
-  [lesstype| α[2] ]
-
-  -- incomplete
-  -- expected: other//unit | thing//unit 
-  #eval unify_reduce 10 
-  [lesstype| (succ//⟨nat_⟩ -> other//unit) & (zero//unit -> thing//unit)]
-  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
-  [lesstype| α[2] ]
-
-  -- incomplete
-  -- expected: nil//unit | other//unit
-  #eval unify_reduce 10 
-  [lesstype| (zero//unit -> α[0]) & (succ//α[1] -> other//unit)]
-  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
-  [lesstype| α[2] ]
-
-  -- incomplete
-  -- expected: nil//unit | other//unit
-  #eval unify_reduce 10 
-  [lesstype| (zero//unit -> α[0]) & (succ//⟨list_⟩ -> other//unit)]
-  [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
-  [lesstype| α[2] ]
-
-  -- incomplete
-  -- expected: nil//unit | other//unit
-  #eval infer_reduce 10 [lessterm|
-    let _ : α[0] = _ in
-    let _ : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
-    (
-      (_ => match y[0] 
-        case zero;; => y[1] 
-        case succ; y[0] => other;;
-      )
-      (y[0])
-    )
-  ]
-
-  ----- using function application --------
-
-  -- incomplete
-  -- NOTE: full reduction requires using unify_all to solve remaining constraints
-  -- NOTE: return type should not be refined further after return
-  -- expected: zero//unit | other//unit
-  #eval infer_reduce 10 [lessterm|
-    let _ : [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in
-    let _ = _ in
-    (
-      (_ => match y[0] 
-        case nil;; => y[0] 
-        case cons;y[0] => other;;
-      )
-      (y[1](y[0]))
-    )
-  ]
-
-  -- argument type is weaker than parameter type
-  -- expected: none 
-  #eval infer_reduce 10 [lessterm|
-    let _ : α[0] = _ in
-    let _ : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
-    (
-      (_ => match y[0] 
-        case zero;; => y[1]
-      )
-      (y[0])
-    )
-  ]
-
-
-  -------- collapsing ------------
-
-  -- expected: multiple environments
-  #eval infer_simple 0 [lessterm| 
-    let _ = _ in 
-    (_ => match y[0] 
-      case one;; => two;; 
-      case three;; => four;;
-    )(y[0])
-  ]
-
-
-  -- expected: none 
-  #eval infer_reduce 0 [lessterm| 
-    let _ = _ in 
-    (_ => match y[0] 
-      case two;; => thing;;
-    ) 
-    ((_ => match y[0] 
-      case one;; => two;; 
-      case three;; => four;;)(y[0]))
-  ]
-
-  #eval infer_simple 0 [lessterm| 
-    let _ = _ in 
-    let _ = (_ => match y[0] 
-      case one;; => two;; 
-      case three;; => four;;
-    )(y[0]) in
-    y[0]
-  ]
-
-  -- sound because initial type may be restricted
-  -- there exists a type that can be inhabited 
-  -- expected: one//unit
-  #eval infer_reduce 0 [lessterm| 
-    let _ = _ in 
-    let _ = (_ => match y[0] case one;; => two;; case three;; => four;;)(y[0]) in
-    let _ = (_ => match y[0] case two;; => thing;;)(y[0]) in
-    y[2]
-  ]
-
-  -- expected: thing//unit
-  #eval infer_reduce 0 [lessterm| 
-    let _ = _ in 
-    let _ = (_ => match y[0] case one;; => two;;)(y[0]) in
-    (_ => match y[0] case two;; => thing;;)(y[0])
-  ]
-
-  --------------------------------------
-
-
-  -- expected: ((one//unit -> two//unit) & (three//unit -> four//unit))
-  #eval infer_reduce 0 [lessterm| 
-    (_ => match y[0] case one;; => two;; case three;; => four;;)
-  ]
-
-  -- imprecise: inferring union instead of intersection
-  -- requires generalization upon detection of funciton types
-  -- expected: ((one//unit -> two//unit) & (three//unit -> four//unit))
-  #eval infer_reduce 0 [lessterm| 
-    (_ => (_ => match y[0] case one;; => two;; case three;; => four;;)(y[0]))
-  ]
-
-  #eval infer_envs 0 [lessterm| 
-    (_ => (_ => match y[0] case one;; => two;; case three;; => four;;)(y[0]))
-  ]
-
-  #eval infer_reduce 0 [lessterm| 
-    let _ = _ in
-    (_ => match y[0] 
-      case one;; => two;; 
-      case three;; => four;;)(y[0])
-  ]
-
-  #eval unify_reduce 10
-  [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
-  [lesstype| α[7] -> α[8]]
-  [lesstype| α[7] -> α[8]]
-
-  ------- path selection --------------
-  -- expected: two//unit 
-  #eval infer_reduce 0 [lessterm| 
-    (_ => match y[0] case one;; => two;; case three;; => four;;)(one;;) 
-  ]
-
-------------------------------
-
-  -- expected: false
-  #eval unify_decide 0
-  [lesstype| {β[0] with β[0] * cons//cons//nil//unit <: ⟨nat_list⟩}]
-  [lesstype| succ//foo//zero//unit ]
-
-  #eval unify_reduce 10
-  [lesstype| {β[0] with β[0] * cons//cons//nil//unit <: ⟨nat_list⟩}]
-  [lesstype| α[0]]
-  [lesstype| α[0]]
-
-  #eval unify_reduce 10
-  [lesstype| α[0] * cons//cons//nil//unit]
-  nat_list
-  [lesstype| α[0] ]
-
-  #eval unify_decide 10
-  [lesstype| succ//foo//zero//unit ]
-  [lesstype| succ//succ//zero//unit ]
-
-  --------- sound application --------
-
-  -- expected: false
-  #eval unify_decide 10
-  [lesstype|
-    {β[0] * β[1] with (x : β[0] & y : β[1] & z : succ//zero//unit ) <: ⟨plus⟩}
-  ]
-  [lesstype| (zero//unit * succ//zero//unit) ]
-
-  -- incomplete: not fully reduced
-  -- expected: ((zero//unit * succ//zero//unit) | (succ//zero//unit * zero//unit))
-  #eval unify_reduce 10
-  [lesstype|
-    {β[0] * β[1] with (x : β[0] & y : β[1] & z : succ//zero//unit ) <: ⟨plus⟩}
-  ]
-  [lesstype| α[7] ]
-  [lesstype| α[7] ]
-
-  #eval unify_reduce 10
-  [lesstype|
-    [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩}
-  ]
-  [lesstype| succ//zero//unit -> α[7] ]
-  [lesstype| α[7] ]
-
-  -- incomplete: not fully reduced
-  -- expected: ((zero//unit * succ//zero//unit) | (succ//zero//unit * zero//unit))
-  #eval infer_reduce 10
-  [lessterm|
-    let _ : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
-    y[0](succ;zero;;)
-  ]
-  -----------------------------------
-
-  -- expected: none 
-  #eval unify_reduce 10
-  [lesstype|
-    (zero//unit * succ//zero//unit) -> unit
-  ]
-  [lesstype| ((zero//unit * succ//zero//unit) | (succ//zero//unit * zero//unit)) -> α[7] ]
-  [lesstype| α[7] ]
-
-  -- expected: none 
-  #eval infer_reduce 10
-  [lessterm|
-    let _ : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
-    let _ : (zero//unit * succ//zero//unit) -> unit = _ in 
-    y[0](y[1](succ;zero;;))
-  ]
-
-  -- expected: unit
-  #eval infer_reduce 10
-  [lessterm|
-    let _ : (foo//unit) -> unit = _ in 
-    y[0](foo;;)
-  ]
-
-  -- expected: none 
-  #eval infer_reduce 10
-  [lessterm|
-    let _ : (foo//unit) -> unit = _ in 
-    y[0](boo;;)
-  ]
-
-  -------------------------------------------
-  ---------- let binding soundness -----------
-
-  -- expected: none 
-  #eval infer_reduce 10
-  [lessterm|
-    let _ : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
-    let _ : (zero//unit * succ//zero//unit) = y[0](succ;zero;;) in
-    y[0]
-
-  ]
-
-  ----------- left-inductive -----------------
-
-  -- expected: true
-  #eval unify_decide 30
-  [lesstype| ⟨nat_⟩ ] 
-  [lesstype| (zero//unit | succ//⟨nat_⟩) ]
-
-  -- expected: true
-  #eval unify_decide 30
-  [lesstype| ((zero//unit | succ//⟨nat_⟩)) ] 
-  [lesstype| (⟨nat_⟩) ]
-
-  -- expected: true 
-  #eval unify_decide 0
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
-
-  -- NOTE: this requires factoring to circumvent circular variable restriction.
-  #eval unify_decide 10
-  [lesstype| ⟨nat_list⟩ ]
-  [lesstype| ⟨nat_⟩ * α[1] ]
-
-
-  ------- specialization --------------
-  -- NOTE: this is specialized because left-universal checks constraints after unification
-  -- expected: even 
-  #eval infer_reduce 0 [lessterm|
-  let _ : [_<:⟨nat_⟩] β[0] * β[0] -> β[0] = _ in 
-  let _ : ⟨even⟩ = _ in
-  (y[1] (y[0], zero;;))
-  ]
-
-  -- expected: nat 
-  #eval infer_reduce 0 [lessterm|
-  let _ : [_<:⟨nat_⟩] β[0] * β[0] -> β[0] = _ in 
-  let _ : ⟨even⟩ = _ in
-  (y[1] (zero;;, y[0]))
-  ]
-
-
-
---------------------------------------
-
------------------------------------
--- uninhabitable
------------------------------------
-
-  -- is unification with uninhabitable types unsound?
-  -- assigment indicates a subtyping; (not a typing)
-  -- the existience of a subtyping does not imply the existence of a typing; 
-  -- that is, the subtype could also be empty 
-  -- thus it does not introduce a false premise in order to draw a false conclusion
-
-  -- α[7] is an uninhabitable type
-  #eval unify_decide 10 
-  [lesstype| α[7] ]
-  [lesstype| {β[0] with succ//β[0] <: foo//β[0]} ]
-
-  -- α[0] is an uninhabitable type
-  #eval unify_decide 30
-  [lesstype| [_<:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
-  [lesstype| foo//succ//zero//unit -> α[0] ] 
-
-  -- expected false
-  #eval unify_decide 30
-  [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
-  [lesstype| foo//succ//zero//unit -> α[0] ] 
-
-
--------------------------------------
-  -- max example 
--------------------------------------
-
-
-  -- incomplete
-  -- expected: notions of zero//and true//appear in inferred type
-  -- this requires including relational constraints in generalization
-  #eval infer_reduce 0 [lessterm| 
-    (_ => (fix (_ => _ => match y[0]
-      case (zero;;, zero;;) => true;;  
-    )) (y[0]))
-  ] 
-
-  -- incomplete: lack of recursive call causes failure
-  #eval infer_reduce 0 [lessterm| 
-    (fix (_ => _ => match y[0]
-      case (zero;;, zero;;) => true;;
-    ))
-  ] 
-
-  #eval infer_reduce 0 [lessterm| 
-    (fix (_ => _ => match y[0]
-      case (zero;;, zero;;) => y[0](true;;)
-    ))
-  ] 
-
-  -- incomplete
-  -- expected: true//unit
-  #eval infer_reduce 0 [lessterm| 
-    let _ = (_ => ((fix (_ => _ => match y[0]
-      case (zero;;, zero;;) => true;;  
-    )) (y[0])))
-    in
-    (y[0] (zero;;, zero;;))
-  ] 
-
-  def nat_pair := [lesstype|
-    induct
-      {(zero//unit * ⟨nat_⟩)} 
-      | 
-      {(succ//β[0] * succ//β[1]) with (β[0] * β[1]) <: β[2] } 
-      | 
-      {(succ//⟨nat_⟩ * zero//unit)}
-  ]
-
-  -- expected: relational function type
-  #eval infer_reduce 0 [lessterm| 
-    fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    )
-  ] 
+--   -- expected: true 
+--   #eval unify_decide 10
+--   [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| succ//zero//unit -> α[0] ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+--   [lesstype| [_<:⟨nat_⟩] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+
+--   -- expected: false 
+--   #eval unify_decide 10
+--   [lesstype| ⟨nat_⟩ -> ⟨list_⟩ ]
+--   [lesstype| α[0] -> {β[0] with α[0] * β[0] <: ⟨nat_list⟩} ]
+
+--   -- expected: false 
+--   #eval unify_decide 10
+--   [lesstype| ⟨list_⟩ ]
+--   [lesstype| {β[0] with α[0] * β[0] <: ⟨nat_list⟩} ]
+
+--   -- expected: false
+--   #eval unify_decide 10
+--   [lesstype| α[0] * ⟨list_⟩ ]
+--   [lesstype| ⟨nat_list⟩ ]
+
+--   -- expected: true 
+--   #eval unify_decide 10
+--   [lesstype| {β[0] with β[0] <: ⟨list_⟩} ]
+--   [lesstype| ⟨list_⟩ ]
+
+
+--   ------------------------------
+
+
+--   -- expected: true 
+--   #eval unify_decide 0
+--   [lesstype| ⟨nat_⟩ ]
+--   [lesstype|
+--     induct
+--       zero//unit |
+--       {succ//β[0] with β[0] <: β[2] # 2}
+--   ]
+
+-- ---------------- debugging
+
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ : ⟨nat_⟩ -> ⟨list_⟩ = fix(_ => _ => match y[0]
+--       case zero;; => nil;;  
+--       case succ;y[0] => cons;(y[2](y[0])) 
+--     )
+--     in
+--     y[0]
+--   ] 
+--   --------------------------------
+
+--   ------- proactive safely assgined ---------
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| {β[0]} ]
+--   [lesstype|  ooga//unit ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| {β[0] with β[0] <: ooga//unit} ]
+--   [lesstype|  booga//unit]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| {β[2] with β[0] * β[1] <: ⟨nat_list⟩ # 3} ]
+--   [lesstype| ⟨nat_⟩]
+
+--   -- expected: true 
+--   #eval unify_decide 0
+--   [lesstype| {β[0] with β[0] <: ooga//unit} ]
+--   [lesstype|  ooga//unit | booga//unit]
+
+--   -- expected: false
+--   #eval unify_decide 0
+--   [lesstype| {β[0] with β[0] <: (three//unit)} ]
+--   [lesstype| one//unit ]
+
+--   -- expected: false
+--   #eval unify_decide 0
+--   [lesstype| (one//unit | three//unit) ]
+--   [lesstype| one//unit ]
+
+--   -- expected: false
+--   #eval unify_decide 0
+--   [lesstype| {β[0] with β[0] <: (one//unit | three//unit)} ]
+--   [lesstype| one//unit ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| (one//unit * two//unit) | (three//unit * four//unit) ]
+--   [lesstype| (three//unit * four//unit)  ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| {β[0] with β[0] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
+--   [lesstype| one//unit * two//unit ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| {β[0]  with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit) # 2} ]
+--   [lesstype| one//unit ]
+
+--   -- expected: false 
+--   #eval unify_decide 10
+--   [lesstype| {β[0] with β[0] * α[0] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
+--   [lesstype| one//unit  ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| {β[0] with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit) # 2} ]
+--   [lesstype| one//unit ]
+
+--   -- expected: true 
+--   #eval unify_decide 0
+--   [lesstype| {β[0] with β[0] * β[1] <: (one//unit * two//unit) | (three//unit * four//unit) # 2} ]
+--   [lesstype| one//unit | three//unit ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| (one//unit * two//unit) | (three//unit * four//unit) ]
+--   [lesstype| one//unit  ]
+
+--   -- expected: true 
+--   #eval unify_decide 10 
+--   [lesstype| {β[0] with β[0] * α[0] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
+--   [lesstype| one//unit | three//unit  ]
+
+--   -- expected: false 
+--   #eval unify_decide 10 
+--   [lesstype| {β[0] with β[0] * α[0] <: (one//unit * two//unit) | (three//unit * four//unit)} ]
+--   [lesstype| one//unit  ]
+
+
+
+-- --------------------- universal introduction subtyping ----------------
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| one//unit  ]
+--   [lesstype| [_<:{(β[0] | α[0]) -> β[0] with (β[0] | α[0]) <: (one//unit | two//unit) & (three//unit | four//unit) }] β[0] ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| one//unit  ]
+--   [lesstype| (one//unit | two//unit) & (three//unit | four//unit) ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| one//unit  ]
+--   [lesstype|  [_<:{(β[0] | α[0]) -> β[0] with (β[0] | α[0]) <: (one//unit | two//unit) * (three//unit | four//unit)}] β[0] ]
+
+--   -- expected: false 
+--   #eval unify_decide 0
+--   [lesstype| one//unit  ]
+--   [lesstype| (one//unit | two//unit) * (three//unit | four//unit) ]
+
+
+-- ---------------------------------
+--   #eval infer_reduce 1 [lessterm| 
+--     let _ : α[0] = _ in
+--     y[0] 
+--   ] 
+
+--   def ooga := [lesstype| 
+--     induct
+--       {zero//unit * β[0]} |
+--       {succ//β[0] * succ//β[1] with β[0] * β[1] <: β[2]}
+--   ]
+
+--   #eval unify_reduce 10
+--   [lesstype| α[2] * α[3] -> {β[0] with (α[2] * β[0]) * (α[3] * β[0]) <: ⟨ooga⟩ * ⟨ooga⟩} ]
+--   [lesstype| α[0] * α[1] -> α[1] ]
+--   [lesstype| hmm//unit ]
+
+
+-- --------------------------------------------------------
+
+--   -- expected: none 
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ : ([_][_] β[0] * β[1] -> {β[0] with (β[0] * β[1]) <: ⟨nat_⟩ * ⟨nat_⟩ # 1}) = 
+--     (_ => match y[0] case (y[0], y[1]) => y[0]) in
+--     y[0]
+--   ] 
+
+-- ------- argument type inference ------
+
+--   -- expected: the argument type should be refined by the function application 
+--   -- should be similar to the function type, but just an exisitential without the return type
+--   -- the return type is inferred, but the argument type is not inferred 
+--   -- e.g.
+--   /-
+--     ({2 // β[0] with (β[0] * β[1]) <: (induct (
+--           (zero//unit * nil//unit) |
+--           {2 // (succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2]}
+--     ))})
+--   -/
+--   #eval unify_reduce 50
+--   [lesstype| 
+--   ([_<:α[10]] (β[0] ->
+--   {β[0] with (β[1] * β[0]) <: (induct ((zero//unit * nil//unit) |
+--      {(succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2] # 2})) # 1}))
+--   ]
+--   [lesstype| α[20] -> α[12]]
+--   [lesstype| α[20]]
+
+
+--   -- expected: the argument type should be refined by the function application 
+--   -- e.g.
+--   /-
+--     ({2 // β[0] with (β[0] * β[1]) <: (induct (
+--           (zero//unit * nil//unit) |
+--           {2 // (succ//β[1] * cons//β[0]) with (β[1] * β[0]) <: β[2]}
+--     ))})
+--   -/
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = fix (_ => _ => match y[0]
+--       case (zero;;) => nil;;  
+--       case (succ;y[0]) => cons;(y[1](y[0])) 
+--     ) in
+--     let _ = _ in
+--     let _ = (y[1] (y[0])) in
+--     y[1]
+--   ] 
+
+-- --------------------------------------
+
+--   ----------------------------
+--   -- incomplete without model-based subtyping / semantic subtyping
+--   ----------------------------
+--   -- URL: https://pnwamk.github.io/sst-tutorial/#%28part._sec~3asemantic-subtyping%29
+--   #eval unify_decide 0
+--   [lesstype| (x//unit | y//unit) * y//unit ] 
+--   [lesstype| (x//unit * y//unit) | (y//unit * y//unit) ] 
+
+--   -------------------------
+
+--   -- expected: (?spanish unit | ?english unit)
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
+--     let _ : α[1] = _ in
+--     (
+--       (_ => match y[0] case dos;; => spanish;; case two;; => english;;)
+--       (y[1](y[0]))
+--     ) 
+--   ]
+
+--   -----------  argument type strengthening ----------
+
+--   -- expected: uno//unit
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : uno//unit -> dos//unit = _ in
+--     let _ = _ in
+--     let _ = y[1](y[0]) in
+--     y[1]
+--   ]
+
+--   -- expected: uno//unit
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit)} = _ in
+--     let _ = _ in
+--     (
+--       (_ => match y[0] case dos;; => y[0])
+--       (y[1](y[0]))
+--     ) 
+--   ]
+
+--   -- expected: uno//unit
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : uno//unit -> dos//unit = _ in
+--     let _ = _ in
+--     (
+--       (_ => match y[0] case dos;; => y[0])
+--       (y[1](y[0]))
+--     ) 
+--   ]
+
+--   -- requires local strengthening in left-existential
+--   -- expected: uno//unit
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : [_<:α[2]] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit)} = _ in
+--     let _ = _ in
+--     (
+--       (_ => match y[0] case dos;; => y[0])
+--       (y[1](y[0]))
+--     ) 
+--   ]
+
+--   -- incomplete
+--   -- expected: uno//unit | other//unit
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
+--     let _ = _ in
+--     (
+--       (_ => match y[0] case dos;; => y[0] case two;; => other;;)
+--       (y[1](y[0]))
+--     ) 
+--   ]
+
+--   -- incomplete
+--   -- expected: dos//unit | other//unit
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : (dos//unit) | (two//unit) = _ in
+--     (_ => match y[0] case dos;; => y[0] case two;; => other;;)
+--     (y[0])
+--   ]
+
+--   -- incomplete
+--   -- expected: uno//unit 
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : [_] β[0] -> {β[0] with β[1] * β[0] <: (uno//unit * dos//unit) | (one//unit * two//unit)} = _ in
+--     let _ = _ in
+--     (
+--       (_ => match y[0] case dos;; => y[0] case two;; => uno;;)
+--       (y[1](y[0]))
+--     ) 
+--   ]
+
+
+--   -----------  local strengthening ----------
+
+--   -- complete
+--   -- expected: (one//unit | three//unit) 
+--   #eval infer_reduce 0 [lessterm|
+--     let _ = _ in
+--     let _ = (
+--       (_ => match y[0] case one;; => two;; case three;; => four;;)
+--       (y[0])
+--     ) in
+--     y[1]
+--   ]
+
+--   -- expected: (two//unit | four//unit)
+--   #eval infer_reduce 0 [lessterm|
+--     let _ = _ in
+--     (_ => match y[0] case one;; => two;; case three;; => four;;)
+--     (y[0])
+--   ]
+
+--   -- expected:  (([_:(one//unit -> two//unit)]β[0]) & ([_:(three//unit -> four//unit)]β[0]))
+--   #eval infer_reduce 0 [lessterm|
+--     _ => (
+--       (_ => match y[0] 
+--         case one;; => two;; 
+--         case three;; => four;;
+--       )
+--       (y[0])
+--     )
+--   ]
+
+--   -- expected: one//unit
+--   #eval infer_reduce 0 [lessterm|
+--     let _ = _ in
+--     (
+--       (_ => match y[0] 
+--         case one;; => y[0] 
+--         case three;; => one;;
+--       )
+--       (y[0])
+--     )
+--   ]
+
+--   -- expected: none 
+--   #eval infer_reduce 0 [lessterm|
+--     let _ : one//unit | two//unit = _ in
+--     (
+--       (_ => match y[0] 
+--         case one;; => y[0] 
+--         case three;; => one;;
+--       )
+--       (y[0])
+--     )
+--   ]
+
+--   -----------  implication existential ----------
+
+--   -- incomplete
+--   -- expected: unit 
+--   #eval unify_reduce 10 
+--   [lesstype| (one//unit -> unit) & (three//unit -> unit) ]
+--   [lesstype| {β[0] with β[0] <: (one//unit | three//unit)} -> α[7] ]
+--   [lesstype| α[7] ]
+
+--   -- expected: none 
+--   #eval unify_reduce 10 
+--   [lesstype| {β[0] with β[0] <: (one//unit | three//unit)} ]
+--   [lesstype| one//unit ]
+--   [lesstype| unexpected//unit ]
+
+
+--   -- incomplete
+--   -- expected: one//unit 
+--   #eval infer_reduce 0 [lessterm|
+--     let _ : {β[0] with β[0] <: one//unit | three//unit} = _ in
+--     (
+--       (_ => match y[0] 
+--         case one;; => y[0] 
+--         case three;; => one;;
+--       )
+--       (y[0])
+--     )
+--   ]
+
+--   -- incomplete
+--   -- expected: one//unit | three//unit 
+--   #eval infer_reduce 0 [lessterm|
+--     let _ : {β[0] with β[0] <: one//unit | three//unit} = _ in
+--     (
+--       (_ => match y[0] 
+--         case one;; => y[0] 
+--         case three;; => y[0]
+--       )
+--       (y[0])
+--     )
+--   ]
+
+
+--   ---------- implication union ---------
+--   -- (S1 -> T) & (S2 -> T) <: (S1 | S2 -> T) 
+
+
+--   -- expected: unit
+--   #eval unify_reduce 10 
+--   [lesstype| (one//unit -> unit) & (three//unit -> unit) ]
+--   [lesstype| (one//unit | three//unit) -> α[7] ]
+--   [lesstype| α[7] ]
+
+
+--   -- complete
+--   -- expected: four//unit
+--   #eval infer_reduce 0 [lessterm|
+--     let _ : one//unit | three//unit = _ in
+--     (
+--       (_ => match y[0] 
+--         case one;; => four;; 
+--         case three;; => four;;
+--       )
+--       (y[0])
+--     )
+--   ]
+
+--   -- expected: two//unit * four//unit
+--   #eval unify_reduce 10 
+--   [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
+--   [lesstype| (one//unit -> α[7]) & (three//unit -> α[8])]
+--   [lesstype| α[7] * α[8] ]
+
+
+--   -- NOTE: requires adjustment to be turned on
+--   -- expected: two//unit | four//unit
+--   #eval unify_reduce_adj (empty.insert 7) 10
+--   [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
+--   [lesstype| (one//unit | three//unit) -> α[7] ]
+--   [lesstype| α[7] ]
+--   /-
+--   -- TODO: adjustment isn't necessary if it treats variable as unassigned for each case 
+--   -/
+--   ----------------------
+--   /-
+--                                                       Y <: ?'
+--                                                   --------------
+--                                                     Y <: B | ?'
+--                                                   --------------------
+--     B <: ?                                            Y <: ?
+-- ------------------------                     ------------------------
+--   (A -> B) <: (A -> ?)                         (X -> Y) <: (X -> ?) 
+-- ---------------------------------          -----------------------------------
+--   (A -> B & X -> Y) <: (A -> ?),            (A -> B & X -> Y) <: (X -> ?)
+-- --------------------------------------------------------------------------------
+--   (A -> B & X -> Y) <: (A | X) -> ?
+
+
+--   -- NOTE: requires expanding ? into B | Y
+--   -- since it starts as a variable; union a variable to indicate it can expand 
+--   -/
+
+-- -----------------
+
+--   -- NOTE: variable α[7] should not be refined
+--   -- NOTE: requires adjustment to be turned on
+--   -- it should be marked as expandable
+--   -- expected: two//| ?four
+--   #eval unify_reduce_adj (empty.insert 7) 10
+--   [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
+--   [lesstype| (one//unit | three//unit) -> {β[0] with β[0] <: α[7]} ]
+--   [lesstype| α[7] ]
+
+
+-- -----------------
+
+--   #eval unify_simple 10
+--   [lesstype| (one//unit -> two//unit)  ]
+--   [lesstype| (one//unit | three//unit) -> {β[0]} ]
+
+--   #eval unify_simple 10
+--   [lesstype| (three//unit -> four//unit) ]
+--   [lesstype| (one//unit | three//unit) -> {β[0]} ]
+
+
+-- ---------------------------------------------------
+
+
+--   -- expected: one//unit | three//unit
+--   #eval unify_reduce 10
+--   [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
+--   [lesstype| α[7] -> (two//unit | four//unit) ]
+--   [lesstype| α[7] ]
+
+
+--   -------------------------------------------
+--   -- requires weakening of return type in app
+--   -- expected: two//unit | four//unit
+--   -- may be affected initial expected type in infer_reduce 
+--   #eval infer_reduce 0 [lessterm|
+--     let _ : one//unit | three//unit = _ in
+--     (
+--       (_ => match y[0] 
+--         case one;; => two;; 
+--         case three;; => four;;
+--       )
+--       (y[0])
+--     )
+--   ]
+
+--   -- imprecise 
+--   -- expected: one//unit
+--   #eval infer_reduce 0 [lessterm|
+--     let _ : one//unit | three//unit = _ in
+--     (
+--       (_ => match y[0] 
+--         case one;; => y[0] 
+--         case three;; => one;;
+--       )
+--       (y[0])
+--     )
+--   ]
+
+--   ---------- implication intersection ---------
+--   -- (S -> T1) & (S -> T2) <: (S -> T1 & T2)
+
+--   -- expected: true
+--   #eval unify_decide 10 
+--   [lesstype| (one//unit -> two//unit) & (one//unit -> three//unit) ]
+--   [lesstype| one//unit -> (two//unit & three//unit)]
+
+--   ----------------------------------
+
+--   -- NOTE: in right-existential: if key is not matchable; save the relation
+--   -- expected: true 
+--   #eval unify_decide 10 
+--   [lesstype| succ//α[1] * α[0] ]
+--   [lesstype| {(succ//β[0] * cons//β[1]) with (β[0] * β[1]) <: ⟨nat_list⟩ # 2} ]
+
+--   ---------- relational propagation ---------
+
+--   -- NOTE: these are all dependent on an antecedent existential rule
+
+--   -- incomplete
+--   -- NOTE: variables are no longer expanded; 
+--   -- need a generalized disjunction elimination rule 
+--   -- or some general elimination rule for intersection of implication; e.g a factoring rule.
+--   -- expected thing//unit | other//unit
+--   #eval unify_reduce 10 
+--   [lesstype| (zero//unit -> thing//unit) & (succ//α[1] -> other//unit)]
+--   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
+--   [lesstype| α[2] ]
+
+--   -- incomplete
+--   -- expected: other//unit | thing//unit 
+--   #eval unify_reduce 10 
+--   [lesstype| (succ//⟨nat_⟩ -> other//unit) & (zero//unit -> thing//unit)]
+--   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
+--   [lesstype| α[2] ]
+
+--   -- incomplete
+--   -- expected: nil//unit | other//unit
+--   #eval unify_reduce 10 
+--   [lesstype| (zero//unit -> α[0]) & (succ//α[1] -> other//unit)]
+--   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
+--   [lesstype| α[2] ]
+
+--   -- incomplete
+--   -- expected: nil//unit | other//unit
+--   #eval unify_reduce 10 
+--   [lesstype| (zero//unit -> α[0]) & (succ//⟨list_⟩ -> other//unit)]
+--   [lesstype| {β[0] with β[0] * α[0] <: ⟨nat_list⟩} -> α[2]]
+--   [lesstype| α[2] ]
+
+--   -- incomplete
+--   -- expected: nil//unit | other//unit
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : α[0] = _ in
+--     let _ : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
+--     (
+--       (_ => match y[0] 
+--         case zero;; => y[1] 
+--         case succ; y[0] => other;;
+--       )
+--       (y[0])
+--     )
+--   ]
+
+--   ----- using function application --------
+
+--   -- incomplete
+--   -- NOTE: full reduction requires using unify_all to solve remaining constraints
+--   -- NOTE: return type should not be refined further after return
+--   -- expected: zero//unit | other//unit
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : [_<:α[0]] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} = _ in
+--     let _ = _ in
+--     (
+--       (_ => match y[0] 
+--         case nil;; => y[0] 
+--         case cons;y[0] => other;;
+--       )
+--       (y[1](y[0]))
+--     )
+--   ]
+
+--   -- argument type is weaker than parameter type
+--   -- expected: none 
+--   #eval infer_reduce 10 [lessterm|
+--     let _ : α[0] = _ in
+--     let _ : {β[0] with β[0] * α[0] <: ⟨nat_list⟩} = _ in
+--     (
+--       (_ => match y[0] 
+--         case zero;; => y[1]
+--       )
+--       (y[0])
+--     )
+--   ]
+
+
+--   -------- collapsing ------------
+
+--   -- expected: multiple environments
+--   #eval infer_simple 0 [lessterm| 
+--     let _ = _ in 
+--     (_ => match y[0] 
+--       case one;; => two;; 
+--       case three;; => four;;
+--     )(y[0])
+--   ]
+
+
+--   -- expected: none 
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = _ in 
+--     (_ => match y[0] 
+--       case two;; => thing;;
+--     ) 
+--     ((_ => match y[0] 
+--       case one;; => two;; 
+--       case three;; => four;;)(y[0]))
+--   ]
+
+--   #eval infer_simple 0 [lessterm| 
+--     let _ = _ in 
+--     let _ = (_ => match y[0] 
+--       case one;; => two;; 
+--       case three;; => four;;
+--     )(y[0]) in
+--     y[0]
+--   ]
+
+--   -- sound because initial type may be restricted
+--   -- there exists a type that can be inhabited 
+--   -- expected: one//unit
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = _ in 
+--     let _ = (_ => match y[0] case one;; => two;; case three;; => four;;)(y[0]) in
+--     let _ = (_ => match y[0] case two;; => thing;;)(y[0]) in
+--     y[2]
+--   ]
+
+--   -- expected: thing//unit
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = _ in 
+--     let _ = (_ => match y[0] case one;; => two;;)(y[0]) in
+--     (_ => match y[0] case two;; => thing;;)(y[0])
+--   ]
+
+--   --------------------------------------
+
+
+--   -- expected: ((one//unit -> two//unit) & (three//unit -> four//unit))
+--   #eval infer_reduce 0 [lessterm| 
+--     (_ => match y[0] case one;; => two;; case three;; => four;;)
+--   ]
+
+--   -- imprecise: inferring union instead of intersection
+--   -- requires generalization upon detection of funciton types
+--   -- expected: ((one//unit -> two//unit) & (three//unit -> four//unit))
+--   #eval infer_reduce 0 [lessterm| 
+--     (_ => (_ => match y[0] case one;; => two;; case three;; => four;;)(y[0]))
+--   ]
+
+--   #eval infer_envs 0 [lessterm| 
+--     (_ => (_ => match y[0] case one;; => two;; case three;; => four;;)(y[0]))
+--   ]
+
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = _ in
+--     (_ => match y[0] 
+--       case one;; => two;; 
+--       case three;; => four;;)(y[0])
+--   ]
+
+--   #eval unify_reduce 10
+--   [lesstype| (one//unit -> two//unit) & (three//unit -> four//unit) ]
+--   [lesstype| α[7] -> α[8]]
+--   [lesstype| α[7] -> α[8]]
+
+--   ------- path selection --------------
+--   -- expected: two//unit 
+--   #eval infer_reduce 0 [lessterm| 
+--     (_ => match y[0] case one;; => two;; case three;; => four;;)(one;;) 
+--   ]
+
+-- ------------------------------
+
+--   -- expected: false
+--   #eval unify_decide 0
+--   [lesstype| {β[0] with β[0] * cons//cons//nil//unit <: ⟨nat_list⟩}]
+--   [lesstype| succ//foo//zero//unit ]
+
+--   #eval unify_reduce 10
+--   [lesstype| {β[0] with β[0] * cons//cons//nil//unit <: ⟨nat_list⟩}]
+--   [lesstype| α[0]]
+--   [lesstype| α[0]]
+
+--   #eval unify_reduce 10
+--   [lesstype| α[0] * cons//cons//nil//unit]
+--   nat_list
+--   [lesstype| α[0] ]
+
+--   #eval unify_decide 10
+--   [lesstype| succ//foo//zero//unit ]
+--   [lesstype| succ//succ//zero//unit ]
+
+--   --------- sound application --------
+
+--   -- expected: false
+--   #eval unify_decide 10
+--   [lesstype|
+--     {β[0] * β[1] with (x : β[0] & y : β[1] & z : succ//zero//unit ) <: ⟨plus⟩}
+--   ]
+--   [lesstype| (zero//unit * succ//zero//unit) ]
+
+--   -- incomplete: not fully reduced
+--   -- expected: ((zero//unit * succ//zero//unit) | (succ//zero//unit * zero//unit))
+--   #eval unify_reduce 10
+--   [lesstype|
+--     {β[0] * β[1] with (x : β[0] & y : β[1] & z : succ//zero//unit ) <: ⟨plus⟩}
+--   ]
+--   [lesstype| α[7] ]
+--   [lesstype| α[7] ]
+
+--   #eval unify_reduce 10
+--   [lesstype|
+--     [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩}
+--   ]
+--   [lesstype| succ//zero//unit -> α[7] ]
+--   [lesstype| α[7] ]
+
+--   -- incomplete: not fully reduced
+--   -- expected: ((zero//unit * succ//zero//unit) | (succ//zero//unit * zero//unit))
+--   #eval infer_reduce 10
+--   [lessterm|
+--     let _ : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
+--     y[0](succ;zero;;)
+--   ]
+--   -----------------------------------
+
+--   -- expected: none 
+--   #eval unify_reduce 10
+--   [lesstype|
+--     (zero//unit * succ//zero//unit) -> unit
+--   ]
+--   [lesstype| ((zero//unit * succ//zero//unit) | (succ//zero//unit * zero//unit)) -> α[7] ]
+--   [lesstype| α[7] ]
+
+--   -- expected: none 
+--   #eval infer_reduce 10
+--   [lessterm|
+--     let _ : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
+--     let _ : (zero//unit * succ//zero//unit) -> unit = _ in 
+--     y[0](y[1](succ;zero;;))
+--   ]
+
+--   -- expected: unit
+--   #eval infer_reduce 10
+--   [lessterm|
+--     let _ : (foo//unit) -> unit = _ in 
+--     y[0](foo;;)
+--   ]
+
+--   -- expected: none 
+--   #eval infer_reduce 10
+--   [lessterm|
+--     let _ : (foo//unit) -> unit = _ in 
+--     y[0](boo;;)
+--   ]
+
+--   -------------------------------------------
+--   ---------- let binding soundness -----------
+
+--   -- expected: none 
+--   #eval infer_reduce 10
+--   [lessterm|
+--     let _ : [_] β[0] -> {β[0] * β[1] with (x : β[0] & y : β[1] & z : β[2]) <: ⟨plus⟩} =  _ in
+--     let _ : (zero//unit * succ//zero//unit) = y[0](succ;zero;;) in
+--     y[0]
+
+--   ]
+
+--   ----------- left-inductive -----------------
+
+--   -- expected: true
+--   #eval unify_decide 30
+--   [lesstype| ⟨nat_⟩ ] 
+--   [lesstype| (zero//unit | succ//⟨nat_⟩) ]
+
+--   -- expected: true
+--   #eval unify_decide 30
+--   [lesstype| ((zero//unit | succ//⟨nat_⟩)) ] 
+--   [lesstype| (⟨nat_⟩) ]
+
+--   -- expected: true 
+--   #eval unify_decide 0
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| ⟨nat_⟩ * ⟨list_⟩ ]
+
+--   -- NOTE: this requires factoring to circumvent circular variable restriction.
+--   #eval unify_decide 10
+--   [lesstype| ⟨nat_list⟩ ]
+--   [lesstype| ⟨nat_⟩ * α[1] ]
+
+
+--   ------- specialization --------------
+--   -- NOTE: this is specialized because left-universal checks constraints after unification
+--   -- expected: even 
+--   #eval infer_reduce 0 [lessterm|
+--   let _ : [_<:⟨nat_⟩] β[0] * β[0] -> β[0] = _ in 
+--   let _ : ⟨even⟩ = _ in
+--   (y[1] (y[0], zero;;))
+--   ]
+
+--   -- expected: nat 
+--   #eval infer_reduce 0 [lessterm|
+--   let _ : [_<:⟨nat_⟩] β[0] * β[0] -> β[0] = _ in 
+--   let _ : ⟨even⟩ = _ in
+--   (y[1] (zero;;, y[0]))
+--   ]
+
+
+
+-- --------------------------------------
+
+-- -----------------------------------
+-- -- uninhabitable
+-- -----------------------------------
+
+--   -- is unification with uninhabitable types unsound?
+--   -- assigment indicates a subtyping; (not a typing)
+--   -- the existience of a subtyping does not imply the existence of a typing; 
+--   -- that is, the subtype could also be empty 
+--   -- thus it does not introduce a false premise in order to draw a false conclusion
+
+--   -- α[7] is an uninhabitable type
+--   #eval unify_decide 10 
+--   [lesstype| α[7] ]
+--   [lesstype| {β[0] with succ//β[0] <: foo//β[0]} ]
+
+--   -- α[0] is an uninhabitable type
+--   #eval unify_decide 30
+--   [lesstype| [_<:top] β[0] -> {β[0] with β[1] * β[0] <: ⟨nat_list⟩} ]
+--   [lesstype| foo//succ//zero//unit -> α[0] ] 
+
+--   -- expected false
+--   #eval unify_decide 30
+--   [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨nat_list⟩}] β[0] ]
+--   [lesstype| foo//succ//zero//unit -> α[0] ] 
+
+
+-- -------------------------------------
+--   -- max example 
+-- -------------------------------------
+
+
+--   -- incomplete
+--   -- expected: notions of zero//and true//appear in inferred type
+--   -- this requires including relational constraints in generalization
+--   #eval infer_reduce 0 [lessterm| 
+--     (_ => (fix (_ => _ => match y[0]
+--       case (zero;;, zero;;) => true;;  
+--     )) (y[0]))
+--   ] 
+
+--   -- incomplete: lack of recursive call causes failure
+--   #eval infer_reduce 0 [lessterm| 
+--     (fix (_ => _ => match y[0]
+--       case (zero;;, zero;;) => true;;
+--     ))
+--   ] 
+
+--   #eval infer_reduce 0 [lessterm| 
+--     (fix (_ => _ => match y[0]
+--       case (zero;;, zero;;) => y[0](true;;)
+--     ))
+--   ] 
+
+--   -- incomplete
+--   -- expected: true//unit
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = (_ => ((fix (_ => _ => match y[0]
+--       case (zero;;, zero;;) => true;;  
+--     )) (y[0])))
+--     in
+--     (y[0] (zero;;, zero;;))
+--   ] 
+
+--   def nat_pair := [lesstype|
+--     induct
+--       {(zero//unit * ⟨nat_⟩)} 
+--       | 
+--       {(succ//β[0] * succ//β[1]) with (β[0] * β[1]) <: β[2] } 
+--       | 
+--       {(succ//⟨nat_⟩ * zero//unit)}
+--   ]
+
+--   -- expected: relational function type
+--   #eval infer_reduce 0 [lessterm| 
+--     fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     )
+--   ] 
     
-  -- expected: false//unit
-  #eval infer_reduce 0 [lessterm| 
-    -- less than or equal:
-    let _ = fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    ) in
-    (
-      (_ => y[0])
-      (y[0] (succ; succ; zero;;, succ; zero;;))
-    )
-  ] 
-
-  -- expected: the argument type should be refined by the function application 
-  #eval infer_reduce 0 [lessterm| 
-    -- less than or equal:
-    let _ = fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    ) in
-    (_ => match y[0] case (y[0], y[1]) => 
-      (
-        let _ = (y[3] (y[0], y[1])) in
-        y[1]
-      )
-    )
-  ] 
-
-  -- expected: type maintains relational information 
-  #eval infer_reduce 0 [lessterm| 
-    let _ = fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    ) in
-    let _ = (_ => match y[0] case (y[0], y[1]) => 
-        (y[3] (y[0], y[1]))
-    ) in
-    y[0]
-  ] 
-
-
-  -- NOTE: not reducible 
-  -- expected: none 
-  #eval unify_reduce 10
-  [lesstype| (α[1] * α[2]) * true//unit ]
-  [lesstype|
-  induct (
-      {((zero//unit * β[0]) * true//unit) # 1} |
-      {((succ//β[0] * succ//β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3] # 3} |
-      {((succ//β[0] * zero//unit) * false//unit) # 1}
-  )
-  ]
-  [lesstype| (α[1] * α[2]) * true//unit ]
-
-  -- expected: ?? 
-  #eval unify_decide 0
-  [lesstype|
-    ({β[0] with ((α[20] * α[18]) * β[0]) <: 
-      (induct ({((zero//unit * β[0]) * true//unit) # 1} |
-      ({((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3] # 3} |
-      {((succ//β[0] * zero//unit) * false//unit) # 1}))) # 1}
-  )
-  ]
-  [lesstype| true//unit ]
-
-
-  -- expected: type is maintained after identity function application
-  #eval infer_reduce 0 [lessterm| 
-    -- less than or equal:
-    let _ = fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ;y[0], succ; y[1]) => y[3](y[0], y[1])
-      case (succ;y[0], zero;;) => false;; 
-    ) in
-    (_ => match y[0] case (y[0], y[1]) => 
-      (
-        (_ => y[0])
-        (y[2] (y[0], y[1]))
-      )
-    )
-  ]
-
-  -- expected: type that describes max invariant
-  -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
-  #eval infer_reduce 0 [lessterm| 
-    let _ = fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    ) in
-    let _ = _ in
-    let _ = _ in
-    (
-      if (y[2] (y[0], y[1])) then
-        y[1]
-      else
-        y[0]
-    )
-  ] 
-
-
-
-  -- expected: 
-  /-
-  (? >> (? >> ({2 // (β[1] * β[0]) with (β[1] * β[0]) <: (induct ({1 // (zero//unit * β[0])} |
-        ({3 // (succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3]} | {1 // (succ//β[0] * zero//unit)})))} >> β[0])))
-  -/
-  #eval unify_reduce 10 
-  [lesstype| 
-  α[0] * α[1]
-  ]
-  [lesstype| 
-  (induct (
-    {(zero//unit * β[0]) # 1} | 
-    {(succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3] # 3} |
-    {(succ//β[0] * zero//unit) # 1}
-  )) 
-  ]
-  [lesstype| 
-  α[0] * α[1]
-  ]
-
-  -- expected: 
-  /-
-  (? >> (? >> ({2 // (β[1] * β[0]) with (β[1] * β[0]) <: (induct ({1 // (zero//unit * β[0])} |
-        ({3 // (succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3]} | {1 // (succ//β[0] * zero//unit)})))} >> β[0])))
-  -/
-  #eval unify_reduce 10 
-  [lesstype| 
-  [_<:(induct (
-    {(zero//unit * β[0]) # 1} | 
-    {(succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3] # 3} |
-    {(succ//β[0] * zero//unit) # 1}
-  ))] (β[0] ->
-    {β[0] with (β[1] * β[0]) <: (induct 
-      {((zero//unit * β[0]) * true//unit) # 1} |
-      {((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3] # 3} |
-      {((succ//β[0] * zero//unit) * false//unit) # 1}
-    ) # 1}
-  )
-    ]
-  [lesstype| 
-  α[0] * α[1] -> α[2]
-  ]
-  [lesstype| 
-  α[0] * α[1]
-  ]
-
-  #eval unify_reduce 10 
-  [lesstype| α[0] * α[1] ]
-  nat_list
-  [lesstype| α[0] * α[1] ]
-
-  -- NOTE: unify_all breaks this
-  -- complete
-  -- expected: type that describes max invariant
-  -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
-  #eval infer_reduce 0 [lessterm| 
-    let _ = fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    ) in
-    (_ => match y[0] case (y[0], y[1]) => 
-      (
-        if (y[3] (y[0], y[1])) then
-          y[1]
-        else 
-          y[0]
-      )
-    ) 
-  ] 
-
-/-
-{2 # ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * true//unit) <: (induct (
-      ((zero//unit * α[7]) * true//unit) |
-      {3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
-      ((succ//α[14] * zero//unit) * false//unit)
-))} |
-
-{2 # ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * false//unit) <: (induct (
-      ((zero//unit * α[7]) * true//unit) |
-      {3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
-      ((succ//α[14] * zero//unit) * false//unit)
-))}
--/
-
-  -- complete
-  -- NOTE: max of the two inputs  
-  -- expected: succ//succ//succ//zero//unit   
-  #eval infer_reduce 0 [lessterm| 
-    let _ = fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    ) in
-    let _ = (_ => match y[0] case (y[0], y[1]) =>
-      (
-        if (y[3] (y[0], y[1])) then
-          y[1]
-        else
-          y[0]
-      )
-    ) in
-    (y[0] (succ;zero;;, succ;succ;succ;zero;;))
-  ] 
-
-
-  -- incomplete 
-  -- actual: {X with X > 1} 
-  -- expected: succ//succ//succ//zero//unit   
-  #eval infer_reduce 0 [lessterm| 
-    let _ = fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    ) in
-    let _ = (_ => match y[0] case (y[0], y[1]) =>
-      (
-        if (y[3] (y[0], y[1])) then
-          y[1]
-        else
-          y[0]
-      )
-    ) in
-    (y[0] (succ;succ;succ;zero;;, succ;zero;;))
-  ] 
-
-  -- complete
-  -- NOTE: merely require some of the function paths to match
-  -- not necessary for all cases to succeed
-  -- expected: succ//succ//succ//zero//unit   
-  #eval infer_reduce 0 [lessterm| 
-    (_ => match y[0] case (y[0], y[1]) => 
-      (
-        if 
-          (fix(_ => _ => match y[0]
-            case (zero;;, y[0]) => true;;  
-            case (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-            case (succ; y[0], zero;;) => false;; 
-          ) (y[0], y[1]))
-        then
-          y[1]
-        else
-          y[0]
-      )
-    ) 
-    ((succ; zero;;, succ; succ; succ; zero;;))
-  ] 
-
-
-  def led_ := [lesstype|
-    induct 
-      {((zero//unit * β[0]) * true//unit) # 1} |
-      {((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3] # 3} |
-      {((succ//β[0] * zero//unit) * false//unit) # 1}
-  ]
-
-  -------------
-  #eval unify_reduce 10
-  [lesstype|
-    (([_<:{((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩ # 2}] β[0])) & 
-    (([_<:{((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩ # 2}] β[0]))
-  ]
-  [lesstype| succ//zero//unit * succ//succ//succ//zero//unit -> α[7] ]
-  [lesstype| α[7]]
-
-
-  -- expected: succ//succ//succ//zero//unit
-  #eval unify_reduce 10
-  [lesstype| (succ//zero//unit * succ//succ//succ//zero//unit) * α[7] ]
-  [lesstype|
-    ({((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩ # 2}) 
-    |
-    ({((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩ # 2})
-  ]
-  [lesstype| α[7]]
-
-  -- expected: succ//succ//succ//zero//unit
-  #eval unify_reduce 10
-  [lesstype| (succ//succ//succ//zero//unit * succ//zero//unit) * α[7] ]
-  [lesstype|
-    ({((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩ # 2}) 
-    |
-    ({((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩ # 2})
-  ]
-  [lesstype| α[7]]
-
-  --------------- debugging ---------------
-
-  -- complete
-  -- expected: false//unit 
-  #eval infer_reduce 0 [lessterm| 
-    (
-      (fix (_ => _ => match y[0]
-        case (zero;;, y[0]) => true;;  
-        case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-        case (succ; y[0], zero;;) => false;; 
-      ))
-      (succ; succ; zero;;, succ; zero;;)
-    )
-  ] 
-
-  #eval infer_reduce 0 [lessterm| 
-    let _ = (fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    )) in
-    (y[0] (succ; succ; zero;;, succ; zero;;))
-  ] 
-
-  #eval infer_reduce 0 [lessterm| 
-    (fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    ))
-  ] 
-
-
-
-  #eval unify_decide 10 
-  [lesstype| succ//zero//unit * zero//unit]
-  nat_pair
-
-
-  def le_ := [lesstype|
-    induct
-      {(zero//unit * β[0]) * true//unit} 
-      | 
-      {(succ//β[0] * succ//β[1]) * β[2] with (β[0] * β[1]) * β[2] <: β[3] } 
-      | 
-      {(succ//β[0] * zero//unit) * false//unit}
-  ]
-
-  -- expected: none 
-  #eval unify_reduce 10 
-  [lesstype|
-    ([_<:ooga//unit]
-       (β[0] -> {β[0] with (β[1] * β[0]) <: ⟨le_⟩ # 1}))
-  ]
-  [lesstype| succ//succ//zero//unit * succ//zero//unit -> α[0]]
-  [lesstype| α[0] ]
-
-  -- incomplete: not reducing all the way
-  -- expected: false//unit 
-  #eval unify_reduce 10 
-  [lesstype| ([_<:⟨nat_pair⟩] (β[0] -> {β[0] with (β[1] * β[0]) <: ⟨le_⟩ # 1})) ]
-  [lesstype| succ//succ//zero//unit * succ//zero//unit -> α[0]]
-  [lesstype| α[0] ]
-
--------------------------------------
-  -- sum example 
--------------------------------------
-
-  def diff := [lessterm|
-    fix(_ => _ => match y[0] 
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1]))
-      case (zero;;, y[0]) => y[0]
-      case (y[0], zero;;) => y[0] 
-    )
-  ]
-
-  #eval infer_reduce 10  [lessterm|
-    let _ = ⟨diff⟩ in
-    (y[0] (succ; succ; zero;;, succ; zero;;))
-  ]
-
-
-  def leq := [lessterm|
-    fix (_ => _ => match y[0]
-      case (zero;;, y[0]) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-      case (succ; y[0], zero;;) => false;; 
-    )
-  ]
-
-  def max := [lessterm| 
-    (_ => match y[0] case (y[0], y[1]) => 
-      (
-        if (⟨leq⟩ (y[0], y[1])) then
-          y[1]
-        else
-          y[0]
-      )
-    ) 
-  ] 
-
-  def add := [lessterm|
-    fix(_ => _ => match y[0] 
-      case (zero;;, y[0]) => y[0] 
-      case (succ; y[0], y[1]) => succ; (y[3] (y[0], y[1]))
-    )
-  ]
-
-  #eval infer_reduce 0 add 
-
-  def sum := [lessterm|
-    fix(_ => _ => match y[0]
-      case zero;; => zero;; 
-      case succ; y[0] => (
-        (⟨add⟩)((y[2](y[0]), succ;y[0]))
-      )
-    )
-  ]
-
-  --expected: type that relates the recursive result type variable to the application's result type 
-  /-
-       {2 // (succ//X * A) with (X, Y) <: self} 
-       where
-        add (e1, e2) : A 
-        e1 : Y
-        e2 : succ//X 
-  -/
-  #eval infer_reduce 0 sum 
-
-  #eval infer_reduce 0 [lessterm| 
-    (⟨sum⟩)(succ;succ;zero;;) 
-  ]
-
-  -- sum(2) : {v | v >= 2} 
-  -- 0 : {v | v >= 2} 
-  -- expected: false 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
-  | some ty => unify_decide 0 [lesstype| zero//unit ] ty
-  | none => false
-
-  -- sum(2) : {v | v >= 2} 
-  -- 1 : {v | v >= 2} 
-  -- expected: false 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
-  | some ty => unify_decide 0 [lesstype| succ//zero//unit ] ty
-  | none => false
-
-  -- sum(2) : {v | v >= 2} 
-  -- 2 : {v | v >= 2} 
-  -- expected: true
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
-  | some ty => unify_decide 0 [lesstype| succ//succ//zero//unit ] ty
-  | none => false
-
-  -- sum(2) : {v | v >= 2} 
-  -- 3 : {v | v >= 2} 
-  -- expected: true 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
-  | some ty => unify_decide 0 [lesstype| succ//succ//succ//zero//unit ] ty
-  | none => false
-
-
-  #eval infer_reduce 0 [lessterm| 
-    (⟨sum⟩)(succ;zero;;) 
-  ]
-
-  -- expected: false 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;;)]) with
-  | some ty => unify_decide 0 [lesstype| zero//unit ] ty
-  | none => false
-
-  -- expected: true
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;;)]) with
-  | some ty => unify_decide 0 [lesstype| succ//zero//unit ] ty
-  | none => false
-
-
-  #eval infer_reduce 0 [lessterm| 
-    (⟨sum⟩)(zero;;) 
-  ]
-
-  -- expected: true 
-  #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(zero;;)]) with
-  | some ty => unify_decide 0 [lesstype| zero//unit ] ty
-  | none => false
-
-  -------------------------------------
-  /-
-  foldn example 
-  -/
-  -------------------------------------
-
-  def lt := [lessterm|
-    fix (_ => _ => match y[0]
-      case (zero;;, succ;zero;;) => true;;  
-      case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
-      case (y[0], zero;;) => false;; 
-    )
-  ]
-
-  #eval infer_reduce 0 lt
-
-  -- expected: true//unit
-  #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩(zero;;, succ;zero;;) 
-  ]
-
-  -- expected: true//unit
-  #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩(succ;zero;;, succ;succ;zero;;) 
-  ]
-
-  -- expected: false//unit
-  #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩(zero;;, zero;;) 
-  ]
-
-  -- expected: false//unit
-  #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩(succ;zero;;, succ;zero;;) 
-  ]
-
-  -- expected: false//unit
-  #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩(succ;succ;zero;;, succ;zero;;) 
-  ]
-
-  #eval infer_reduce 0 [lessterm| 
-    ⟨lt⟩ 
-  ]
-
----------------
-  def foldn := [lessterm|
-  let _ = _ in
-  let _ = _ in
-  _ => match y[0] case (y[0], (y[1], y[2])) => (
-      let _ = fix(_ => _ => match y[0] case (y[0], y[1]) =>
-        /-
-        n, b, f: 4, 5, 6 
-        loop: 3 
-        i, c: 0, 1 
-        -/
-        (if ⟨lt⟩(y[0], y[4]) then
-          -- y[3](succ;y[0], y[6](y[0], y[1]))
-          y[3](succ;y[0], ;)
-        else
-          y[1]
-        )
-      ) in 
-      /-
-      loop: 0 
-      n: 1
-      b: 2
-      f: 3
-      -/
-      y[0](zero;;, y[2])
-      -- y[0]
-  )
-  ]
-
-  /-
-  incomplete
-  ERROR: naive decreasing requirement for unifying with inductive type is overly strict  
-  TODO: convert to leverging CHC solver, and rely on external decidability heuristics 
-  -/
-  #eval infer_reduce 0 foldn
-
-  /-
-  ERROR: fails due to overly strict and naive decreasing heuristic
-  -/ 
-  #eval decreasing 0
-  [lesstype|
-    -- THE succ//β[1] is not decreasing!!
-    {((β[1] * β[2]) * β[0]) with ((succ//β[1] * unit) * β[0]) <: β[3] # 3}
-  ]
-
-  -------------------------------
-  /-
-  pattern matching type inference 
-  -/
-  -------------------------------
-  /-
-  Pattern matching should include switch, rather then merely having branches of a function.
-  Inclusion of switch allows more precise typing; since switch <: pattern constraint can be leveraged for inferring type for each case.
-  Seems related to occurence typing
-  -/
-  #eval infer_reduce 0 [lessterm|
-    let _ = _ in
-    (_ => match y[0]
-      case XO;; => (_ => match y[0] case XO;; => XX;;)(y[0]) -- need to prevent this assignment from escaping
-      case YO;; => YY;;
-    )
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-    (_ => 
-      (_ => match y[0]
-        case XO;; => (_ => match y[0] case XO;; => XX;;)(y[0]) -- need to prevent this assignment from escaping
-        case YO;; => YY;;
-      )((y[0]))
-    )
-  ]
-
-----------------------------------
-
-  def zero := [lessterm|
-    _ => match y[0]
-    case zero;; => true;;  
-    case succ;y[0] => false;; 
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-    fix(_ => _ =>
-      if ⟨zero⟩(y[0]) then
-        zero;;
-      else
-        match y[0] 
-        case succ;y[0] => succ;(y[2](y[0]))
-    )(succ;zero;;)
-  ]
-
-  #eval infer_reduce 0 [lessterm|
-    fix(_ => _ => match y[0]
-      case zero;; => zero;; 
-      case succ;y[0] => succ;y[2](y[0])
-    )(succ;zero;;)
-  ]
+--   -- expected: false//unit
+--   #eval infer_reduce 0 [lessterm| 
+--     -- less than or equal:
+--     let _ = fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     ) in
+--     (
+--       (_ => y[0])
+--       (y[0] (succ; succ; zero;;, succ; zero;;))
+--     )
+--   ] 
+
+--   -- expected: the argument type should be refined by the function application 
+--   #eval infer_reduce 0 [lessterm| 
+--     -- less than or equal:
+--     let _ = fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     ) in
+--     (_ => match y[0] case (y[0], y[1]) => 
+--       (
+--         let _ = (y[3] (y[0], y[1])) in
+--         y[1]
+--       )
+--     )
+--   ] 
+
+--   -- expected: type maintains relational information 
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     ) in
+--     let _ = (_ => match y[0] case (y[0], y[1]) => 
+--         (y[3] (y[0], y[1]))
+--     ) in
+--     y[0]
+--   ] 
+
+
+--   -- NOTE: not reducible 
+--   -- expected: none 
+--   #eval unify_reduce 10
+--   [lesstype| (α[1] * α[2]) * true//unit ]
+--   [lesstype|
+--   induct (
+--       {((zero//unit * β[0]) * true//unit) # 1} |
+--       {((succ//β[0] * succ//β[1]) * β[2]) with ((β[0] * β[1]) * β[2]) <: β[3] # 3} |
+--       {((succ//β[0] * zero//unit) * false//unit) # 1}
+--   )
+--   ]
+--   [lesstype| (α[1] * α[2]) * true//unit ]
+
+--   -- expected: ?? 
+--   #eval unify_decide 0
+--   [lesstype|
+--     ({β[0] with ((α[20] * α[18]) * β[0]) <: 
+--       (induct ({((zero//unit * β[0]) * true//unit) # 1} |
+--       ({((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3] # 3} |
+--       {((succ//β[0] * zero//unit) * false//unit) # 1}))) # 1}
+--   )
+--   ]
+--   [lesstype| true//unit ]
+
+
+--   -- expected: type is maintained after identity function application
+--   #eval infer_reduce 0 [lessterm| 
+--     -- less than or equal:
+--     let _ = fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ;y[0], succ; y[1]) => y[3](y[0], y[1])
+--       case (succ;y[0], zero;;) => false;; 
+--     ) in
+--     (_ => match y[0] case (y[0], y[1]) => 
+--       (
+--         (_ => y[0])
+--         (y[2] (y[0], y[1]))
+--       )
+--     )
+--   ]
+
+--   -- expected: type that describes max invariant
+--   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     ) in
+--     let _ = _ in
+--     let _ = _ in
+--     (
+--       if (y[2] (y[0], y[1])) then
+--         y[1]
+--       else
+--         y[0]
+--     )
+--   ] 
+
+
+
+--   -- expected: 
+--   /-
+--   (? >> (? >> ({2 // (β[1] * β[0]) with (β[1] * β[0]) <: (induct ({1 // (zero//unit * β[0])} |
+--         ({3 // (succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3]} | {1 // (succ//β[0] * zero//unit)})))} >> β[0])))
+--   -/
+--   #eval unify_reduce 10 
+--   [lesstype| 
+--   α[0] * α[1]
+--   ]
+--   [lesstype| 
+--   (induct (
+--     {(zero//unit * β[0]) # 1} | 
+--     {(succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3] # 3} |
+--     {(succ//β[0] * zero//unit) # 1}
+--   )) 
+--   ]
+--   [lesstype| 
+--   α[0] * α[1]
+--   ]
+
+--   -- expected: 
+--   /-
+--   (? >> (? >> ({2 // (β[1] * β[0]) with (β[1] * β[0]) <: (induct ({1 // (zero//unit * β[0])} |
+--         ({3 // (succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3]} | {1 // (succ//β[0] * zero//unit)})))} >> β[0])))
+--   -/
+--   #eval unify_reduce 10 
+--   [lesstype| 
+--   [_<:(induct (
+--     {(zero//unit * β[0]) # 1} | 
+--     {(succ//β[1] * succ//β[2]) with (β[1] * β[2]) <: β[3] # 3} |
+--     {(succ//β[0] * zero//unit) # 1}
+--   ))] (β[0] ->
+--     {β[0] with (β[1] * β[0]) <: (induct 
+--       {((zero//unit * β[0]) * true//unit) # 1} |
+--       {((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3] # 3} |
+--       {((succ//β[0] * zero//unit) * false//unit) # 1}
+--     ) # 1}
+--   )
+--     ]
+--   [lesstype| 
+--   α[0] * α[1] -> α[2]
+--   ]
+--   [lesstype| 
+--   α[0] * α[1]
+--   ]
+
+--   #eval unify_reduce 10 
+--   [lesstype| α[0] * α[1] ]
+--   nat_list
+--   [lesstype| α[0] * α[1] ]
+
+--   -- NOTE: unify_all breaks this
+--   -- complete
+--   -- expected: type that describes max invariant
+--   -- e.g. X -> Y -> {Z with (X * Z) <: LE, (Y * Z) <: LE}
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     ) in
+--     (_ => match y[0] case (y[0], y[1]) => 
+--       (
+--         if (y[3] (y[0], y[1])) then
+--           y[1]
+--         else 
+--           y[0]
+--       )
+--     ) 
+--   ] 
+
+-- /-
+-- {2 # ((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * true//unit) <: (induct (
+--       ((zero//unit * α[7]) * true//unit) |
+--       {3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
+--       ((succ//α[14] * zero//unit) * false//unit)
+-- ))} |
+
+-- {2 # ((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * false//unit) <: (induct (
+--       ((zero//unit * α[7]) * true//unit) |
+--       {3 # ((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3]} |
+--       ((succ//α[14] * zero//unit) * false//unit)
+-- ))}
+-- -/
+
+--   -- complete
+--   -- NOTE: max of the two inputs  
+--   -- expected: succ//succ//succ//zero//unit   
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     ) in
+--     let _ = (_ => match y[0] case (y[0], y[1]) =>
+--       (
+--         if (y[3] (y[0], y[1])) then
+--           y[1]
+--         else
+--           y[0]
+--       )
+--     ) in
+--     (y[0] (succ;zero;;, succ;succ;succ;zero;;))
+--   ] 
+
+
+--   -- incomplete 
+--   -- actual: {X with X > 1} 
+--   -- expected: succ//succ//succ//zero//unit   
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     ) in
+--     let _ = (_ => match y[0] case (y[0], y[1]) =>
+--       (
+--         if (y[3] (y[0], y[1])) then
+--           y[1]
+--         else
+--           y[0]
+--       )
+--     ) in
+--     (y[0] (succ;succ;succ;zero;;, succ;zero;;))
+--   ] 
+
+--   -- complete
+--   -- NOTE: merely require some of the function paths to match
+--   -- not necessary for all cases to succeed
+--   -- expected: succ//succ//succ//zero//unit   
+--   #eval infer_reduce 0 [lessterm| 
+--     (_ => match y[0] case (y[0], y[1]) => 
+--       (
+--         if 
+--           (fix(_ => _ => match y[0]
+--             case (zero;;, y[0]) => true;;  
+--             case (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
+--             case (succ; y[0], zero;;) => false;; 
+--           ) (y[0], y[1]))
+--         then
+--           y[1]
+--         else
+--           y[0]
+--       )
+--     ) 
+--     ((succ; zero;;, succ; succ; succ; zero;;))
+--   ] 
+
+
+--   def led_ := [lesstype|
+--     induct 
+--       {((zero//unit * β[0]) * true//unit) # 1} |
+--       {((succ//β[1] * succ//β[2]) * β[0]) with ((β[1] * β[2]) * β[0]) <: β[3] # 3} |
+--       {((succ//β[0] * zero//unit) * false//unit) # 1}
+--   ]
+
+--   -------------
+--   #eval unify_reduce 10
+--   [lesstype|
+--     (([_<:{((β[0] * β[1]) -> β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩ # 2}] β[0])) & 
+--     (([_<:{((β[0] * β[1]) -> β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩ # 2}] β[0]))
+--   ]
+--   [lesstype| succ//zero//unit * succ//succ//succ//zero//unit -> α[7] ]
+--   [lesstype| α[7]]
+
+
+--   -- expected: succ//succ//succ//zero//unit
+--   #eval unify_reduce 10
+--   [lesstype| (succ//zero//unit * succ//succ//succ//zero//unit) * α[7] ]
+--   [lesstype|
+--     ({((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩ # 2}) 
+--     |
+--     ({((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩ # 2})
+--   ]
+--   [lesstype| α[7]]
+
+--   -- expected: succ//succ//succ//zero//unit
+--   #eval unify_reduce 10
+--   [lesstype| (succ//succ//succ//zero//unit * succ//zero//unit) * α[7] ]
+--   [lesstype|
+--     ({((β[0] * β[1]) * β[1]) with ((β[0] * β[1]) * true//unit) <: ⟨led_⟩ # 2}) 
+--     |
+--     ({((β[0] * β[1]) * β[0]) with ((β[0] * β[1]) * false//unit) <: ⟨led_⟩ # 2})
+--   ]
+--   [lesstype| α[7]]
+
+--   --------------- debugging ---------------
+
+--   -- complete
+--   -- expected: false//unit 
+--   #eval infer_reduce 0 [lessterm| 
+--     (
+--       (fix (_ => _ => match y[0]
+--         case (zero;;, y[0]) => true;;  
+--         case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--         case (succ; y[0], zero;;) => false;; 
+--       ))
+--       (succ; succ; zero;;, succ; zero;;)
+--     )
+--   ] 
+
+--   #eval infer_reduce 0 [lessterm| 
+--     let _ = (fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     )) in
+--     (y[0] (succ; succ; zero;;, succ; zero;;))
+--   ] 
+
+--   #eval infer_reduce 0 [lessterm| 
+--     (fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[2] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     ))
+--   ] 
+
+
+
+--   #eval unify_decide 10 
+--   [lesstype| succ//zero//unit * zero//unit]
+--   nat_pair
+
+
+--   def le_ := [lesstype|
+--     induct
+--       {(zero//unit * β[0]) * true//unit} 
+--       | 
+--       {(succ//β[0] * succ//β[1]) * β[2] with (β[0] * β[1]) * β[2] <: β[3] } 
+--       | 
+--       {(succ//β[0] * zero//unit) * false//unit}
+--   ]
+
+--   -- expected: none 
+--   #eval unify_reduce 10 
+--   [lesstype|
+--     ([_<:ooga//unit]
+--        (β[0] -> {β[0] with (β[1] * β[0]) <: ⟨le_⟩ # 1}))
+--   ]
+--   [lesstype| succ//succ//zero//unit * succ//zero//unit -> α[0]]
+--   [lesstype| α[0] ]
+
+--   -- incomplete: not reducing all the way
+--   -- expected: false//unit 
+--   #eval unify_reduce 10 
+--   [lesstype| ([_<:⟨nat_pair⟩] (β[0] -> {β[0] with (β[1] * β[0]) <: ⟨le_⟩ # 1})) ]
+--   [lesstype| succ//succ//zero//unit * succ//zero//unit -> α[0]]
+--   [lesstype| α[0] ]
+
+-- -------------------------------------
+--   -- sum example 
+-- -------------------------------------
+
+--   def diff := [lessterm|
+--     fix(_ => _ => match y[0] 
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1]))
+--       case (zero;;, y[0]) => y[0]
+--       case (y[0], zero;;) => y[0] 
+--     )
+--   ]
+
+--   #eval infer_reduce 10  [lessterm|
+--     let _ = ⟨diff⟩ in
+--     (y[0] (succ; succ; zero;;, succ; zero;;))
+--   ]
+
+
+--   def leq := [lessterm|
+--     fix (_ => _ => match y[0]
+--       case (zero;;, y[0]) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--       case (succ; y[0], zero;;) => false;; 
+--     )
+--   ]
+
+--   def max := [lessterm| 
+--     (_ => match y[0] case (y[0], y[1]) => 
+--       (
+--         if (⟨leq⟩ (y[0], y[1])) then
+--           y[1]
+--         else
+--           y[0]
+--       )
+--     ) 
+--   ] 
+
+--   def add := [lessterm|
+--     fix(_ => _ => match y[0] 
+--       case (zero;;, y[0]) => y[0] 
+--       case (succ; y[0], y[1]) => succ; (y[3] (y[0], y[1]))
+--     )
+--   ]
+
+--   #eval infer_reduce 0 add 
+
+--   def sum := [lessterm|
+--     fix(_ => _ => match y[0]
+--       case zero;; => zero;; 
+--       case succ; y[0] => (
+--         (⟨add⟩)((y[2](y[0]), succ;y[0]))
+--       )
+--     )
+--   ]
+
+--   --expected: type that relates the recursive result type variable to the application's result type 
+--   /-
+--        {2 // (succ//X * A) with (X, Y) <: self} 
+--        where
+--         add (e1, e2) : A 
+--         e1 : Y
+--         e2 : succ//X 
+--   -/
+--   #eval infer_reduce 0 sum 
+
+--   #eval infer_reduce 0 [lessterm| 
+--     (⟨sum⟩)(succ;succ;zero;;) 
+--   ]
+
+--   -- sum(2) : {v | v >= 2} 
+--   -- 0 : {v | v >= 2} 
+--   -- expected: false 
+--   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
+--   | some ty => unify_decide 0 [lesstype| zero//unit ] ty
+--   | none => false
+
+--   -- sum(2) : {v | v >= 2} 
+--   -- 1 : {v | v >= 2} 
+--   -- expected: false 
+--   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
+--   | some ty => unify_decide 0 [lesstype| succ//zero//unit ] ty
+--   | none => false
+
+--   -- sum(2) : {v | v >= 2} 
+--   -- 2 : {v | v >= 2} 
+--   -- expected: true
+--   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
+--   | some ty => unify_decide 0 [lesstype| succ//succ//zero//unit ] ty
+--   | none => false
+
+--   -- sum(2) : {v | v >= 2} 
+--   -- 3 : {v | v >= 2} 
+--   -- expected: true 
+--   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;succ;zero;;)]) with
+--   | some ty => unify_decide 0 [lesstype| succ//succ//succ//zero//unit ] ty
+--   | none => false
+
+
+--   #eval infer_reduce 0 [lessterm| 
+--     (⟨sum⟩)(succ;zero;;) 
+--   ]
+
+--   -- expected: false 
+--   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;;)]) with
+--   | some ty => unify_decide 0 [lesstype| zero//unit ] ty
+--   | none => false
+
+--   -- expected: true
+--   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(succ;zero;;)]) with
+--   | some ty => unify_decide 0 [lesstype| succ//zero//unit ] ty
+--   | none => false
+
+
+--   #eval infer_reduce 0 [lessterm| 
+--     (⟨sum⟩)(zero;;) 
+--   ]
+
+--   -- expected: true 
+--   #eval match (infer_reduce 0 [lessterm| ⟨sum⟩(zero;;)]) with
+--   | some ty => unify_decide 0 [lesstype| zero//unit ] ty
+--   | none => false
+
+--   -------------------------------------
+--   /-
+--   foldn example 
+--   -/
+--   -------------------------------------
+
+--   def lt := [lessterm|
+--     fix (_ => _ => match y[0]
+--       case (zero;;, succ;zero;;) => true;;  
+--       case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+--       case (y[0], zero;;) => false;; 
+--     )
+--   ]
+
+--   #eval infer_reduce 0 lt
+
+--   -- expected: true//unit
+--   #eval infer_reduce 0 [lessterm| 
+--     ⟨lt⟩(zero;;, succ;zero;;) 
+--   ]
+
+--   -- expected: true//unit
+--   #eval infer_reduce 0 [lessterm| 
+--     ⟨lt⟩(succ;zero;;, succ;succ;zero;;) 
+--   ]
+
+--   -- expected: false//unit
+--   #eval infer_reduce 0 [lessterm| 
+--     ⟨lt⟩(zero;;, zero;;) 
+--   ]
+
+--   -- expected: false//unit
+--   #eval infer_reduce 0 [lessterm| 
+--     ⟨lt⟩(succ;zero;;, succ;zero;;) 
+--   ]
+
+--   -- expected: false//unit
+--   #eval infer_reduce 0 [lessterm| 
+--     ⟨lt⟩(succ;succ;zero;;, succ;zero;;) 
+--   ]
+
+--   #eval infer_reduce 0 [lessterm| 
+--     ⟨lt⟩ 
+--   ]
+
+-- ---------------
+--   def foldn := [lessterm|
+--   let _ = _ in
+--   let _ = _ in
+--   _ => match y[0] case (y[0], (y[1], y[2])) => (
+--       let _ = fix(_ => _ => match y[0] case (y[0], y[1]) =>
+--         /-
+--         n, b, f: 4, 5, 6 
+--         loop: 3 
+--         i, c: 0, 1 
+--         -/
+--         (if ⟨lt⟩(y[0], y[4]) then
+--           -- y[3](succ;y[0], y[6](y[0], y[1]))
+--           y[3](succ;y[0], ;)
+--         else
+--           y[1]
+--         )
+--       ) in 
+--       /-
+--       loop: 0 
+--       n: 1
+--       b: 2
+--       f: 3
+--       -/
+--       y[0](zero;;, y[2])
+--       -- y[0]
+--   )
+--   ]
+
+--   /-
+--   incomplete
+--   ERROR: naive decreasing requirement for unifying with inductive type is overly strict  
+--   TODO: convert to leverging CHC solver, and rely on external decidability heuristics 
+--   -/
+--   #eval infer_reduce 0 foldn
+
+--   /-
+--   ERROR: fails due to overly strict and naive decreasing heuristic
+--   -/ 
+--   #eval decreasing 0
+--   [lesstype|
+--     -- THE succ//β[1] is not decreasing!!
+--     {((β[1] * β[2]) * β[0]) with ((succ//β[1] * unit) * β[0]) <: β[3] # 3}
+--   ]
+
+--   -------------------------------
+--   /-
+--   pattern matching type inference 
+--   -/
+--   -------------------------------
+--   /-
+--   Pattern matching should include switch, rather then merely having branches of a function.
+--   Inclusion of switch allows more precise typing; since switch <: pattern constraint can be leveraged for inferring type for each case.
+--   Seems related to occurence typing
+--   -/
+--   #eval infer_reduce 0 [lessterm|
+--     let _ = _ in
+--     (_ => match y[0]
+--       case XO;; => (_ => match y[0] case XO;; => XX;;)(y[0]) -- need to prevent this assignment from escaping
+--       case YO;; => YY;;
+--     )
+--   ]
+
+--   #eval infer_reduce 0 [lessterm|
+--     (_ => 
+--       (_ => match y[0]
+--         case XO;; => (_ => match y[0] case XO;; => XX;;)(y[0]) -- need to prevent this assignment from escaping
+--         case YO;; => YY;;
+--       )((y[0]))
+--     )
+--   ]
+
+-- ----------------------------------
+
+--   def zero := [lessterm|
+--     _ => match y[0]
+--     case zero;; => true;;  
+--     case succ;y[0] => false;; 
+--   ]
+
+--   #eval infer_reduce 0 [lessterm|
+--     fix(_ => _ =>
+--       if ⟨zero⟩(y[0]) then
+--         zero;;
+--       else
+--         match y[0] 
+--         case succ;y[0] => succ;(y[2](y[0]))
+--     )(succ;zero;;)
+--   ]
+
+--   #eval infer_reduce 0 [lessterm|
+--     fix(_ => _ => match y[0]
+--       case zero;; => zero;; 
+--       case succ;y[0] => succ;y[2](y[0])
+--     )(succ;zero;;)
+--   ]
 
 end Nameless 

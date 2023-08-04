@@ -24,7 +24,7 @@ namespace Surface
   | union : Ty -> Ty -> Ty
   | inter : Ty -> Ty -> Ty
   | impli : Ty -> Ty -> Ty
-  | exis : List String -> Ty -> Ty -> Ty -> Ty
+  | exis : Ty -> List (Ty × Ty) -> List String -> Ty
   | univ : String -> Option Ty -> Ty -> Ty
   | induc : String -> Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
@@ -58,12 +58,17 @@ namespace Surface
       let n1 := Ty.infer_abstraction exclude ty1 
       let n2 := Ty.infer_abstraction exclude ty2
       n1 + n2 
-    | exis n ty_c1 ty_c2 ty_pl =>
+    | exis ty_pl constraints n =>
       let exclude' := exclude + (from_list n)  
-      let n_c1 := Ty.infer_abstraction exclude' ty_c1 
-      let n_c2 := Ty.infer_abstraction exclude' ty_c2
+      let n_constraints := constraints.foldl (fun n_constraints (ty_c1, ty_c2) =>
+        let n_c1 := Ty.infer_abstraction exclude' ty_c1 
+        let n_c2 := Ty.infer_abstraction exclude' ty_c2
+        n_constraints + n_c1 + n_c2
+      ) {} 
+
       let n_pl := Ty.infer_abstraction exclude' ty_pl  
-      n_c1 + n_c2 + n_pl
+      n_pl + n_constraints
+
     | univ name op_ty_c ty_pl =>
       let exclude := exclude.insert name  
       let n_c := match Option.map (infer_abstraction exclude) op_ty_c with
@@ -72,6 +77,7 @@ namespace Surface
 
       let n_pl := Ty.infer_abstraction exclude ty_pl  
       n_c + n_pl
+
     | induc name content =>
       Ty.infer_abstraction (exclude + from_list [name]) content 
 
@@ -119,17 +125,21 @@ namespace Surface
         Format.bracket "(" (
           "[" ++ name ++  " <: " ++ (Ty.repr ty_c n) ++ "] " ++ (Ty.repr ty_pl n)
         ) ")"
-    | .exis names ty_c1 ty_c2 ty_pl =>
+    | .exis ty_pl constraints names =>
       let names_format := Format.bracket "[" (Format.joinSep names ", ") "]"
-      if (ty_c1, ty_c2) == (Ty.unit, Ty.unit) then
+      if constraints.isEmpty then
         Format.bracket "{" 
           (Ty.repr ty_pl n ++ " " ++ names_format)  
         "}"
       else
+        let constraints' := constraints.map (fun (ty_c1, ty_c2) =>
+          (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
+        )
+        let constraints'' := Format.joinSep constraints' ", "
         Format.bracket "{" (
           (Ty.repr ty_pl n) ++ " with " ++
-          (Ty.repr ty_c1 n) ++ " <: " ++ (Ty.repr ty_c2 n)
-          ++ " " ++ names_format
+          constraints'' ++
+          " " ++ names_format
         ) "}"
     | .induc name ty1 =>
       Format.bracket "(" (
@@ -160,6 +170,10 @@ namespace Surface
     syntax:60 surftype:61 "|" surftype:60 : surftype
     syntax:50 surftype:51 "->" surftype:50 : surftype
 
+    -- constraints
+    syntax:40 surftype:41 "<:" surftype:41 : surftype
+    syntax:40 surftype:41 "<:" surftype:41 "," surftype: surftype
+    ------
 
     syntax "{" surftype:41 "with" surftype surftype:100 "}": surftype 
     syntax "{" surftype:41 surftype:100 "}" : surftype 
@@ -167,15 +181,11 @@ namespace Surface
     syntax "{" surftype:41 "with" surftype "}": surftype 
     syntax "{" surftype:41 "}" : surftype 
 
-
     syntax:50  "[" ident "]" surftype:50: surftype 
     syntax:50  "[" ident "<:" surftype:51 "]" surftype:50 : surftype 
 
     syntax:50 "induct" "[" ident "]" surftype : surftype 
 
-    -- constraints
-    syntax:40 surftype:41 "<:" surftype:41 : surftype
-    syntax:40 surftype:41 "<:" surftype:41 "," surftype: surftype
     ------------
 
 
@@ -212,19 +222,12 @@ namespace Surface
     | `([surftype| $b <: $c , $xs ]) => `(([surftype| $b ],[surftype| $c ]) :: [surftype| $xs])
     --------------
 
-    | `([surftype| { $d with $xs $n}  ]) => `(intersect_over
-        (fun (lhs, rhs) => Ty.exis [surftype| $n ] lhs rhs  [surftype| $d ])
-        [surftype| $xs ]
-      )
-    | `([surftype| { $b:surftype $n } ]) => `(Ty.exis [surftype| $n ] Ty.unit Ty.unit [surftype| $b ] )
+    | `([surftype| { $d with $xs $n}  ]) => `(Ty.exis [surftype| $d ] [surftype| $xs ] [surftype| $n ])
+    | `([surftype| { $b:surftype $n } ]) => `(Ty.exis [surftype| $b ] [] [surftype| $n ] )
 
-    | `([surftype| { $d with $xs }  ]) => `(intersect_over
-        (fun (lhs, rhs) => Ty.exis (toList (Ty.infer_abstraction {} [surftype| $d ])) lhs rhs [surftype| $d ])
-        [surftype| $xs ]
-      )
+    | `([surftype| { $d with $xs }  ]) => `(Ty.exis [surftype| $d ] [surftype| $xs ] (toList (Ty.infer_abstraction {} [surftype| $d ])))
 
-    | `([surftype| { $b:surftype } ]) => 
-      `(Ty.exis (toList (Ty.infer_abstraction {} [surftype| $b ])) Ty.unit Ty.unit [surftype| $b ] )
+    | `([surftype| { $b:surftype } ]) => `(Ty.exis [surftype| $b ] [] (toList (Ty.infer_abstraction {} [surftype| $b ])))
 
     | `([surftype| [ $i:ident ] $d  ]) => 
       `(Ty.univ $(Lean.quote (toString i.getId)) none [surftype| $d ])
