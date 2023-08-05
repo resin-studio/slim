@@ -21,6 +21,7 @@ partial def multi_step {T : Type} [BEq T] (step : T -> T) (source : T): T :=
 
 namespace Nameless 
 
+  -- TODO: rewrite using recursion, which is better for automatic termination
   def bind_nl (i_xs : Nat × List α) 
     (f : Nat -> α -> (Nat × List β)) 
   : (Nat × List β) 

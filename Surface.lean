@@ -480,7 +480,8 @@ namespace Surface
         | _ => none
       | [] => none
 
-    partial def extract_bound_stack (i : Nat): Nameless.Ty -> Nat × List (List String)  
+    -- TODO: make sure traversal order is consistent across all syntax tree crawlers
+    def extract_bound_stack (i : Nat): Nameless.Ty -> Nat × List (List String)  
     | .bvar _ => (i, []) 
     | .fvar _ => (i, []) 
     | .unit => (i, []) 
@@ -510,13 +511,17 @@ namespace Surface
       let (i, names) := (i + 1, [s!"T{i}"])
       (i, names :: stack_c ++ stack_pl)
     | .exis ty_pl constraints n =>
-      -- TODO: consider natural recursion definition to gain automatic termination proof 
       let (i, stack_pl) := extract_bound_stack i ty_pl
-      let (i, stack_cs) := bind_nl (i, constraints) (fun i (tyc1, tyc2) =>
-        let (i, stack1) := extract_bound_stack i tyc1 
-        let (i, stack2) := extract_bound_stack i tyc2 
-        (i, stack1 ++ stack2)
-      )  
+
+      let rec loop (i : Nat): List (Nameless.Ty × Nameless.Ty) -> (Nat × List (List String))  
+      | [] => (i, []) 
+      | (ty_c1, ty_c2) :: constraints => 
+          let (i, stack_loop) := loop i constraints
+          let (i, stack2) := extract_bound_stack i ty_c2 
+          let (i, stack1) := extract_bound_stack i ty_c1 
+          (i, stack1 ++ stack2 ++ stack_loop)
+
+      let (i, stack_cs) := loop i constraints
 
       let (i, names) := (i + n, (List.range n).map (fun j => s!"T{i + j}"))
       (i, names :: stack_pl ++ stack_cs)
