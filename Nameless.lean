@@ -2086,64 +2086,61 @@ namespace Nameless
     - NOTE: use state Monad for fresh variable
     - NOTE: returns type and list of constraints; rather than propagating down expected type
     - constraints formed at application, rather than from downward propagation
+
+
+    - NOTE: simply return a type; use existential type to include unsolved constraints. 
     -/
     -- def infer (i : Nat) (qual : Ty.Qual) (context : Ty.Context) (env_tm : PHashMap Nat Ty) (t : Tm) : (Nat × List (Ty.Context × Ty)) :=
-    def to_type_constraints (env_tm : PHashMap Nat Ty) (t : Tm) : StateT Nat Option (Ty × List (Ty × Ty)) :=
+    partial def to_type_constraints (env_tm : PHashMap Nat Ty) (t : Tm) : StateT Nat Option Ty :=
     match t with
     | hole =>
-      return (Ty.top, [])
+      return Ty.top
     | .unit => 
-      return (Ty.unit, [])
+      return Ty.unit
     | bvar _ => 
       failure
     | fvar id => do
       let ty <- env_tm.find? id
-      return (ty, [])
+      return ty
     | .tag l t1 => do 
-      let (ty1, cs1) <- to_type_constraints env_tm t1
-      return (Ty.tag l ty1, cs1)
+      let ty1 <- to_type_constraints env_tm t1
+      return Ty.tag l ty1
 
-    -- TODO
+    | .record fds =>
+      fds.foldrM (fun (l_i, t_i) ty_result => do
+        let ty_i <- to_type_constraints env_tm t_i  
+        return Ty.inter (Ty.field l_i ty_i) ty_result
+      ) Ty.top
+    | .matc switch branches => do
+      let ty_switch <- to_type_constraints env_tm switch
+
+      branches.foldrM (fun (p, b) ty_result => do
+        let n <- pattern_wellformed 0 p
+        let env_pat : PHashMap Nat Ty <- modifyGet (fun i => (
+          (List.range n).foldl (fun env_pat j => 
+            let tm_key := (i + (2 * j))
+            let ty_x := Ty.fvar (i + (2 * j) + 1) 
+            (env_pat.insert tm_key ty_x)
+          ) empty,
+          i + (2 * n)
+        ))
+
+        let list_tm_x := env_pat.toList.map (fun (k, _) => (fvar k))
+
+        let p := instantiate 0 list_tm_x p 
+        let b := instantiate 0 list_tm_x b  
+        let ty_p <- to_type_constraints (env_tm ; env_pat) p
+        let constraint := (ty_switch, ty_p)
+        let ty_b <- to_type_constraints (env_tm ; env_pat) b 
+        let ty_i := Ty.exis ty_b [constraint] 0
+
+        return Ty.union ty_i ty_result
+      ) Ty.bot
+
     --------------
     | _ => 
-      return (Ty.top, [])
+      return Ty.top
     /-
-    | .record fds =>
-
-      let f_step := (fun (l, t1) acc =>
-        bind_nl acc (fun i (context, ty_acc) =>
-        bind_nl (infer i qual context env_tm t1) (fun i (context, ty1) =>
-          (i, [(context, Ty.inter (Ty.field l ty1) ty_acc)])
-        ))
-      )
-
-      List.foldr f_step (i, [(context, Ty.top)]) fds 
-
-    | .matc arg branches =>
-      all_nl (infer i qual context env_tm arg) (fun i (context, ty_arg) => 
-        bind_nl (i, branches) (fun i (p, b) =>
-          match pattern_wellformed 0 p with
-          | none => (i, [])
-          | some n => (
-            let env_pat : PHashMap Nat Ty := (List.range n).foldl (fun env_pat j => 
-              let tm_key := (i + (2 * j))
-              let ty_x := Ty.fvar (i + (2 * j) + 1) 
-              (env_pat.insert tm_key ty_x)
-            ) empty
-            let i := i + (2 * n)
-
-            let list_tm_x := env_pat.toList.map (fun (k, _) => (fvar k))
-
-            let p := instantiate 0 list_tm_x p 
-            let b := instantiate 0 list_tm_x b  
-            bind_nl (infer i qual context (env_tm ; env_pat) p) (fun i (context, ty_p) =>
-            bind_nl (Ty.unify i qual context ty_arg ty_p) (fun i context =>
-              let qual := {qual with descrip := qual.descrip + (Ty.free_vars ty_p)}
-              (infer i qual context (env_tm ; env_pat) b) 
-            ))
-          )
-        )
-      )
 
     | .func body =>
       let (i, env_param, ty_p) : (Nat × PHashMap Nat Ty × Ty) := (
