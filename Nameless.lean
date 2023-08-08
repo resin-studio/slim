@@ -21,7 +21,7 @@ partial def multi_step {T : Type} [BEq T] (step : T -> T) (source : T): T :=
 
 namespace Nameless 
 
-  -- TODO: rewrite using recursion, which is better for automatic termination
+  -- TODO: rewrite using natural recursion, which might better for automatic termination
   def bind_nl (i_xs : Nat × List α) 
     (f : Nat -> α -> (Nat × List β)) 
   : (Nat × List β) 
@@ -2070,27 +2070,44 @@ namespace Nameless
     --   ty : Ty 
     -- deriving Repr
 
+    -- def increment (howMuch : Int) : StateM Int Int :=
+    --   get >>= fun i =>
+    --   set (i + howMuch) >>= fun () =>
+    --   pure i
 
+    -- def increment (howMuch : Int) : StateM Int Int := do
+    --   let i <- get 
+    --   set (i + howMuch) 
+    --   pure i
 
-    partial def infer (i : Nat) (qual : Ty.Qual) (context : Ty.Context) (env_tm : PHashMap Nat Ty) (t : Tm) : 
-    (Nat × List (Ty.Context × Ty)) :=
+    -- def foo (t : Tm) : StateM Nat (List (Ty × Ty)) := do 
+    --   let i <- get
+    /-
+    - NOTE: use state Monad for fresh variable
+    - NOTE: returns type and list of constraints; rather than propagating down expected type
+    - constraints formed at application, rather than from downward propagation
+    -/
+    -- def infer (i : Nat) (qual : Ty.Qual) (context : Ty.Context) (env_tm : PHashMap Nat Ty) (t : Tm) : (Nat × List (Ty.Context × Ty)) :=
+    def to_type_constraints (env_tm : PHashMap Nat Ty) (t : Tm) : StateT Nat Option (Ty × List (Ty × Ty)) :=
     match t with
-    | hole => 
-      (i, [(context, Ty.top)])
+    | hole =>
+      return (Ty.top, [])
     | .unit => 
-      (i, [(context, Ty.unit)])
-    | bvar _ => (i, []) 
-    | fvar id =>
-      match (env_tm.find? id) with
-      | some ty => 
-        (i, [(context, ty)])
-      | none => (i, [])
+      return (Ty.unit, [])
+    | bvar _ => 
+      failure
+    | fvar id => do
+      let ty <- env_tm.find? id
+      return (ty, [])
+    | .tag l t1 => do 
+      let (ty1, cs1) <- to_type_constraints env_tm t1
+      return (Ty.tag l ty1, cs1)
 
-    | .tag l t1 =>   
-      bind_nl (infer i qual context env_tm t1) (fun i (context, ty1) =>
-        (i, [(context, Ty.tag l ty1)])
-      )
-
+    -- TODO
+    --------------
+    | _ => 
+      return (Ty.top, [])
+    /-
     | .record fds =>
 
       let f_step := (fun (l, t1) acc =>
@@ -2375,6 +2392,8 @@ namespace Nameless
       -- (i, [])
       -- (i, [(context, Ty.tag "booga_ty_IH" ty_IH)])
       -- (i, [(context, Ty.top)])
+
+    -/
 
     partial def infer_simple i (t : Tm) :=
       let qual := ⟨empty⟩
