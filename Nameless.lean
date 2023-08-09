@@ -2086,12 +2086,13 @@ namespace Nameless
     - NOTE: use state Monad for fresh variable
     - NOTE: returns type and list of constraints; rather than propagating down expected type
     - constraints formed at application, rather than from downward propagation
+    - NOTE: type must be non-empty/inhabited to ensure soundness
 
 
     - NOTE: simply return a type; use existential type to include unsolved constraints. 
     -/
     -- def infer (i : Nat) (qual : Ty.Qual) (context : Ty.Context) (env_tm : PHashMap Nat Ty) (t : Tm) : (Nat × List (Ty.Context × Ty)) :=
-    partial def to_type_constraints (env_tm : PHashMap Nat Ty) (t : Tm) : StateT Nat Option Ty :=
+    partial def to_type (env_tm : PHashMap Nat Ty) (t : Tm) : StateT Nat Option Ty :=
     match t with
     | hole =>
       return Ty.top
@@ -2103,25 +2104,31 @@ namespace Nameless
       let ty <- env_tm.find? id
       return ty
     | .tag l t1 => do 
-      let ty1 <- to_type_constraints env_tm t1
+      let ty1 <- to_type env_tm t1
       return Ty.tag l ty1
 
-    | .record fds =>
-      fds.foldrM (fun (l_i, t_i) ty_result => do
-        let ty_i <- to_type_constraints env_tm t_i  
-        return Ty.inter (Ty.field l_i ty_i) ty_result
-      ) Ty.top
-    | .matc switch branches => do
-      let ty_switch <- to_type_constraints env_tm switch
+    | .record fds => do
+      let mut ty_result := Ty.top 
+      for (l_i, t_i) in fds do
+        let ty_i <- to_type env_tm t_i  
+        ty_result := Ty.inter (Ty.field l_i ty_i) ty_result
+      return ty_result
 
-      branches.foldrM (fun (p, b) ty_result => do
+    | .matc switch branches => do
+      let ty_switch <- to_type env_tm switch
+      
+      let mut ty_result := Ty.bot
+      for (p,b) in branches do
         let n <- pattern_wellformed 0 p
         let env_pat : PHashMap Nat Ty <- modifyGet (fun i => (
-          (List.range n).foldl (fun env_pat j => 
+          Id.run do
+          let mut env_pat : PHashMap Nat Ty := empty 
+          for j in (List.range n) do
             let tm_key := (i + (2 * j))
             let ty_x := Ty.fvar (i + (2 * j) + 1) 
-            (env_pat.insert tm_key ty_x)
-          ) empty,
+            env_pat := (env_pat.insert tm_key ty_x)
+          return env_pat
+          ,
           i + (2 * n)
         ))
 
@@ -2129,32 +2136,34 @@ namespace Nameless
 
         let p := instantiate 0 list_tm_x p 
         let b := instantiate 0 list_tm_x b  
-        let ty_p <- to_type_constraints (env_tm ; env_pat) p
+        let ty_p <- to_type (env_tm ; env_pat) p
         let constraint := (ty_switch, ty_p)
-        let ty_b <- to_type_constraints (env_tm ; env_pat) b 
+        let ty_b <- to_type (env_tm ; env_pat) b 
         let ty_i := Ty.exis ty_b [constraint] 0
 
-        return Ty.union ty_i ty_result
-      ) Ty.bot
+        ty_result := Ty.union ty_i ty_result
+      return ty_result
+
+
+    | .func body => do
+      let (env_param, ty_p) <- modifyGet (fun i => (
+        let ty_p := Ty.fvar (i + 1)
+        (empty.insert i ty_p, ty_p)
+        ,
+        (i + 2)
+      ))
+
+      let list_tm_x := env_param.toList.map (fun (k, _) => (fvar k))
+
+      let b := instantiate 0 list_tm_x body
+      let ty_b <- to_type (env_tm; env_param) b
+      return Ty.impli ty_p ty_b
 
     --------------
     | _ => 
       return Ty.top
     /-
 
-    | .func body =>
-      let (i, env_param, ty_p) : (Nat × PHashMap Nat Ty × Ty) := (
-        let ty_p := Ty.fvar (i + 1)
-        (i + 2, empty.insert i ty_p, ty_p)
-      )
-
-      let list_tm_x := env_param.toList.map (fun (k, _) => (fvar k))
-
-      let b := instantiate 0 list_tm_x body
-      let qual := {qual with descrip := qual.descrip + (Ty.free_vars ty_p)}
-      bind_nl (infer i qual context (env_tm ; env_param) b) (fun i (context, ty_b) =>
-          (i, [(context, Ty.simplify (Ty.impli ty_p ty_b))])
-      )
 
     | .proj t1 l =>
       bind_nl (infer i qual context env_tm t1) (fun i (context, ty1) =>
