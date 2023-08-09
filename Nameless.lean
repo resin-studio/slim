@@ -2163,52 +2163,36 @@ namespace Nameless
       let ty1 <- to_type env_tm t1
       return Ty.exis (.bvar 0) [(ty1, Ty.field l (.bvar 0))] 1
 
+    | .app t_f t_arg => do
+      let ty_arg <- to_type env_tm t_arg
+      let ty_f <- to_type env_tm t_f
+      return Ty.exis (.bvar 0) [(ty_f, Ty.impli ty_arg (.bvar 0))] 1 
+
+
+    | .letb op_ty_expected t_arg t => do
+
+      let ty_expected <- match op_ty_expected with
+      | some ty_expected => return ty_expected
+      | none => modifyGet (fun i => (Ty.fvar i, i + 1))
+
+      let ty_context <- (do
+        if t_arg == Tm.hole then
+          return ty_expected
+        else
+          let ty_arg <- to_type env_tm t_arg
+          return [lesstype| [_ <: {⟨ty_arg⟩ with ⟨ty_arg⟩ <: ⟨ty_expected⟩ # 0}] β[0] ]
+      )
+
+      let (x, env_tmx) <- modifyGet (fun i =>
+        ((fvar i, PHashMap.from_list [(i, ty_context)]), i + 1)
+      )
+      let t := instantiate 0 [x] t 
+      to_type (env_tm;env_tmx) t
+
     --------------
     | _ => 
       return Ty.top
     /-
-
-
-
-    | .app t_f t_arg =>
-      let (i, id_res) := (i + 1, i)
-      let ty_res := Ty.fvar id_res
-      let descrip : PHashSet Nat := empty.insert id_res
-      let qual := {qual with descrip := qual.descrip + descrip}
-
-      -- NOTE: for all types that the argument could be there there exists a function type that matches.
-      all_nl (infer i qual context env_tm t_arg) (fun i (context, ty_arg) =>
-        bind_nl (infer i qual context env_tm t_f) (fun i (context, ty_f) =>
-          bind_nl (Ty.unify i qual context ty_f (Ty.impli ty_arg ty_res)) (fun i context => 
-            -- let context := {context with adj := context.adj - adj}
-            (i, [(context, ty_res)])
-          )
-        )
-      )
-
-    | .letb op_ty_expected t_arg t => 
-
-      let (i, ty_expected) := match op_ty_expected with
-      | some ty_expected => (i, ty_expected)
-      | none => (i + 1, Ty.fvar i)
-
-      if t_arg == Tm.hole then
-        let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_expected)]) 
-        let t := instantiate 0 [x] t 
-        (infer i qual context (env_tm ; env_tmx) t) 
-      else
-        let (i, context_ty_args) := (
-          all_nl (infer i qual context env_tm t_arg) (fun i (context, ty_arg) =>
-            bind_nl (Ty.unify i qual context ty_arg ty_expected) (fun i context =>
-              (i, [(context, ty_arg)])
-            )
-          )
-        )
-        bind_nl (i, context_ty_args) (fun i (context, ty_arg) =>
-          let (i, x, env_tmx) := (i + 1, fvar i, PHashMap.from_list [(i, ty_arg)]) 
-          let t := instantiate 0 [x] t 
-          (infer i qual context (env_tm ; env_tmx) t) 
-        )
 
     | .fix t1 =>
       -- NOTE: extracting type from term seems similar to craig interpolation
