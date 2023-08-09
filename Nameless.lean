@@ -2159,18 +2159,16 @@ namespace Nameless
       let ty_b <- to_type (env_tm; env_param) b
       return Ty.impli ty_p ty_b
 
+    | .proj t1 l => do
+      let ty1 <- to_type env_tm t1
+      return Ty.exis (.bvar 0) [(ty1, Ty.field l (.bvar 0))] 1
+
     --------------
     | _ => 
       return Ty.top
     /-
 
 
-    | .proj t1 l =>
-      bind_nl (infer i qual context env_tm t1) (fun i (context, ty1) =>
-      let (i, ty) := (i + 1, Ty.fvar i)
-      bind_nl (Ty.unify i qual context ty1 (Ty.field l ty)) (fun i context =>
-        (i, [(context, ty)])
-      ))
 
     | .app t_f t_arg =>
       let (i, id_res) := (i + 1, i)
