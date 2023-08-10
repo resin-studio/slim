@@ -871,6 +871,11 @@ namespace Nameless
       (split_intersections ty1) ++ (split_intersections ty2)
     | ty => [ty]
 
+    def split_unions : Ty -> List Ty 
+    | Ty.union ty1 ty2 =>
+      (split_unions ty1) ++ (split_unions ty2)
+    | ty => [ty]
+
     -- def linearize_fields : Ty -> Option (List (String × Ty))
     -- | .field l ty => some [(l, ty)]
     -- | .inter (.field l ty1) ty2 => 
@@ -2089,6 +2094,7 @@ namespace Nameless
     - NOTE: type must be non-empty/inhabited to ensure soundness
 
 
+
     - NOTE: simply return a type; use existential type to include unsolved constraints. 
     -/
     -- def infer (i : Nat) (qual : Ty.Qual) (context : Ty.Context) (env_tm : PHashMap Nat Ty) (t : Tm) : (Nat × List (Ty.Context × Ty)) :=
@@ -2190,7 +2196,7 @@ namespace Nameless
       to_type (env_tm;env_tmx) t
 
     | .fix t_self_f => do
-      -- NOTE: extracting type from term seems similar to craig interpolation
+      -- NOTE: extracting type from term using downward propagation of types seems similar to craig interpolation 
       -- Craig: proof : A -> B ==> A -> I -> B
       -- type inference : program ==> program : X -> Y ==> X -> Y <: A -> B ==> A <: X, Y <: B ==> A -> (X -> Y) -> B   
       let boundary <- get
@@ -2208,83 +2214,99 @@ namespace Nameless
           - add inductive constraint to each case?
           - can we add the inductive constraint overall simply
           - inductively constrained variables need to be locally bound; to be distinct for each unrolling 
+          - RIGHT: X -> induct SELF . {nil with X <: zero} | {cons l with X <: succ n, n × l <: SELF [n, l]} 
           - WRONG: X -> induct SELF . {{nil with X <: zero} | {cons l with X <: succ n}  with n × l <: SELF} 
+        --------
+        - step 0: SELF -> X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
+          - this seems naturally coninductive: 
+          - coind SELF . X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
+        - translate to inductive:
+        - step 1: REL = induct SELF . {zero * nil} | {succ N * cons L with N * L <: SELF [N, L]}
+        - step 2: F = {X -> Y with X * Y <: REL}
+        - step 3: [T<:F] T 
+        ----
       -/
-      let ty_content := inductive_branches.foldr (fun (context, ty_branch) ty_acc =>
-        match ty_branch with
-        | .impli ty_IH ty_IC => 
-          let ty_IH := Ty.subst context.env_simple ty_IH
-          let ty_IC := Ty.subst context.env_simple ty_IC
+      match ty_self_f with
+      | .impli ty_IH ty_IC =>
+      -------------
+      -------------
+      -- let ty_content := inductive_branches.foldr (fun (context, ty_branch) ty_acc =>
+      --   match ty_branch with
+      --   | .impli ty_IH ty_IC => 
+      --     let ty_IH := Ty.subst context.env_simple ty_IH
+      --     let ty_IC := Ty.subst context.env_simple ty_IC
 
-          match ty_IH, ty_IC with
-          | .impli ty_IH_ante ty_IH_consq, .impli ty_IC_ante ty_IC_consq => (
-            /-
-            abstract/pack type of application in tail position 
-            -/
-            let stale_consq := (Ty.stale_boundary boundary) + (Ty.free_vars ty_IH_consq)
-            let ty_IC_consq := Ty.pack stale_consq context ty_IC_consq
-            let ty_IC_pair := [lesstype| ⟨ty_IC_ante⟩ * ⟨ty_IC_consq⟩]
+      --     match ty_IH, ty_IC with
+      --     | .impli ty_IH_ante ty_IH_consq, .impli ty_IC_ante ty_IC_consq => (
+      --       /-
+      --       abstract/pack type of application in tail position 
+      --       -/
+      --       let stale_consq := (Ty.stale_boundary boundary) + (Ty.free_vars ty_IH_consq)
+      --       let ty_IC_consq := Ty.pack stale_consq context ty_IC_consq
+      --       let ty_IC_pair := [lesstype| ⟨ty_IC_ante⟩ * ⟨ty_IC_consq⟩]
 
-            let ty_IH_pair := [lesstype| ⟨ty_IH_ante⟩ * ⟨ty_IH_consq⟩]
+      --       let ty_IH_pair := [lesstype| ⟨ty_IH_ante⟩ * ⟨ty_IH_consq⟩]
 
-            let fvs_IH := Ty.free_vars ty_IH_pair
-            let fvs_IC := Ty.free_vars ty_IC_pair
-            let fvs := (toList (fvs_IH + fvs_IC)).filter (fun fid => fid >= boundary)
-            let ty_choice := (
-              if !(fvs_IH * fvs_IC).isEmpty then
-                let fixed_point := fvs.length
-                [lesstype|
-                  {⟨Ty.abstract fvs 0 ty_IC_pair⟩ with 
-                    ⟨Ty.abstract fvs 0 ty_IH_pair⟩ <: β[⟨fixed_point⟩] 
-                    #
-                    ⟨fvs.length⟩
-                  } 
-                ]
-              else if fvs.length > 0 then
-                [lesstype| {⟨Ty.abstract fvs 0 ty_IC_pair⟩ # ⟨fvs.length⟩} ]
-              else
-                ty_IC_pair
-            )
+      --       let fvs_IH := Ty.free_vars ty_IH_pair
+      --       let fvs_IC := Ty.free_vars ty_IC_pair
+      --       let fvs := (toList (fvs_IH + fvs_IC)).filter (fun fid => fid >= boundary)
+      --       let ty_choice := (
+      --         if !(fvs_IH * fvs_IC).isEmpty then
+      --           let fixed_point := fvs.length
+      --           [lesstype|
+      --             {⟨Ty.abstract fvs 0 ty_IC_pair⟩ with 
+      --               ⟨Ty.abstract fvs 0 ty_IH_pair⟩ <: β[⟨fixed_point⟩] 
+      --               #
+      --               ⟨fvs.length⟩
+      --             } 
+      --           ]
+      --         else if fvs.length > 0 then
+      --           [lesstype| {⟨Ty.abstract fvs 0 ty_IC_pair⟩ # ⟨fvs.length⟩} ]
+      --         else
+      --           ty_IC_pair
+      --       )
 
-            /-
-            include other constraints on variables with along with inductive constraint
-            -/
-            -- let ty_IC_packed := Ty.pack (Ty.stale_boundary boundary) context ty_IC_pair
-            -- let ty_choice := (
-            --   if ty_IC_packed == Ty.simplify (Ty.subst context.env_simple ty_IC_pair) then
-            --     ty_choice
-            --   else 
-            --     Ty.intersect ty_choice ty_IC_packed
-            -- )
+      --       /-
+      --       include other constraints on variables with along with inductive constraint
+      --       -/
+      --       -- let ty_IC_packed := Ty.pack (Ty.stale_boundary boundary) context ty_IC_pair
+      --       -- let ty_choice := (
+      --       --   if ty_IC_packed == Ty.simplify (Ty.subst context.env_simple ty_IC_pair) then
+      --       --     ty_choice
+      --       --   else 
+      --       --     Ty.intersect ty_choice ty_IC_packed
+      --       -- )
 
-            (Ty.union ty_choice ty_acc) 
-          )
-          | .fvar id_IH, .impli ty_IC_ante ty_IC_consq => (
-            let stale_consq := (Ty.stale_boundary boundary)
-            let ty_IC_consq := Ty.pack stale_consq context ty_IC_consq
-            let ty_IC_pair := [lesstype| ⟨ty_IC_ante⟩ * ⟨ty_IC_consq⟩]
+      --       (Ty.union ty_choice ty_acc) 
+      --     )
+      --     | .fvar id_IH, .impli ty_IC_ante ty_IC_consq => (
+      --       let stale_consq := (Ty.stale_boundary boundary)
+      --       let ty_IC_consq := Ty.pack stale_consq context ty_IC_consq
+      --       let ty_IC_pair := [lesstype| ⟨ty_IC_ante⟩ * ⟨ty_IC_consq⟩]
 
-            let fvs := (toList (Ty.free_vars ty_IC_pair)).filter (fun fid => fid >= boundary)
-            let ty_choice := (
-              if fvs.length > 0 then
-                [lesstype| {⟨Ty.abstract fvs 0 ty_IC_pair⟩ # ⟨fvs.length⟩} ]
-              else
-                ty_IC_pair
-            )
-            (Ty.union ty_choice ty_acc) 
-          )
-          | _, _ => Ty.top
-        | _ => (Ty.tag "other" Ty.unit)
-      ) Ty.bot
+      --       let fvs := (toList (Ty.free_vars ty_IC_pair)).filter (fun fid => fid >= boundary)
+      --       let ty_choice := (
+      --         if fvs.length > 0 then
+      --           [lesstype| {⟨Ty.abstract fvs 0 ty_IC_pair⟩ # ⟨fvs.length⟩} ]
+      --         else
+      --           ty_IC_pair
+      --       )
+      --       (Ty.union ty_choice ty_acc) 
+      --     )
+      --     | _, _ => Ty.top
+      --   | _ => (Ty.tag "other" Ty.unit)
+      -- ) Ty.bot
 
-      let ty_rel := [lesstype| induct ⟨ty_content⟩ ]
-      let ty' := Ty.simplify [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨ty_rel⟩ # 2}] β[0]] 
+      -- let ty_rel := [lesstype| induct ⟨ty_content⟩ ]
+      -- let ty' := Ty.simplify [lesstype| [_<:{β[1] -> β[0] with β[1] * β[0] <: ⟨ty_rel⟩ # 2}] β[0]] 
 
 
-      -- let context := {context with env_simple := context.env_simple.insert 666 (Ty.tag s!"msg_{i}_" Ty.unit)}
-      let context := {context with env_simple := context.env_simple.insert 666 (Ty.tag s!"boundary_{boundary}_" Ty.unit)}
+      -- -- let context := {context with env_simple := context.env_simple.insert 666 (Ty.tag s!"msg_{i}_" Ty.unit)}
+      -- let context := {context with env_simple := context.env_simple.insert 666 (Ty.tag s!"boundary_{boundary}_" Ty.unit)}
 
-      (i, [(context, ty')])
+      -- (i, [(context, ty')])
+      ----------------------
+      ----------------------
 
     --------------
     | _ => 
