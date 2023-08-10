@@ -2204,12 +2204,11 @@ namespace Nameless
           (zero × nil) 
           {succ n × cons l with n × l <: nat_list}
 
-        - OPTION 1: split cases 
+        - TODO: split cases 
           - add inductive constraint to each case?
           - can we add the inductive constraint overall simply
-        - OPTION 2: nest constraints; one inductive constraint for all cases
-          - no need for local variable binding?
-          - X -> induct SELF . {{nil with X <: zero} | {cons l with X <: succ n}  with n × l <: SELF} 
+          - inductively constrained variables need to be locally bound; to be distinct for each unrolling 
+          - WRONG: X -> induct SELF . {{nil with X <: zero} | {cons l with X <: succ n}  with n × l <: SELF} 
       -/
       let ty_content := inductive_branches.foldr (fun (context, ty_branch) ty_acc =>
         match ty_branch with
