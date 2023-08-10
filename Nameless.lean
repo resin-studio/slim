@@ -2189,18 +2189,28 @@ namespace Nameless
       let t := instantiate 0 [x] t 
       to_type (env_tm;env_tmx) t
 
-    --------------
-    | _ => 
-      return Ty.top
-    /-
-
-    | .fix t1 =>
+    | .fix t_self_f => do
       -- NOTE: extracting type from term seems similar to craig interpolation
       -- Craig: proof : A -> B ==> A -> I -> B
       -- type inference : program ==> program : X -> Y ==> X -> Y <: A -> B ==> A <: X, Y <: B ==> A -> (X -> Y) -> B   
-      let boundary := i
+      let boundary <- get
 
-      let (i, inductive_branches) := (infer i qual context env_tm t1)
+      let ty_self_f <- to_type env_tm t_self_f
+      /-
+      - inductive_branches --rename--> ty_self_f
+      - ty_self_f should 
+
+        induct nat_list
+          (zero × nil) 
+          {succ n × cons l with n × l <: nat_list}
+
+        - OPTION 1: split cases 
+          - add inductive constraint to each case?
+          - can we add the inductive constraint overall simply
+        - OPTION 2: nest constraints; one inductive constraint for all cases
+          - no need for local variable binding?
+          - X -> induct SELF . {{nil with X <: zero} | {cons l with X <: succ n}  with n × l <: SELF} 
+      -/
       let ty_content := inductive_branches.foldr (fun (context, ty_branch) ty_acc =>
         match ty_branch with
         | .impli ty_IH ty_IC => 
@@ -2276,6 +2286,12 @@ namespace Nameless
       let context := {context with env_simple := context.env_simple.insert 666 (Ty.tag s!"boundary_{boundary}_" Ty.unit)}
 
       (i, [(context, ty')])
+
+    --------------
+    | _ => 
+      return Ty.top
+    /-
+
 
       ------------------
 
