@@ -2218,13 +2218,13 @@ namespace Nameless
           - WRONG: X -> induct SELF . {{nil with X <: zero} | {cons l with X <: succ n}  with n × l <: SELF} 
         --------
         - step 0: SELF -> X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
-        - this is inductive: want the LEAST fixed point, which is a conjunction of everything
-        - induct SELF . X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
-        - translate to LEAST fixed point of body; which one trace among choices:
+        - this is co-inductive: want the GREATEST fixed point, which is the least number of conjunctions (intersections)
+        - coinduct SELF . X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
+        - translate to LEAST fixed point of body; which is the least number of disjunctions (unions):
         - step 1: REL = induct SELF . {zero * nil} | {succ N * cons L with N * L <: SELF [N, L]}
         - step 2: F = {X -> Y with X * Y <: REL}
         - step 3: [T<:F] T 
-        - TODO: verify that translation is logically valid 
+        - TODO: verify that translation is logically valid according to duality
         ----
       -/
       match ty_self_f with
