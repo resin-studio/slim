@@ -2210,12 +2210,6 @@ namespace Nameless
           (zero × nil) 
           {succ n × cons l with n × l <: nat_list}
 
-        - TODO: split cases 
-          - add inductive constraint to each case?
-          - can we add the inductive constraint overall simply
-          - inductively constrained variables need to be locally bound; to be distinct for each unrolling 
-          - RIGHT: X -> induct SELF . {nil with X <: zero} | {cons l with X <: succ n, n × l <: SELF [n, l]} 
-          - WRONG: X -> induct SELF . {{nil with X <: zero} | {cons l with X <: succ n}  with n × l <: SELF} 
         --------
         - step 0: SELF -> X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
         - this is co-inductive: want the GREATEST fixed point, which is the least number of conjunctions (intersections)
@@ -2225,7 +2219,17 @@ namespace Nameless
         - step 2: F = {X -> Y with X * Y <: REL}
         - step 3: [T<:F] T 
         - TODO: verify that translation is logically valid according to duality
+        - if it is valid; generate the simpler co-inductive type; then translate it to constraints for CHC solver
+        - if it's not valid; construct an inductive type
         ----
+        ----
+        SELF -> X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
+        coind SELF . X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
+        coind SELF . zero -> nil & {succ N -> cons L SELF <: N -> L [N, L]}
+        ¬ induct SELF . zero × ¬ nil | {succ N × ¬ cons L with N × ¬L <: SELF [N, L]})
+        induct SELF . zero × ¬ nil | {succ N × ¬ cons L with N × ¬L <: SELF [N, L]} -> F
+        {X × ¬ Y -> F with X * Y <: REL} ; REL = induct SELF . zero × nil | {succ N × cons L with N × L <: SELF [N, L]}
+        {X -> Y with X * Y <: REL}
       -/
       match ty_self_f with
       | .impli ty_IH ty_IC =>
