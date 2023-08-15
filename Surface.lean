@@ -27,6 +27,7 @@ namespace Surface
   | exis : Ty -> List (Ty × Ty) -> List String -> Ty
   | univ : String -> Option Ty -> Ty -> Ty
   | induc : String -> Ty -> Ty
+  | coduc : String -> Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
   #check List.repr
 
@@ -90,6 +91,8 @@ namespace Surface
       n_c + n_pl
 
     | induc name content =>
+      Ty.infer_abstraction (exclude + from_list [name]) content 
+    | coduc name content =>
       Ty.infer_abstraction (exclude + from_list [name]) content 
 
     def intersect : Ty -> Ty -> Ty
@@ -155,6 +158,11 @@ namespace Surface
     | .induc name ty1 =>
       Format.bracket "(" (
         "induct " ++ "[" ++ name ++ "] " ++ (Ty.repr ty1 n)
+      ) ")"
+
+    | .coduc name ty1 =>
+      Format.bracket "(" (
+        "coduct " ++ "[" ++ name ++ "] " ++ (Ty.repr ty1 n)
       ) ")"
 
     instance : Repr Ty where
@@ -363,6 +371,9 @@ namespace Surface
     | .induc name ty => do
       let (stack, ty') <- (to_nameless free_vars (name :: bound_vars) ty) 
       some ([name] :: stack, .induc ty')
+    | .coduc name ty => do
+      let (stack, ty') <- (to_nameless free_vars (name :: bound_vars) ty) 
+      some ([name] :: stack, .coduc ty')
 
     partial def extract_free_vars : Ty -> PHashSet String
     | id name => from_list [name] 
@@ -399,6 +410,9 @@ namespace Surface
       ) + (extract_free_vars ty_pl)
       from_list ((toList names).filter (fun n => n != bound_name))
     | induc bound_name ty =>
+      let names := (extract_free_vars ty)
+      from_list ((toList names).filter (fun n => n != bound_name))
+    | coduc bound_name ty =>
       let names := (extract_free_vars ty)
       from_list ((toList names).filter (fun n => n != bound_name))
 
@@ -479,6 +493,15 @@ namespace Surface
           some (stack', .induc name ty') 
         | _ => none
       | [] => none
+    | .coduc ty =>
+      match stack with
+      | names' :: stack'  =>
+        match names' with
+        | [name] => do
+          let (stack', ty') <- (from_nameless free_names (name :: names) stack' ty)   
+          some (stack', .induc name ty') 
+        | _ => none
+      | [] => none
 
     -- TODO: make sure traversal order is consistent across all syntax tree crawlers
     def extract_bound_stack (i : Nat): Nameless.Ty -> Nat × List (List String)  
@@ -526,6 +549,10 @@ namespace Surface
       let (i, names) := (i + n, (List.range n).map (fun j => s!"T{i + j}"))
       (i, names :: stack_pl ++ stack_cs)
     | .induc ty =>
+      let (i, stack) := extract_bound_stack i ty 
+      let (i, names) := (i + 1, [s!"T{i}"])
+      (i, names :: stack)
+    | .coduc ty =>
       let (i, stack) := extract_bound_stack i ty 
       let (i, names) := (i + 1, [s!"T{i}"])
       (i, names :: stack)
@@ -953,28 +980,28 @@ namespace Surface
       let (stack, content') <- from_nameless abstraction stack content 
       some (stack, .fix content')
 
-    partial def infer_reduce (type_names : List String) (t : Surface.Tm) : Option Surface.Ty := do
-      let (_, t_nl) <- to_nameless type_names [] t 
-      let ty_nl <- Nameless.Tm.infer_reduce (type_names.length) t_nl
-      let (_, stack_nl) := Ty.extract_bound_stack 0 ty_nl
-      let (_, ty_surf) <- Surface.Ty.from_nameless type_names [] stack_nl ty_nl 
-      ty_surf
+    -- partial def infer_reduce (type_names : List String) (t : Surface.Tm) : Option Surface.Ty := do
+    --   let (_, t_nl) <- to_nameless type_names [] t 
+    --   let ty_nl <- Nameless.Tm.infer_reduce (type_names.length) t_nl
+    --   let (_, stack_nl) := Ty.extract_bound_stack 0 ty_nl
+    --   let (_, ty_surf) <- Surface.Ty.from_nameless type_names [] stack_nl ty_nl 
+    --   ty_surf
 
-    -- debugging
-    partial def infer_reduce_debug (type_names : List String) (t : Surface.Tm) : Option (Nameless.Ty) :=  do
-      let (_, t_nl) <- to_nameless type_names [] t 
-      let ty_nl := Nameless.Tm.infer_reduce (type_names.length) t_nl
-      ty_nl
-      -- let (_, ty_surf) <- Surface.Ty.from_nameless [] [] stack_nl ty_nl 
-      -- ty_surf
+    -- -- debugging
+    -- partial def infer_reduce_debug (type_names : List String) (t : Surface.Tm) : Option (Nameless.Ty) :=  do
+    --   let (_, t_nl) <- to_nameless type_names [] t 
+    --   let ty_nl := Nameless.Tm.infer_reduce (type_names.length) t_nl
+    --   ty_nl
+    --   -- let (_, ty_surf) <- Surface.Ty.from_nameless [] [] stack_nl ty_nl 
+    --   -- ty_surf
 
   end Tm
 
 
     --------------------------------------
-  #eval Tm.infer_reduce [] [surfterm|
-    succ;zero;;
-  ]
+  -- #eval Tm.infer_reduce [] [surfterm|
+  --   succ;zero;;
+  -- ]
 
   def nat_list := [surftype| 
     induct [nat_list]
@@ -987,10 +1014,10 @@ namespace Surface
     induct [NAT] zero//unit | succ//NAT
   ]
 
-  #eval Tm.infer_reduce [] [surfterm|
-    let f : [A <: ⟨nat_⟩] A -> {B with A * B <: ⟨nat_list⟩} = _ in 
-    f(succ;zero;;)
-  ]
+  -- #eval Tm.infer_reduce [] [surfterm|
+  --   let f : [A <: ⟨nat_⟩] A -> {B with A * B <: ⟨nat_list⟩} = _ in 
+  --   f(succ;zero;;)
+  -- ]
 
 --------------------------------------
 
@@ -1009,13 +1036,13 @@ namespace Surface
     )
   ]
 
-  #eval Tm.infer_reduce [] [surfterm|
-    fix(self => param => match param
-      case (succ;x, succ;y) => self(x, y)
-      case (zero;;, y) => y
-      case (x, zero;;) => x 
-    )
-  ]
+  -- #eval Tm.infer_reduce [] [surfterm|
+  --   fix(self => param => match param
+  --     case (succ;x, succ;y) => self(x, y)
+  --     case (zero;;, y) => y
+  --     case (x, zero;;) => x 
+  --   )
+  -- ]
 
   
   #eval  [surfterm|
@@ -1077,11 +1104,11 @@ namespace Surface
       {succ//X * succ//Y with X * Y <: LE}
   ]
 
-  #eval Tm.infer_reduce ["X", "Y"] [surfterm| 
-    let x : X = _ in
-    let y : Y = _ in
-    (x, y)
-  ] 
+  -- #eval Tm.infer_reduce ["X", "Y"] [surfterm| 
+  --   let x : X = _ in
+  --   let y : Y = _ in
+  --   (x, y)
+  -- ] 
 
   -- TODO
   -- diverges
@@ -1125,107 +1152,107 @@ namespace Surface
   --------------------
 
   -- TODO: type is missing mention of succ//and ?zero
-  #eval Tm.infer_reduce [] [surfterm| 
-    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = 
-      fix(self => param => match param
-        case (zero;;, y) => true;; 
-        case (succ;x, succ;y) => self(x, y) 
-        case (succ;x, zero;;) => false;; 
-      )
-    in
-    let max = param => match param case (x, y) => 
-      if (le (x, y)) then y else x 
-    in
-    max
-  ] 
+  -- #eval Tm.infer_reduce [] [surfterm| 
+  --   let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = 
+  --     fix(self => param => match param
+  --       case (zero;;, y) => true;; 
+  --       case (succ;x, succ;y) => self(x, y) 
+  --       case (succ;x, zero;;) => false;; 
+  --     )
+  --   in
+  --   let max = param => match param case (x, y) => 
+  --     if (le (x, y)) then y else x 
+  --   in
+  --   max
+  -- ] 
 
   -- TODO: it is merely returning the type of the right argument
   -- expected: succ//succ//zero//unit
-  #eval Tm.infer_reduce [] [surfterm| 
-    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ =
-      fix(self => param => match param
-        case (zero;;, y) => true;; 
-        case (succ;x, succ;y) => self(x, y) 
-        case (succ;x, zero;;) => false;; 
-      )
-    in
-    let max = param => match param case (x, y) => 
-      if (le (x, y)) then y else x 
-    in
-    let x = max(succ;succ;zero;;, zero;;)  in
-    x
-  ] 
+  -- #eval Tm.infer_reduce [] [surfterm| 
+  --   let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ =
+  --     fix(self => param => match param
+  --       case (zero;;, y) => true;; 
+  --       case (succ;x, succ;y) => self(x, y) 
+  --       case (succ;x, zero;;) => false;; 
+  --     )
+  --   in
+  --   let max = param => match param case (x, y) => 
+  --     if (le (x, y)) then y else x 
+  --   in
+  --   let x = max(succ;succ;zero;;, zero;;)  in
+  --   x
+  -- ] 
 
   -- expected: succ//succ//zero//unit
-  #eval Tm.infer_reduce [] [surfterm| 
-    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = 
-      fix(self => param => match param
-        case (zero;;, y) => true;; 
-        case (succ;x, succ;y) => self(x, y) 
-        case (succ;x, zero;;) => false;; 
-      )
-    in
-    let max = param => match param case (x, y) => 
-      if (le (x, y)) then y else x 
-    in
-    -- let x : {[X] X with (X * succ//succ//zero//unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
-    let x 
-    : succ//succ//zero//unit | succ//zero//unit 
-    = (max (succ;zero;;, succ;succ;zero;;)) 
-    in
-    x
-  ] 
+  -- #eval Tm.infer_reduce [] [surfterm| 
+  --   let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = 
+  --     fix(self => param => match param
+  --       case (zero;;, y) => true;; 
+  --       case (succ;x, succ;y) => self(x, y) 
+  --       case (succ;x, zero;;) => false;; 
+  --     )
+  --   in
+  --   let max = param => match param case (x, y) => 
+  --     if (le (x, y)) then y else x 
+  --   in
+  --   -- let x : {[X] X with (X * succ//succ//zero//unit) <: ⟨LE⟩ } = (max (#succ #zero(), (#succ #succ #zero()))) in
+  --   let x 
+  --   : succ//succ//zero//unit | succ//zero//unit 
+  --   = (max (succ;zero;;, succ;succ;zero;;)) 
+  --   in
+  --   x
+  -- ] 
   --------------------------------
 
   -- expected: fail 
-  #eval Tm.infer_reduce [] [surfterm| 
-    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = 
-      fix(self => param => match param
-        case (zero;;, y) => true;; 
-        case (succ;x, succ;y) => self(x, y) 
-        case (succ;x, zero;;) => false;; 
-      )
-    in
-    let max = param => match param case (x, y) => 
-      if (le (x, y)) then y else x 
-    in
-    let x : {X with (X * zero//unit) <: ⟨LE⟩ [X, Y]} 
-    = (max (succ;zero;;, succ;succ;zero;;)) 
-    in
-    x
-  ] 
+  -- #eval Tm.infer_reduce [] [surfterm| 
+  --   let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = 
+  --     fix(self => param => match param
+  --       case (zero;;, y) => true;; 
+  --       case (succ;x, succ;y) => self(x, y) 
+  --       case (succ;x, zero;;) => false;; 
+  --     )
+  --   in
+  --   let max = param => match param case (x, y) => 
+  --     if (le (x, y)) then y else x 
+  --   in
+  --   let x : {X with (X * zero//unit) <: ⟨LE⟩ [X, Y]} 
+  --   = (max (succ;zero;;, succ;succ;zero;;)) 
+  --   in
+  --   x
+  -- ] 
 
   -- expected: fail 
-  #eval Tm.infer_reduce [] [surfterm| 
-    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = 
-      fix(self => param => match param
-        case (zero;;, y) => true;; 
-        case (succ;x, succ;y) => self(x, y) 
-        case (succ;x, zero;;) => false;; 
-      )
-    in
-    let max = param => match param case (x, y) => 
-      if (le (x, y)) then y else x 
-    in
-    let x : succ//zero//unit = max(succ;zero;;, succ;succ;zero;;) in
-    x
-  ] 
+  -- #eval Tm.infer_reduce [] [surfterm| 
+  --   let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = 
+  --     fix(self => param => match param
+  --       case (zero;;, y) => true;; 
+  --       case (succ;x, succ;y) => self(x, y) 
+  --       case (succ;x, zero;;) => false;; 
+  --     )
+  --   in
+  --   let max = param => match param case (x, y) => 
+  --     if (le (x, y)) then y else x 
+  --   in
+  --   let x : succ//zero//unit = max(succ;zero;;, succ;succ;zero;;) in
+  --   x
+  -- ] 
 
   -- expected: fail 
-  #eval Tm.infer_reduce [] [surfterm| 
-    let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = 
-      fix(self => param => match param
-        case (zero;;, y) => true;; 
-        case (succ;x, succ;y) => self(x, y) 
-        case (succ;x, zero;;) => false;; 
-      )
-    in
-    let max = param => match param case (x, y) => 
-      if (le (x, y)) then y else x 
-    in
-    let x : {[X] X with (X * succ//zero//unit) <: ⟨LE⟩ } = max(succ;zero;;, succ;succ;zero;;) in
-    x
-  ] 
+  -- #eval Tm.infer_reduce [] [surfterm| 
+  --   let le : ⟨NAT⟩ * ⟨NAT⟩ -> ⟨BOOL⟩ = 
+  --     fix(self => param => match param
+  --       case (zero;;, y) => true;; 
+  --       case (succ;x, succ;y) => self(x, y) 
+  --       case (succ;x, zero;;) => false;; 
+  --     )
+  --   in
+  --   let max = param => match param case (x, y) => 
+  --     if (le (x, y)) then y else x 
+  --   in
+  --   let x : {[X] X with (X * succ//zero//unit) <: ⟨LE⟩ } = max(succ;zero;;, succ;succ;zero;;) in
+  --   x
+  -- ] 
 
   -- expected: fail 
   #eval Ty.unify_reduce
@@ -1258,67 +1285,67 @@ namespace Surface
 
   ---------- generics ----------------
 
-  #eval Tm.infer_reduce [] [surfterm|
-    (a => match a case (cons;(x,y)) => x)(cons;(one;;, two;;))
-  ]
+  -- #eval Tm.infer_reduce [] [surfterm|
+  --   (a => match a case (cons;(x,y)) => x)(cons;(one;;, two;;))
+  -- ]
   -- expected: one//unit
 
 
-  #eval Tm.infer_reduce [] [surfterm|
-    let f = a => match a case (cons;(x, y)) => x in 
-    f  
-  ]
+  -- #eval Tm.infer_reduce [] [surfterm|
+  --   let f = a => match a case (cons;(x, y)) => x in 
+  --   f  
+  -- ]
   -- expected: (forall (cons//(T0 * T1) -> T0))
 
-  #eval Tm.infer_reduce [] [surfterm|
-    let f : [X] [Y] cons//(X * Y) -> X = _ in
-    f(cons;(ooga;;, booga;;))
-  ]
+  -- #eval Tm.infer_reduce [] [surfterm|
+  --   let f : [X] [Y] cons//(X * Y) -> X = _ in
+  --   f(cons;(ooga;;, booga;;))
+  -- ]
 
   ---------- path discriminatin ----------------
-  #eval Tm.infer_reduce [] [surfterm|
-    let f = fix(loop => (match loop 
-      case (zero;;) => nil;;
-      case (succ;x) => cons;loop(x)
-    )) in 
-    f(succ;zero;;)
-  ]
+  -- #eval Tm.infer_reduce [] [surfterm|
+  --   let f = fix(loop => (match loop 
+  --     case (zero;;) => nil;;
+  --     case (succ;x) => cons;loop(x)
+  --   )) in 
+  --   f(succ;zero;;)
+  -- ]
   -- expected: cons//nil//unit
 
 
-  #eval Tm.infer_reduce [] [surfterm|
-    let f : (zero//unit -> nil//unit) & (succ//zero//unit -> cons//nil//unit) = _ in 
-    f(succ;zero;;)
-  ]
+  -- #eval Tm.infer_reduce [] [surfterm|
+  --   let f : (zero//unit -> nil//unit) & (succ//zero//unit -> cons//nil//unit) = _ in 
+  --   f(succ;zero;;)
+  -- ]
   -- expected: cons//nil//unit
 
   -- expected: some two//unit
-  #eval Tm.infer_reduce [] 
-  [surfterm|
-  let f : (
-    ([X] (hello//X -> world//unit)) & 
-    ([X] one//X -> two//unit)
-  ) = _ in 
-  f(one;;)
-  ]
+  -- #eval Tm.infer_reduce [] 
+  -- [surfterm|
+  -- let f : (
+  --   ([X] (hello//X -> world//unit)) & 
+  --   ([X] one//X -> two//unit)
+  -- ) = _ in 
+  -- f(one;;)
+  -- ]
 
 
   ---------- adjustment ----------------
 
   -- inferring unions (widening)
-  #eval Tm.infer_reduce [] [surfterm|
-    let f : [X] X -> (X -> (X * X)) = _ in 
-    f(hello;;)(world;;)
-  ]
+  -- #eval Tm.infer_reduce [] [surfterm|
+  --   let f : [X] X -> (X -> (X * X)) = _ in 
+  --   f(hello;;)(world;;)
+  -- ]
   -- expected: ((world//unit | hello//unit) * (world//unit | hello//unit))
 
   -- inferring intersections (narrowing)
-  #eval Tm.infer_reduce [] [surfterm|
-  let from_uno : uno//unit -> unit = _ in 
-  let from_dos: dos//unit -> unit = _ in 
-  (x =>
-    from_uno(x), from_dos(x))
-  ]
+  -- #eval Tm.infer_reduce [] [surfterm|
+  -- let from_uno : uno//unit -> unit = _ in 
+  -- let from_dos: dos//unit -> unit = _ in 
+  -- (x =>
+  --   from_uno(x), from_dos(x))
+  -- ]
   -- expected: (?uno unit & ?dos unit -> (unit * unit))
   -- reduces to: (⊥ -> (unit * unit))
 

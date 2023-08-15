@@ -86,6 +86,7 @@ namespace Nameless
   -- TODO: remove Option from univ; top type is sufficient
   | univ : Option Ty -> Ty -> Ty
   | induc : Ty -> Ty
+  | coduc : Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
   -- #check List.repr
 
@@ -155,6 +156,8 @@ namespace Nameless
       Nat.max n_c n_pl
     | .induc content =>
       infer_abstraction (start + 1) content 
+    | .coduc content =>
+      infer_abstraction (start + 1) content 
 
     partial def free_vars: Ty -> PHashSet Nat 
     | .bvar id => {} 
@@ -176,6 +179,7 @@ namespace Nameless
       | some ty_c => (free_vars ty_c) + (free_vars ty)
       | none => (free_vars ty)
     | .induc ty => (free_vars ty)
+    | .coduc ty => (free_vars ty)
 
     -- def neg_vars (neg : Bool) : Ty -> PHashSet Nat 
     -- | .bvar id => empty 
@@ -222,6 +226,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       (.univ (Option.map (abstract fids (start + 1)) op_ty_c) (abstract fids (start + 1) ty))
     | .induc ty => .induc (abstract fids (start + 1) ty)
+    | .coduc ty => .coduc (abstract fids (start + 1) ty)
 
     -- assuming no cycles; (assuming occurs check has been properly applied before hand) 
     partial def subst (m : PHashMap Nat Ty) : Ty -> Ty
@@ -247,6 +252,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (subst m)) (subst m ty))
     | .induc ty => .induc (subst m ty)
+    | .coduc ty => .coduc (subst m ty)
 
     -- assume assoc right
     def inter_contains : Ty -> Ty -> Bool 
@@ -338,6 +344,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       .univ (op_ty_c.map simplify) (simplify ty)
     | .induc ty => .induc (simplify ty)
+    | .coduc ty => .coduc (simplify ty)
 
 
     def record_fields : Ty -> PHashMap String Ty
@@ -370,6 +377,7 @@ namespace Nameless
     | .exis ty constraints n => false
     | .univ op_ty_c ty => false
     | .induc ty => false
+    | .coduc ty => false
 
     partial def subst_while (f : Ty -> Bool) (m : PHashMap Nat Ty) : Ty -> Ty
     | .bvar id => .bvar id 
@@ -398,6 +406,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (subst_while f m)) (subst_while f m ty))
     | .induc ty => .induc (subst_while f m ty)
+    | .coduc ty => .coduc (subst_while f m ty)
 
     partial def sub_nonneg (stale : PHashSet Nat) (m : PHashMap Nat Ty) (negs : PHashSet Nat) : Ty -> Ty
     | .bvar id => .bvar id 
@@ -427,6 +436,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (sub_nonneg stale m negs)) (sub_nonneg stale m negs ty))
     | .induc ty => .induc (sub_nonneg stale m negs ty)
+    | .coduc ty => .coduc (sub_nonneg stale m negs ty)
 
 
     declare_syntax_cat lesstype
@@ -463,6 +473,7 @@ namespace Nameless
     syntax:50 "[" "_" "]" lesstype:50 : lesstype 
 
     syntax "induct" lesstype:40 : lesstype 
+    syntax "coduct" lesstype:40 : lesstype 
 
     syntax "(" lesstype ")" : lesstype
 
@@ -511,6 +522,7 @@ namespace Nameless
       `(Ty.univ (some [lesstype| $a ]) [lesstype| $d ])
 
     | `([lesstype| induct $a ]) => `(Ty.induc [lesstype| $a ])
+    | `([lesstype| coduct $a ]) => `(Ty.coduc [lesstype| $a ])
 
     | `([lesstype| ($a) ]) => `([lesstype| $a ])
 
@@ -571,6 +583,10 @@ namespace Nameless
     | .induc ty1 =>
       Format.bracket "(" (
         "induct " ++ (repr ty1 n)
+      ) ")"
+    | .coduc ty1 =>
+      Format.bracket "(" (
+        "coduct " ++ (repr ty1 n)
       ) ")"
 
     instance : Repr Ty where
@@ -652,6 +668,7 @@ namespace Nameless
       ) && 
       no_function_types ty_pl
     | .induc content => no_function_types content 
+    | .coduc content => no_function_types content 
 
     partial def index_free_vars (initial : PHashMap Nat (PHashSet Ty)) (ty : Ty) : PHashMap Nat (PHashSet Ty) :=
       let fids := toList (free_vars ty)
@@ -800,6 +817,7 @@ namespace Nameless
       (.univ (Option.map (instantiate (start + 1) args) op_ty_c) (instantiate (start + 1) args ty)
       )
     | .induc ty => .induc (instantiate (start + 1) args ty)
+    | .coduc ty => .coduc (instantiate (start + 1) args ty)
 
 
     partial def occurs (m : Ty.Context) (key : Nat): Ty -> Bool 
@@ -839,6 +857,7 @@ namespace Nameless
       | none => false
       | some ty_c => (occurs m key ty_c)) || (occurs m key ty)
     | .induc ty => (occurs m key ty)
+    | .coduc ty => (occurs m key ty)
 
     partial def subst_default (sign : Bool) : Ty -> Ty
     | .bvar id => .bvar id  
@@ -860,6 +879,7 @@ namespace Nameless
       -- can't sub away if constrained
       .univ op_ty_c ty
     | .induc ty => .induc (subst_default sign ty)
+    | .coduc ty => .coduc (subst_default sign ty)
 
     partial def equiv (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
       let ty1 := simplify (subst env_ty ty1)
@@ -913,6 +933,7 @@ namespace Nameless
       from_list (fields.map (fun (l, _) => l))
     | .exis ty constraints n => (extract_record_labels ty)
     | .induc ty => extract_record_labels ty
+    | .coduc ty => extract_record_labels ty
     | _ => {} 
 
     partial def extract_label_list (ty : Ty) : List String :=
@@ -923,11 +944,6 @@ namespace Nameless
         let fids := free_vars key_rel
         fids.contains key
       ) != none
-
-    def split_unions : Ty -> List Ty 
-    | Ty.union ty1 ty2 =>
-      (split_unions ty1) ++ (split_unions ty2)
-    | ty => [ty]
 
     def extract_field (label : String) (ty : Ty) : Option Ty := do
       let fields := toList (record_fields ty)
@@ -1024,6 +1040,7 @@ namespace Nameless
       )
     | .univ _ _ => false 
     | .induc _ => false 
+    | .coduc _ => false 
 
     -- (fun ty_u => 
     --   match ty_u with
@@ -2196,12 +2213,27 @@ namespace Nameless
       to_type (env_tm;env_tmx) t
 
     | .fix t_self_f => do
+      /-
       -- NOTE: extracting type from term using downward propagation of types seems similar to craig interpolation 
       -- Craig: proof : A -> B ==> A -> I -> B
       -- type inference : program ==> program : X -> Y ==> X -> Y <: A -> B ==> A <: X, Y <: B ==> A -> (X -> Y) -> B   
-      let boundary <- get
+      -/
+      -- let boundary <- get
 
       let ty_self_f <- to_type env_tm t_self_f
+
+      let (id_fixed, ty_IC) <- match ty_self_f with
+      | .impli (.fvar id) ty_IC => some (id, ty_IC)
+      | _ => none 
+
+      -- TODO: abstract variables that constrain the fixed point
+      return [lesstype| coduct ⟨Ty.abstract [id_fixed] 0 ty_IC⟩ ]
+    /-
+    END to_type
+    -/
+
+      -- match ty_self_f with
+      -- | .impli ty_IH ty_IC =>
       /-
       - inductive_branches --rename--> ty_self_f
       - ty_self_f should 
@@ -2213,7 +2245,7 @@ namespace Nameless
         --------
         - step 0: SELF -> X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
         - this is co-inductive: want the GREATEST fixed point, which is the least number of conjunctions (intersections)
-        - coinduct SELF . X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
+        - coducuct SELF . X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
         - translate to LEAST fixed point of body; which is the least number of disjunctions (unions):
         - step 1: REL = induct SELF . {zero * nil} | {succ N * cons L with N * L <: SELF [N, L]}
         - step 2: F = {X -> Y with X * Y <: REL}
@@ -2222,17 +2254,19 @@ namespace Nameless
         - if it is valid; generate the simpler co-inductive type; then translate it to constraints for CHC solver
         - if it's not valid; construct an inductive type
         ----
+        -- NOTE: when converting co-inductive type into constraints; remove quantifiers and and place inductive binding in premise 
+        -- i.e. coducuct X . T  becomes X <: T
         ----
         SELF -> X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
-        coind SELF . X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
-        coind SELF . zero -> nil & {succ N -> cons L SELF <: N -> L [N, L]}
+        coduc SELF . X -> {nil with X <: zero} | {cons L with X <: succ N, SELF <: N -> L [N, L]}
+        --- assuming constraints on X are disjoint --- this is probably an unnecssary step that would strengthen in if not disjoint
+        coduc SELF . X -> {nil with X <: zero} & X -> {cons L with X <: succ N, SELF <: N -> L [N, L]}
+        coduc SELF . zero -> nil & {succ N -> cons L SELF <: N -> L [N, L]}
         ¬ induct SELF . zero × ¬ nil | {succ N × ¬ cons L with N × ¬L <: SELF [N, L]})
         induct SELF . zero × ¬ nil | {succ N × ¬ cons L with N × ¬L <: SELF [N, L]} -> F
         {X × ¬ Y -> F with X * Y <: REL} ; REL = induct SELF . zero × nil | {succ N × cons L with N × L <: SELF [N, L]}
         {X -> Y with X * Y <: REL}
       -/
-      match ty_self_f with
-      | .impli ty_IH ty_IC =>
       -------------
       -------------
       -- let ty_content := inductive_branches.foldr (fun (context, ty_branch) ty_acc =>
@@ -2314,8 +2348,6 @@ namespace Nameless
       ----------------------
 
     --------------
-    | _ => 
-      return Ty.top
     /-
 
 
@@ -2425,52 +2457,52 @@ namespace Nameless
 
     -/
 
-    partial def infer_simple i (t : Tm) :=
-      let qual := ⟨empty⟩
-      let context : Ty.Context := ⟨empty, empty, empty⟩
-      (infer (i + 1) qual context {} t)
+    -- partial def infer_simple i (t : Tm) :=
+    --   let qual := ⟨empty⟩
+    --   let context : Ty.Context := ⟨empty, empty, empty⟩
+    --   (infer (i + 1) qual context {} t)
 
-    partial def infer_envs (i : Nat) (t : Tm) : List (PHashMap Nat Ty) :=
-      let qual := ⟨empty⟩
-      let context : Ty.Context := ⟨empty, empty, empty⟩
-      let (i, context_tys) := (infer (i + 1) qual context {} t)
-      context_tys.map (fun (context, ty) => context.env_simple)
+    -- partial def infer_envs (i : Nat) (t : Tm) : List (PHashMap Nat Ty) :=
+    --   let qual := ⟨empty⟩
+    --   let context : Ty.Context := ⟨empty, empty, empty⟩
+    --   let (i, context_tys) := (infer (i + 1) qual context {} t)
+    --   context_tys.map (fun (context, ty) => context.env_simple)
 
-    partial def infer_reduce_context (i : Nat) (qual : Ty.Qual) (context : Ty.Context) (t : Tm) : Option Ty :=
-      let boundary := 0
-      let (_, context_tys) := (infer i qual context {} t) 
-      -- let (_, context_tys) := bind_nl (infer i context {} t) (fun i (context, ty) =>
-      --   bind_nl (Ty.unify_all i [context] context.env_relational.toList) (fun i context =>
-      --     (i, [(context, ty)])
-      -- ))
+    -- partial def infer_reduce_context (i : Nat) (qual : Ty.Qual) (context : Ty.Context) (t : Tm) : Option Ty :=
+    --   let boundary := 0
+    --   let (_, context_tys) := (infer i qual context {} t) 
+    --   -- let (_, context_tys) := bind_nl (infer i context {} t) (fun i (context, ty) =>
+    --   --   bind_nl (Ty.unify_all i [context] context.env_relational.toList) (fun i context =>
+    --   --     (i, [(context, ty)])
+    --   -- ))
 
-      if context_tys.isEmpty then
-        none
-      else
-        let intersectable := context_tys.all (fun (context, ty_result) => 
-          Ty.functiontype (Ty.subst context.env_simple ty_result)
-        )
-        let intersectable := false
+    --   if context_tys.isEmpty then
+    --     none
+    --   else
+    --     let intersectable := context_tys.all (fun (context, ty_result) => 
+    --       Ty.functiontype (Ty.subst context.env_simple ty_result)
+    --     )
+    --     let intersectable := false
 
-        let ty_collapsed := (
-          if intersectable then
-            List.foldr (fun (context, ty') ty_acc => 
-              let ty_ex := Ty.pack (Ty.stale_boundary boundary) context ty' 
-              Ty.intersect [lesstype| [_ <: ⟨ty_ex⟩] β[0]] ty_acc
-            ) Ty.top context_tys 
-          else
-            List.foldr (fun (context, ty') ty_acc => 
-              let ty_ex := Ty.pack (Ty.stale_boundary boundary) context ty'
-              Ty.unionize ty_ex ty_acc
-            ) Ty.bot context_tys
-        )
-        some ty_collapsed
+    --     let ty_collapsed := (
+    --       if intersectable then
+    --         List.foldr (fun (context, ty') ty_acc => 
+    --           let ty_ex := Ty.pack (Ty.stale_boundary boundary) context ty' 
+    --           Ty.intersect [lesstype| [_ <: ⟨ty_ex⟩] β[0]] ty_acc
+    --         ) Ty.top context_tys 
+    --       else
+    --         List.foldr (fun (context, ty') ty_acc => 
+    --           let ty_ex := Ty.pack (Ty.stale_boundary boundary) context ty'
+    --           Ty.unionize ty_ex ty_acc
+    --         ) Ty.bot context_tys
+    --     )
+    --     some ty_collapsed
 
 
-    partial def infer_reduce (i : Nat) (t : Tm) : Option Ty := 
-      let qual := ⟨empty⟩
-      let context : Ty.Context := ⟨empty, empty, empty⟩
-      infer_reduce_context (i + 1) qual context t
+    -- partial def infer_reduce (i : Nat) (t : Tm) : Option Ty := 
+    --   let qual := ⟨empty⟩
+    --   let context : Ty.Context := ⟨empty, empty, empty⟩
+    --   infer_reduce_context (i + 1) qual context t
 
     -- structure Work where
     --   cost : Nat
