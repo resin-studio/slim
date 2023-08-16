@@ -2269,8 +2269,8 @@ namespace Nameless
     ))
     -/
     #eval to_type nat_to_chain
-    ------------------
 
+    ------------------
     def nat_to_list := [lessterm|
       (_ => fix(_ => _ => match y[0] 
         case zero;; => nil;;
@@ -2286,15 +2286,98 @@ namespace Nameless
     -/
     #eval to_type nat_to_list
 
-    -- ))(thing;;)(succ;succ;zero;;)
+    ------------------
 
-    #eval [lesstype|
-    ([_](β[1] ->
-  (coduct (β[1] ->
-    ({cons//((l : β[3]) & (r : {β[0] with β[2] <: (β[1] -> β[0]) # 1})) with β[2] <: succ//β[0] # 1} |
-     {nil//unit with β[1] <: zero//unit # 0})))))
+    def le := [lessterm| 
+      fix (_ => _ => match y[0]
+        case (zero;;, y[0]) => true;;  
+        case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+        case (succ; y[0], zero;;) => false;; 
+      )
     ]
 
+    #eval to_type le 
+
+    def max := [lessterm| 
+      let _ = ⟨le⟩ in
+      (_ => match y[0] case (y[0], y[1]) =>
+        (
+          if (y[3] (y[0], y[1])) then
+            y[1]
+          else
+            y[0]
+        )
+      )
+    ] 
+
+    #eval to_type max
+
+    def lt := [lessterm|
+      fix (_ => _ => match y[0]
+        case (zero;;, succ;zero;;) => true;;  
+        case (succ; y[0], succ; y[1]) => (y[3] (y[0], y[1])) 
+        case (y[0], zero;;) => false;; 
+      )
+    ]
+
+    def add := [lessterm|
+      fix(_ => _ => match y[0] 
+        case (zero;;, y[0]) => y[0] 
+        case (succ; y[0], y[1]) => succ; (y[3] (y[0], y[1]))
+      )
+    ]
+
+    #eval to_type add 
+
+    def sum := [lessterm|
+      fix(_ => _ => match y[0]
+        case zero;; => zero;; 
+        case succ; y[0] => (
+          (⟨add⟩)((y[2](y[0]), succ;y[0]))
+        )
+      )
+    ]
+
+    #eval to_type sum 
+
+    def foldn := [lessterm|
+      let _ = _ in
+      let _ = _ in
+      _ => match y[0] case (y[0], (y[1], y[2])) => (
+          let _ = fix(_ => _ => match y[0] case (y[0], y[1]) =>
+            /-
+            n, b, f: 4, 5, 6 
+            loop: 3 
+            i, c: 0, 1 
+            -/
+            (if ⟨lt⟩(y[0], y[4]) then
+              -- y[3](succ;y[0], y[6](y[0], y[1]))
+              y[3](succ;y[0], ;)
+            else
+              y[1]
+            )
+          ) in 
+          /-
+          loop: 0 
+          n: 1
+          b: 2
+          f: 3
+          -/
+          y[0](zero;;, y[2])
+          -- y[0]
+      )
+    ]
+
+    #eval to_type foldn 
+
+    /-
+    TODO: convert type into set of horn clause constraints in for of subtyping
+    - e.g. {C & P₁ & P₂ & ... [Y]} <: Q  
+    - meaning ∀ X Y . (C[X,Y] & P₁[X,Y] & P₂[X,Y] & ... => Q[X])
+    -/
+
+    -----------------------
+    -----------------------
     -----------------------
 
       -- match ty_self_f with
