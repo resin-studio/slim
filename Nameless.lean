@@ -2115,7 +2115,7 @@ namespace Nameless
     - NOTE: simply return a type; use existential type to include unsolved constraints. 
     -/
     -- def infer (i : Nat) (qual : Ty.Qual) (context : Ty.Context) (env_tm : PHashMap Nat Ty) (t : Tm) : (Nat × List (Ty.Context × Ty)) :=
-    partial def to_type (env_tm : PHashMap Nat Ty) (t : Tm) : StateT Nat Option Ty :=
+    partial def to_type_state (env_tm : PHashMap Nat Ty) (t : Tm) : StateT Nat Option Ty :=
     match t with
     | hole =>
       return Ty.top
@@ -2127,22 +2127,22 @@ namespace Nameless
       let ty <- env_tm.find? id
       return ty
     | .tag l t1 => do 
-      let ty1 <- to_type env_tm t1
+      let ty1 <- to_type_state env_tm t1
       return Ty.tag l ty1
 
     | .record fds => do
       let mut ty_result := Ty.top 
-      for (l_i, t_i) in fds do
-        let ty_i <- to_type env_tm t_i  
+      for (l_i, t_i) in fds.reverse do
+        let ty_i <- to_type_state env_tm t_i  
         ty_result := Ty.inter (Ty.field l_i ty_i) ty_result
       return ty_result
 
     | .matc switch branches => do
       let boundary <- get
-      let ty_switch <- to_type env_tm switch
+      let ty_switch <- to_type_state env_tm switch
       
       let mut ty_result := Ty.bot
-      for (p,b) in branches do
+      for (p,b) in branches.reverse do
         let n <- pattern_wellformed 0 p
         let env_pat : PHashMap Nat Ty <- modifyGet (fun i => (
           Id.run do
@@ -2160,9 +2160,9 @@ namespace Nameless
 
         let p := instantiate 0 list_tm_x p 
         let b := instantiate 0 list_tm_x b  
-        let ty_p <- to_type (env_tm ; env_pat) p
+        let ty_p <- to_type_state (env_tm ; env_pat) p
 
-        let ty_b <- to_type (env_tm ; env_pat) b 
+        let ty_b <- to_type_state (env_tm ; env_pat) b 
         /-
         NOTE: abstract pattern's type for each case
         -/
@@ -2187,16 +2187,16 @@ namespace Nameless
       let list_tm_x := env_param.toList.map (fun (k, _) => (fvar k))
 
       let b := instantiate 0 list_tm_x body
-      let ty_b <- to_type (env_tm; env_param) b
+      let ty_b <- to_type_state (env_tm; env_param) b
       return Ty.impli ty_p ty_b
 
     | .proj t1 l => do
-      let ty1 <- to_type env_tm t1
+      let ty1 <- to_type_state env_tm t1
       return Ty.exis (.bvar 0) [(ty1, Ty.field l (.bvar 0))] 1
 
     | .app t_f t_arg => do
-      let ty_arg <- to_type env_tm t_arg
-      let ty_f <- to_type env_tm t_f
+      let ty_arg <- to_type_state env_tm t_arg
+      let ty_f <- to_type_state env_tm t_f
       return Ty.exis (.bvar 0) [(ty_f, Ty.impli ty_arg (.bvar 0))] 1 
 
 
@@ -2210,7 +2210,7 @@ namespace Nameless
         if t_arg == Tm.hole then
           return ty_expected
         else
-          let ty_arg <- to_type env_tm t_arg
+          let ty_arg <- to_type_state env_tm t_arg
           return [lesstype| [_ <: {⟨ty_arg⟩ with ⟨ty_arg⟩ <: ⟨ty_expected⟩ # 0}] β[0] ]
       )
 
@@ -2218,10 +2218,10 @@ namespace Nameless
         ((fvar i, PHashMap.from_list [(i, ty_context)]), i + 1)
       )
       let t := instantiate 0 [x] t 
-      to_type (env_tm;env_tmx) t
+      to_type_state (env_tm;env_tmx) t
 
     | .fix t_self_f => do
-      let ty_self_f <- to_type env_tm t_self_f
+      let ty_self_f <- to_type_state env_tm t_self_f
 
       let (id_fixed, ty_IC) <- match ty_self_f with
       | .impli (.fvar id) ty_IC => some (id, ty_IC)
@@ -2229,16 +2229,72 @@ namespace Nameless
 
       return [lesstype| coduct ⟨Ty.abstract [id_fixed] 0 ty_IC⟩ ]
     /-
-    END to_type
+    END to_type_state
     -/
 
-    -----------------
-    #eval to_type empty [lessterm|
+
+    def to_type (t : Tm) : Option Ty := do
+      let (ty, _) <- to_type_state empty t 0
+      let ty := Ty.simplify ty
+      /-
+      TODO: generalize 
+      -/
+      -- let fids := toList (Ty.free_vars ty)
+      -- let mut ty_univ := (Ty.abstract fids 0 ty)
+      -- for _ in fids do
+      --   ty_univ := Ty.univ none ty_univ
+      return ty
+
+    /-
+    - NOTE: constraint on parameter via body's existential seems sound 
+    - this implies that a type such as (P -> bot) can be constructed
+    - logically this means ¬ P, which seems ok.
+    - therefore constraint in universal is not actually necessary over implication
+    - it is subsumed by constraint in existential
+    - however, if body of universal is not an implication then universal constraint is helpful
+    -/
+
+    def nat_to_chain := [lessterm|
       fix(_ => _ => match y[0] 
       case zero;; => nil;;
       case succ;y[0] => cons;(y[2](y[0]))
       )
-    ] 0
+    ] 
+    /-
+    Expected:
+    (coduct (α[3] ->
+      {cons//{β[0] with β[2] <: (β[1] -> β[0]) # 1} with α[3] <: succ//β[0] # 1} |
+      {nil//unit with α[3] <: zero//unit # 0} | 
+      bot
+    ))
+    -/
+    #eval to_type nat_to_chain
+    ------------------
+
+    def nat_to_list := [lessterm|
+      (_ => fix(_ => _ => match y[0] 
+        case zero;; => nil;;
+        case succ;y[0] => cons;(y[3], y[2](y[0]))
+      ))
+    ]
+    /-
+    Expected:
+    (α[1] -> (coduct (α[5] ->
+      {nil//unit with α[5] <: zero//unit # 0} |
+      {cons//(α[1] * {β[0] with β[2] <: (β[1] -> β[0]) # 1}) with α[5] <: succ//β[0] # 1}
+    )))
+    -/
+    #eval to_type nat_to_list
+
+    -- ))(thing;;)(succ;succ;zero;;)
+
+    #eval [lesstype|
+    ([_](β[1] ->
+  (coduct (β[1] ->
+    ({cons//((l : β[3]) & (r : {β[0] with β[2] <: (β[1] -> β[0]) # 1})) with β[2] <: succ//β[0] # 1} |
+     {nil//unit with β[1] <: zero//unit # 0})))))
+    ]
+
     -----------------------
 
       -- match ty_self_f with
