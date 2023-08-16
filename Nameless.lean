@@ -2138,6 +2138,7 @@ namespace Nameless
       return ty_result
 
     | .matc switch branches => do
+      let boundary <- get
       let ty_switch <- to_type env_tm switch
       
       let mut ty_result := Ty.bot
@@ -2160,15 +2161,22 @@ namespace Nameless
         let p := instantiate 0 list_tm_x p 
         let b := instantiate 0 list_tm_x b  
         let ty_p <- to_type (env_tm ; env_pat) p
-        let constraint := (ty_switch, ty_p)
+
         let ty_b <- to_type (env_tm ; env_pat) b 
-        let ty_i := Ty.exis ty_b [constraint] 0
+        /-
+        NOTE: abstract pattern's type for each case
+        -/
+        let fids := (toList ((Ty.free_vars ty_b) + (Ty.free_vars ty_p))).filter (fun fid => fid >= boundary)
+        let ty_i := Ty.exis (Ty.abstract fids 0 ty_b) [(ty_switch, (Ty.abstract fids 0 ty_p))] fids.length
 
         ty_result := Ty.union ty_i ty_result
       return ty_result
 
 
     | .func body => do
+      /-
+      abstraction of parameter occurs in let-binding
+      -/
       let (env_param, ty_p) <- modifyGet (fun i => (
         let ty_p := Ty.fvar (i + 1)
         (empty.insert i ty_p, ty_p)
@@ -2213,24 +2221,25 @@ namespace Nameless
       to_type (env_tm;env_tmx) t
 
     | .fix t_self_f => do
-      /-
-      -- NOTE: extracting type from term using downward propagation of types seems similar to craig interpolation 
-      -- Craig: proof : A -> B ==> A -> I -> B
-      -- type inference : program ==> program : X -> Y ==> X -> Y <: A -> B ==> A <: X, Y <: B ==> A -> (X -> Y) -> B   
-      -/
-      -- let boundary <- get
-
       let ty_self_f <- to_type env_tm t_self_f
 
       let (id_fixed, ty_IC) <- match ty_self_f with
       | .impli (.fvar id) ty_IC => some (id, ty_IC)
       | _ => none 
 
-      -- TODO: abstract variables that constrain the fixed point
       return [lesstype| coduct ⟨Ty.abstract [id_fixed] 0 ty_IC⟩ ]
     /-
     END to_type
     -/
+
+    -----------------
+    #eval to_type empty [lessterm|
+      fix(_ => _ => match y[0] 
+      case zero;; => nil;;
+      case succ;y[0] => cons;(y[2](y[0]))
+      )
+    ] 0
+    -----------------------
 
       -- match ty_self_f with
       -- | .impli ty_IH ty_IC =>
