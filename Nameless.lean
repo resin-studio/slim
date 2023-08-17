@@ -2225,6 +2225,9 @@ namespace Nameless
 
       let (id_fixed, ty_IC) <- match ty_self_f with
       | .impli (.fvar id) ty_IC => some (id, ty_IC)
+      /-
+      TODO: add case for generalized implication: .univ ... 
+      -/
       | _ => none 
 
       return [lesstype| coduct ⟨Ty.abstract [id_fixed] 0 ty_IC⟩ ]
@@ -2244,6 +2247,50 @@ namespace Nameless
       -- for _ in fids do
       --   ty_univ := Ty.univ none ty_univ
       return ty
+
+    /-
+    TODO: convert type into set of horn clause constraints in for of subtyping
+    - e.g. {C & P₁ & P₂ & ... [Y]} <: Q  
+    - meaning ∀ X Y . (C[X,Y] & P₁[X,Y] & P₂[X,Y] & ... => Q[X])
+
+    TODO: may need to convert coinductive implication into inductive constraints
+
+    - can think of the type generated from a program as a model
+    - although the model may have nested specs due to 
+      - body <: annotation in let-binding   
+      - arg <: param in application
+      - switch <: pattern in matching 
+
+    NOTE: difference from Remy: rhs is a spec, not merely a type variable 
+    NOTE: when existential is on rhs:
+      - variables should be freed 
+      - P <: μ R . nil | {cons X × L with L <: R}
+      - P(nil) ==> R(nil)
+      - ∀ x,l . P(cons(x,l)) & R(l) ==> R(cons(x,l))
+    -/
+    -- def flatten (ty_model : Ty) (ty_spec : Ty) : PHashSet Ty := match ty_model with
+    --|------|--
+    --| TODO |--
+    --|------|--
+    -- | _ => 
+    -- | .bvar : Nat -> Ty  
+    -- | .fvar : Nat -> Ty
+    -- | .unit : Ty
+    -- | .top : Ty
+    -- | .bot : Ty
+    -- | .tag : String -> Ty -> Ty
+    -- | .field : String -> Ty -> Ty
+    -- | .union : Ty -> Ty -> Ty
+    -- | .inter : Ty -> Ty -> Ty
+    -- | .impli : Ty -> Ty -> Ty
+    -- /- payload -> List (lower <: upper) -> bound -> Ty -/
+    -- | .exis : Ty -> List (Ty × Ty) -> Nat -> Ty
+    -- -- TODO: remove Option from univ; top type is sufficient
+    -- | .univ : Option Ty -> Ty -> Ty
+    -- | .induc : Ty -> Ty
+    -- | .coduc : Ty -> Ty
+
+    -----------------------
 
     /-
     - NOTE: constraint on parameter via body's existential seems sound 
@@ -2369,12 +2416,6 @@ namespace Nameless
     ]
 
     #eval to_type foldn 
-
-    /-
-    TODO: convert type into set of horn clause constraints in for of subtyping
-    - e.g. {C & P₁ & P₂ & ... [Y]} <: Q  
-    - meaning ∀ X Y . (C[X,Y] & P₁[X,Y] & P₂[X,Y] & ... => Q[X])
-    -/
 
     -----------------------
     -----------------------
