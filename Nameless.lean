@@ -2294,13 +2294,22 @@ namespace Nameless
     - distinguish between rules allowing predicates to be expanded
       - and rules defining constraints; which cannot be expanded
     
-    NOTE: difference between CHC and Prolog 
-    - CHC is the search problem of finding predicates
-    - Prolog is the search problem of finding arguments
+    NOTE: comparison of CHC and Prolog 
+    - CHC involves the search problem of finding predicates
+    - Prolog involves the search problem of finding arguments
+    - solving predicates in a CHC query via craig interpolation 
+      - is a generalization of solving for arguments in a Prolog query  
+    - solving predicates in a CHC rule
+      - is a generalization of defining predicates in Prolog
 
     NOTE: predicate search
     - C(x) ==> P(x), D(c) ==> P(x) expands P with union P ↦ C | D
     - P(x) ==> C(x) uses craig interpolation to narrow P's dependencies with intersection 
+
+    IDEA: 
+    - use CHC solver to solve for predicates in type language
+    - then use specialized theory to solve for arguments of type predicates
+
 
     -/
     -- def to_clauses : Ty -> Option ((List Clause) × Ty)
