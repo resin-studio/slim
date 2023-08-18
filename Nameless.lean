@@ -2308,8 +2308,30 @@ namespace Nameless
 
     IDEA: 
     - use CHC solver to solve for predicates in type language
+    - check that solution as type union/intersection is inhabited/non-empty
     - then use specialized theory to solve for arguments of type predicates
 
+    IDEA: 
+    - types with bound variables represent CHC constraints (unadjustable)
+    - type variables represent predicates to be learned (adjustable)
+
+    NOTE: the learnable predicate/type for one abstraction becomes the constraint for the outer abstraction 
+    NOTE: let annotations, param types, pattern types are constraints
+    --------------------------------------
+    NOTE: 
+    - inductive definitions (used on lhs) can have learnable predicates
+    - Thus it is safe to convert an observed inductive type into horn clause constraints over a type variable.
+    - types on RHS, (e.g. annotations, param/pattern types) are not converted into horn clauses!
+    - types on RHS are constraints and are not learnable
+    - is that enough? is any else necessary to mark learnable type variables?
+    - are all free variables learnable?
+    - all free variables are learnable
+    - learnability is decided by choosing when to free type variables
+    - flagging free variables as learnable/unlearnable isn't necessary
+      - because RHS is searched by introducing a new learnable predicate that implies RHS constraint
+      - e.g. P(x, y), y = label ==> C(x, y)
+      - i.e. a constraint is made learnable by introducing a new learnable variable under a constraint
+    ------------------------------------------------
 
     -/
     -- def to_clauses : Ty -> Option ((List Clause) × Ty)
