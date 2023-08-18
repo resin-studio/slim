@@ -2284,26 +2284,39 @@ namespace Nameless
     /-
     TODO: 
     - create a horn clauses syntactic sugar
-    - create predicate syntax 
+    - create meta-predicate syntax; meta-predicate is an object-proposition
+    - a meta-argument is a proof; proof : proposition
     - predicate is a variable defined by the horn clause
     - use first order predicates and |= for entailment 
     - or use _ |- _ ==> _ for entailment under interpretation  
-    -/
-    def to_clauses : Ty -> Option ((List Clause) × Ty)
-    | .bvar _ => failure  
-    | .fvar id => return ([([], .fvar id)], .fvar id) 
-    | .unit => return ([([], .unit)], .unit) 
-    | .top => return ([([], .top)], .top)
-    | .bot => return ([([], .bot)], .bot)
-    | .tag l ty_pl => do
-      let (clauses_pl, head_pl) <- to_clauses ty_pl  
-      -- ALTERNATIVE: use propositions and fresh ID in head position
-      -- return (([.tag l head_pl], ID) :: clauses_pl, ID)
-      -- return (([head_pl(h)] ==> ID(.tag l h)) :: clauses_pl, ID)
-      return (([], .tag l head_pl) :: clauses_pl, .tag l head_pl)
+
+    TODO:
+    - distinguish between rules allowing predicates to be expanded
+      - and rules defining constraints; which cannot be expanded
     
-    /- --| TODO |-- -/
-    | _ => failure 
+    NOTE: difference between CHC and Prolog 
+    - CHC is the search problem of finding predicates
+    - Prolog is the search problem of finding arguments
+
+    NOTE: predicate search
+    - C(x) ==> P(x), D(c) ==> P(x) expands P with union P ↦ C | D
+    - P(x) ==> C(x) uses craig interpolation to narrow P's dependencies with intersection 
+
+    -/
+    -- def to_clauses : Ty -> Option ((List Clause) × Ty)
+    -- | .bvar _ => failure  
+    -- | .fvar id => return ([([], .fvar id)], .fvar id) 
+    -- | .unit => return ([([], .unit)], .unit) 
+    -- | .top => return ([([], .top)], .top)
+    -- | .bot => return ([([], .bot)], .bot)
+    -- | .tag l ty_pl => do
+    --   let (clauses_pl, head_pl) <- to_clauses ty_pl  
+    --   -- ALTERNATIVE: use propositions and fresh ID in head position
+    --   -- return (([.tag l head_pl], ID) :: clauses_pl, ID)
+    --   -- return (([head_pl(h)] ==> ID(.tag l h)) :: clauses_pl, ID)
+    --   return (([], .tag l head_pl) :: clauses_pl, .tag l head_pl)
+    -- /- --| TODO |-- -/
+    -- | _ => failure 
     -- | .field : String -> Ty -> Ty
     -- | .union : Ty -> Ty -> Ty
     -- | .inter : Ty -> Ty -> Ty
