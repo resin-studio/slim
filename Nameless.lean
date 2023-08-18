@@ -2260,25 +2260,50 @@ namespace Nameless
       - body <: annotation in let-binding   
       - arg <: param in application
       - switch <: pattern in matching 
+    NOTE: when existential is on rhs
+      CORRECT: 
+        - induction/existential/union on RHS represents a concrete predicate
+        - do no deconstruct
+      WRONG:
+        - variables should be freed 
+        - P <: μ R . nil | {cons X × L with L <: R}
+        - P(nil) ==> R(nil)
+        - ∀ x,l . P(cons(x,l)) & R(l) ==> R(cons(x,l))
+    NOTE: deconstruction of RHS will be handled by craig interpolation during solving
+    QUESTION: How is universal on lhs handled? moved to rhs? 
+    QUESTION: should universals be converted to existentials? 
+    QUESTION: should co-induction be converted to induction? 
 
-    NOTE: difference from Remy: rhs is a spec, not merely a type variable 
-    NOTE: when existential is on rhs:
-      - variables should be freed 
-      - P <: μ R . nil | {cons X × L with L <: R}
-      - P(nil) ==> R(nil)
-      - ∀ x,l . P(cons(x,l)) & R(l) ==> R(cons(x,l))
+
+
+    NOTE: generation of horn clauses rewrites types into horn clauses
     -/
-    -- def flatten (ty_model : Ty) (ty_spec : Ty) : PHashSet Ty := match ty_model with
-    --|------|--
-    --| TODO |--
-    --|------|--
-    -- | _ => 
-    -- | .bvar : Nat -> Ty  
-    -- | .fvar : Nat -> Ty
-    -- | .unit : Ty
-    -- | .top : Ty
-    -- | .bot : Ty
-    -- | .tag : String -> Ty -> Ty
+
+    def Clause := List Ty × Ty 
+
+    /-
+    TODO: 
+    - create a horn clauses syntactic sugar
+    - create predicate syntax 
+    - predicate is a variable defined by the horn clause
+    - use first order predicates and |= for entailment 
+    - or use _ |- _ ==> _ for entailment under interpretation  
+    -/
+    def to_clauses : Ty -> Option ((List Clause) × Ty)
+    | .bvar _ => failure  
+    | .fvar id => return ([([], .fvar id)], .fvar id) 
+    | .unit => return ([([], .unit)], .unit) 
+    | .top => return ([([], .top)], .top)
+    | .bot => return ([([], .bot)], .bot)
+    | .tag l ty_pl => do
+      let (clauses_pl, head_pl) <- to_clauses ty_pl  
+      -- ALTERNATIVE: use propositions and fresh ID in head position
+      -- return (([.tag l head_pl], ID) :: clauses_pl, ID)
+      -- return (([head_pl(h)] ==> ID(.tag l h)) :: clauses_pl, ID)
+      return (([], .tag l head_pl) :: clauses_pl, .tag l head_pl)
+    
+    /- --| TODO |-- -/
+    | _ => failure 
     -- | .field : String -> Ty -> Ty
     -- | .union : Ty -> Ty -> Ty
     -- | .inter : Ty -> Ty -> Ty
