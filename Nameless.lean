@@ -2279,7 +2279,6 @@ namespace Nameless
     NOTE: generation of horn clauses rewrites types into horn clauses
     -/
 
-    def Clause := List Ty × Ty 
 
     /-
     TODO: 
@@ -2329,8 +2328,26 @@ namespace Nameless
         - including the labels (tags, fields), implication, quantifiers, induction, etc.
     ------------------------------------------------
     -/
-    def to_CHC : Ty -> StateT Nat Option ((List Clause) × Ty)
+
+    /-
+    constraint form for CHC solving
+    -/
+
+    inductive Atom 
+    | var : Nat -> Atom 
+    | constraint : Constraint -> Atom 
+
+    inductive HornClause
+    | hc : List Atom -> Atom -> HornClause
+
+    inductive Constraint 
+    | c : Ty -> Constraint 
+
+    def to_CHC (ty_model : Ty) (ty_spec : Ty) 
+    : StateT Nat Option ((List HornClause) × Atom)
+    := match ty_model with
     | .tag l ty_pl => do
+      let constraint := Constraint.c ty_spec 
       let (clauses_pl, head_pl) <- to_CHC ty_pl  
       -- ALTERNATIVE: use propositions and fresh ID in head position
       -- return (([.tag l head_pl], ID) :: clauses_pl, ID)

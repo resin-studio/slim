@@ -3,15 +3,16 @@
 - evaluate existing solvers for feasibility
     - see if solvers have specialized logic for solving for arguments of horn clauses
 - translate to IR horn clause language
-    - treat types on rhs as opaque
+    - translate rhs types (specs) to placeholder constraint syntax
     - but turn types on lhs into horn clauses for learning predicates
 - choose backend (Lean or some CHC solver)
 - translation to predicate learning backend
-- translate to iterpolating/argument solving backend
-    - target CHC's solver's specialized interpolation/constraint logic
+- translate to rhs types (specs) to actual constraint language
+    - constraint language is a specialized/refined logic solved via interpolation
 - write a custom CHC solver with specialized logic for the type language
     - if the existing solvers are insufficient
-
+    - could be similar to previous unification procedure 
+    - simply avoid using termination heuristic to be more complete
 
 > Due 2023 Sep 01 
 - select benchmarks 
