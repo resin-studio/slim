@@ -1,38 +1,47 @@
 ## schedule
 > Due 2023 Aug 25
-- existing solver feasibility evaluated
-- first draft of IR horn clause language translation completed
-- backend (Lean or some CHC solver) chosen
+- evaluate existing solvers for feasibility
+    - see if solvers have specialized logic for solving for arguments of horn clauses
+- translate to IR horn clause language
+    - treat types on rhs as opaque
+    - but turn types on lhs into horn clauses for learning predicates
+- choose backend (Lean or some CHC solver)
+- translation to predicate learning backend
+- translate to iterpolating/argument solving backend
+    - target CHC's solver's specialized interpolation/constraint logic
+- write a custom CHC solver with specialized logic for the type language
+    - if the existing solvers are insufficient
+
 
 > Due 2023 Sep 01 
-- benchmarks selected 
-- first draft of backend translation (lean or CHC) completed
+- select benchmarks 
+- complete first draft of backend translation (lean or CHC)
 
 > Due 2023 Sep 08 
-- 33% of benchmarks evaluated 
+- evaluate 33% of benchmarks
 
 > Due 2023 Sep 15 
-- meta-theorems proposed 
+- propose meta-theorems 
 
 > Due 2023 Sep 22 
-- 66% of benchmarks evaluated 
-- 33% of meta-theorems proved 
+- evaluate 66% of benchmarks 
+- prove 33% of meta-theorems
 
 > Due 2023 Sep 29
-- 100% of benchmarks evaluated 
-- 66% of meta-theorems proved 
+- evaluate 100% of benchmarks 
+- prove 66% of meta-theorems 
 
 > Due 2023 Oct 06
-- 100% of meta-theorems proved 
+- prove 100% of meta-theorems 
 
 > Due 2023 Oct 13
-- first draft of paper completed
+- complete first draft of paper
 
 > Due 2023 Oct 20
-- second full draft of paper completed
+- complete second full draft of paper
 
 > Due 2023 Oct 27
-- third full draft of paper completed
+- complete third full draft of paper
 
 > Due 2023 Nov 03
-- final paper and all results completed
+- complete final paper and all results

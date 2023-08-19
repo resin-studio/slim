@@ -2296,20 +2296,12 @@ namespace Nameless
     
     NOTE: comparison of CHC and Prolog 
     - CHC involves the search problem of finding predicates
+      - interpolation part is a specialized logic e.g. Prolog/arithmetic
     - Prolog involves the search problem of finding arguments
-    - solving predicates in a CHC query via craig interpolation 
-      - is a generalization of solving for arguments in a Prolog query  
-    - solving predicates in a CHC rule
-      - is a generalization of defining predicates in Prolog
 
     NOTE: predicate search
     - C(x) ==> P(x), D(c) ==> P(x) expands P with union P ↦ C | D
     - P(x) ==> C(x) uses craig interpolation to narrow P's dependencies with intersection 
-
-    IDEA: 
-    - use CHC solver to solve for predicates in type language
-    - check that solution as type union/intersection is inhabited/non-empty
-    - then use specialized theory to solve for arguments of type predicates
 
     IDEA: 
     - types with bound variables represent CHC constraints (unadjustable)
@@ -2324,16 +2316,28 @@ namespace Nameless
     - types on RHS, (e.g. annotations, param/pattern types) are not converted into horn clauses!
     - types on RHS are constraints and are not learnable
     - is that enough? is any else necessary to mark learnable type variables?
-    - are all free variables learnable?
     - all free variables are learnable
-    - learnability is decided by choosing when to free type variables
-    - flagging free variables as learnable/unlearnable isn't necessary
-      - because RHS is searched by introducing a new learnable predicate that implies RHS constraint
+    - free variables that represent parameter will be constrained by types/predicates originating at pattern matching
+    - the outer horn clause language is for coarsely learning predicates
+    - the inner constraint sublanguage is for refining the predicates
+      - the inner language may be Prolog-like
+    - the constraint (RHS) is searched by introducing a new learnable predicate that implies RHS constraint
       - e.g. P(x, y), y = label ==> C(x, y)
+      - e.g. P & {x,y | y = label} ==> C(x, y)
       - i.e. a constraint is made learnable by introducing a new learnable variable under a constraint
+      - solving for the concrete value of X requires a specialized logic that understands the full type language
+        - including the labels (tags, fields), implication, quantifiers, induction, etc.
     ------------------------------------------------
-
     -/
+    def to_CHC : Ty -> StateT Nat Option ((List Clause) × Ty)
+    | .tag l ty_pl => do
+      let (clauses_pl, head_pl) <- to_CHC ty_pl  
+      -- ALTERNATIVE: use propositions and fresh ID in head position
+      -- return (([.tag l head_pl], ID) :: clauses_pl, ID)
+      -- return (([head_pl(h)] ==> ID(.tag l h)) :: clauses_pl, ID)
+      return (([], .tag l head_pl) :: clauses_pl, .tag l head_pl)
+    /- --| TODO |-- -/
+    | _ => failure 
     -- def to_clauses : Ty -> Option ((List Clause) × Ty)
     -- | .bvar _ => failure  
     -- | .fvar id => return ([([], .fvar id)], .fvar id) 
