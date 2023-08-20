@@ -2333,42 +2333,60 @@ namespace Nameless
     constraint form for CHC solving
     -/
 
-    inductive Atom 
-    | var : Nat -> Atom 
-    | constraint : Constraint -> Atom 
-
-    inductive HornClause
-    | hc : List Atom -> Atom -> HornClause
-
     inductive Constraint 
     | c : Ty -> Constraint 
 
-    def to_CHC (ty_model : Ty) (ty_spec : Ty) 
-    : StateT Nat Option ((List HornClause) × Atom)
-    := match ty_model with
-    | .tag l ty_pl => do
-      let constraint := Constraint.c ty_spec 
-      let (clauses_pl, head_pl) <- to_CHC ty_pl  
-      -- ALTERNATIVE: use propositions and fresh ID in head position
-      -- return (([.tag l head_pl], ID) :: clauses_pl, ID)
-      -- return (([head_pl(h)] ==> ID(.tag l h)) :: clauses_pl, ID)
-      return (([], .tag l head_pl) :: clauses_pl, .tag l head_pl)
+    inductive Atom 
+    | id : Nat -> Atom 
+    | con : Constraint -> Atom 
+
+    structure HornClause where
+     body : List Atom 
+     head : Atom
+
+    def to_constraint (ty : Ty) : Constraint := Constraint.c ty
+
+    def to_atom (ty : Ty) : Atom := Atom.con (to_constraint ty) 
+
+    /-
+    - return a list of horn clauses to be validated and 
+    - the atom constructed from the type for constructing future clauses 
+    -/
+    /-
+    ISSUE: this construction is dependent on the specialized logic of constraints
+    TODO: need to determine what the solver's special language looks like
+    -/
+    -- def to_CHC (ty_model : Ty) 
+    -- : StateT Nat Option (List HornClause × Nat) 
+    -- := match ty_model with
+    -- | .bvar _ => failure  
+    -- | .fvar id => return ([], id) 
+    -- | .unit => do
+    --   let (clause, id) <- modifyGet (fun i => (
+    --     let id := i
+    --     let atom := to_atom (Ty.unit)
+    --     let clause : HornClause := ⟨[atom], (Atom.id id)⟩
+    --     (clause, id)
+    --     ,
+    --     i + 1
+    --   ))
+    --   return ([clause], id)
+    -- -- | .top => return ([([], .top)], .top)
+    -- -- | .bot => return ([([], .bot)], .bot)
+    -- | .tag l ty_pl => do
+    --   let ⟨clauses_pl, id_pl⟩ <- to_CHC ty_pl  
+    --   let (clause, id) <- modifyGet (fun i => (
+    --     let id := i
+    --     let atom := to_atom (Ty.tag l (Ty.fvar id_pl))
+    --     let clause : HornClause := ⟨[atom], (Atom.id id)⟩
+    --     (clause, id)
+    --     ,
+    --     i + 1
+    --   ))
+    --   return ⟨clause :: clauses_pl, id⟩
+
     /- --| TODO |-- -/
     | _ => failure 
-    -- def to_clauses : Ty -> Option ((List Clause) × Ty)
-    -- | .bvar _ => failure  
-    -- | .fvar id => return ([([], .fvar id)], .fvar id) 
-    -- | .unit => return ([([], .unit)], .unit) 
-    -- | .top => return ([([], .top)], .top)
-    -- | .bot => return ([([], .bot)], .bot)
-    -- | .tag l ty_pl => do
-    --   let (clauses_pl, head_pl) <- to_clauses ty_pl  
-    --   -- ALTERNATIVE: use propositions and fresh ID in head position
-    --   -- return (([.tag l head_pl], ID) :: clauses_pl, ID)
-    --   -- return (([head_pl(h)] ==> ID(.tag l h)) :: clauses_pl, ID)
-    --   return (([], .tag l head_pl) :: clauses_pl, .tag l head_pl)
-    -- /- --| TODO |-- -/
-    -- | _ => failure 
     -- | .field : String -> Ty -> Ty
     -- | .union : Ty -> Ty -> Ty
     -- | .inter : Ty -> Ty -> Ty

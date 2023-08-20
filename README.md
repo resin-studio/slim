@@ -2,13 +2,16 @@
 > Due 2023 Aug 25
 - evaluate existing solvers for feasibility
     - see if solvers have specialized logic for solving for arguments of horn clauses
-- translate to IR horn clause language
-    - translate rhs types (specs) to placeholder constraint syntax
-    - but turn types on lhs into horn clauses for learning predicates
-- choose backend (Lean or some CHC solver)
-- translation to predicate learning backend
-- translate to rhs types (specs) to actual constraint language
-    - constraint language is a specialized/refined logic solved via interpolation
+    - try to manually construct CHC problem for the foldn example
+- translate to CHC solver language
+    - turn types on lhs into horn clauses for learning predicates for identifiers
+        - used for abstract reasoning phase
+    - turn types on rhs types (specs) for decomposing constraints 
+        - used for refined reasoning/interpolation phase
+    - consider how implication should be transformed
+- choose backend (Lean or some CHC solver); Lean seems too difficult
+    - translating to Lean would require finding the top type and constructing refinement types
+    - or avoiding datatypes completely and using sets of labeled things
 - write a custom CHC solver with specialized logic for the type language
     - if the existing solvers are insufficient
     - could be similar to previous unification procedure 
