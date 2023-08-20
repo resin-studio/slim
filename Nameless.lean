@@ -2342,8 +2342,12 @@ namespace Nameless
     return 
       - a list of horn clauses corresponding to the nested subtyping qualifiers
       - a type with the subtyping qualifiers removed
+
     -/
-    def flatten (ty_model : Ty) : StateT Nat Option (List HornClause × Ty) 
+    /- 
+    TODO: consider if ty_spec param is necessary when constructing horn clauses from subtyping qualifiers
+    -/
+    partial def flatten (ty_model : Ty) : StateT Nat Option (List HornClause × Ty) 
     := match ty_model with
     | .bvar _ => failure  
     | .fvar id => return ([], (Ty.fvar id)) 
@@ -2377,13 +2381,53 @@ namespace Nameless
         ((clause, head), i + 1)
       )
       return (clause :: clauses1 ++ clauses2, head)
-    -- | .impli : Ty -> Ty -> Ty
-    -- /- payload -> List (lower <: upper) -> bound -> Ty -/
-    -- | .exis : Ty -> List (Ty × Ty) -> Nat -> Ty
-    -- -- TODO: remove Option from univ; top type is sufficient
-    -- | .univ : Option Ty -> Ty -> Ty
-    -- | .induc : Ty -> Ty
+    | .impli ty1 ty2 => do 
+      /- NOTE 
+      - antecedent cannot be flattened
+      -/
+      let (clauses2, ty2') <- flatten ty2
+      return (clauses2, Ty.impli ty1 ty2')
+    | .exis payload sts n => do
+      let (fids, head) <- modifyGet (fun i =>
+        let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
+        let fids := ids_bound.map (fun id => Ty.fvar id)
+        let head := Ty.fvar i
+        ((fids, head), i + 1)
+      )
+      /- TODO: recursive call to flatten for qualifiers? -/
+      let clauses : List HornClause := sts.map (fun (ty_c1, ty_c2) =>
+        let ty_c1 := Ty.instantiate 0 fids ty_c1
+        let ty_c2 := Ty.instantiate 0 fids ty_c2
+        ⟨[ty_c1], ty_c2⟩
+      )
+      let payload := Ty.instantiate 0 fids payload 
+      let clause_payload : HornClause := ⟨[payload], head⟩
+      return (clause_payload :: clauses, head)
+    | .univ ty_bound_op ty_pl => do
+      let ty_bound <- ty_bound_op 
+      /- TODO: recursive call to flatten for ty_pl? -/
+      let fid <- modifyGet (fun i =>
+        (Ty.fvar i, i + 1)
+      )
+      let ty_pl := Ty.instantiate 0 [fid] ty_pl
+      let clause : HornClause := ⟨[fid], ty_bound⟩
+      return ([clause], ty_pl)
+    | .induc ty => do
+      let (ty, fid) <- modifyGet (fun i =>
+        let (i, id_bound) := (i + 1, i)
+        let fid := Ty.fvar id_bound
+        let ty := Ty.instantiate 0 [fid] ty
+        ((ty, fid), i + 1)
+      )
+      let (clauses_ty, head_ty) <- flatten ty
+      let clause : HornClause := ⟨[head_ty], fid⟩
+      return (clause :: clauses_ty, fid)
     -- | .coduc : Ty -> Ty
+    /-
+    -- TODO: 
+    - first try direct encoding of co-inductive;
+    - if problematic, then try conversion to inductive body 
+    -/
     | _ => failure 
 
     -----------------------
