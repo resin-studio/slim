@@ -2346,6 +2346,9 @@ namespace Nameless
     -/
     /- 
     TODO: consider if ty_spec param is necessary when constructing horn clauses from subtyping qualifiers
+    - specifically, this is needed to break down the constraints that occur from function application 
+    - e.g. f : P -> Q, x : X, f(x) produces P -> Q <: X -> ?
+    - need to simplify this form into [X <: P, Q <: ?] 
     -/
     partial def flatten (ty_model : Ty) : StateT Nat Option (List HornClause × Ty) 
     := match ty_model with
@@ -2394,7 +2397,8 @@ namespace Nameless
         let head := Ty.fvar i
         ((fids, head), i + 1)
       )
-      /- TODO: recursive call to flatten for qualifiers? -/
+      /- TODO: consider recursive call to flatten for qualifiers -/
+      /- TODO: consider if ty_spec is necessary for recursive call  -/
       let clauses : List HornClause := sts.map (fun (ty_c1, ty_c2) =>
         let ty_c1 := Ty.instantiate 0 fids ty_c1
         let ty_c2 := Ty.instantiate 0 fids ty_c2
@@ -2405,13 +2409,12 @@ namespace Nameless
       return (clause_payload :: clauses, head)
     | .univ ty_bound_op ty_pl => do
       let ty_bound <- ty_bound_op 
-      /- TODO: recursive call to flatten for ty_pl? -/
-      let fid <- modifyGet (fun i =>
-        (Ty.fvar i, i + 1)
-      )
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
       let ty_pl := Ty.instantiate 0 [fid] ty_pl
-      let clause : HornClause := ⟨[fid], ty_bound⟩
-      return ([clause], ty_pl)
+      /- TODO: consider reason for recursive call to flatten for ty_pl -/
+      let (clauses_pl, ty_pl) <- flatten ty_pl
+      let clause_bound : HornClause := ⟨[fid], ty_bound⟩
+      return (clause_bound :: clauses_pl, ty_pl)
     | .induc ty => do
       let (ty, fid) <- modifyGet (fun i =>
         let (i, id_bound) := (i + 1, i)
@@ -2419,8 +2422,8 @@ namespace Nameless
         let ty := Ty.instantiate 0 [fid] ty
         ((ty, fid), i + 1)
       )
-      let (clauses_ty, head_ty) <- flatten ty
-      let clause : HornClause := ⟨[head_ty], fid⟩
+      let (clauses_ty, ty) <- flatten ty
+      let clause : HornClause := ⟨[ty], fid⟩
       return (clause :: clauses_ty, fid)
     -- | .coduc : Ty -> Ty
     /-
