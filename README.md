@@ -1,5 +1,7 @@
 ## schedule
 > Due 2023 Aug 25
+- translate to custom CHC-type language
+    - in order to visualize the ideal CHC language for refined reasoning
 - evaluate existing solvers for feasibility
     - see if solvers have specialized logic for solving for arguments of horn clauses
     - try to manually construct CHC problem for the foldn example

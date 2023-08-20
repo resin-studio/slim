@@ -2333,63 +2333,50 @@ namespace Nameless
     constraint form for CHC solving
     -/
 
-    inductive Constraint 
-    | c : Ty -> Constraint 
-
-    inductive Atom 
-    | id : Nat -> Atom 
-    | con : Constraint -> Atom 
-
     structure HornClause where
-     body : List Atom 
-     head : Atom
+     body : List Ty 
+     head : Ty 
 
-    def to_constraint (ty : Ty) : Constraint := Constraint.c ty
-
-    def to_atom (ty : Ty) : Atom := Atom.con (to_constraint ty) 
 
     /-
-    - return a list of horn clauses to be validated and 
-    - the atom constructed from the type for constructing future clauses 
+    return 
+      - a list of horn clauses corresponding to the nested subtyping qualifiers
+      - a type with the subtyping qualifiers removed
     -/
-    /-
-    ISSUE: this construction is dependent on the specialized logic of constraints
-    TODO: need to determine what the solver's special language looks like
-    -/
-    -- def to_CHC (ty_model : Ty) 
-    -- : StateT Nat Option (List HornClause × Nat) 
-    -- := match ty_model with
-    -- | .bvar _ => failure  
-    -- | .fvar id => return ([], id) 
-    -- | .unit => do
-    --   let (clause, id) <- modifyGet (fun i => (
-    --     let id := i
-    --     let atom := to_atom (Ty.unit)
-    --     let clause : HornClause := ⟨[atom], (Atom.id id)⟩
-    --     (clause, id)
-    --     ,
-    --     i + 1
-    --   ))
-    --   return ([clause], id)
-    -- -- | .top => return ([([], .top)], .top)
-    -- -- | .bot => return ([([], .bot)], .bot)
-    -- | .tag l ty_pl => do
-    --   let ⟨clauses_pl, id_pl⟩ <- to_CHC ty_pl  
-    --   let (clause, id) <- modifyGet (fun i => (
-    --     let id := i
-    --     let atom := to_atom (Ty.tag l (Ty.fvar id_pl))
-    --     let clause : HornClause := ⟨[atom], (Atom.id id)⟩
-    --     (clause, id)
-    --     ,
-    --     i + 1
-    --   ))
-    --   return ⟨clause :: clauses_pl, id⟩
-
-    /- --| TODO |-- -/
-    | _ => failure 
-    -- | .field : String -> Ty -> Ty
-    -- | .union : Ty -> Ty -> Ty
-    -- | .inter : Ty -> Ty -> Ty
+    def flatten (ty_model : Ty) : StateT Nat Option (List HornClause × Ty) 
+    := match ty_model with
+    | .bvar _ => failure  
+    | .fvar id => return ([], (Ty.fvar id)) 
+    | .unit => return ([], Ty.unit) 
+    | .top => return ([], Ty.top) 
+    | .bot => return ([], Ty.bot)
+    | .tag l ty_pl => do
+      let ⟨clauses_pl, ty_pl'⟩ <- flatten ty_pl  
+      return (clauses_pl, Ty.tag l ty_pl')
+    | .field l ty_pl => do
+      let ⟨clauses_pl, ty_pl'⟩ <- flatten ty_pl  
+      return (clauses_pl, Ty.field l ty_pl')
+    | .union ty1 ty2 => do
+      let (clauses1, ty1') <- flatten ty1
+      let (clauses2, ty2') <- flatten ty2
+      let (clauses, head) <- modifyGet (fun i =>
+        let head := Ty.fvar i
+        let clauses : List HornClause := [
+            ⟨[ty1'], head⟩,
+            ⟨[ty2'], head⟩
+        ]
+        ((clauses, head), i + 1)
+      )
+      return (clauses ++ clauses1 ++ clauses2, head)
+    | .inter ty1 ty2 => do
+      let (clauses1, ty1') <- flatten ty1
+      let (clauses2, ty2') <- flatten ty2
+      let (clause, head) <- modifyGet (fun i =>
+        let head := Ty.fvar i
+        let clause : HornClause := ⟨[ty1', ty2'], head⟩
+        ((clause, head), i + 1)
+      )
+      return (clause :: clauses1 ++ clauses2, head)
     -- | .impli : Ty -> Ty -> Ty
     -- /- payload -> List (lower <: upper) -> bound -> Ty -/
     -- | .exis : Ty -> List (Ty × Ty) -> Nat -> Ty
@@ -2397,6 +2384,7 @@ namespace Nameless
     -- | .univ : Option Ty -> Ty -> Ty
     -- | .induc : Ty -> Ty
     -- | .coduc : Ty -> Ty
+    | _ => failure 
 
     -----------------------
 
