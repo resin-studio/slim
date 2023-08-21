@@ -2438,12 +2438,18 @@ namespace Nameless
         clauses_sts := clauses ++ clauses_sts
       return ⟨[payload], ty_spec⟩ :: clauses_sts
     | .univ ty_bound_op ty_pl => do
-    /-
-    remove Option from ty_bound_op
-    -/
+      /-
+      TODO: remove Option from ty_bound_op
+      -/
       let ty_bound <- ty_bound_op 
       let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
       let ty_pl := Ty.instantiate 0 [fid] ty_pl
+      /-
+      ( ∀ X <: T . P[X] ) <: Q
+      -------
+      P <: A -> {B with X <: T}
+      (A -> {B with X <: T}) <: Q
+      -/
       /-
       QUESTION: 
       - how should variables and ty_bound be translated to ensure universai semantics in premise?  
