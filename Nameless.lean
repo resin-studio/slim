@@ -2443,34 +2443,29 @@ namespace Nameless
       -/
       let ty_bound <- ty_bound_op 
       let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let ty_pl := Ty.instantiate 0 [fid] ty_pl
+      /-
+      NOTE: variables and ty_bound must be translated to ensure universai semantics in premise
+      NOTE: this is the infinite version of intersection
+      IDEA: translate this into an implication with an existential
+      -/
       /-
       ( ∀ X <: T . P[X] ) <: Q
       -------
       P <: A -> {B with X <: T}
       (A -> {B with X <: T}) <: Q
       -/
-      /-
-      QUESTION: 
-      - how should variables and ty_bound be translated to ensure universai semantics in premise?  
-      - this is the infinite version of intersection
-      - can we translate this into an implication with an existential?
-      -/
-      -- let clauses_bound <- flatten fid ty_bound 
-      -- let clauses_pl <- flatten ty_pl ty_spec
-      -- return clauses_bound ++ clauses_pl
-      failure
-    ----------------------------
-    -- | .induc ty => do
-    --   let (ty, fid) <- modifyGet (fun i =>
-    --     let (i, id_bound) := (i + 1, i)
-    --     let fid := Ty.fvar id_bound
-    --     let ty := Ty.instantiate 0 [fid] ty
-    --     ((ty, fid), i + 1)
-    --   )
-    --   let (clauses_ty, ty) <- flatten ty
-    --   let clause : HornClause := ⟨[ty], fid⟩
-    --   return (clause :: clauses_ty, fid)
+      let (ty_ante, ty_concl) <- modifyGet (fun i => ((Ty.fvar i, Ty.fvar (i + 1)), i + 2))
+      let ty_pl_spec := Ty.impli ty_ante (Ty.exis ty_concl [(fid, ty_bound)] 0)   
+      let ty_pl := Ty.instantiate 0 [fid] ty_pl
+      let clauses1 <- flatten ty_pl ty_pl_spec
+      let clauses2 <- flatten ty_pl_spec ty_spec 
+      return clauses1 ++ clauses2
+
+    | .induc ty_pl => do
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let ty_pl := Ty.instantiate 0 [fid] ty_pl
+      let clauses_pl <- flatten ty_pl fid 
+      return ⟨[fid], ty_spec⟩ :: clauses_pl
     -- | .coduc : Ty -> Ty
     /-
     -- TODO: 
