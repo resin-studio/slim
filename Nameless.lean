@@ -2408,31 +2408,53 @@ namespace Nameless
       let clauses1 <- flatten ty1 ty1_spec
       let clauses2 <- flatten ty2 ty2_spec
       return ⟨[Ty.impli ty1 ty2_spec], ty_spec⟩ :: clauses1 ++ clauses2
-    -- | .exis payload sts n => do
-    --   let (fids, head) <- modifyGet (fun i =>
-    --     let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
-    --     let fids := ids_bound.map (fun id => Ty.fvar id)
-    --     let head := Ty.fvar i
-    --     ((fids, head), i + 1)
-    --   )
-    --   /- TODO: consider recursive call to flatten for qualifiers -/
-    --   /- TODO: consider if ty_spec is necessary for recursive call  -/
-    --   let clauses : List HornClause := sts.map (fun (ty_c1, ty_c2) =>
-    --     let ty_c1 := Ty.instantiate 0 fids ty_c1
-    --     let ty_c2 := Ty.instantiate 0 fids ty_c2
-    --     ⟨[ty_c1], ty_c2⟩
-    --   )
-    --   let payload := Ty.instantiate 0 fids payload 
-    --   let clause_payload : HornClause := ⟨[payload], head⟩
-    --   return (clause_payload :: clauses, head)
-    -- | .univ ty_bound_op ty_pl => do
-    --   let ty_bound <- ty_bound_op 
-    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
-    --   /- TODO: consider reason for recursive call to flatten for ty_pl -/
-    --   let (clauses_pl, ty_pl) <- flatten ty_pl
-    --   let clause_bound : HornClause := ⟨[fid], ty_bound⟩
-    --   return (clause_bound :: clauses_pl, ty_pl)
+    | .exis payload sts n => do
+      let fids <- modifyGet (fun i =>
+        let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
+        let fids := ids_bound.map (fun id => Ty.fvar id)
+        (fids, i)
+      )
+      let payload := Ty.instantiate 0 fids payload 
+      /-
+      NOTE: this translation to horn clauses appears valid 
+      -----------------------
+      ∃ y : Y . P y ==> Q x 
+      Y(y), P(y) ==> Q(x) 
+      -- vs --
+      y = y' ==> Y(y')
+      P(y') ==> Q(x) 
+      ------------------------
+      ------------------------
+      {X with X <: Y} <: Q   
+      -- vs --
+      X <: Y
+      X <: Q
+      -/
+      let mut clauses_sts := []
+      for (ty_c1, ty_c2) in sts.reverse do
+        let ty_c1 := Ty.instantiate 0 fids ty_c1
+        let ty_c2 := Ty.instantiate 0 fids ty_c2
+        let clauses <- (flatten ty_c1 ty_c2)
+        clauses_sts := clauses ++ clauses_sts
+      return ⟨[payload], ty_spec⟩ :: clauses_sts
+    | .univ ty_bound_op ty_pl => do
+    /-
+    remove Option from ty_bound_op
+    -/
+      let ty_bound <- ty_bound_op 
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let ty_pl := Ty.instantiate 0 [fid] ty_pl
+      /-
+      QUESTION: 
+      - how should variables and ty_bound be translated to ensure universai semantics in premise?  
+      - this is the infinite version of intersection
+      - can we translate this into an implication with an existential?
+      -/
+      -- let clauses_bound <- flatten fid ty_bound 
+      -- let clauses_pl <- flatten ty_pl ty_spec
+      -- return clauses_bound ++ clauses_pl
+      failure
+    ----------------------------
     -- | .induc ty => do
     --   let (ty, fid) <- modifyGet (fun i =>
     --     let (i, id_bound) := (i + 1, i)
