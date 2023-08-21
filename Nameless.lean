@@ -2466,16 +2466,13 @@ namespace Nameless
       let ty_pl := Ty.instantiate 0 [fid] ty_pl
       let clauses_pl <- flatten ty_pl fid 
       return ⟨[fid], ty_spec⟩ :: clauses_pl
-    -- | .coduc : Ty -> Ty
-    /-
-    -- TODO: 
-    - first try direct encoding of co-inductive;
-    - if problematic, then try conversion to inductive body 
-    -/
-    | _ => failure 
+    | .coduc ty_pl => do 
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let ty_pl := Ty.instantiate 0 [fid] ty_pl
+      let clauses_pl <- flatten fid ty_pl 
+      return ⟨[ty_pl], ty_spec⟩ :: clauses_pl
 
     -----------------------
-
     /-
     - NOTE: constraint on parameter via body's existential seems sound 
     - this implies that a type such as (P -> bot) can be constructed

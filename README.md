@@ -4,6 +4,7 @@
     - in order to visualize the ideal CHC language for refined reasoning
 - evaluate existing solvers for feasibility
     - see if solvers have specialized logic for solving for arguments of horn clauses
+    - try running the CHC-type translation on foldn example
     - try to manually construct CHC problem for the foldn example
 - translate to CHC solver language
     - turn types on lhs into horn clauses for learning predicates for identifiers
