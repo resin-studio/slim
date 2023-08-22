@@ -2334,15 +2334,18 @@ namespace Nameless
     -/
 
     structure HornClause where
-     body : List Ty 
-     head : Ty 
+     body : List (Ty × Ty) 
+     head : (Ty × Ty)
     deriving Repr
 
 
     partial def HornClause.repr (hc : HornClause) (n : Nat) : Format :=
+      let _ : ToFormat (Ty × Ty) := ⟨fun (lower, upper) =>
+        (Ty.repr lower n) ++ " <: " ++ (Ty.repr upper (n))
+      ⟩
       let body := Format.joinSep hc.body ", " 
-      let head := Ty.repr hc.head n
-      body ++ " <<:: " ++ head 
+      let (head_lower, head_upper) := hc.head
+      body ++ " |- " ++ ((Ty.repr head_lower n) ++ " <: " ++ (Ty.repr head_upper n)) 
 
 
     instance : Repr HornClause where
@@ -2372,131 +2375,151 @@ namespace Nameless
 
     -/
     /-
-    TODO: this is completely wrong. need to construct entailment of subtyping propositions. 
+    ISSUE: this is completely wrong. 
+    TODO: construct idealized form of horn clauses using entailment of subtyping
     -/
     partial def flatten (ty_model : Ty) (ty_spec : Ty) : StateT Nat Option (List HornClause) 
     := match ty_model with
     | .bvar _ => 
       failure  
-    | .fvar id => 
-      return [
-        ⟨[Ty.fvar id], ty_spec⟩
-      ] 
-    | .unit =>
-      return [
-        ⟨[Ty.unit], ty_spec⟩
-      ] 
-    | .top =>
-      return [
-        ⟨[Ty.top], ty_spec⟩
-      ] 
-    | .bot =>
-      return [
-        ⟨[Ty.bot], ty_spec⟩
-      ] 
+    -- | .fvar id => 
+    --   return [
+    --     ⟨[Ty.fvar id], ty_spec⟩
+    --   ] 
+    -- | .unit =>
+    --   return [
+    --     ⟨[Ty.unit], ty_spec⟩
+    --   ] 
+    -- | .top =>
+    --   return [
+    --     ⟨[Ty.top], ty_spec⟩
+    --   ] 
+    -- | .bot =>
+    --   return [
+    --     ⟨[Ty.bot], ty_spec⟩
+    --   ] 
 
     | .tag l ty_pl => do
-      let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let clauses_pl <- flatten ty_pl ty_pl_spec  
-      let clause : HornClause := ⟨[Ty.tag l ty_pl_spec], ty_spec⟩ 
-      return clause :: clauses_pl
+    --   let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let clauses_pl <- flatten ty_pl ty_pl_spec  
+    --   let clause : HornClause := ⟨[Ty.tag l ty_pl_spec], ty_spec⟩ 
+    --   return clause :: clauses_pl
+      failure
 
-    | .field l ty_pl => do
-      let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let clauses_pl <- flatten ty_pl ty_pl_spec  
-      let clause : HornClause := ⟨[Ty.field l ty_pl_spec], ty_spec⟩ 
-      return clause :: clauses_pl
+    -- | .field l ty_pl => do
+    --   let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let clauses_pl <- flatten ty_pl ty_pl_spec  
+    --   let clause : HornClause := ⟨[Ty.field l ty_pl_spec], ty_spec⟩ 
+    --   return clause :: clauses_pl
 
     | .union ty1 ty2 => do
+      /-
+      A | B <: C
+      -------------------------
+      A <: C
+      B <: C
+      -/
       let clauses1 <- flatten ty1 ty_spec
       let clauses2 <- flatten ty2 ty_spec
       return clauses1 ++ clauses2
 
     | .inter ty1 ty2 => do
+      /-
+      A & B <: C
+      -------------------------
+      X <: A, X <: B |- X <: C
+      -/
+
       let (ty1_spec, ty2_spec) <- modifyGet (fun i =>
         ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
       )
+      let bid := Ty.bvar 0  
+      let clause : HornClause := ⟨
+        [(bid, ty1_spec), (bid, ty2_spec)],
+        (bid, ty_spec)
+      ⟩
       let clauses1 <- flatten ty1 ty1_spec
       let clauses2 <- flatten ty2 ty2_spec
-      return ⟨[ty1_spec, ty2_spec], ty_spec⟩ :: clauses1 ++ clauses2
+      return clause :: clauses1 ++ clauses2
 
-    | .impli ty1_spec ty2 => do 
-      let (ty1, ty2_spec) <- modifyGet (fun i =>
-        ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
-      )
-      let clauses1 <- flatten ty1 ty1_spec
-      let clauses2 <- flatten ty2 ty2_spec
-      return ⟨[Ty.impli ty1 ty2_spec], ty_spec⟩ :: clauses1 ++ clauses2
+    -- | .impli ty1_spec ty2 => do 
+    --   let (ty1, ty2_spec) <- modifyGet (fun i =>
+    --     ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
+    --   )
+    --   let clauses1 <- flatten ty1 ty1_spec
+    --   let clauses2 <- flatten ty2 ty2_spec
+    --   return ⟨[Ty.impli ty1 ty2_spec], ty_spec⟩ :: clauses1 ++ clauses2
 
-    | .exis payload sts n => do
-      let fids <- modifyGet (fun i =>
-        let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
-        let fids := ids_bound.map (fun id => Ty.fvar id)
-        (fids, i)
-      )
-      let payload := Ty.instantiate 0 fids payload 
-      /-
-      NOTE: this translation to horn clauses appears valid 
-      -----------------------
-      ∃ y : Y . P y ==> Q x 
-      Y(y), P(y) ==> Q(x) 
-      -- vs --
-      y = y' ==> Y(y')
-      P(y') ==> Q(x) 
-      ------------------------
-      ------------------------
-      {X with X <: Y} <: Q   
-      -- vs --
-      X <: Y
-      X <: Q
-      -/
-      let mut clauses_sts := []
-      for (ty_c1, ty_c2) in sts.reverse do
-        let ty_c1 := Ty.instantiate 0 fids ty_c1
-        let ty_c2 := Ty.instantiate 0 fids ty_c2
-        let clauses <- (flatten ty_c1 ty_c2)
-        clauses_sts := clauses ++ clauses_sts
-      return ⟨[payload], ty_spec⟩ :: clauses_sts
+    -- | .exis payload sts n => do
+    --   let fids <- modifyGet (fun i =>
+    --     let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
+    --     let fids := ids_bound.map (fun id => Ty.fvar id)
+    --     (fids, i)
+    --   )
+    --   let payload := Ty.instantiate 0 fids payload 
+    --   /-
+    --   NOTE: this translation to horn clauses appears valid 
+    --   -----------------------
+    --   ∃ y : Y . P y ==> Q x 
+    --   Y(y), P(y) ==> Q(x) 
+    --   -- vs --
+    --   y = y' ==> Y(y')
+    --   P(y') ==> Q(x) 
+    --   ------------------------
+    --   ------------------------
+    --   {X with X <: Y} <: Q   
+    --   -- vs --
+    --   X <: Y
+    --   X <: Q
+    --   -/
+    --   let mut clauses_sts := []
+    --   for (ty_c1, ty_c2) in sts.reverse do
+    --     let ty_c1 := Ty.instantiate 0 fids ty_c1
+    --     let ty_c2 := Ty.instantiate 0 fids ty_c2
+    --     let clauses <- (flatten ty_c1 ty_c2)
+    --     clauses_sts := clauses ++ clauses_sts
+    --   return ⟨[payload], ty_spec⟩ :: clauses_sts
 
-    | .univ ty_bound_op ty_pl => do
-      /-
-      - TODO: remove Option from ty_bound_op
-      -/
-      let ty_bound <- ty_bound_op 
-      /-
-      NOTE: variables and ty_bound must be translated to ensure universai semantics in premise
-      NOTE: this is the infinite version of intersection
+    -- | .univ ty_bound_op ty_pl => do
+    --   /-
+    --   - TODO: remove Option from ty_bound_op
+    --   -/
+    --   let ty_bound <- ty_bound_op 
+    --   /-
+    --   NOTE: variables and ty_bound must be translated to ensure universai semantics in premise
+    --   NOTE: this is the infinite version of intersection
 
-      TODO: double check that this translation idea is valid 
-      TODO: this idea seems correct; make sure the distinction with the existential rule is clear 
-      IDEA: introduce intermediate variable; rely on horn clause definition meaning "the least" satisfying the definition
-      ( ∀ X <: A | B . P[X] ) <: Q
-      ----
-      P[A] & P[B] <: Q
-      ----
-      X <: A | B
-      P[X] <: P'  (P' is the least thing that satisfies this statement)
-      P' <: Q
-      -/
-      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let ty_pl := Ty.instantiate 0 [fid] ty_pl
-      let ty_middle <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let clauses_bound <- flatten fid ty_bound
-      let clauses_middle <- flatten ty_pl ty_middle  
-      let clauses <- flatten ty_middle ty_spec 
-      return clauses_bound ++ clauses_middle ++ clauses 
+    --   TODO: double check that this translation idea is valid 
+    --   TODO: this idea seems correct; make sure the distinction with the existential rule is clear 
+    --   IDEA: introduce intermediate variable; rely on horn clause definition meaning "the least" satisfying the definition
+    --   ( ∀ X <: A | B . P[X] ) <: Q
+    --   ----
+    --   P[A] & P[B] <: Q
+    --   ----
+    --   X <: A | B
+    --   P[X] <: P'  (P' is the least thing that satisfies this statement)
+    --   P' <: Q
+    --   -/
+    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
+    --   let ty_middle <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let clauses_bound <- flatten fid ty_bound
+    --   let clauses_middle <- flatten ty_pl ty_middle  
+    --   let clauses <- flatten ty_middle ty_spec 
+    --   return clauses_bound ++ clauses_middle ++ clauses 
 
-    | .induc ty_pl => do
-      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let ty_pl := Ty.instantiate 0 [fid] ty_pl
-      let clauses_pl <- flatten ty_pl fid 
-      return ⟨[fid], ty_spec⟩ :: clauses_pl
+    -- | .induc ty_pl => do
+    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
+    --   let clauses_pl <- flatten ty_pl fid 
+    --   return ⟨[fid], ty_spec⟩ :: clauses_pl
 
-    | .coduc ty_pl => do 
-      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let ty_pl := Ty.instantiate 0 [fid] ty_pl
-      let clauses_pl <- flatten fid ty_pl 
-      return ⟨[ty_pl], ty_spec⟩ :: clauses_pl
+    -- | .coduc ty_pl => do 
+    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
+    --   let clauses_pl <- flatten fid ty_pl 
+    --   return ⟨[ty_pl], ty_spec⟩ :: clauses_pl
+    | _ => failure
     /- End flatten -/
 
     def to_clauses (t : Tm) : Option (List HornClause) := do
@@ -2543,6 +2566,7 @@ namespace Nameless
     NOTE: first-order propositions allow 
 
     ----------
+    NOTE: existing CHC solvers may require limiting language to first-order quantification for existential
     Expected: 
     |- (zero;;, nil;;) : R
     (x, y) : R  |- (succ;x, cons;y) : R 
@@ -2551,6 +2575,12 @@ namespace Nameless
 
     |- (zero//unit * nil//unit) <: R
     ∀ X, Y . (X * Y) <: R |- (succ//X * cons//Y) <: R 
+
+    -- WRONG: -- 
+    x : (zero//unit * nil//unit) |-  x : R
+    w : (X * Y), w : R, w' :(succ//X * cons//Y) |- w' <: R 
+    -- END WRONG --
+    NOTE: X and Y are not required to be in sync according to R 
 
     ----------
     ----------

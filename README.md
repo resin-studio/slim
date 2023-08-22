@@ -1,6 +1,7 @@
 ## schedule
 > Due 2023 Aug 25
 - translate to custom CHC-type language
+    - start with idealized clauses of subtyping entailment
     - the horn-clause translation simplifies by removing quantifiers (univ, exis, induc, coinduc)
     - the (unions, existential, induction)/(intersections, universal, co-induction)
         - are inferred by context: 
@@ -9,6 +10,7 @@
     - in order to visualize the ideal CHC language for refined reasoning
 - evaluate existing solvers for feasibility
     - see if solvers have specialized logic for solving for arguments of horn clauses
+    - understand if subtyping entailment needs to be abandoned in favor of typing entailment 
     - try running the CHC-type translation on foldn example
     - try to manually construct CHC problem for the foldn example
 - translate to CHC solver language
