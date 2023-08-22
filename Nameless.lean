@@ -2371,6 +2371,9 @@ namespace Nameless
       option 2: ty_spec be pattern-matched/deconstructed in generation of horn clauses
 
     -/
+    /-
+    TODO: this is completely wrong. need to construct entailment of subtyping propositions. 
+    -/
     partial def flatten (ty_model : Ty) (ty_spec : Ty) : StateT Nat Option (List HornClause) 
     := match ty_model with
     | .bvar _ => 
@@ -2534,6 +2537,32 @@ namespace Nameless
     /- broken: coduct rule -/
     #eval to_clauses nat_to_chain
 
+    /-
+    NOTE: horn claues require that type containment is part of atoms in clause
+    NOTE: the type variables are free over all clauses
+    NOTE: first-order propositions allow 
+
+    ----------
+    Expected: 
+    |- (zero;;, nil;;) : R
+    (x, y) : R  |- (succ;x, cons;y) : R 
+
+    -- OR -- 
+
+    |- (zero//unit * nil//unit) <: R
+    ∀ X, Y . (X * Y) <: R |- (succ//X * cons//Y) <: R 
+
+    ----------
+    ----------
+    Actual:
+    (l : zero//unit),  (r : nil//unit) <: R
+
+    (l : α[0]), (r : α[1]) <: R 
+    (l : succ//α[0]), (r : cons//α[1]) <: R 
+
+    broken: this is wrong; would allow incrementing out of sync: (succ;zero;;, cons;cons;nil;;) : R
+
+    -/
     #eval to_clauses_from_type [lesstype|  
       induct 
         (zero//unit * nil//unit) |
