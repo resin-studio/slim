@@ -2336,6 +2336,17 @@ namespace Nameless
     structure HornClause where
      body : List Ty 
      head : Ty 
+    deriving Repr
+
+
+    partial def HornClause.repr (hc : HornClause) (n : Nat) : Format :=
+      let body := Format.joinSep hc.body ", " 
+      let head := Ty.repr hc.head n
+      body ++ " <<:: " ++ head 
+
+
+    instance : Repr HornClause where
+      reprPrec := HornClause.repr
 
 
     /-
@@ -2483,6 +2494,16 @@ namespace Nameless
       let ty_pl := Ty.instantiate 0 [fid] ty_pl
       let clauses_pl <- flatten fid ty_pl 
       return ⟨[ty_pl], ty_spec⟩ :: clauses_pl
+    /- End flatten -/
+
+    def to_clauses (t : Tm) : Option (List HornClause) := do
+      let (ty, i) <- to_type_state empty t 0
+      let (clauses, _) <- flatten ty Ty.top i 
+      return clauses
+
+    def to_clauses_from_type (ty_model : Ty) : Option (List HornClause) := do
+      let (clauses, _) <- flatten ty_model Ty.top 0
+      return clauses
 
     -----------------------
     /-
@@ -2509,6 +2530,15 @@ namespace Nameless
     ))
     -/
     #eval to_type nat_to_chain
+
+    /- broken: coduct rule -/
+    #eval to_clauses nat_to_chain
+
+    #eval to_clauses_from_type [lesstype|  
+      induct 
+        (zero//unit * nil//unit) |
+        {succ//β[0] * cons//β[1] with β[0] * β[1] <: β[2] # 2} 
+    ]
 
     ------------------
     def nat_to_list := [lessterm|
