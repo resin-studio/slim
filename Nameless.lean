@@ -2380,20 +2380,24 @@ namespace Nameless
       return [
         ⟨[Ty.bot], ty_spec⟩
       ] 
+
     | .tag l ty_pl => do
       let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
       let clauses_pl <- flatten ty_pl ty_pl_spec  
       let clause : HornClause := ⟨[Ty.tag l ty_pl_spec], ty_spec⟩ 
       return clause :: clauses_pl
+
     | .field l ty_pl => do
       let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
       let clauses_pl <- flatten ty_pl ty_pl_spec  
       let clause : HornClause := ⟨[Ty.field l ty_pl_spec], ty_spec⟩ 
       return clause :: clauses_pl
+
     | .union ty1 ty2 => do
       let clauses1 <- flatten ty1 ty_spec
       let clauses2 <- flatten ty2 ty_spec
       return clauses1 ++ clauses2
+
     | .inter ty1 ty2 => do
       let (ty1_spec, ty2_spec) <- modifyGet (fun i =>
         ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
@@ -2401,6 +2405,7 @@ namespace Nameless
       let clauses1 <- flatten ty1 ty1_spec
       let clauses2 <- flatten ty2 ty2_spec
       return ⟨[ty1_spec, ty2_spec], ty_spec⟩ :: clauses1 ++ clauses2
+
     | .impli ty1_spec ty2 => do 
       let (ty1, ty2_spec) <- modifyGet (fun i =>
         ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
@@ -2408,6 +2413,7 @@ namespace Nameless
       let clauses1 <- flatten ty1 ty1_spec
       let clauses2 <- flatten ty2 ty2_spec
       return ⟨[Ty.impli ty1 ty2_spec], ty_spec⟩ :: clauses1 ++ clauses2
+
     | .exis payload sts n => do
       let fids <- modifyGet (fun i =>
         let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
@@ -2437,12 +2443,12 @@ namespace Nameless
         let clauses <- (flatten ty_c1 ty_c2)
         clauses_sts := clauses ++ clauses_sts
       return ⟨[payload], ty_spec⟩ :: clauses_sts
+
     | .univ ty_bound_op ty_pl => do
       /-
       - TODO: remove Option from ty_bound_op
       -/
       let ty_bound <- ty_bound_op 
-      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
       /-
       NOTE: variables and ty_bound must be translated to ensure universai semantics in premise
       NOTE: this is the infinite version of intersection
@@ -2457,34 +2463,21 @@ namespace Nameless
       X <: A | B
       P[X] <: P'  (P' is the least thing that satisfies this statement)
       P' <: Q
-
-      ---------------------------------
-      ---------------------------------
-      ---------------------------------
-      OLD IDEA 
-
-      - translate this into an implication with an existntial
-      - move lhs universal bound to rhs free variable qualifer
-      - and require implication in intermediate form
-
-      ( ∀ X <: T . P[X] ) <: Q
-      -------
-      P[X] <: A -> {B with X <: T}
-      (A -> {B with X <: T}) <: Q
-
       -/
-      let (ty_ante, ty_concl) <- modifyGet (fun i => ((Ty.fvar i, Ty.fvar (i + 1)), i + 2))
-      let ty_pl_spec := Ty.impli ty_ante (Ty.exis ty_concl [(fid, ty_bound)] 0)   
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
       let ty_pl := Ty.instantiate 0 [fid] ty_pl
-      let clauses1 <- flatten ty_pl ty_pl_spec
-      let clauses2 <- flatten ty_pl_spec ty_spec 
-      return clauses1 ++ clauses2
+      let ty_middle <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let clauses_bound <- flatten fid ty_bound
+      let clauses_middle <- flatten ty_pl ty_middle  
+      let clauses <- flatten ty_middle ty_spec 
+      return clauses_bound ++ clauses_middle ++ clauses 
 
     | .induc ty_pl => do
       let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
       let ty_pl := Ty.instantiate 0 [fid] ty_pl
       let clauses_pl <- flatten ty_pl fid 
       return ⟨[fid], ty_spec⟩ :: clauses_pl
+
     | .coduc ty_pl => do 
       let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
       let ty_pl := Ty.instantiate 0 [fid] ty_pl

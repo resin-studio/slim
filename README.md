@@ -1,6 +1,11 @@
 ## schedule
 > Due 2023 Aug 25
 - translate to custom CHC-type language
+    - the horn-clause translation simplifies by removing quantifiers (univ, exis, induc, coinduc)
+    - the (unions, existential, induction)/(intersections, universal, co-induction)
+        - are inferred by context: 
+            - rhs variable implies least solution (union until valid)
+            - lhs variable implies greatest solution (intersect until valid)
     - in order to visualize the ideal CHC language for refined reasoning
 - evaluate existing solvers for feasibility
     - see if solvers have specialized logic for solving for arguments of horn clauses
