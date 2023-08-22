@@ -2439,20 +2439,39 @@ namespace Nameless
       return ⟨[payload], ty_spec⟩ :: clauses_sts
     | .univ ty_bound_op ty_pl => do
       /-
-      TODO: remove Option from ty_bound_op
+      - TODO: remove Option from ty_bound_op
       -/
       let ty_bound <- ty_bound_op 
       let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
       /-
       NOTE: variables and ty_bound must be translated to ensure universai semantics in premise
       NOTE: this is the infinite version of intersection
-      IDEA: translate this into an implication with an existential
-      -/
-      /-
+
+      TODO: double check that this translation idea is valid 
+      TODO: this idea seems correct; make sure the distinction with the existential rule is clear 
+      IDEA: introduce intermediate variable; rely on horn clause definition meaning "the least" satisfying the definition
+      ( ∀ X <: A | B . P[X] ) <: Q
+      ----
+      P[A] & P[B] <: Q
+      ----
+      X <: A | B
+      P[X] <: P'  (P' is the least thing that satisfies this statement)
+      P' <: Q
+
+      ---------------------------------
+      ---------------------------------
+      ---------------------------------
+      OLD IDEA 
+
+      - translate this into an implication with an existntial
+      - move lhs universal bound to rhs free variable qualifer
+      - and require implication in intermediate form
+
       ( ∀ X <: T . P[X] ) <: Q
       -------
-      P <: A -> {B with X <: T}
+      P[X] <: A -> {B with X <: T}
       (A -> {B with X <: T}) <: Q
+
       -/
       let (ty_ante, ty_concl) <- modifyGet (fun i => ((Ty.fvar i, Ty.fvar (i + 1)), i + 2))
       let ty_pl_spec := Ty.impli ty_ante (Ty.exis ty_concl [(fid, ty_bound)] 0)   
