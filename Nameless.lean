@@ -2377,6 +2377,8 @@ namespace Nameless
     /-
     ISSUE: this is completely wrong. 
     TODO: construct idealized form of horn clauses using entailment of subtyping
+    TODO: pattern match on ty_spec in order generate horn clauses derived from application
+    NOTE: flatten is subtyping semantics as a denoation into horn clauses
     -/
     partial def flatten (ty_model : Ty) (ty_spec : Ty) : StateT Nat Option (List HornClause) 
     := match ty_model with
@@ -2514,6 +2516,18 @@ namespace Nameless
       return ⟨[], (fid, ty_spec)⟩ :: clauses_pl
 
     | .coduc ty_pl => do 
+      /-
+      ISSUE: type on rhs does no simply via flatten
+      TODO:
+      - either convert the type to implication in to_type
+      - or convert coduct to induct with implication here
+      - or double negate co-induction
+        - i.e. NOT (NOT coduct (X -> Y)) 
+        - === (NOT coduct (X -> Y)) -> bot 
+        - === (induct X * NOT Y) -> bot 
+        - === {X * NOT Y with (X * Y) <: induct X * Y} -> bot 
+        - === [Z <: {X -> Y with (X * Y) <: induct X * Y}] Z 
+      -/
       let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
       let ty_pl := Ty.instantiate 0 [fid] ty_pl
       let clauses_pl <- flatten fid ty_pl 
@@ -2545,6 +2559,10 @@ namespace Nameless
       case succ;y[0] => cons;(y[2](y[0]))
       )
     ] 
+
+    def nat_to_chain_app := [lessterm|
+      ⟨nat_to_chain⟩(zero;;)
+    ]
     /-
     Expected:
     (coduct (α[3] ->
@@ -2554,9 +2572,11 @@ namespace Nameless
     ))
     -/
     #eval to_type nat_to_chain
+    #eval to_type nat_to_chain_app
 
     /- broken: coduct rule -/
     #eval to_clauses nat_to_chain
+    #eval to_clauses nat_to_chain_app
 
     /-
     NOTE: horn claues require that type containment is part of atoms in clause
