@@ -2382,42 +2382,53 @@ namespace Nameless
     := match ty_model with
     | .bvar _ => 
       failure  
-    -- | .fvar id => 
-    --   return [
-    --     ⟨[Ty.fvar id], ty_spec⟩
-    --   ] 
-    -- | .unit =>
-    --   return [
-    --     ⟨[Ty.unit], ty_spec⟩
-    --   ] 
-    -- | .top =>
-    --   return [
-    --     ⟨[Ty.top], ty_spec⟩
-    --   ] 
-    -- | .bot =>
-    --   return [
-    --     ⟨[Ty.bot], ty_spec⟩
-    --   ] 
+    | .fvar id => 
+      return [
+        ⟨[], (Ty.fvar id, ty_spec)⟩
+      ] 
+    | .unit =>
+      return [
+        ⟨[], (Ty.unit, ty_spec)⟩
+      ] 
+    | .top =>
+      return [
+        ⟨[], (Ty.top, ty_spec)⟩
+      ] 
+    | .bot =>
+      return [
+        ⟨[], (Ty.bot, ty_spec)⟩
+      ] 
 
     | .tag l ty_pl => do
-    --   let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let clauses_pl <- flatten ty_pl ty_pl_spec  
-    --   let clause : HornClause := ⟨[Ty.tag l ty_pl_spec], ty_spec⟩ 
-    --   return clause :: clauses_pl
-      failure
+      /-
+      label//P <: C
+      -------------
+      ... |- P <: Q
+      |- label Q <: C 
+      -/
+      let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let clauses_pl <- flatten ty_pl ty_pl_spec  
+      let clause : HornClause := ⟨[], (Ty.tag l ty_pl_spec, ty_spec)⟩ 
+      return clause :: clauses_pl
 
-    -- | .field l ty_pl => do
-    --   let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let clauses_pl <- flatten ty_pl ty_pl_spec  
-    --   let clause : HornClause := ⟨[Ty.field l ty_pl_spec], ty_spec⟩ 
-    --   return clause :: clauses_pl
+    | .field l ty_pl => do
+      /-
+      (label : P) <: C
+      -------------
+      ... |- P <: Q
+      |- (label : Q) <: C 
+      -/
+      let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let clauses_pl <- flatten ty_pl ty_pl_spec  
+      let clause : HornClause := ⟨[], (Ty.field l ty_pl_spec, ty_spec)⟩ 
+      return clause :: clauses_pl
 
     | .union ty1 ty2 => do
       /-
       A | B <: C
       -------------------------
-      A <: C
-      B <: C
+      |- A <: C
+      |- B <: C
       -/
       let clauses1 <- flatten ty1 ty_spec
       let clauses2 <- flatten ty2 ty_spec
@@ -2442,84 +2453,71 @@ namespace Nameless
       let clauses2 <- flatten ty2 ty2_spec
       return clause :: clauses1 ++ clauses2
 
-    -- | .impli ty1_spec ty2 => do 
-    --   let (ty1, ty2_spec) <- modifyGet (fun i =>
-    --     ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
-    --   )
-    --   let clauses1 <- flatten ty1 ty1_spec
-    --   let clauses2 <- flatten ty2 ty2_spec
-    --   return ⟨[Ty.impli ty1 ty2_spec], ty_spec⟩ :: clauses1 ++ clauses2
+    | .impli ty1_spec ty2 => do 
+      /-
+      A_spec -> B <: C
+      -------------------------
+      ... |- A <: A_spec 
+      ... |- B <: B_spec 
+      |- (A -> B_spec) <: C
+      -/
+      let (ty1, ty2_spec) <- modifyGet (fun i =>
+        ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
+      )
+      let clauses1 <- flatten ty1 ty1_spec
+      let clauses2 <- flatten ty2 ty2_spec
+      return ⟨[], (Ty.impli ty1 ty2_spec, ty_spec)⟩ :: clauses1 ++ clauses2
 
-    -- | .exis payload sts n => do
+    | .exis payload sts n => do
+      /- 
+      - NOTE: do no free bound variables; 
+      - they become universally quantified over horn clause 
+
+      {P with A <: B} <: C
+      -------------------------
+      A <: B |- P <: C
+      -/
+      return [⟨sts, (payload, ty_spec)⟩]
+      -- let mut premise := []
+      -- for (ty_c1, ty_c2) in sts.reverse do
+      --   let ty_c1 := Ty.instantiate 0 fids ty_c1
+      --   let ty_c2 := Ty.instantiate 0 fids ty_c2
+      --   let clauses <- (flatten ty_c1 ty_c2)
+      --   clauses_sts := clauses ++ clauses_sts
+      -- return ⟨[payload], ty_spec⟩ :: clauses_sts
     --   let fids <- modifyGet (fun i =>
     --     let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
     --     let fids := ids_bound.map (fun id => Ty.fvar id)
     --     (fids, i)
     --   )
     --   let payload := Ty.instantiate 0 fids payload 
-    --   /-
-    --   NOTE: this translation to horn clauses appears valid 
-    --   -----------------------
-    --   ∃ y : Y . P y ==> Q x 
-    --   Y(y), P(y) ==> Q(x) 
-    --   -- vs --
-    --   y = y' ==> Y(y')
-    --   P(y') ==> Q(x) 
-    --   ------------------------
-    --   ------------------------
-    --   {X with X <: Y} <: Q   
-    --   -- vs --
-    --   X <: Y
-    --   X <: Q
-    --   -/
-    --   let mut clauses_sts := []
-    --   for (ty_c1, ty_c2) in sts.reverse do
-    --     let ty_c1 := Ty.instantiate 0 fids ty_c1
-    --     let ty_c2 := Ty.instantiate 0 fids ty_c2
-    --     let clauses <- (flatten ty_c1 ty_c2)
-    --     clauses_sts := clauses ++ clauses_sts
-    --   return ⟨[payload], ty_spec⟩ :: clauses_sts
 
-    -- | .univ ty_bound_op ty_pl => do
-    --   /-
-    --   - TODO: remove Option from ty_bound_op
-    --   -/
-    --   let ty_bound <- ty_bound_op 
-    --   /-
-    --   NOTE: variables and ty_bound must be translated to ensure universai semantics in premise
-    --   NOTE: this is the infinite version of intersection
+    | .univ ty_bound_op ty_pl => do
+      /-
+      [X <: T] A <: C
+      ---------------
+      |- X <: T
+      |- A <: C
+      -/
+      let ty_bound <- ty_bound_op 
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let ty_pl := Ty.instantiate 0 [fid] ty_pl
 
-    --   TODO: double check that this translation idea is valid 
-    --   TODO: this idea seems correct; make sure the distinction with the existential rule is clear 
-    --   IDEA: introduce intermediate variable; rely on horn clause definition meaning "the least" satisfying the definition
-    --   ( ∀ X <: A | B . P[X] ) <: Q
-    --   ----
-    --   P[A] & P[B] <: Q
-    --   ----
-    --   X <: A | B
-    --   P[X] <: P'  (P' is the least thing that satisfies this statement)
-    --   P' <: Q
-    --   -/
-    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
-    --   let ty_middle <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let clauses_bound <- flatten fid ty_bound
-    --   let clauses_middle <- flatten ty_pl ty_middle  
-    --   let clauses <- flatten ty_middle ty_spec 
-    --   return clauses_bound ++ clauses_middle ++ clauses 
+      let clauses_bound <- flatten fid ty_bound
+      let clauses_pl <- flatten ty_pl ty_spec 
+      return clauses_bound ++ clauses_pl
 
-    -- | .induc ty_pl => do
-    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
-    --   let clauses_pl <- flatten ty_pl fid 
-    --   return ⟨[fid], ty_spec⟩ :: clauses_pl
+    | .induc ty_pl => do
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let ty_pl := Ty.instantiate 0 [fid] ty_pl
+      let clauses_pl <- flatten ty_pl fid 
+      return ⟨[], (fid, ty_spec)⟩ :: clauses_pl
 
-    -- | .coduc ty_pl => do 
-    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
-    --   let clauses_pl <- flatten fid ty_pl 
-    --   return ⟨[ty_pl], ty_spec⟩ :: clauses_pl
-    | _ => failure
+    | .coduc ty_pl => do 
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let ty_pl := Ty.instantiate 0 [fid] ty_pl
+      let clauses_pl <- flatten fid ty_pl 
+      return ⟨[], (ty_pl, ty_spec)⟩ :: clauses_pl
     /- End flatten -/
 
     def to_clauses (t : Tm) : Option (List HornClause) := do
