@@ -2050,24 +2050,22 @@ namespace Nameless
       -- flatten quant premises _ (double_negate .coduc ty_body)
       failure
 
+    | _, .impli (.union ty1_ante ty2_ante) ty_consq => do
+      let clauses1 <- flatten quant premises ty1_ante (.impli ty_model ty_consq)
+      let clauses2 <- flatten quant premises ty2_ante (.impli ty_model ty_consq)
+      return clauses1 ++ clauses2
+
+    | _, .impli ty_ante (.inter ty1_consq ty2_consq) => do
+      let clauses1 <- flatten quant premises ty_ante (.impli ty_model ty1_consq)
+      let clauses2 <- flatten quant premises ty_ante (.impli ty_model ty2_consq)
+      return clauses1 ++ clauses2
+
     | .union ty1 ty2, _ => do
-      /-
-      A | B <: C
-      ----------
-      |- A <: C
-      |- B <: C
-      -/
       let clauses1 <- flatten quant premises ty1 ty_spec
       let clauses2 <- flatten quant premises ty2 ty_spec
       return clauses1 ++ clauses2
 
     | _, .inter ty1 ty2 => do
-      /-
-      C <: A & B
-      -----------
-      |- C <: A 
-      |- C <: B 
-      -/
       let clauses1 <- flatten quant premises ty_model ty1
       let clauses2 <- flatten quant premises ty_model ty2
       return clauses1 ++ clauses2
@@ -2076,17 +2074,12 @@ namespace Nameless
     Refined translation
     -/
 
-    /-
-    Simplification 
-    -/
-
-    ------------------------
-
     -- | _, .induc ty_body => do
     --   /- 
         -- ISSUE: must treat fixed point as constraint, which is NOT learnable 
         -- introducing fresh variable would incorrectly allow learning a weaker constraint
         -- perhaps this cannot be simplified and requires translation into a special constraint language
+        -- TODO: distinguish between constraint symbol and learnable symbol 
     --   -/
     --   failure
     --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
@@ -2094,6 +2087,40 @@ namespace Nameless
     --   let clauses_induc <- flatten 0 [] ty_body fid 
     --   let clauses_model <- flatten quant premises ty_model fid
     --   return clauses_induc ++ clauses_model
+
+    /-
+    Simplification 
+    -/
+
+    | _, .top => do
+      return [] 
+
+    | .bot, _ => do
+      return []
+
+    | .unit, .unit => do
+      return []
+
+    | .tag l1 ty1, tag l2 ty2 => do
+      if l1 == l2 then
+        flatten quant premises ty1 ty2
+      else
+        failure
+
+    | .field l1 ty1, .field l2 ty2 => do
+      if l1 == l2 then
+        flatten quant premises ty1 ty2
+      else
+        failure
+        
+    | .impli ty1_spec ty2_model, .impli ty1_model ty2_spec => do 
+      let clauses1 <- flatten quant premises ty1_model ty1_spec
+      let clauses2 <- flatten quant premises ty2_model ty2_spec
+      return clauses1 ++ clauses2
+
+    ------------------------
+    -- OLD --
+    ------------------------
 
 
     -- | .bvar _ => 
@@ -2115,29 +2142,6 @@ namespace Nameless
     --     ⟨[], (Ty.bot, ty_spec)⟩
     --   ] 
 
-    -- | .tag l ty_pl => do
-    --   /-
-    --   label//P <: C
-    --   -------------
-    --   ... |- P <: Q
-    --   |- label Q <: C 
-    --   -/
-    --   let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let clauses_pl <- flatten ty_pl ty_pl_spec  
-    --   let clause : HornClause := ⟨[], (Ty.tag l ty_pl_spec, ty_spec)⟩ 
-    --   return clause :: clauses_pl
-
-    -- | .field l ty_pl => do
-    --   /-
-    --   (label : P) <: C
-    --   -------------
-    --   ... |- P <: Q
-    --   |- (label : Q) <: C 
-    --   -/
-    --   let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let clauses_pl <- flatten ty_pl ty_pl_spec  
-    --   let clause : HornClause := ⟨[], (Ty.field l ty_pl_spec, ty_spec)⟩ 
-    --   return clause :: clauses_pl
 
 
     -- | .inter ty1 ty2 => do
@@ -2158,21 +2162,6 @@ namespace Nameless
     --   let clauses1 <- flatten ty1 ty1_spec
     --   let clauses2 <- flatten ty2 ty2_spec
     --   return clause :: clauses1 ++ clauses2
-
-    -- | .impli ty1_spec ty2 => do 
-    --   /-
-    --   A_spec -> B <: C
-    --   -------------------------
-    --   ... |- A <: A_spec 
-    --   ... |- B <: B_spec 
-    --   |- (A -> B_spec) <: C
-    --   -/
-    --   let (ty1, ty2_spec) <- modifyGet (fun i =>
-    --     ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
-    --   )
-    --   let clauses1 <- flatten ty1 ty1_spec
-    --   let clauses2 <- flatten ty2 ty2_spec
-    --   return ⟨[], (Ty.impli ty1 ty2_spec, ty_spec)⟩ :: clauses1 ++ clauses2
 
 
     -- | .univ ty_bound_op ty_pl => do
@@ -2207,7 +2196,11 @@ namespace Nameless
     --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
     --   let clauses_pl <- flatten fid ty_pl 
     --   return ⟨[], (ty_pl, ty_spec)⟩ :: clauses_pl
-    | _, _ => failure
+    | _, _ => do
+      if ty_model == ty_spec then
+        return []
+      else 
+        failure
     /- End flatten -/
 
 
