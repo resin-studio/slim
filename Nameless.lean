@@ -1995,7 +1995,7 @@ namespace Nameless
       /-
       issue: payload needs to be flattened next
       -/
-      let clauses_unwrapped <- flatten (quant + 1) (qualifiers_renamed ++ premises) payload ty_spec
+      let clauses_unwrapped <- flatten (quant + n) (qualifiers_renamed ++ premises) payload ty_spec
       return clauses_unwrapped ++ clauses_qualifier_total
       -- let mut premise := []
       -- for (ty_c1, ty_c2) in sts.reverse do
@@ -2014,7 +2014,7 @@ namespace Nameless
     | _, .univ ty_constraint_op ty_pl => do
       /-
       M <: [X <: T] A
-      ---------------
+      ----------------
       X <: T |- M <: A
       -/
       let ty_constraint <- ty_constraint_op 
@@ -2168,7 +2168,7 @@ namespace Nameless
 
 
     def to_clauses_from_type (ty_model : Ty) : Option (List Ty.HornClause) := do
-      let (clauses, _) <- Ty.flatten ty_model Ty.top 0
+      let (clauses, _) <- Ty.flatten 0 [] ty_model Ty.top 0
       return clauses
 
     /-
@@ -2637,7 +2637,7 @@ namespace Nameless
 
     def to_clauses (t : Tm) : Option (List Ty.HornClause) := do
       let (ty, i) <- to_type_state empty t 0
-      let (clauses, _) <- Ty.flatten ty Ty.top i 
+      let (clauses, _) <- Ty.flatten 0 [] ty Ty.top i 
       return clauses
 
     -----------------------
