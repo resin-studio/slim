@@ -1966,6 +1966,10 @@ namespace Nameless
       (ty_model : Ty) (ty_spec : Ty) 
     : StateT Nat Option (List HornClause) 
     := match ty_model, ty_spec with
+
+    /-
+    Abstract translation
+    -/
     | .exis ty_body qualifiers n, _ => do
       /- 
       - NOTE: do no free bound variables; 
@@ -2046,14 +2050,50 @@ namespace Nameless
       -- flatten quant premises _ (double_negate .coduc ty_body)
       failure
 
+    | .union ty1 ty2, _ => do
+      /-
+      A | B <: C
+      ----------
+      |- A <: C
+      |- B <: C
+      -/
+      let clauses1 <- flatten quant premises ty1 ty_spec
+      let clauses2 <- flatten quant premises ty2 ty_spec
+      return clauses1 ++ clauses2
+
+    | _, .inter ty1 ty2 => do
+      /-
+      C <: A & B
+      -----------
+      |- C <: A 
+      |- C <: B 
+      -/
+      let clauses1 <- flatten quant premises ty_model ty1
+      let clauses2 <- flatten quant premises ty_model ty2
+      return clauses1 ++ clauses2
+
+    /-
+    Refined translation
+    -/
+
+    /-
+    Simplification 
+    -/
+
     ------------------------
 
-    | _, .induc ty_body => do
-      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let ty_body := Ty.instantiate 0 [fid] ty_body
-      let clauses_induc <- flatten 0 [] ty_body fid 
-      let clauses_model <- flatten quant premises ty_model fid
-      return clauses_induc ++ clauses_model
+    -- | _, .induc ty_body => do
+    --   /- 
+        -- ISSUE: must treat fixed point as constraint, which is NOT learnable 
+        -- introducing fresh variable would incorrectly allow learning a weaker constraint
+        -- perhaps this cannot be simplified and requires translation into a special constraint language
+    --   -/
+    --   failure
+    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let ty_body := Ty.instantiate 0 [fid] ty_body
+    --   let clauses_induc <- flatten 0 [] ty_body fid 
+    --   let clauses_model <- flatten quant premises ty_model fid
+    --   return clauses_induc ++ clauses_model
 
 
     -- | .bvar _ => 
@@ -2099,16 +2139,6 @@ namespace Nameless
     --   let clause : HornClause := ⟨[], (Ty.field l ty_pl_spec, ty_spec)⟩ 
     --   return clause :: clauses_pl
 
-    -- | .union ty1 ty2 => do
-    --   /-
-    --   A | B <: C
-    --   -------------------------
-    --   |- A <: C
-    --   |- B <: C
-    --   -/
-    --   let clauses1 <- flatten ty1 ty_spec
-    --   let clauses2 <- flatten ty2 ty_spec
-    --   return clauses1 ++ clauses2
 
     -- | .inter ty1 ty2 => do
     --   /-
