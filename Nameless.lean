@@ -1992,7 +1992,11 @@ namespace Nameless
         clauses_qualifier_total := clauses_qualifier ++ clauses_qualifier_total
         qualifiers_renamed := (ty_content, ty_name) :: qualifiers_renamed
 
-      return [⟨premises ++ qualifiers_renamed, (payload, ty_spec)⟩] ++ clauses_qualifier_total
+      /-
+      issue: payload needs to be flattened next
+      -/
+      let clauses_unwrapped <- flatten (quant + 1) (qualifiers_renamed ++ premises) payload ty_spec
+      return clauses_unwrapped ++ clauses_qualifier_total
       -- let mut premise := []
       -- for (ty_c1, ty_c2) in sts.reverse do
       --   let ty_c1 := Ty.instantiate 0 fids ty_c1
@@ -2019,8 +2023,7 @@ namespace Nameless
       )
       let clauses_qualifier <- flatten 0 [] ty_constraint constraint_renamed
       let qualifier_renamed := (Ty.bvar quant, constraint_renamed) 
-      -- let quant := quant + 1
-      let clauses_unwrapped <- flatten (quant + 1) [qualifier_renamed] ty_model ty_pl
+      let clauses_unwrapped <- flatten (quant + 1) (qualifier_renamed :: premises) ty_model ty_pl
       return clauses_unwrapped ++ clauses_qualifier
     --   /-
     --   [X <: T] A <: C
