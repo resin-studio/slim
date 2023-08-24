@@ -1825,6 +1825,389 @@ namespace Nameless
 
 
 
+
+
+
+    structure HornClause where
+     body : List (Ty × Ty) 
+     head : (Ty × Ty)
+    deriving Repr
+
+
+    partial def HornClause.repr (hc : HornClause) (n : Nat) : Format :=
+      let _ : ToFormat (Ty × Ty) := ⟨fun (lower, upper) =>
+        (Ty.repr lower n) ++ " <: " ++ (Ty.repr upper (n))
+      ⟩
+      let body := Format.joinSep hc.body ", " 
+      let (head_lower, head_upper) := hc.head
+      body ++ " |- " ++ ((Ty.repr head_lower n) ++ " <: " ++ (Ty.repr head_upper n)) 
+
+
+    instance : Repr HornClause where
+      reprPrec := HornClause.repr
+
+    /-
+    TODO: convert type into set of horn clause constraints in for of subtyping
+    - e.g. {C & P₁ & P₂ & ... [Y]} <: Q  
+    - meaning ∀ X Y . (C[X,Y] & P₁[X,Y] & P₂[X,Y] & ... => Q[X])
+
+    TODO: may need to convert coinductive implication into inductive constraints
+
+    - can think of the type generated from a program as a model
+    - although the model may have nested specs due to 
+      - body <: annotation in let-binding   
+      - arg <: param in application
+      - switch <: pattern in matching 
+    NOTE: when existential is on rhs
+      CORRECT: 
+        - induction/existential/union on RHS represents a concrete predicate
+        - do no deconstruct
+      WRONG:
+        - variables should be freed 
+        - P <: μ R . nil | {cons X × L with L <: R}
+        - P(nil) ==> R(nil)
+        - ∀ x,l . P(cons(x,l)) & R(l) ==> R(cons(x,l))
+    NOTE: deconstruction of RHS will be handled by craig interpolation during solving
+    QUESTION: How is universal on lhs handled? moved to rhs? 
+    QUESTION: should universals be converted to existentials? 
+    QUESTION: should co-induction be converted to induction? 
+
+
+
+    NOTE: generation of horn clauses rewrites types into horn clauses
+    -/
+
+
+    /-
+    TODO: 
+    - create a horn clauses syntactic sugar
+    - create meta-predicate syntax; meta-predicate is an object-proposition
+    - a meta-argument is a proof; proof : proposition
+    - predicate is a variable defined by the horn clause
+    - use first order predicates and |= for entailment 
+    - or use _ |- _ ==> _ for entailment under interpretation  
+
+    TODO:
+    - distinguish between rules allowing predicates to be expanded
+      - and rules defining constraints; which cannot be expanded
+    
+    NOTE: comparison of CHC and Prolog 
+    - CHC involves the search problem of finding predicates
+      - interpolation part is a specialized logic e.g. Prolog/arithmetic
+    - Prolog involves the search problem of finding arguments
+
+    NOTE: predicate search
+    - C(x) ==> P(x), D(c) ==> P(x) expands P with union P ↦ C | D
+    - P(x) ==> C(x) uses craig interpolation to narrow P's dependencies with intersection 
+
+    IDEA: 
+    - types with bound variables represent CHC constraints (unadjustable)
+    - type variables represent predicates to be learned (adjustable)
+
+    NOTE: the learnable predicate/type for one abstraction becomes the constraint for the outer abstraction 
+    NOTE: let annotations, param types, pattern types are constraints
+    --------------------------------------
+    NOTE: 
+    - inductive definitions (used on lhs) can have learnable predicates
+    - Thus it is safe to convert an observed inductive type into horn clause constraints over a type variable.
+    - types on RHS, (e.g. annotations, param/pattern types) are not converted into horn clauses!
+    - types on RHS are constraints and are not learnable
+    - is that enough? is any else necessary to mark learnable type variables?
+    - all free variables are learnable
+    - free variables that represent parameter will be constrained by types/predicates originating at pattern matching
+    - the outer horn clause language is for coarsely learning predicates
+    - the inner constraint sublanguage is for refining the predicates
+      - the inner language may be Prolog-like
+    - the constraint (RHS) is searched by introducing a new learnable predicate that implies RHS constraint
+      - e.g. P(x, y), y = label ==> C(x, y)
+      - e.g. P & {x,y | y = label} ==> C(x, y)
+      - i.e. a constraint is made learnable by introducing a new learnable variable under a constraint
+      - solving for the concrete value of X requires a specialized logic that understands the full type language
+        - including the labels (tags, fields), implication, quantifiers, induction, etc.
+    ------------------------------------------------
+    -/
+
+    /-
+    constraint form for CHC solving
+    -/
+
+
+
+    /-
+    return 
+      - a list of horn clauses corresponding to the nested subtyping qualifiers
+      - a type with the subtyping qualifiers removed
+
+    -/
+    /- 
+    TODO: consider if ty_spec param is necessary when constructing horn clauses from subtyping qualifiers
+    - specifically, this is needed to break down the constraints that occur from function application 
+    - e.g. f : P -> Q, x : X, f(x) produces P -> Q <: X -> ?
+    - need to simplify this form into [X <: P, Q <: ?] 
+
+    QUESTION: which option is better?
+      option 1: ty_spec is treated opaquely in generation of horn clauses
+        - the point simply being to 
+          1. free any bound variables from univ/exis/induc/coduc
+          2. break apart unions/intersections
+        - it is then deconstructed by the solver
+
+      option 2: ty_spec be pattern-matched/deconstructed in generation of horn clauses
+
+    -/
+    /-
+    ISSUE: this is completely wrong. 
+    TODO: construct idealized form of horn clauses using entailment of subtyping
+    TODO: pattern match on ty_spec in order generate horn clauses derived from application
+    NOTE: flatten is subtyping semantics as a denoation into horn clauses
+    NOTE: either in denotation here or in solving: restrict to FOL by preventing bound variables on rhs 
+    -/
+    partial def flatten (quant : Nat) (premises : List (Ty × Ty)) 
+      (ty_model : Ty) (ty_spec : Ty) 
+    : StateT Nat Option (List HornClause) 
+    := match ty_model, ty_spec with
+    | .exis payload qualifiers n, _ => do
+      /- 
+      - NOTE: do no free bound variables; 
+      - they become universally quantified over horn clause 
+
+      {P with A <: B} <: C
+      -------------------------
+      A <: B |- P <: C
+      -/
+
+      /- constraint means rhs of qualifier, i.e. _ <: constraint -/ 
+      let constraint_renamings <- modifyGet (fun i => 
+        (
+          qualifiers.enum.map (fun (j, q) => (q, Ty.fvar (i + j)))
+          , 
+          i + n
+        )
+      )
+
+      let mut clauses_qualifier_total := []
+      let mut qualifiers_renamed := []
+      for ((ty_content, ty_constraint), ty_name) in constraint_renamings.reverse do
+        let clauses_qualifier <- flatten 0 [] ty_constraint ty_name
+        clauses_qualifier_total := clauses_qualifier ++ clauses_qualifier_total
+        qualifiers_renamed := (ty_content, ty_name) :: qualifiers_renamed
+
+      return [⟨premises ++ qualifiers_renamed, (payload, ty_spec)⟩] ++ clauses_qualifier_total
+      -- let mut premise := []
+      -- for (ty_c1, ty_c2) in sts.reverse do
+      --   let ty_c1 := Ty.instantiate 0 fids ty_c1
+      --   let ty_c2 := Ty.instantiate 0 fids ty_c2
+      --   let clauses <- (flatten ty_c1 ty_c2)
+      --   clauses_sts := clauses ++ clauses_sts
+      -- return ⟨[payload], ty_spec⟩ :: clauses_sts
+    --   let fids <- modifyGet (fun i =>
+    --     let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
+    --     let fids := ids_bound.map (fun id => Ty.fvar id)
+    --     (fids, i)
+    --   )
+    --   let payload := Ty.instantiate 0 fids payload 
+
+    | _, .univ ty_constraint_op ty_pl => do
+      /-
+      M <: [X <: T] A
+      ---------------
+      X <: T |- M <: A
+      -/
+      let ty_constraint <- ty_constraint_op 
+      let constraint_renamed <- modifyGet (fun i => 
+        (Ty.fvar i, i + 1)
+      )
+      let clauses_qualifier <- flatten 0 [] ty_constraint constraint_renamed
+      let qualifier_renamed := (Ty.bvar quant, constraint_renamed) 
+      -- let quant := quant + 1
+      let clauses_unwrapped <- flatten (quant + 1) [qualifier_renamed] ty_model ty_pl
+      return clauses_unwrapped ++ clauses_qualifier
+    --   /-
+    --   [X <: T] A <: C
+    --   ---------------
+    --   |- X <: T
+    --   |- A <: C
+    --   -/
+    --   let ty_bound <- ty_bound_op 
+    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
+      -- failure
+
+    -- | .bvar _ => 
+    --   failure  
+    -- | .fvar id => 
+    --   return [
+    --     ⟨[], (Ty.fvar id, ty_spec)⟩
+    --   ] 
+    -- | .unit =>
+    --   return [
+    --     ⟨[], (Ty.unit, ty_spec)⟩
+    --   ] 
+    -- | .top =>
+    --   return [
+    --     ⟨[], (Ty.top, ty_spec)⟩
+    --   ] 
+    -- | .bot =>
+    --   return [
+    --     ⟨[], (Ty.bot, ty_spec)⟩
+    --   ] 
+
+    -- | .tag l ty_pl => do
+    --   /-
+    --   label//P <: C
+    --   -------------
+    --   ... |- P <: Q
+    --   |- label Q <: C 
+    --   -/
+    --   let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let clauses_pl <- flatten ty_pl ty_pl_spec  
+    --   let clause : HornClause := ⟨[], (Ty.tag l ty_pl_spec, ty_spec)⟩ 
+    --   return clause :: clauses_pl
+
+    -- | .field l ty_pl => do
+    --   /-
+    --   (label : P) <: C
+    --   -------------
+    --   ... |- P <: Q
+    --   |- (label : Q) <: C 
+    --   -/
+    --   let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let clauses_pl <- flatten ty_pl ty_pl_spec  
+    --   let clause : HornClause := ⟨[], (Ty.field l ty_pl_spec, ty_spec)⟩ 
+    --   return clause :: clauses_pl
+
+    -- | .union ty1 ty2 => do
+    --   /-
+    --   A | B <: C
+    --   -------------------------
+    --   |- A <: C
+    --   |- B <: C
+    --   -/
+    --   let clauses1 <- flatten ty1 ty_spec
+    --   let clauses2 <- flatten ty2 ty_spec
+    --   return clauses1 ++ clauses2
+
+    -- | .inter ty1 ty2 => do
+    --   /-
+    --   A & B <: C
+    --   -------------------------
+    --   X <: A, X <: B |- X <: C
+    --   -/
+
+    --   let (ty1_spec, ty2_spec) <- modifyGet (fun i =>
+    --     ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
+    --   )
+    --   let bid := Ty.bvar 0  
+    --   let clause : HornClause := ⟨
+    --     [(bid, ty1_spec), (bid, ty2_spec)],
+    --     (bid, ty_spec)
+    --   ⟩
+    --   let clauses1 <- flatten ty1 ty1_spec
+    --   let clauses2 <- flatten ty2 ty2_spec
+    --   return clause :: clauses1 ++ clauses2
+
+    -- | .impli ty1_spec ty2 => do 
+    --   /-
+    --   A_spec -> B <: C
+    --   -------------------------
+    --   ... |- A <: A_spec 
+    --   ... |- B <: B_spec 
+    --   |- (A -> B_spec) <: C
+    --   -/
+    --   let (ty1, ty2_spec) <- modifyGet (fun i =>
+    --     ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
+    --   )
+    --   let clauses1 <- flatten ty1 ty1_spec
+    --   let clauses2 <- flatten ty2 ty2_spec
+    --   return ⟨[], (Ty.impli ty1 ty2_spec, ty_spec)⟩ :: clauses1 ++ clauses2
+
+
+    -- | .univ ty_bound_op ty_pl => do
+    --   /-
+    --   [X <: T] A <: C
+    --   ---------------
+    --   |- X <: T
+    --   |- A <: C
+    --   -/
+    --   let ty_bound <- ty_bound_op 
+    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
+
+    --   let clauses_bound <- flatten fid ty_bound
+    --   let clauses_pl <- flatten ty_pl ty_spec 
+    --   return clauses_bound ++ clauses_pl
+
+    -- | .induc ty_pl => do
+    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
+    --   let clauses_pl <- flatten ty_pl fid 
+    --   return ⟨[], (fid, ty_spec)⟩ :: clauses_pl
+
+    -- | .coduc ty_pl => do 
+    --   /-
+    --   ISSUE: type on rhs does no simply via flatten
+    --   TODO:
+    --   - either convert the type to implication in to_type
+    --   - or convert coduct to induct with implication here
+    --   - or double negate co-induction
+    --     - i.e. NOT (NOT coduct (X -> Y)) 
+    --     - === (NOT coduct (X -> Y)) -> bot 
+    --     - === (induct X * NOT Y) -> bot 
+    --     - === {X * NOT Y with (X * Y) <: induct X * Y} -> bot 
+    --     - === [Z <: {X -> Y with (X * Y) <: induct X * Y}] Z 
+    --   -/
+    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
+    --   let clauses_pl <- flatten fid ty_pl 
+    --   return ⟨[], (ty_pl, ty_spec)⟩ :: clauses_pl
+    | _, _ => failure
+    /- End flatten -/
+
+
+    def to_clauses_from_type (ty_model : Ty) : Option (List Ty.HornClause) := do
+      let (clauses, _) <- Ty.flatten ty_model Ty.top 0
+      return clauses
+
+    /-
+    NOTE: horn claues require that type containment is part of atoms in clause
+    NOTE: the type variables are free over all clauses
+    NOTE: first-order propositions allow 
+
+    ----------
+    NOTE: existing CHC solvers may require limiting language to first-order quantification for existential
+    Expected: 
+    |- (zero;;, nil;;) : R
+    (x, y) : R  |- (succ;x, cons;y) : R 
+
+    -- OR -- 
+
+    |- (zero//unit * nil//unit) <: R
+    ∀ X, Y . (X * Y) <: R |- (succ//X * cons//Y) <: R 
+
+    -- WRONG: -- 
+    x : (zero//unit * nil//unit) |-  x : R
+    w : (X * Y), w : R, w' :(succ//X * cons//Y) |- w' <: R 
+    -- END WRONG --
+    NOTE: X and Y are not required to be in sync according to R 
+
+    ----------
+    ----------
+    Actual:
+    (l : zero//unit),  (r : nil//unit) <: R
+
+    (l : α[0]), (r : α[1]) <: R 
+    (l : succ//α[0]), (r : cons//α[1]) <: R 
+
+    broken: this is wrong; would allow incrementing out of sync: (succ;zero;;, cons;cons;nil;;) : R
+
+    -/
+    #eval Ty.to_clauses_from_type [lesstype|  
+      induct 
+        (zero//unit * nil//unit) |
+        {succ//β[0] * cons//β[1] with β[0] * β[1] <: β[2] # 2} 
+    ]
+
+
   end Ty
 
   inductive Tm : Type
@@ -2248,299 +2631,10 @@ namespace Nameless
       --   ty_univ := Ty.univ none ty_univ
       return ty
 
-    /-
-    TODO: convert type into set of horn clause constraints in for of subtyping
-    - e.g. {C & P₁ & P₂ & ... [Y]} <: Q  
-    - meaning ∀ X Y . (C[X,Y] & P₁[X,Y] & P₂[X,Y] & ... => Q[X])
 
-    TODO: may need to convert coinductive implication into inductive constraints
-
-    - can think of the type generated from a program as a model
-    - although the model may have nested specs due to 
-      - body <: annotation in let-binding   
-      - arg <: param in application
-      - switch <: pattern in matching 
-    NOTE: when existential is on rhs
-      CORRECT: 
-        - induction/existential/union on RHS represents a concrete predicate
-        - do no deconstruct
-      WRONG:
-        - variables should be freed 
-        - P <: μ R . nil | {cons X × L with L <: R}
-        - P(nil) ==> R(nil)
-        - ∀ x,l . P(cons(x,l)) & R(l) ==> R(cons(x,l))
-    NOTE: deconstruction of RHS will be handled by craig interpolation during solving
-    QUESTION: How is universal on lhs handled? moved to rhs? 
-    QUESTION: should universals be converted to existentials? 
-    QUESTION: should co-induction be converted to induction? 
-
-
-
-    NOTE: generation of horn clauses rewrites types into horn clauses
-    -/
-
-
-    /-
-    TODO: 
-    - create a horn clauses syntactic sugar
-    - create meta-predicate syntax; meta-predicate is an object-proposition
-    - a meta-argument is a proof; proof : proposition
-    - predicate is a variable defined by the horn clause
-    - use first order predicates and |= for entailment 
-    - or use _ |- _ ==> _ for entailment under interpretation  
-
-    TODO:
-    - distinguish between rules allowing predicates to be expanded
-      - and rules defining constraints; which cannot be expanded
-    
-    NOTE: comparison of CHC and Prolog 
-    - CHC involves the search problem of finding predicates
-      - interpolation part is a specialized logic e.g. Prolog/arithmetic
-    - Prolog involves the search problem of finding arguments
-
-    NOTE: predicate search
-    - C(x) ==> P(x), D(c) ==> P(x) expands P with union P ↦ C | D
-    - P(x) ==> C(x) uses craig interpolation to narrow P's dependencies with intersection 
-
-    IDEA: 
-    - types with bound variables represent CHC constraints (unadjustable)
-    - type variables represent predicates to be learned (adjustable)
-
-    NOTE: the learnable predicate/type for one abstraction becomes the constraint for the outer abstraction 
-    NOTE: let annotations, param types, pattern types are constraints
-    --------------------------------------
-    NOTE: 
-    - inductive definitions (used on lhs) can have learnable predicates
-    - Thus it is safe to convert an observed inductive type into horn clause constraints over a type variable.
-    - types on RHS, (e.g. annotations, param/pattern types) are not converted into horn clauses!
-    - types on RHS are constraints and are not learnable
-    - is that enough? is any else necessary to mark learnable type variables?
-    - all free variables are learnable
-    - free variables that represent parameter will be constrained by types/predicates originating at pattern matching
-    - the outer horn clause language is for coarsely learning predicates
-    - the inner constraint sublanguage is for refining the predicates
-      - the inner language may be Prolog-like
-    - the constraint (RHS) is searched by introducing a new learnable predicate that implies RHS constraint
-      - e.g. P(x, y), y = label ==> C(x, y)
-      - e.g. P & {x,y | y = label} ==> C(x, y)
-      - i.e. a constraint is made learnable by introducing a new learnable variable under a constraint
-      - solving for the concrete value of X requires a specialized logic that understands the full type language
-        - including the labels (tags, fields), implication, quantifiers, induction, etc.
-    ------------------------------------------------
-    -/
-
-    /-
-    constraint form for CHC solving
-    -/
-
-    structure HornClause where
-     body : List (Ty × Ty) 
-     head : (Ty × Ty)
-    deriving Repr
-
-
-    partial def HornClause.repr (hc : HornClause) (n : Nat) : Format :=
-      let _ : ToFormat (Ty × Ty) := ⟨fun (lower, upper) =>
-        (Ty.repr lower n) ++ " <: " ++ (Ty.repr upper (n))
-      ⟩
-      let body := Format.joinSep hc.body ", " 
-      let (head_lower, head_upper) := hc.head
-      body ++ " |- " ++ ((Ty.repr head_lower n) ++ " <: " ++ (Ty.repr head_upper n)) 
-
-
-    instance : Repr HornClause where
-      reprPrec := HornClause.repr
-
-
-    /-
-    return 
-      - a list of horn clauses corresponding to the nested subtyping qualifiers
-      - a type with the subtyping qualifiers removed
-
-    -/
-    /- 
-    TODO: consider if ty_spec param is necessary when constructing horn clauses from subtyping qualifiers
-    - specifically, this is needed to break down the constraints that occur from function application 
-    - e.g. f : P -> Q, x : X, f(x) produces P -> Q <: X -> ?
-    - need to simplify this form into [X <: P, Q <: ?] 
-
-    QUESTION: which option is better?
-      option 1: ty_spec is treated opaquely in generation of horn clauses
-        - the point simply being to 
-          1. free any bound variables from univ/exis/induc/coduc
-          2. break apart unions/intersections
-        - it is then deconstructed by the solver
-
-      option 2: ty_spec be pattern-matched/deconstructed in generation of horn clauses
-
-    -/
-    /-
-    ISSUE: this is completely wrong. 
-    TODO: construct idealized form of horn clauses using entailment of subtyping
-    TODO: pattern match on ty_spec in order generate horn clauses derived from application
-    NOTE: flatten is subtyping semantics as a denoation into horn clauses
-    -/
-    partial def flatten (ty_model : Ty) (ty_spec : Ty) : StateT Nat Option (List HornClause) 
-    := match ty_model with
-    | .bvar _ => 
-      failure  
-    | .fvar id => 
-      return [
-        ⟨[], (Ty.fvar id, ty_spec)⟩
-      ] 
-    | .unit =>
-      return [
-        ⟨[], (Ty.unit, ty_spec)⟩
-      ] 
-    | .top =>
-      return [
-        ⟨[], (Ty.top, ty_spec)⟩
-      ] 
-    | .bot =>
-      return [
-        ⟨[], (Ty.bot, ty_spec)⟩
-      ] 
-
-    | .tag l ty_pl => do
-      /-
-      label//P <: C
-      -------------
-      ... |- P <: Q
-      |- label Q <: C 
-      -/
-      let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let clauses_pl <- flatten ty_pl ty_pl_spec  
-      let clause : HornClause := ⟨[], (Ty.tag l ty_pl_spec, ty_spec)⟩ 
-      return clause :: clauses_pl
-
-    | .field l ty_pl => do
-      /-
-      (label : P) <: C
-      -------------
-      ... |- P <: Q
-      |- (label : Q) <: C 
-      -/
-      let ty_pl_spec <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let clauses_pl <- flatten ty_pl ty_pl_spec  
-      let clause : HornClause := ⟨[], (Ty.field l ty_pl_spec, ty_spec)⟩ 
-      return clause :: clauses_pl
-
-    | .union ty1 ty2 => do
-      /-
-      A | B <: C
-      -------------------------
-      |- A <: C
-      |- B <: C
-      -/
-      let clauses1 <- flatten ty1 ty_spec
-      let clauses2 <- flatten ty2 ty_spec
-      return clauses1 ++ clauses2
-
-    | .inter ty1 ty2 => do
-      /-
-      A & B <: C
-      -------------------------
-      X <: A, X <: B |- X <: C
-      -/
-
-      let (ty1_spec, ty2_spec) <- modifyGet (fun i =>
-        ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
-      )
-      let bid := Ty.bvar 0  
-      let clause : HornClause := ⟨
-        [(bid, ty1_spec), (bid, ty2_spec)],
-        (bid, ty_spec)
-      ⟩
-      let clauses1 <- flatten ty1 ty1_spec
-      let clauses2 <- flatten ty2 ty2_spec
-      return clause :: clauses1 ++ clauses2
-
-    | .impli ty1_spec ty2 => do 
-      /-
-      A_spec -> B <: C
-      -------------------------
-      ... |- A <: A_spec 
-      ... |- B <: B_spec 
-      |- (A -> B_spec) <: C
-      -/
-      let (ty1, ty2_spec) <- modifyGet (fun i =>
-        ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
-      )
-      let clauses1 <- flatten ty1 ty1_spec
-      let clauses2 <- flatten ty2 ty2_spec
-      return ⟨[], (Ty.impli ty1 ty2_spec, ty_spec)⟩ :: clauses1 ++ clauses2
-
-    | .exis payload sts n => do
-      /- 
-      - NOTE: do no free bound variables; 
-      - they become universally quantified over horn clause 
-
-      {P with A <: B} <: C
-      -------------------------
-      A <: B |- P <: C
-      -/
-      return [⟨sts, (payload, ty_spec)⟩]
-      -- let mut premise := []
-      -- for (ty_c1, ty_c2) in sts.reverse do
-      --   let ty_c1 := Ty.instantiate 0 fids ty_c1
-      --   let ty_c2 := Ty.instantiate 0 fids ty_c2
-      --   let clauses <- (flatten ty_c1 ty_c2)
-      --   clauses_sts := clauses ++ clauses_sts
-      -- return ⟨[payload], ty_spec⟩ :: clauses_sts
-    --   let fids <- modifyGet (fun i =>
-    --     let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
-    --     let fids := ids_bound.map (fun id => Ty.fvar id)
-    --     (fids, i)
-    --   )
-    --   let payload := Ty.instantiate 0 fids payload 
-
-    | .univ ty_bound_op ty_pl => do
-      /-
-      [X <: T] A <: C
-      ---------------
-      |- X <: T
-      |- A <: C
-      -/
-      let ty_bound <- ty_bound_op 
-      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let ty_pl := Ty.instantiate 0 [fid] ty_pl
-
-      let clauses_bound <- flatten fid ty_bound
-      let clauses_pl <- flatten ty_pl ty_spec 
-      return clauses_bound ++ clauses_pl
-
-    | .induc ty_pl => do
-      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let ty_pl := Ty.instantiate 0 [fid] ty_pl
-      let clauses_pl <- flatten ty_pl fid 
-      return ⟨[], (fid, ty_spec)⟩ :: clauses_pl
-
-    | .coduc ty_pl => do 
-      /-
-      ISSUE: type on rhs does no simply via flatten
-      TODO:
-      - either convert the type to implication in to_type
-      - or convert coduct to induct with implication here
-      - or double negate co-induction
-        - i.e. NOT (NOT coduct (X -> Y)) 
-        - === (NOT coduct (X -> Y)) -> bot 
-        - === (induct X * NOT Y) -> bot 
-        - === {X * NOT Y with (X * Y) <: induct X * Y} -> bot 
-        - === [Z <: {X -> Y with (X * Y) <: induct X * Y}] Z 
-      -/
-      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-      let ty_pl := Ty.instantiate 0 [fid] ty_pl
-      let clauses_pl <- flatten fid ty_pl 
-      return ⟨[], (ty_pl, ty_spec)⟩ :: clauses_pl
-    /- End flatten -/
-
-    def to_clauses (t : Tm) : Option (List HornClause) := do
+    def to_clauses (t : Tm) : Option (List Ty.HornClause) := do
       let (ty, i) <- to_type_state empty t 0
-      let (clauses, _) <- flatten ty Ty.top i 
-      return clauses
-
-    def to_clauses_from_type (ty_model : Ty) : Option (List HornClause) := do
-      let (clauses, _) <- flatten ty_model Ty.top 0
+      let (clauses, _) <- Ty.flatten ty Ty.top i 
       return clauses
 
     -----------------------
@@ -2577,45 +2671,6 @@ namespace Nameless
     /- broken: coduct rule -/
     #eval to_clauses nat_to_chain
     #eval to_clauses nat_to_chain_app
-
-    /-
-    NOTE: horn claues require that type containment is part of atoms in clause
-    NOTE: the type variables are free over all clauses
-    NOTE: first-order propositions allow 
-
-    ----------
-    NOTE: existing CHC solvers may require limiting language to first-order quantification for existential
-    Expected: 
-    |- (zero;;, nil;;) : R
-    (x, y) : R  |- (succ;x, cons;y) : R 
-
-    -- OR -- 
-
-    |- (zero//unit * nil//unit) <: R
-    ∀ X, Y . (X * Y) <: R |- (succ//X * cons//Y) <: R 
-
-    -- WRONG: -- 
-    x : (zero//unit * nil//unit) |-  x : R
-    w : (X * Y), w : R, w' :(succ//X * cons//Y) |- w' <: R 
-    -- END WRONG --
-    NOTE: X and Y are not required to be in sync according to R 
-
-    ----------
-    ----------
-    Actual:
-    (l : zero//unit),  (r : nil//unit) <: R
-
-    (l : α[0]), (r : α[1]) <: R 
-    (l : succ//α[0]), (r : cons//α[1]) <: R 
-
-    broken: this is wrong; would allow incrementing out of sync: (succ;zero;;, cons;cons;nil;;) : R
-
-    -/
-    #eval to_clauses_from_type [lesstype|  
-      induct 
-        (zero//unit * nil//unit) |
-        {succ//β[0] * cons//β[1] with β[0] * β[1] <: β[2] # 2} 
-    ]
 
     ------------------
     def nat_to_list := [lessterm|
