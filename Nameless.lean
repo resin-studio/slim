@@ -1966,7 +1966,7 @@ namespace Nameless
       (ty_model : Ty) (ty_spec : Ty) 
     : StateT Nat Option (List HornClause) 
     := match ty_model, ty_spec with
-    | .exis payload qualifiers n, _ => do
+    | .exis ty_body qualifiers n, _ => do
       /- 
       - NOTE: do no free bound variables; 
       - they become universally quantified over horn clause 
@@ -1993,9 +1993,9 @@ namespace Nameless
         qualifiers_renamed := (ty_content, ty_name) :: qualifiers_renamed
 
       /-
-      issue: payload needs to be flattened next
+      issue: ty_body needs to be flattened next
       -/
-      let clauses_unwrapped <- flatten (quant + n) (qualifiers_renamed ++ premises) payload ty_spec
+      let clauses_unwrapped <- flatten (quant + n) (qualifiers_renamed ++ premises) ty_body ty_spec
       return clauses_unwrapped ++ clauses_qualifier_total
       -- let mut premise := []
       -- for (ty_c1, ty_c2) in sts.reverse do
@@ -2003,15 +2003,15 @@ namespace Nameless
       --   let ty_c2 := Ty.instantiate 0 fids ty_c2
       --   let clauses <- (flatten ty_c1 ty_c2)
       --   clauses_sts := clauses ++ clauses_sts
-      -- return ⟨[payload], ty_spec⟩ :: clauses_sts
+      -- return ⟨[ty_body], ty_spec⟩ :: clauses_sts
     --   let fids <- modifyGet (fun i =>
     --     let (i, ids_bound) := (i + n, (List.range n).map (fun j => i + j))
     --     let fids := ids_bound.map (fun id => Ty.fvar id)
     --     (fids, i)
     --   )
-    --   let payload := Ty.instantiate 0 fids payload 
+    --   let ty_body := Ty.instantiate 0 fids ty_body 
 
-    | _, .univ ty_constraint_op ty_pl => do
+    | _, .univ ty_constraint_op ty_body => do
       /-
       M <: [X <: T] A
       ----------------
@@ -2023,18 +2023,38 @@ namespace Nameless
       )
       let clauses_qualifier <- flatten 0 [] ty_constraint constraint_renamed
       let qualifier_renamed := (Ty.bvar quant, constraint_renamed) 
-      let clauses_unwrapped <- flatten (quant + 1) (qualifier_renamed :: premises) ty_model ty_pl
+      let clauses_unwrapped <- flatten (quant + 1) (qualifier_renamed :: premises) ty_model ty_body
       return clauses_unwrapped ++ clauses_qualifier
-    --   /-
-    --   [X <: T] A <: C
-    --   ---------------
-    --   |- X <: T
-    --   |- A <: C
-    --   -/
-    --   let ty_bound <- ty_bound_op 
-    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
-      -- failure
+
+    | .induc ty_body, _ => do
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let ty_body := Ty.instantiate 0 [fid] ty_body
+      let clauses_induc <- flatten quant premises ty_body fid 
+      let clauses_spec <- flatten 0 [] fid ty_spec
+      return clauses_induc ++ clauses_spec
+
+    | _, .coduc ty_body => do
+
+      -- (P -> Q)
+      -- (X -> Y with (X * Y) <: (P * Q))
+      -- ¬ ¬ (P -> Q)
+      -- ¬ (P * ¬ Q)
+      -- (P * ¬ Q) -> bot
+      -- {(X * ¬ Y) -> bot with (X * Y) <: P * Q}
+      /- TODO: use double negation (which assume some implication)-/
+      -- let ty_spec <- (double_negate .coduc ty_body)
+      -- flatten quant premises _ (double_negate .coduc ty_body)
+      failure
+
+    ------------------------
+
+    | _, .induc ty_body => do
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let ty_body := Ty.instantiate 0 [fid] ty_body
+      let clauses_induc <- flatten 0 [] ty_body fid 
+      let clauses_model <- flatten quant premises ty_model fid
+      return clauses_induc ++ clauses_model
+
 
     -- | .bvar _ => 
     --   failure  
@@ -2139,12 +2159,6 @@ namespace Nameless
     --   let clauses_bound <- flatten fid ty_bound
     --   let clauses_pl <- flatten ty_pl ty_spec 
     --   return clauses_bound ++ clauses_pl
-
-    -- | .induc ty_pl => do
-    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
-    --   let clauses_pl <- flatten ty_pl fid 
-    --   return ⟨[], (fid, ty_spec)⟩ :: clauses_pl
 
     -- | .coduc ty_pl => do 
     --   /-
