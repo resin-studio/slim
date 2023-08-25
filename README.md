@@ -1,19 +1,26 @@
-## schedule
+# Relational Types
+
+## Schedule
 > Due 2023 Aug 25
 - translate to custom CHC intermediate language (60%)
     - denotation of subtyping into horn clauses 
-    - two kinds of identifiers: one kind for learnable predicates/types, another for constraint predicates/types
-    - divide translation into three sections: abstract translation, refined translation, and simplification.
-    - the horn-clause translation simplifies flattens subtyping by removing quantifiers (univ, exis, induc, coinduc)
+    - use three kinds of identifiers: 
+        - learnable predicates/types
+        - constraint predicates/types
+        - inhabitants of predicates/types
+    - divide translation into three sections: 
+        - abstract translation: generate rules for abstract reasoning
+        - refined translation: generate rules for refined reasoning
+        - simplification: remove extraneous information
+    - the horn-clause translation normalizes subtyping by removing quantifiers (univ, exis, induc, coinduc)
     - the quantification is inferred by context: 
         - rhs variable implies least solution (union until valid)
         - lhs variable implies greatest solution (intersect until valid)
-    - convert co-induction to induction with implication to allow simplifying on lhs
     - restrict second order type variables to LHS of subtyping (weakening to FOL semantics)
 
 > Due 2023 Sep 01 
-- determine feasibility of RInGen (the SOTA for solving inductive abstract data types) 
-    - look into RInGen tool for handling inductive abstract data types (Kostyukov et al)
+- determine feasibility of RInGen (the SOTA for solving inductive algebraic data types) 
+    - look into RInGen tool for handling inductive ADTs (Kostyukov et al)
     - read *Beyond the Elementary Representations of Program Invariants over Algebraic Data Types*.
         - by Yurii Kostyukov, Dmitry Mordvinov & Grigory Fedyukovich 
         - 2021
