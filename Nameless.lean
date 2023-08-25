@@ -2118,6 +2118,14 @@ namespace Nameless
       let clauses2 <- flatten quant premises ty2_model ty2_spec
       return clauses1 ++ clauses2
 
+    /-
+    TODO: add .fvar cases
+
+    P <: Q 
+    ------
+    ∀ X . X <: P |- X : Q
+    -/
+
     ------------------------
     -- OLD --
     ------------------------
@@ -2182,15 +2190,14 @@ namespace Nameless
     -- | .coduc ty_pl => do 
     --   /-
     --   ISSUE: type on rhs does no simply via flatten
-    --   TODO:
+    --   TODO: convert to inductive predicates (assuming target constraint logic can't handle co-inductive/implication inhabitants)
     --   - either convert the type to implication in to_type
-    --   - or convert coduct to induct with implication here
-    --   - or double negate co-induction
+    --   - double negate co-induction
     --     - i.e. NOT (NOT coduct (X -> Y)) 
-    --     - === (NOT coduct (X -> Y)) -> bot 
-    --     - === (induct X * NOT Y) -> bot 
-    --     - === {X * NOT Y with (X * Y) <: induct X * Y} -> bot 
-    --     - === [Z <: {X -> Y with (X * Y) <: induct X * Y}] Z 
+    --     - === (NOT coduct (X -> Y) & ...) -> bot 
+    --     - === (induct (X * NOT Y) | ...) -> bot 
+    --     - === X * NOT {Y with (X * Y) <: induct P * Q} -> bot 
+    --     - === X -> {Y with (X * Y) <: induct P * Q}
     --   -/
     --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
     --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
