@@ -1,4 +1,4 @@
-####  Due 2023 Aug 25
+####  Due 2023 Aug 25 (Today)
 - translate to custom CHC intermediate language (60%)
     - denotation of subtyping into horn clauses 
     - use three kinds of identifiers: 
@@ -11,17 +11,29 @@
         - simplification: remove extraneous information
     - the horn-clause translation normalizes subtyping by removing quantifiers (univ, exis, induc, coinduc)
     - the quantification is inferred by context: 
-        - rhs variable implies least solution (union until valid)
-        - lhs variable implies greatest solution (intersect until valid)
-    - restrict second order type variables to LHS of subtyping (weakening to FOL semantics)
+        - learnable variable on RHS means least solution (union until valid)
+        - learnable variable on LHS means greatest solution (intersect until valid)
+    - restrict second order bound variables to LHS of subtyping (weakening to FOL semantics)
 
-#### Due 2023 Sep 01 
+#### Due 2023 Sep 01 (Next) 
 - determine feasibility of RInGen (the SOTA for solving inductive algebraic data types) 
     - look into RInGen tool for handling inductive ADTs (Kostyukov et al)
     - read *Beyond the Elementary Representations of Program Invariants over Algebraic Data Types*.
         - by Yurii Kostyukov, Dmitry Mordvinov & Grigory Fedyukovich 
         - 2021
+        - regular vs elementary representations of constraints
+            - regular: automata-based
+            - elementary: first-order logic
+        - supports relations
+        - a tree automaton is a generalization of an algebraic data type 
+            - tree automaton/ADT is used to represent sorts
+                - defining the shapes of the predicate inhabitants / function arguments
+            - it can have repeated constructors
+            - e.g. 
+                - `even ::= Z | S S even`  
+                - `Z |-> q_even, S q_odd |-> q_even, S q_odd |-> q_even, ... |-> q_even`  
     - use custom CHC intermediate lang to guide construction of examples (e.g. foldn) in RInGen 
+- determine novelty of relational types relative to ADT CHC SOTA
 - translate to custom CHC intermediate language (100%)
 
 #### Due 2023 Sep 08 
