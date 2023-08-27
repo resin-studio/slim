@@ -34,6 +34,10 @@
                 - `Z |-> q_even, S q_odd |-> q_even, S q_odd |-> q_even, ... |-> q_even`  
     - use custom CHC intermediate lang to guide construction of examples (e.g. foldn) in RInGen 
 - determine novelty of relational types relative to ADT CHC SOTA
+    - RInGen examples define predicates rather than inferring predicates from programs
+    - Relational types infers predicates from non-boolean functions
+    - The key innovation is inferring a co-inductive type and double negating it to an inductive relation
+        - Liquid Types doesn't need to do this because it relies on HM to infer base types
 - translate to custom CHC intermediate language (100%)
 
 #### Due 2023 Sep 08 
