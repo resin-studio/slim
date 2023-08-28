@@ -1988,10 +1988,7 @@ namespace Nameless
 
     -- | _, .induc ty_body => do
     --   /- 
-        -- ISSUE: must treat fixed point as constraint, which is NOT learnable 
-        -- introducing fresh variable would incorrectly allow learning a weaker constraint
-        -- perhaps this cannot be simplified and requires translation into a special constraint language
-        -- TODO: distinguish between constraint symbol and learnable symbol 
+    -- TODO: use query syntactic form ¬ P ==> FALSE to indicate query rather than rule.
     --   -/
     --   failure
     --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))

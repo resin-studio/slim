@@ -34,6 +34,9 @@
             - queries have predicate variable in head position
         - treat predicate as a specification by negating it in body and using false for head clause. 
             - e.g. `NOT P ==> FALSE`
+    - query vs rule in subtyping: 
+        - lhs-sum-like or rhs-prod-like are rules
+        - rhs-sum-like or lhs-prod-like are queries 
     - notice limitation of learning arity
         - RInGen predicates have a fixed arity
         - RInGen may be unable to infer intersection of fields 
