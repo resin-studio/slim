@@ -37,6 +37,8 @@
         - RInGen may be unable to infer intersection of fields 
         - learning max number of fields amounts to learning the arity of a predicate
         - use custom CHC intermediate lang to guide construction of examples (e.g. foldn) in RInGen
+    - notice limitation of constraint language
+        - it can negate inductive predicate; but can it assert inductive constraint?
 - determine novelty of relational types relative to ADT CHC SOTA
     - RInGen examples define predicates rather than inferring predicates from programs
     - Relational types infers predicates from non-boolean functions

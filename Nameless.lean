@@ -1846,122 +1846,14 @@ namespace Nameless
     instance : Repr HornClause where
       reprPrec := HornClause.repr
 
-    /-
-    TODO: convert type into set of horn clause constraints in for of subtyping
-    - e.g. {C & P₁ & P₂ & ... [Y]} <: Q  
-    - meaning ∀ X Y . (C[X,Y] & P₁[X,Y] & P₂[X,Y] & ... => Q[X])
-
-    TODO: may need to convert coinductive implication into inductive constraints
-
-    - can think of the type generated from a program as a model
-    - although the model may have nested specs due to 
-      - body <: annotation in let-binding   
-      - arg <: param in application
-      - switch <: pattern in matching 
-    NOTE: when existential is on rhs
-      CORRECT: 
-        - induction/existential/union on RHS represents a concrete predicate
-        - do no deconstruct
-      WRONG:
-        - variables should be freed 
-        - P <: μ R . nil | {cons X × L with L <: R}
-        - P(nil) ==> R(nil)
-        - ∀ x,l . P(cons(x,l)) & R(l) ==> R(cons(x,l))
-    NOTE: deconstruction of RHS will be handled by craig interpolation during solving
-    QUESTION: How is universal on lhs handled? moved to rhs? 
-    QUESTION: should universals be converted to existentials? 
-    QUESTION: should co-induction be converted to induction? 
-
-
-
-    NOTE: generation of horn clauses rewrites types into horn clauses
-    -/
-
-
-    /-
-    TODO: 
-    - create a horn clauses syntactic sugar
-    - create meta-predicate syntax; meta-predicate is an object-proposition
-    - a meta-argument is a proof; proof : proposition
-    - predicate is a variable defined by the horn clause
-    - use first order predicates and |= for entailment 
-    - or use _ |- _ ==> _ for entailment under interpretation  
-
-    TODO:
-    - distinguish between rules allowing predicates to be expanded
-      - and rules defining constraints; which cannot be expanded
     
-    NOTE: comparison of CHC and Prolog 
-    - CHC involves the search problem of finding predicates
-      - interpolation part is a specialized logic e.g. Prolog/arithmetic
-    - Prolog involves the search problem of finding arguments
-
-    NOTE: predicate search
-    - C(x) ==> P(x), D(c) ==> P(x) expands P with union P ↦ C | D
-    - P(x) ==> C(x) uses craig interpolation to narrow P's dependencies with intersection 
-
-    IDEA: 
-    - types with bound variables represent CHC constraints (unadjustable)
-    - type variables represent predicates to be learned (adjustable)
-
-    NOTE: the learnable predicate/type for one abstraction becomes the constraint for the outer abstraction 
-    NOTE: let annotations, param types, pattern types are constraints
-    --------------------------------------
-    NOTE: 
-    - inductive definitions (used on lhs) can have learnable predicates
-    - Thus it is safe to convert an observed inductive type into horn clause constraints over a type variable.
-    - types on RHS, (e.g. annotations, param/pattern types) are not converted into horn clauses!
-    - types on RHS are constraints and are not learnable
-    - is that enough? is any else necessary to mark learnable type variables?
-    - all free variables are learnable
-    - free variables that represent parameter will be constrained by types/predicates originating at pattern matching
-    - the outer horn clause language is for coarsely learning predicates
-    - the inner constraint sublanguage is for refining the predicates
-      - the inner language may be Prolog-like
-    - the constraint (RHS) is searched by introducing a new learnable predicate that implies RHS constraint
-      - e.g. P(x, y), y = label ==> C(x, y)
-      - e.g. P & {x,y | y = label} ==> C(x, y)
-      - i.e. a constraint is made learnable by introducing a new learnable variable under a constraint
-      - solving for the concrete value of X requires a specialized logic that understands the full type language
-        - including the labels (tags, fields), implication, quantifiers, induction, etc.
-    ------------------------------------------------
+    /- TODO: double negate co-induct -/
+    /- TODO: 
+    - need to distinguish between learnable type variables and constraint type variables 
+    - learnable types are lhs-sum-like-types and rhs-product-like-types
+    - constraint types are rhs-sum-like-types and lhs-product-like-types
     -/
 
-    /-
-    constraint form for CHC solving
-    -/
-
-
-
-    /-
-    return 
-      - a list of horn clauses corresponding to the nested subtyping qualifiers
-      - a type with the subtyping qualifiers removed
-
-    -/
-    /- 
-    TODO: consider if ty_spec param is necessary when constructing horn clauses from subtyping qualifiers
-    - specifically, this is needed to break down the constraints that occur from function application 
-    - e.g. f : P -> Q, x : X, f(x) produces P -> Q <: X -> ?
-    - need to simplify this form into [X <: P, Q <: ?] 
-
-    QUESTION: which option is better?
-      option 1: ty_spec is treated opaquely in generation of horn clauses
-        - the point simply being to 
-          1. free any bound variables from univ/exis/induc/coduc
-          2. break apart unions/intersections
-        - it is then deconstructed by the solver
-
-      option 2: ty_spec be pattern-matched/deconstructed in generation of horn clauses
-
-    -/
-    /-
-    ISSUE: this is completely wrong. 
-    TODO: construct idealized form of horn clauses using entailment of subtyping
-    TODO: pattern match on ty_spec in order generate horn clauses derived from application
-    NOTE: flatten is subtyping semantics as a denoation into horn clauses
-    NOTE: either in denotation here or in solving: restrict to FOL by preventing bound variables on rhs 
-    -/
     partial def flatten (quant : Nat) (premises : List (Ty × Ty)) 
       (ty_model : Ty) (ty_spec : Ty) 
     : StateT Nat Option (List HornClause) 
