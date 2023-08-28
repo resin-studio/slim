@@ -27,7 +27,7 @@ namespace Surface
   | exis : Ty -> List (Ty × Ty) -> List String -> Ty
   | univ : String -> Option Ty -> Ty -> Ty
   | induc : String -> Ty -> Ty
-  | coduc : String -> Ty -> Ty
+  -- | coduc : String -> Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
   #check List.repr
 
@@ -92,8 +92,8 @@ namespace Surface
 
     | induc name content =>
       Ty.infer_abstraction (exclude + from_list [name]) content 
-    | coduc name content =>
-      Ty.infer_abstraction (exclude + from_list [name]) content 
+    -- | coduc name content =>
+    --   Ty.infer_abstraction (exclude + from_list [name]) content 
 
     def intersect : Ty -> Ty -> Ty
     | .top, ty => ty
@@ -160,10 +160,10 @@ namespace Surface
         "induct " ++ "[" ++ name ++ "] " ++ (Ty.repr ty1 n)
       ) ")"
 
-    | .coduc name ty1 =>
-      Format.bracket "(" (
-        "coduct " ++ "[" ++ name ++ "] " ++ (Ty.repr ty1 n)
-      ) ")"
+    -- | .coduc name ty1 =>
+    --   Format.bracket "(" (
+    --     "coduct " ++ "[" ++ name ++ "] " ++ (Ty.repr ty1 n)
+    --   ) ")"
 
     instance : Repr Ty where
       reprPrec := Ty.repr
@@ -371,9 +371,9 @@ namespace Surface
     | .induc name ty => do
       let (stack, ty') <- (to_nameless free_vars (name :: bound_vars) ty) 
       some ([name] :: stack, .induc ty')
-    | .coduc name ty => do
-      let (stack, ty') <- (to_nameless free_vars (name :: bound_vars) ty) 
-      some ([name] :: stack, .coduc ty')
+    -- | .coduc name ty => do
+    --   let (stack, ty') <- (to_nameless free_vars (name :: bound_vars) ty) 
+    --   some ([name] :: stack, .coduc ty')
 
     partial def extract_free_vars : Ty -> PHashSet String
     | id name => from_list [name] 
@@ -412,9 +412,9 @@ namespace Surface
     | induc bound_name ty =>
       let names := (extract_free_vars ty)
       from_list ((toList names).filter (fun n => n != bound_name))
-    | coduc bound_name ty =>
-      let names := (extract_free_vars ty)
-      from_list ((toList names).filter (fun n => n != bound_name))
+    -- | coduc bound_name ty =>
+    --   let names := (extract_free_vars ty)
+    --   from_list ((toList names).filter (fun n => n != bound_name))
 
 
     partial def from_nameless (free_names : List String) (names : List String) (stack : List (List String)) : 
@@ -493,15 +493,15 @@ namespace Surface
           some (stack', .induc name ty') 
         | _ => none
       | [] => none
-    | .coduc ty =>
-      match stack with
-      | names' :: stack'  =>
-        match names' with
-        | [name] => do
-          let (stack', ty') <- (from_nameless free_names (name :: names) stack' ty)   
-          some (stack', .induc name ty') 
-        | _ => none
-      | [] => none
+    -- | .coduc ty =>
+    --   match stack with
+    --   | names' :: stack'  =>
+    --     match names' with
+    --     | [name] => do
+    --       let (stack', ty') <- (from_nameless free_names (name :: names) stack' ty)   
+    --       some (stack', .induc name ty') 
+    --     | _ => none
+    --   | [] => none
 
     -- TODO: make sure traversal order is consistent across all syntax tree crawlers
     def extract_bound_stack (i : Nat): Nameless.Ty -> Nat × List (List String)  
@@ -552,10 +552,10 @@ namespace Surface
       let (i, stack) := extract_bound_stack i ty 
       let (i, names) := (i + 1, [s!"T{i}"])
       (i, names :: stack)
-    | .coduc ty =>
-      let (i, stack) := extract_bound_stack i ty 
-      let (i, names) := (i + 1, [s!"T{i}"])
-      (i, names :: stack)
+    -- | .coduc ty =>
+    --   let (i, stack) := extract_bound_stack i ty 
+    --   let (i, names) := (i + 1, [s!"T{i}"])
+    --   (i, names :: stack)
 
     partial def unify_reduce (ty1 ty2 ty_result : Surface.Ty) : Option Surface.Ty := do
       let free_vars := toList (extract_free_vars [surftype| ⟨ty1⟩ * ⟨ty2⟩])

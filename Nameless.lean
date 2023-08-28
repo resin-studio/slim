@@ -86,7 +86,7 @@ namespace Nameless
   -- TODO: remove Option from univ; top type is sufficient
   | univ : Option Ty -> Ty -> Ty
   | induc : Ty -> Ty
-  | coduc : Ty -> Ty
+  -- | coduc : Ty -> Ty
   deriving Repr, Inhabited, Hashable, BEq
   -- #check List.repr
 
@@ -156,8 +156,8 @@ namespace Nameless
       Nat.max n_c n_pl
     | .induc content =>
       infer_abstraction (start + 1) content 
-    | .coduc content =>
-      infer_abstraction (start + 1) content 
+    -- | .coduc content =>
+      -- infer_abstraction (start + 1) content 
 
     partial def free_vars: Ty -> PHashSet Nat 
     | .bvar id => {} 
@@ -179,7 +179,7 @@ namespace Nameless
       | some ty_c => (free_vars ty_c) + (free_vars ty)
       | none => (free_vars ty)
     | .induc ty => (free_vars ty)
-    | .coduc ty => (free_vars ty)
+    -- | .coduc ty => (free_vars ty)
 
     -- def neg_vars (neg : Bool) : Ty -> PHashSet Nat 
     -- | .bvar id => empty 
@@ -226,7 +226,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       (.univ (Option.map (abstract fids (start + 1)) op_ty_c) (abstract fids (start + 1) ty))
     | .induc ty => .induc (abstract fids (start + 1) ty)
-    | .coduc ty => .coduc (abstract fids (start + 1) ty)
+    -- | .coduc ty => .coduc (abstract fids (start + 1) ty)
 
     -- assuming no cycles; (assuming occurs check has been properly applied before hand) 
     partial def subst (m : PHashMap Nat Ty) : Ty -> Ty
@@ -252,7 +252,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (subst m)) (subst m ty))
     | .induc ty => .induc (subst m ty)
-    | .coduc ty => .coduc (subst m ty)
+    -- | .coduc ty => .coduc (subst m ty)
 
     -- assume assoc right
     def inter_contains : Ty -> Ty -> Bool 
@@ -344,7 +344,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       .univ (op_ty_c.map simplify) (simplify ty)
     | .induc ty => .induc (simplify ty)
-    | .coduc ty => .coduc (simplify ty)
+    -- | .coduc ty => .coduc (simplify ty)
 
 
     def record_fields : Ty -> PHashMap String Ty
@@ -377,7 +377,7 @@ namespace Nameless
     | .exis ty constraints n => false
     | .univ op_ty_c ty => false
     | .induc ty => false
-    | .coduc ty => false
+    -- | .coduc ty => false
 
     partial def subst_while (f : Ty -> Bool) (m : PHashMap Nat Ty) : Ty -> Ty
     | .bvar id => .bvar id 
@@ -406,7 +406,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (subst_while f m)) (subst_while f m ty))
     | .induc ty => .induc (subst_while f m ty)
-    | .coduc ty => .coduc (subst_while f m ty)
+    -- | .coduc ty => .coduc (subst_while f m ty)
 
     partial def sub_nonneg (stale : PHashSet Nat) (m : PHashMap Nat Ty) (negs : PHashSet Nat) : Ty -> Ty
     | .bvar id => .bvar id 
@@ -436,7 +436,7 @@ namespace Nameless
     | .univ op_ty_c ty => 
       (.univ (op_ty_c.map (sub_nonneg stale m negs)) (sub_nonneg stale m negs ty))
     | .induc ty => .induc (sub_nonneg stale m negs ty)
-    | .coduc ty => .coduc (sub_nonneg stale m negs ty)
+    -- | .coduc ty => .coduc (sub_nonneg stale m negs ty)
 
 
     declare_syntax_cat lesstype
@@ -477,7 +477,7 @@ namespace Nameless
     syntax:50 "[" "_" "]" lesstype:50 : lesstype 
 
     syntax "induct" lesstype:40 : lesstype 
-    syntax "coduct" lesstype:40 : lesstype 
+    -- syntax "coduct" lesstype:40 : lesstype 
 
     syntax "(" lesstype ")" : lesstype
 
@@ -526,7 +526,7 @@ namespace Nameless
       `(Ty.univ (some [lesstype| $a ]) [lesstype| $d ])
 
     | `([lesstype| induct $a ]) => `(Ty.induc [lesstype| $a ])
-    | `([lesstype| coduct $a ]) => `(Ty.coduc [lesstype| $a ])
+    -- | `([lesstype| coduct $a ]) => `(Ty.coduc [lesstype| $a ])
 
     | `([lesstype| ($a) ]) => `([lesstype| $a ])
 
@@ -588,10 +588,10 @@ namespace Nameless
       Format.bracket "(" (
         "induct " ++ (repr ty1 n)
       ) ")"
-    | .coduc ty1 =>
-      Format.bracket "(" (
-        "coduct " ++ (repr ty1 n)
-      ) ")"
+    -- | .coduc ty1 =>
+    --   Format.bracket "(" (
+    --     "coduct " ++ (repr ty1 n)
+    --   ) ")"
 
     instance : Repr Ty where
       reprPrec := repr
@@ -672,7 +672,7 @@ namespace Nameless
       ) && 
       no_function_types ty_pl
     | .induc content => no_function_types content 
-    | .coduc content => no_function_types content 
+    -- | .coduc content => no_function_types content 
 
     partial def index_free_vars (initial : PHashMap Nat (PHashSet Ty)) (ty : Ty) : PHashMap Nat (PHashSet Ty) :=
       let fids := toList (free_vars ty)
@@ -821,7 +821,7 @@ namespace Nameless
       (.univ (Option.map (instantiate (start + 1) args) op_ty_c) (instantiate (start + 1) args ty)
       )
     | .induc ty => .induc (instantiate (start + 1) args ty)
-    | .coduc ty => .coduc (instantiate (start + 1) args ty)
+    -- | .coduc ty => .coduc (instantiate (start + 1) args ty)
 
 
     partial def occurs (m : Ty.Context) (key : Nat): Ty -> Bool 
@@ -861,7 +861,7 @@ namespace Nameless
       | none => false
       | some ty_c => (occurs m key ty_c)) || (occurs m key ty)
     | .induc ty => (occurs m key ty)
-    | .coduc ty => (occurs m key ty)
+    -- | .coduc ty => (occurs m key ty)
 
     partial def subst_default (sign : Bool) : Ty -> Ty
     | .bvar id => .bvar id  
@@ -883,7 +883,7 @@ namespace Nameless
       -- can't sub away if constrained
       .univ op_ty_c ty
     | .induc ty => .induc (subst_default sign ty)
-    | .coduc ty => .coduc (subst_default sign ty)
+    -- | .coduc ty => .coduc (subst_default sign ty)
 
     partial def equiv (env_ty : PHashMap Nat Ty) (ty1 : Ty) (ty2 : Ty) : Bool :=
       let ty1 := simplify (subst env_ty ty1)
@@ -937,7 +937,7 @@ namespace Nameless
       from_list (fields.map (fun (l, _) => l))
     | .exis ty constraints n => (extract_record_labels ty)
     | .induc ty => extract_record_labels ty
-    | .coduc ty => extract_record_labels ty
+    -- | .coduc ty => extract_record_labels ty
     | _ => {} 
 
     partial def extract_label_list (ty : Ty) : List String :=
@@ -1044,7 +1044,7 @@ namespace Nameless
       )
     | .univ _ _ => false 
     | .induc _ => false 
-    | .coduc _ => false 
+    -- | .coduc _ => false 
 
     -- (fun ty_u => 
     --   match ty_u with
@@ -1949,19 +1949,6 @@ namespace Nameless
       let clauses_spec <- flatten 0 [] fid ty_spec
       return clauses_induc ++ clauses_spec
 
-    | _, .coduc ty_body => do
-
-      -- (P -> Q)
-      -- (X -> Y with (X * Y) <: (P * Q))
-      -- ¬ ¬ (P -> Q)
-      -- ¬ (P * ¬ Q)
-      -- (P * ¬ Q) -> bot
-      -- {(X * ¬ Y) -> bot with (X * Y) <: P * Q}
-      /- TODO: use double negation (which assume some implication)-/
-      -- let ty_spec <- (double_negate .coduc ty_body)
-      -- flatten quant premises _ (double_negate .coduc ty_body)
-      failure
-
     | _, .impli (.union ty1_ante ty2_ante) ty_consq => do
       let clauses1 <- flatten quant premises ty1_ante (.impli ty_model ty_consq)
       let clauses2 <- flatten quant premises ty2_ante (.impli ty_model ty_consq)
@@ -2565,12 +2552,71 @@ namespace Nameless
 
       let (id_fixed, ty_IC) <- match ty_self_f with
       | .impli (.fvar id) ty_IC => some (id, ty_IC)
+
       /-
       TODO: add case for generalized implication: .univ ... 
       -/
       | _ => none 
 
-      return [lesstype| coduct ⟨Ty.abstract [id_fixed] 0 ty_IC⟩ ]
+      /-
+      TODO:
+      - construct implication to inductive type
+      - bypass co-inductive notion
+
+      step 1. break down ty_IC into ty_ante, ty_consq
+      step 2. look through constraints of cases
+      step 3. transform the co-inductive constraints into inductive constraints
+
+      i.e. NOT (NOT coduct (X -> Y)) 
+      ==== (NOT coduct (X -> Y) & ...) -> bot 
+      ==== (induct (X * NOT Y) | ...) -> bot 
+      ==== X * NOT {Y with (X * Y) <: induct P * Q} -> bot 
+      ==== X -> {Y with (X * Y) <: induct P * Q}
+      -/
+
+      --------------------
+      let rec flip_constraints (id_fixed : Nat) : Ty -> Option Ty
+      | .exis ty_body qualifiers n => do
+        let mut new_qualifiers := [] 
+        for (lower, upper) in qualifiers.reverse do
+          if lower == Ty.fvar id_fixed then
+            match upper with 
+            | (Ty.impli q_ante q_consq) =>
+              new_qualifiers := ([lesstype| ⟨q_ante⟩ * ⟨q_consq⟩], Ty.fvar id_fixed) :: new_qualifiers
+            | _ => failure 
+          else
+            new_qualifiers := (lower, upper) :: new_qualifiers
+        let ty_body <- flip_constraints id_fixed ty_body
+
+        return .exis ty_body new_qualifiers n
+      | .tag l ty_body => do
+        let ty_body <- flip_constraints id_fixed ty_body
+        return .tag l ty_body
+      | ty => /- TODO -/
+        return ty
+       
+      ----------
+
+      let ty_content <- (
+        match ty_IC with
+        | Ty.impli ty_ante ty_consq => do
+          let mut new_consq := Ty.bot 
+          for cse in (Ty.split_unions (Ty.simplify ty_consq)).reverse do
+            let ty_flipped <- flip_constraints id_fixed cse
+            new_consq := Ty.union ty_flipped new_consq
+
+          return [lesstype| ⟨ty_ante⟩ * ⟨new_consq⟩ ]
+
+        | _ => 
+          failure
+      )
+
+      let relational_type := [lesstype| induct ⟨Ty.abstract [id_fixed] 0 ty_content⟩ ]
+      return Ty.simplify [lesstype| [_] α[0] -> {α[0] with α[1] * α[0] <: ⟨relational_type⟩ # 1}]
+      ------------------------------------
+      ------------------------------------
+      -- return [lesstype| coduct ⟨Ty.abstract [id_fixed] 0 ty_IC⟩ ]
+      -- return [lesstype| coduct ⟨ty_IC⟩ ]
     /-
     END to_type_state
     -/
