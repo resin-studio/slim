@@ -22,7 +22,7 @@
         - by Yurii Kostyukov, Dmitry Mordvinov & Grigory Fedyukovich 
         - 2021
         - regular vs elementary representations of constraints
-            - regular: automata-based
+            - regular: tree automata-based
             - elementary: first-order logic
         - supports relations
         - a tree automaton is a generalization of an algebraic data type 
@@ -32,7 +32,11 @@
             - e.g. 
                 - `even ::= Z | S S even`  
                 - `Z |-> q_even, S q_odd |-> q_even, S q_odd |-> q_even, ... |-> q_even`  
-    - use custom CHC intermediate lang to guide construction of examples (e.g. foldn) in RInGen 
+    - notice limitation of learning arity
+        - RInGen predicates have a fixed arity
+        - RInGen may be unable to infer intersection of fields 
+        - learning max number of fields amounts to learning the arity of a predicate
+        - use custom CHC intermediate lang to guide construction of examples (e.g. foldn) in RInGen
 - determine novelty of relational types relative to ADT CHC SOTA
     - RInGen examples define predicates rather than inferring predicates from programs
     - Relational types infers predicates from non-boolean functions
