@@ -1,18 +1,14 @@
 ####  Due 2023 Aug 25 (Today)
 - translate to custom CHC intermediate language (60%)
     - denotation of subtyping into horn clauses 
-    - use three kinds of identifiers: 
-        - learnable predicates/types
-        - constraint predicates/types
-        - inhabitants of predicates/types
     - divide translation into three sections: 
         - abstract translation: generate rules for abstract reasoning
         - refined translation: generate rules for refined reasoning
         - simplification: remove extraneous information
     - the horn-clause translation normalizes subtyping by removing quantifiers (univ, exis, induc, coinduc)
     - the quantification is inferred by context: 
-        - learnable variable on RHS means least solution (union until valid)
-        - learnable variable on LHS means greatest solution (intersect until valid)
+        - variable on RHS means least solution (union until valid)
+        - variable on LHS means greatest solution (intersect until valid)
     - restrict second order bound variables to LHS of subtyping (weakening to FOL semantics)
 
 #### Due 2023 Sep 01 (Next) 
@@ -32,6 +28,12 @@
             - e.g. 
                 - `even ::= Z | S S even`  
                 - `Z |-> q_even, S q_odd |-> q_even, S q_odd |-> q_even, ... |-> q_even`  
+        - constraint language may refer to predicate variables
+        - query vs rule
+            - rules have FALSE in head position
+            - queries have predicate variable in head position
+        - treat predicate as a specification by negating it in body and using false for head clause. 
+            - e.g. `NOT P ==> FALSE`
     - notice limitation of learning arity
         - RInGen predicates have a fixed arity
         - RInGen may be unable to infer intersection of fields 

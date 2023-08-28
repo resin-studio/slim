@@ -1831,26 +1831,24 @@ namespace Nameless
   end Ty
 
 
-  /-
-  TODO: define HornClause in terms of HornType
-  -/
 
   inductive HornType : Type
-  /- bound (α) -/ 
   | bid : Nat -> HornType  
-  /- learnable (P) -/
   | fid : Nat -> HornType
-
-  /- issue: how should inductive constraints be represented? -/
-  /- TODO: should a constraint should be a self-contained type?-/
-  /- and constrained (φ) -/
-  | cid : Nat -> HornType 
   | unit : HornType 
   | tag : String -> HornType -> HornType 
   | field : String -> HornType -> HornType 
   deriving Repr, Inhabited, Hashable, BEq
 
+  /-
+  TODO: 
+  - create HornProp in terms of HornType subtyping
+  - with negation
+  -/
 
+  /-
+  TODO: define HornClause in terms of HornType/Constraint/FALSE
+  -/
   structure HornClause where
     body : List (Ty × Ty) 
     head : (Ty × Ty)
@@ -1872,10 +1870,8 @@ namespace Nameless
 
     
     /- TODO: double negate co-induct -/
-    /- TODO: 
-    - need to distinguish between learnable type variables and constraint type variables 
-    - learnable types are lhs-sum-like-types and rhs-product-like-types
-    - constraint types are rhs-sum-like-types and lhs-product-like-types
+    /- TODO: RHS of subtyping indicates as a query
+    - A <: B becomes x : A ∧ ¬ (x : B) ==> FALSE  
     -/
 
     partial def flatten (quant : Nat) (premises : List (Ty × Ty)) 
