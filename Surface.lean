@@ -432,7 +432,7 @@ namespace Surface
       if h : index < free_names.length then  
         some (stack, .id (free_names.get ⟨index, h⟩))
       else
-        some (stack, .id (s!"α_{index}_")) 
+        some (stack, .id (s!"P_{index}_")) 
     | .unit => some (stack, .unit)
     | .bot => some (stack, .bot)
     | .top => some (stack, .top)
