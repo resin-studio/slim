@@ -2029,17 +2029,15 @@ namespace Nameless
 
     | .inter ty1 ty2, _ => do
       /-
+      ⟦ty1 <: P⟧  
+      ⟦ty2 <: P⟧ 
+      ⟦ P <: SPEC ⟧ 
       -/
-      failure
-
-
-    -----------------
-    --   let clauses1 <- flatten quant premises ty_model ty1
-    --   let clauses2 <- flatten quant premises ty_model ty2
-    --   return clauses1 ++ clauses2
-    --   let clauses1 <- flatten quant premises ty_ty1 ty_spec
-    --   let clauses2 <- flatten quant premises ty2 ty_spec
-    --   return clauses1 ++ clauses2
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let clauses1 <- flatten quant premises ty1 fid 
+      let clauses2 <- flatten quant premises ty2 fid 
+      let clauses_spec <- flatten quant premises fid ty_spec
+      return clauses_spec ++ clauses1 ++ clauses2
 
     /-
     Simplification 
