@@ -1832,13 +1832,13 @@ namespace Nameless
 
 
 
-  inductive HornType : Type
-  | bid : Nat -> HornType  
-  | fid : Nat -> HornType
-  | unit : HornType 
-  | tag : String -> HornType -> HornType 
-  | field : String -> HornType -> HornType 
-  deriving Repr, Inhabited, Hashable, BEq
+  -- inductive HornType : Type
+  -- | bid : Nat -> HornType  
+  -- | fid : Nat -> HornType
+  -- | unit : HornType 
+  -- | tag : String -> HornType -> HornType 
+  -- | field : String -> HornType -> HornType 
+  -- deriving Repr, Inhabited, Hashable, BEq
 
   /-
   TODO: 
@@ -1849,20 +1849,34 @@ namespace Nameless
   /-
   TODO: define HornClause in terms of HornType/Constraint/FALSE
   -/
+
+  inductive Formula  
+  | Pos : Ty -> Ty -> Formula
+  | Neg : Ty -> Ty -> Formula
+  deriving Repr
+
+  inductive Head  
+  | Form : Ty -> Ty -> Head
+  | False : Head
+  deriving Repr
+
   structure HornClause where
-    body : List (Ty × Ty) 
-    head : (Ty × Ty)
+    body : List Formula 
+    head : Head 
   deriving Repr
 
   namespace CHC
 
     partial def HornClause.repr (hc : HornClause) (n : Nat) : Format :=
-      let _ : ToFormat (Ty × Ty) := ⟨fun (lower, upper) =>
-        (Ty.repr lower n) ++ " <: " ++ (Ty.repr upper (n))
+      let _ : ToFormat Formula := ⟨fun 
+      | .Pos lower upper => (Ty.repr lower n) ++ " <: " ++ (Ty.repr upper (n))
+      | .Neg lower upper => "¬ " ++ (Ty.repr lower n) ++ " <: " ++ (Ty.repr upper (n))
       ⟩
       let body := Format.joinSep hc.body ", " 
-      let (head_lower, head_upper) := hc.head
-      body ++ " |- " ++ ((Ty.repr head_lower n) ++ " <: " ++ (Ty.repr head_upper n)) 
+      match hc.head with
+      | .Form lower upper =>
+        body ++ " ==> " ++ ((Ty.repr lower n) ++ " <: " ++ (Ty.repr upper n)) 
+      | .False => " ==> FALSE" 
 
 
     instance : Repr HornClause where
@@ -1874,7 +1888,7 @@ namespace Nameless
     - A <: B becomes x : A ∧ ¬ (x : B) ==> FALSE  
     -/
 
-    partial def flatten (quant : Nat) (premises : List (Ty × Ty)) 
+    partial def flatten (quant : Nat) (premises : List Formula) 
       (ty_model : Ty) (ty_spec : Ty) 
     : StateT Nat Option (List HornClause) 
     := match ty_model, ty_spec with
@@ -1906,7 +1920,7 @@ namespace Nameless
       for ((ty_content, ty_constraint), ty_name) in constraint_renamings.reverse do
         let clauses_qualifier <- flatten 0 [] ty_constraint ty_name
         clauses_qualifier_total := clauses_qualifier ++ clauses_qualifier_total
-        qualifiers_renamed := (ty_content, ty_name) :: qualifiers_renamed
+        qualifiers_renamed := (Formula.Pos ty_content ty_name) :: qualifiers_renamed
 
       /-
       issue: ty_body needs to be flattened next
@@ -1938,7 +1952,7 @@ namespace Nameless
         (Ty.fvar i, i + 1)
       )
       let clauses_qualifier <- flatten 0 [] ty_constraint constraint_renamed
-      let qualifier_renamed := (Ty.bvar quant, constraint_renamed) 
+      let qualifier_renamed := (Formula.Pos (Ty.bvar quant) constraint_renamed) 
       let clauses_unwrapped <- flatten (quant + 1) (qualifier_renamed :: premises) ty_model ty_body
       return clauses_unwrapped ++ clauses_qualifier
 
@@ -1972,6 +1986,22 @@ namespace Nameless
     /-
     Refined translation
     -/
+
+    | _, .induc ty_body => do
+      let fid_fixed <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let ty_body := Ty.instantiate 0 [fid_fixed] ty_body
+      let clauses_induc <- flatten quant premises ty_body fid_fixed 
+
+
+      let fid_model <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let clauses_model <- flatten quant premises ty_model fid_model
+
+
+      let var_arg := Ty.bvar quant
+      -- let quant := quant + 1
+
+      let query : HornClause :=  ⟨[.Pos var_arg fid_model, .Neg var_arg fid_fixed], .False⟩
+      return query :: clauses_induc ++ clauses_model
 
     -- | _, .induc ty_body => do
     --   /- 
