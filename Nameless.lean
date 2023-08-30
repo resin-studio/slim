@@ -2013,6 +2013,34 @@ namespace Nameless
       let query : HornClause :=  ⟨[.Pos var_arg fid_model, .Neg var_arg fid_fixed], .False⟩
       return query :: clauses_induc ++ clauses_model
 
+    | _, .union ty1 ty2 => do
+      /-
+      ⟦ty1 <: P⟧  
+      ⟦ty2 <: P⟧ 
+      x : M and ¬ (x : P) ==> FALSE 
+      -/
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let clauses1 <- flatten quant premises ty1 fid 
+      let clauses2 <- flatten quant premises ty2 fid 
+
+      let var_arg := Ty.bvar quant
+      let query : HornClause :=  ⟨[.Pos var_arg fid, .Neg var_arg fid], .False⟩
+      return query :: clauses1 ++ clauses2
+
+    | .inter ty1 ty2, _ => do
+      /-
+      -/
+      failure
+
+
+    -----------------
+    --   let clauses1 <- flatten quant premises ty_model ty1
+    --   let clauses2 <- flatten quant premises ty_model ty2
+    --   return clauses1 ++ clauses2
+    --   let clauses1 <- flatten quant premises ty_ty1 ty_spec
+    --   let clauses2 <- flatten quant premises ty2 ty_spec
+    --   return clauses1 ++ clauses2
+
     /-
     Simplification 
     -/
