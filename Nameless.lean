@@ -1989,6 +1989,14 @@ namespace Nameless
       let clauses_body <- (flatten quant premises ty_model ty_body)
       return clauses_body ++ clauses_qualifiers
 
+    | .univ op_ty_bound ty_body, _ => do
+      let ty_bound <- op_ty_bound
+      let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
+      let clauses_bound <- flatten quant premises fid ty_bound 
+      let ty_body := Ty.instantiate 0 [fid] ty_body
+      let clauses_body <- (flatten quant premises ty_body ty_spec)
+      return clauses_bound ++ clauses_body
+
     | _, .induc ty_body => do
       let fid_fixed <- modifyGet (fun i => (Ty.fvar i, i + 1))
       let ty_body := Ty.instantiate 0 [fid_fixed] ty_body
