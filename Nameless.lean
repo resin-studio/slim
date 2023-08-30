@@ -2069,96 +2069,10 @@ namespace Nameless
       let clauses2 <- flatten quant premises ty2_model ty2_spec
       return clauses1 ++ clauses2
 
-    /-
-    TODO: add .fvar cases
-
-    P <: Q 
-    ------
-    ∀ X . X <: P |- X : Q
-    -/
-
-    ------------------------
-    -- OLD --
-    ------------------------
-
-
-    -- | .bvar _ => 
-    --   failure  
-    -- | .fvar id => 
-    --   return [
-    --     ⟨[], (Ty.fvar id, ty_spec)⟩
-    --   ] 
-    -- | .unit =>
-    --   return [
-    --     ⟨[], (Ty.unit, ty_spec)⟩
-    --   ] 
-    -- | .top =>
-    --   return [
-    --     ⟨[], (Ty.top, ty_spec)⟩
-    --   ] 
-    -- | .bot =>
-    --   return [
-    --     ⟨[], (Ty.bot, ty_spec)⟩
-    --   ] 
-
-
-
-    -- | .inter ty1 ty2 => do
-    --   /-
-    --   A & B <: C
-    --   -------------------------
-    --   X <: A, X <: B |- X <: C
-    --   -/
-
-    --   let (ty1_spec, ty2_spec) <- modifyGet (fun i =>
-    --     ((Ty.fvar i, Ty.fvar (i + 1)), i + 2)
-    --   )
-    --   let bid := Ty.bvar 0  
-    --   let clause : HornClause := ⟨
-    --     [(bid, ty1_spec), (bid, ty2_spec)],
-    --     (bid, ty_spec)
-    --   ⟩
-    --   let clauses1 <- flatten ty1 ty1_spec
-    --   let clauses2 <- flatten ty2 ty2_spec
-    --   return clause :: clauses1 ++ clauses2
-
-
-    -- | .univ ty_bound_op ty_pl => do
-    --   /-
-    --   [X <: T] A <: C
-    --   ---------------
-    --   |- X <: T
-    --   |- A <: C
-    --   -/
-    --   let ty_bound <- ty_bound_op 
-    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
-
-    --   let clauses_bound <- flatten fid ty_bound
-    --   let clauses_pl <- flatten ty_pl ty_spec 
-    --   return clauses_bound ++ clauses_pl
-
-    -- | .coduc ty_pl => do 
-    --   /-
-    --   ISSUE: type on rhs does no simply via flatten
-    --   TODO: convert to inductive predicates (assuming target constraint logic can't handle co-inductive/implication inhabitants)
-    --   - either convert the type to implication in to_type
-    --   - double negate co-induction
-    --     - i.e. NOT (NOT coduct (X -> Y)) 
-    --     - === (NOT coduct (X -> Y) & ...) -> bot 
-    --     - === (induct (X * NOT Y) | ...) -> bot 
-    --     - === X * NOT {Y with (X * Y) <: induct P * Q} -> bot 
-    --     - === X -> {Y with (X * Y) <: induct P * Q}
-    --   -/
-    --   let fid <- modifyGet (fun i => (Ty.fvar i, i + 1))
-    --   let ty_pl := Ty.instantiate 0 [fid] ty_pl
-    --   let clauses_pl <- flatten fid ty_pl 
-    --   return ⟨[], (ty_pl, ty_spec)⟩ :: clauses_pl
     | _, _ => do
-      if ty_model == ty_spec then
-        return []
-      else 
-        failure
+      let bid := Ty.bvar (quant + 1)
+      let clause : HornClause := ⟨[.Pos bid ty_model], .Form bid ty_spec⟩
+      return [clause]
     /- End flatten -/
 
 
