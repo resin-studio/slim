@@ -43,21 +43,23 @@
     - query vs rule in subtyping: 
         - lhs-sum-like or rhs-prod-like are rules
         - rhs-sum-like or lhs-prod-like are queries 
-    - notice limitation of learning arity
-        - RInGen predicates have a fixed arity
-        - RInGen may be unable to infer intersection of fields 
-        - learning max number of fields amounts to learning the arity of a predicate
-        - use custom CHC intermediate lang to guide construction of examples (e.g. foldn) in RInGen
-    - notice limitation of constraint language
-        - it can negate inductive predicate; but can it assert inductive constraint?
+    - determine feasibility of learning arity or records 
+        - see how JayHorn does it:
+            - https://www.martinschaef.de/papers/cav2016.pdf
+        - records could be encoded as functions over their payload
+            - e.g. maybe `x : {m1 : T1, m2 : T2}` could become `m1(x) : T1, m2(x) : T2 ==> x : P`
     - determine feasibility of translation into sorts
         - determine if sorts are explicitly declared
     - determine feasibility of translation of polymorphism 
-- determine novelty of relational types relative to ADT CHC SOTA
-    - RInGen examples define predicates rather than inferring predicates from programs
-    - Relational types infers predicates from non-boolean functions
-    - The key innovation is inferring a co-inductive type and double negating it to an inductive relation
-        - Liquid Types doesn't need to do this because it relies on HM to infer base types
+    - use custom CHC intermediate lang to guide construction of examples (e.g. foldn) in RInGen
+- determine novelty of relational types relative to ADT CHC SOTA and other translations
+    - Relational types infers the relational constraints from compositions
+    - liquid type systems must declare data types and predicates to infer constraints
+    - Not novel: RCaml uses prior technique making proposed relational types method already well-known: 
+        - https://www.cs.tsukuba.ac.jp/~uhiro/papers/cav2017.pdf
+        - RCaml generates constraints from functions 
+        - it doesn't look like it can learn record types 
+    - Novel compared to Liquid Types, which relies on data types and predicate abstraction
 - translate to custom CHC intermediate language (100%)
 
 #### Due 2023 Sep 08 
