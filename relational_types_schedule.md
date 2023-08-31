@@ -12,6 +12,11 @@
     - restrict second order bound variables to LHS of subtyping (weakening to FOL semantics)
 
 #### Due 2023 Sep 01 (Next) 
+- assert intuition: 
+    - horn clauses are a natural structure for reasoning
+    - they are analogous to inference rules and and bayesian networks 
+    - they provide an economical syntax that is relatively easy to automate
+    - therefore, denotation into horn clauses is a beneficial effort, even if automation for the details does not yet exist.
 - determine feasibility of RInGen (the SOTA for solving inductive algebraic data types) 
     - look into RInGen tool for handling inductive ADTs (Kostyukov et al)
     - read *Beyond the Elementary Representations of Program Invariants over Algebraic Data Types*.
@@ -44,6 +49,9 @@
         - use custom CHC intermediate lang to guide construction of examples (e.g. foldn) in RInGen
     - notice limitation of constraint language
         - it can negate inductive predicate; but can it assert inductive constraint?
+    - determine feasibility of translation into sorts
+        - determine if sorts are explicitly declared
+    - determine feasibility of translation of polymorphism 
 - determine novelty of relational types relative to ADT CHC SOTA
     - RInGen examples define predicates rather than inferring predicates from programs
     - Relational types infers predicates from non-boolean functions

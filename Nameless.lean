@@ -2070,7 +2070,7 @@ namespace Nameless
       return clauses1 ++ clauses2
 
     | _, _ => do
-      let bid := Ty.bvar (quant + 1)
+      let bid := Ty.bvar quant
       let clause : HornClause := ⟨[.Pos bid ty_model], .Form bid ty_spec⟩
       return [clause]
     /- End flatten -/
