@@ -12,9 +12,10 @@
     - restrict second order bound variables to LHS of subtyping (weakening to FOL semantics)
 
 #### Due 2023 Sep 01 (Next) 
-- assert intuition: 
+- assert intuition about horn clauses: 
     - horn clauses are a natural structure for reasoning
-    - they are analogous to inference rules and and bayesian networks 
+    - they represent the steps that may be used in constructing a derivation
+    - they are analogous to inference rules, bayesian networks, automata, etc 
     - they provide an economical syntax that is relatively easy to automate
     - therefore, denotation into horn clauses is a beneficial effort, even if automation for the details does not yet exist.
 - determine feasibility of RInGen (the SOTA for solving inductive algebraic data types) 
