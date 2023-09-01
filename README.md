@@ -16,9 +16,10 @@
     - how does liquid types leverage this structure?
         - it has a simple way of type checking the base type without using solver
     - downward propagation can leverage mirrored structure of type
-5. the distinction between 
+5. tracks the distinction between 
     - type variables acting as constraints and 
-    - those acting as learnable predicates is kept track of  
+    - those acting as learnable predicates
+    - by marking parameter and return type variables  
 6. learning unions vs intersections is discriminated 
     - according to the side of the subtyping relation.
 7. equivalent to horn clauses 
