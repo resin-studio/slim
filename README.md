@@ -23,6 +23,14 @@
 6. learning unions vs intersections is discriminated 
     - according to the side of the subtyping relation.
 7. equivalent to horn clauses 
+8. types have the advantage of leveraging existing proof structure  
+    - CEGAR: prove `A <: B` by refuting `A and not B` 
+        - must find single proof for `A` and `B` 
+    - upward propagation: assuming proof `a : A`, decide `A <: B` by decomposing types
+    according to a structure that mirrors the proof `a`.
+    propagating `B` down `a`
+    - downward propagation: assuming program `a`, decide `a : B` by propagating `B` down `a`
+
 
 #### Results
 - benchmarks showing verification/synthesis problems that can be solved
