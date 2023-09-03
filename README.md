@@ -22,14 +22,23 @@
     - by marking parameter and return type variables  
 6. learning unions vs intersections is discriminated 
     - according to the side of the subtyping relation.
+    - this should be consistent with craig interpolation criteria: 
+        - the learned type contains only symbols in the intersection of the 
+            subtree and the rest of the tree (type tree, that is)
+        - need to verify this idea
 7. equivalent to horn clauses 
 8. types have the advantage of leveraging existing proof structure  
-    - CEGAR: prove `A <: B` by refuting `A and not B` 
-        - must find single proof for `A` and `B` 
-    - upward propagation: assuming proof `a : A`, decide `A <: B` by decomposing types
+    - CHC solving: prove `A <: B` by refuting `A and not B` 
+        - must find single proof for `A` and `B`
+    - bottom-up propagation: assuming proof `a : A`, decide `A <: B` by decomposing types
     according to a structure that mirrors the proof `a`.
     propagating `B` down `a`
-    - downward propagation: assuming program `a`, decide `a : B` by propagating `B` down `a`
+    - top-down propagation: assuming program `a`, decide `a : B` by propagating `B` down `a`
+        - related to SYNGAR
+            - if the program is spurious, then the negation of the IO example 
+            - is propagated down the spurious program tree.
+            - a separate notion of tree automata is used to generate candidate programs 
+
 
 
 #### Results
