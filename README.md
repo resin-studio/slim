@@ -1,7 +1,10 @@
 ## Relational Types
 
 #### Hypothesis
-- subtyping constraints over relational types that mirror structure of programs are easier to solve than semantically equivalent horn clauses via CHC.
+- a succinct representation of relations as types for concise yet expressive annotation
+- horn clauses represent the decomposition of programs just as well as relational types
+- relational types is just a superficial skin.
+- liquid types is also subsumed by CHC 
 
 #### Innovation
 0. An expressive type language
@@ -9,11 +12,8 @@
 2. learns by unwinding (a la duality in CHC)
 2. easy to provide annotations and confine their locality 
 3. as expressive as horn clauses
-4. leveraging type's mirrored structure for easier problems to solve?  
-    - type structure is derived from program structure
-    - therefore, subtyping rules leverage program structure 
-    - better than horn solvers as program structure dictates 
-        - the optimal constraint to solve/check
+4. subtyping solving instead of CHC (different, not better)  
+    - allows annotations and specs to be written succinctly 
     - comparison to liquid types
         - similar: types mirror structure of program
             - it has a syntactic way of type checking the base type
@@ -33,6 +33,10 @@
         - similar: relies on duality 
             - duality constructs predicates by unwinding inductive constraints
             - this amounts to deriving disjunctions, right?
+            - the interpolant is a learned upper bound on program term
+                - e.g. for `foo(t)`, `foo : A -> B`, `t : T`, 
+                    the interpolant is `I` where `T <: I <: A`
+            - unwinding in CHC corresponds to unrolling the rhs in Relational types, right?  
     - downward propagation can leverage mirrored structure of type
 5. tracks the distinction between 
     - type variables acting as constraints and 
