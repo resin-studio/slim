@@ -5,7 +5,8 @@
 
 #### Innovation
 0. An expressive type language
-1. mirrors the structure of programs 
+1. mirrors the structure of programs (a la liquid types)
+2. learns by unwinding (a la duality in CHC)
 2. easy to provide annotations and confine their locality 
 3. as expressive as horn clauses
 4. leveraging type's mirrored structure for easier problems to solve?  
@@ -14,21 +15,24 @@
     - better than horn solvers as program structure dictates 
         - the optimal constraint to solve/check
     - comparison to liquid types
-        - it has a simple way of type checking the base type without using solver
-        - the generated constraints capture the the program composition as subtyping constraints?
+        - similar: types mirror structure of program
+            - it has a syntactic way of type checking the base type
+            - by using qualified types?
         - Are these generated subtyping constraints really that different from horn clauses?
             - maybe because they are embedded in the datatype qualifier?
             - embedding the qualifier captures the derivation structure
             - thereby ensuring the optimal refinement search path?
-        - relies on predicate abstraction (restricted to set of predicates)
-        - predicate abstraction relies on conjunctions from predefined set of predicates  
+        - different: relies on predicate abstraction (restricted to set of predicates)
+            - instead of duality
+            - predicate abstraction relies on conjunctions from predefined set of predicates  
     - comparison to solving CHC with duality
-        - verify that CHC can't reuse the initial derivation.
-        - the derivation has to make arbitrary choices on wether to unwind or not.
-        - whereas, subtyping constraints unwind according to the structure, right?
-        - relies on duality 
-        - duality constructs predicates by unwinding inductive constraints
-        - this amounts to learning disjunctions
+        - different: solving by searching for derivation in horn clauses
+            - verify that CHC can't reuse the initial derivation.
+            - the derivation has to make arbitrary choices on wether to unwind or not.
+            - whereas, subtyping constraints unwind according to the structure, right?
+        - similar: relies on duality 
+            - duality constructs predicates by unwinding inductive constraints
+            - this amounts to deriving disjunctions, right?
     - downward propagation can leverage mirrored structure of type
 5. tracks the distinction between 
     - type variables acting as constraints and 
