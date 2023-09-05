@@ -1,18 +1,15 @@
 ## Relational Types
 
 #### Hypothesis
-- a succinct representation of relations as types for concise yet expressive annotation
-- horn clauses represent the decomposition of programs just as well as relational types
-- relational types is just a superficial skin.
-- liquid types is also subsumed by CHC 
+- relational type inference is equivalent to CHC solving
 
 #### Innovation
-0. An expressive type language
-1. mirrors the structure of programs (a la liquid types)
-2. learns by unwinding (a la duality in CHC)
-2. easy to provide annotations and confine their locality 
-3. as expressive as horn clauses
-4. subtyping solving instead of CHC (different, not better)  
+- An expressive type language with an alternative view of deducing and abducing types
+- mirrors the structure of programs (a la liquid types)
+- learns by unwinding (a la duality)
+- easy to provide annotations and confine their locality 
+- equivalent to horn clauses 
+- subtyping solving instead of CHC (different, not better)  
     - allows annotations and specs to be written succinctly 
     - comparison to liquid types
         - similar: types mirror structure of program
@@ -26,23 +23,26 @@
             - instead of duality
             - predicate abstraction relies on conjunctions from predefined set of predicates  
     - comparison to solving CHC with duality
-        - different: solving by searching for derivation in horn clauses
-            - verify that CHC can't reuse the initial derivation.
-            - the derivation has to make arbitrary choices on wether to unwind or not.
-            - whereas, subtyping constraints unwind according to the structure, right?
         - similar: relies on duality 
-            - duality constructs predicates by unwinding inductive constraints
-            - this amounts to deriving disjunctions, right?
-            - the interpolant is a learned upper bound on program term
-                - e.g. for `foo(t)`, `foo : A -> B`, `t : T`, 
-                    the interpolant is `I` where `T <: I <: A`
-            - unwinding in CHC corresponds to unrolling the rhs in Relational types, right?  
-    - downward propagation can leverage mirrored structure of type
-5. tracks the distinction between 
+            - CHC: decide `A <: B` by refuting `A and not B` and learning interpolant 
+                - duality constructs predicates by unwinding inductive constraints
+                - this amounts to deriving disjunctions, right?
+                - the interpolant is a learned upper bound on program term
+                    - e.g. for `foo(t)`, `foo : A -> B`, `t : T`, 
+                        the interpolant is `I` where `T <: I <: A`
+            - subtyping: decide `A <: B` by decomposing types and choosing values for learnable type variables
+    - comparison to bi-directional propagation
+        - similar: relies on duality 
+            - assuming program `a`, decide `a : B` by propagating `B` down `a`
+    - comparison to SYNGAR  
+        - if the program is spurious, then the negation of the IO example 
+        - is propagated down the spurious program tree.
+        - a separate notion of tree automata is used to generate candidate programs 
+- tracks the distinction between 
     - type variables acting as constraints and 
     - those acting as learnable predicates
     - by marking parameter and return type variables  
-6. learning unions vs intersections is discriminated 
+- learning unions vs intersections is discriminated 
     - according to the side of the subtyping relation.
     - this should be consistent with craig interpolation criteria: 
         - the learned type contains only symbols in the intersection of the 
@@ -50,31 +50,29 @@
         - need to verify this idea
     - learning unions is deductive; i.e. the grounding is certain (could become weaker)
     - learning intersections is abductive; i.e. the grounding is uncertain (could become stronger)
-7. equivalent to horn clauses 
-8. types have the advantage of leveraging existing proof structure  
-    - CHC solving: prove `A <: B` by refuting `A and not B` 
-        - must find single proof for `A` and `B`
-    - bottom-up propagation: assuming proof `a : A`, decide `A <: B` by decomposing types
-    according to a structure that mirrors the proof `a`.
-    propagating `B` down `a`
-    - top-down propagation: assuming program `a`, decide `a : B` by propagating `B` down `a`
-        - related to SYNGAR
-            - if the program is spurious, then the negation of the IO example 
-            - is propagated down the spurious program tree.
-            - a separate notion of tree automata is used to generate candidate programs 
 
 #### Limitations
 - cannot ensure termination
     - because the search space is not bounded by a top data type
 
 
+#### Future directions
+- bidirectional propagation
+- program synthesis
+- data-driven
 
 #### Results
+- runtime semantics
+- CHC semantics
+- typing semantics
+- subtyping semantics
+- compilation into horn clauses
+- type inference and unification algorithm 
+- soundness proofs down to runtime semantics
 - benchmarks showing verification/synthesis problems that can be solved
 - comparison of 
     - custom unification algorithm vs
     - compilation to horn clause and running on CHC solver  
-- proof of soundness of relational type system
 
 
 #### TODO
